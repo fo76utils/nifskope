@@ -21,6 +21,7 @@ jobs:
       with:
         msystem: MINGW64
         update: true
+        cache: true
         install: 'base-devel mingw-w64-x86_64-toolchain msys/scons mingw64/mingw-w64-x86_64-SDL2 mingw64/mingw-w64-x86_64-python-matplotlib mingw64/mingw-w64-x86_64-swig'
     
     - name: 'Build with Scons'
