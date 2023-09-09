@@ -47,7 +47,7 @@ jobs:
         fetch-depth: 0
       
     - name: 'Install required packages'
-    - uses: awalsh128/cache-apt-pkgs-action@latest
+      uses: awalsh128/cache-apt-pkgs-action@latest
       with:
           packages: swig libsdl2-dev scons
           version: 1.0
