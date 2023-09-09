@@ -9,9 +9,7 @@ jobs:
   build:
     runs-on: windows-latest
     name: Build MSYS2
-    defaults:
-      run:
-        shell: msys2 {0}
+    
     steps:
     - name: 'Checkout'
       uses: actions/checkout@v3
@@ -19,20 +17,19 @@ jobs:
         fetch-depth: 0
     
     - name: 'Setup MSYS2'
+      uses: msys2/setup-msys2@v2
       with:
         msystem: MINGW64
         update: true
-    - shell: msys2 {0}
+        install: 'base-devel mingw-w64-x86_64-toolchain msys/scons mingw64/mingw-w64-x86_64-SDL2 mingw64/mingw-w64-x86_64-python-matplotlib mingw64/mingw-w64-x86_64-swig'
+    
+    - name: 'Build with Scons'
+      shell: msys2 {0}
       run: |
-        pacman -Syu --noconfirm
-        pacman -Su --noconfirm
-        pacman -S --needed base-devel mingw-w64-x86_64-toolchain --noconfirm
-        pacman -S msys/scons --noconfirm
-        pacman -S mingw64/mingw-w64-x86_64-SDL2 --noconfirm
-        pacman -S mingw64/mingw-w64-x86_64-python-matplotlib --noconfirm
-        pacman -S mingw64/mingw-w64-x86_64-swig --noconfirm
         scons -j 8
-    - uses: actions/upload-artifact@v3
+    
+    - name: 'Upload Artifacts'
+      uses: actions/upload-artifact@v2
       with:
         name: build
         path: '**/*.exe'
