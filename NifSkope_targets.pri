@@ -117,12 +117,8 @@ ROOT = $$re_escape($${PWD})
 GENERATE_QHP = NO
 exists($$qhgen):GENERATE_QHP = YES
 
-HAVE_DOT = NO
-DOT_PATH = " " # Using space because sed on Windows errors on s%@DOT_PATH@%%g for some reason
-exists($$dot) {
-	HAVE_DOT = YES
-	DOT_PATH = $$re_escape($${dot})
-}
+HAVE_DOT = YES
+DOT_PATH = $${PWD}
 
 TAGS = $${PWD}/build/doxygen/tags
 BINS = $$re_escape($$[QT_INSTALL_BINS])

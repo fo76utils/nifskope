@@ -2,7 +2,9 @@
 ## BUILD OPTIONS
 ###############################
 
-TEMPLATE = vcapp
+*msvc* {
+  TEMPLATE = vcapp
+}
 TARGET   = NifSkope
 
 QT += xml opengl network widgets
@@ -136,7 +138,7 @@ include(NifSkope_targets.pri)
 ## PROJECT SCOPES
 ###############################
 
-INCLUDEPATH += src lib
+INCLUDEPATH += src lib lib/libfo76utils/src
 
 HEADERS += \
 	src/data/nifitem.h \
@@ -344,14 +346,14 @@ nvtristrip {
 }
 
 qhull {
-    !*msvc*:QMAKE_CFLAGS += -isystem ../nifskope/lib/qhull/src
-    !*msvc*:QMAKE_CXXFLAGS += -isystem ../nifskope/lib/qhull/src
+    !*msvc*:QMAKE_CFLAGS += -Ilib/qhull/src
+    !*msvc*:QMAKE_CXXFLAGS += -Ilib/qhull/src
     else:INCLUDEPATH += lib/qhull/src
     HEADERS += $$files($$PWD/lib/qhull/src/libqhull/*.h, false)
 }
 
 gli {
-    !*msvc*:QMAKE_CXXFLAGS += -isystem ../nifskope/lib/gli/gli -isystem ../nifskope/lib/gli/external
+    !*msvc*:QMAKE_CXXFLAGS += -Ilib/gli/gli -Ilib/gli/external
     else:INCLUDEPATH += lib/gli/gli lib/gli/external
     HEADERS += $$files($$PWD/lib/gli/gli/*.hpp, true)
     HEADERS += $$files($$PWD/lib/gli/gli/*.inl, true)
@@ -363,8 +365,8 @@ zlib {
 	macx {
         DEFINES += Z_HAVE_UNISTD_H
     }
-    !*msvc*:QMAKE_CFLAGS += -isystem ../nifskope/lib/zlib
-    !*msvc*:QMAKE_CXXFLAGS += -isystem ../nifskope/lib/zlib
+    !*msvc*:QMAKE_CFLAGS += -Ilib/zlib
+    !*msvc*:QMAKE_CXXFLAGS += -Ilib/zlib
     else:INCLUDEPATH += lib/zlib
     HEADERS += $$files($$PWD/lib/zlib/*.h, false)
     SOURCES += $$files($$PWD/lib/zlib/*.c, false)
@@ -445,13 +447,10 @@ win32 {
 	#  Optimization flags
 	QMAKE_CXXFLAGS_DEBUG -= -O0 -g
 	QMAKE_CXXFLAGS_DEBUG *= -Og -g3
-	QMAKE_CXXFLAGS_RELEASE *= -O3 -mfpmath=sse
+	QMAKE_CXXFLAGS_RELEASE *= -O3 -march=haswell -mtune=generic
 
 	# C++ Standard Support
 	QMAKE_CXXFLAGS_RELEASE *= -std=c++20
-
-	#  Extension flags
-	QMAKE_CXXFLAGS_RELEASE *= -msse2 -msse
 }
 
 win32 {
