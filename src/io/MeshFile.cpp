@@ -6,22 +6,16 @@
 
 #include <QBuffer>
 #include <QFile>
+#include "fp32vec4.hpp"
 
 double snormToDouble(int16_t x) { return x < 0 ? x / double(32768) : x / double(32767); }
 
 Vector3 UnpackUDEC3(quint32 n, bool& invertBitangent)
 {
-	float x;
-	float y;
-	float z;
-	quint32 w;
+	FloatVector4  v(FloatVector4::convertX10Y10Z10(n));
+	invertBitangent = bool((n >> 31) & 1);
 
-	x = ((n & 1023) / 511.5) - 1.0;
-	y = (((n >> 10) & 1023) / 511.5) - 1.0;
-	z = (((n >> 20) & 1023) / 511.5) - 1.0;
-	w = (n >> 30) & 3;
-
-	return Vector3(x, y, z);
+	return Vector3(v[0], v[1], v[2]);
 }
 
 MeshFile::MeshFile(const QString& filepath)
@@ -112,9 +106,7 @@ quint32 MeshFile::readMesh()
 		positions.resize(numPositions + positions.count());
 
 		for ( int i = 0; i < positions.count(); i++ ) {
-			int16_t x, y;
-			int16_t z;
-			union { float f; uint32_t i; } xu, yu, zu;
+			int16_t x, y, z;
 
 			in >> x;
 			in >> y;
@@ -131,18 +123,14 @@ quint32 MeshFile::readMesh()
 		coords[0].resize(numCoord1);
 
 		for ( int i = 0; i < coords[0].count(); i++ ) {
-			uint16_t u, v;
-			union { float f; uint32_t i; } uu, vu;
+			uint32_t uv;
 
-			in >> u;
-			in >> v;
-
-			uu.i = half_to_float(u);
-			vu.i = half_to_float(v);
+			in >> uv;
+      FloatVector4  uv_f(FloatVector4::convertFloat16(uv));
 
 			Vector2 coord;
-			coord[0] = uu.f;
-			coord[1] = vu.f;
+			coord[0] = uv_f[0];
+			coord[1] = uv_f[1];
 
 			coords[0][i] = coord;
 		}
@@ -153,18 +141,16 @@ quint32 MeshFile::readMesh()
 		coords[1].resize(numCoord2);
 
 		for ( int i = 0; i < coords[1].count(); i++ ) {
-			uint16_t u, v;
-			union { float f; uint32_t i; } uu, vu;
+			uint32_t uv;
 
-			in >> u;
-			in >> v;
-			uu.i = half_to_float(u);
-			vu.i = half_to_float(v);
+			in >> uv;
+      FloatVector4  uv_f(FloatVector4::convertFloat16(uv));
 
 			Vector2 coord;
-			coord[0] = uu.f;
-			coord[1] = vu.f;
-			coords[1][i] = coord;
+			coord[0] = uv_f[0];
+			coord[1] = uv_f[1];
+
+      coords[1][i] = coord;
 		}
 
 		quint32 numColor;
