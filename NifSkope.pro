@@ -19,7 +19,7 @@ contains(QT_VERSION, ^5\\.[0-6]\\..*) {
 CONFIG += c++20
 
 # Dependencies
-CONFIG += nvtristrip qhull zlib lz4 fsengine gli
+CONFIG += nvtristrip qhull zlib lz4 fsengine gli libfo76utils
 
 # Debug/Release options
 CONFIG(debug, debug|release) {
@@ -138,7 +138,7 @@ include(NifSkope_targets.pri)
 ## PROJECT SCOPES
 ###############################
 
-INCLUDEPATH += src lib lib/libfo76utils/src
+INCLUDEPATH += src lib
 
 HEADERS += \
 	src/data/nifitem.h \
@@ -235,7 +235,7 @@ SOURCES += \
 	src/gl/gltexloaders.cpp \
 	src/gl/gltools.cpp \
 	src/gl/renderer.cpp \
-	src/io/material.cpp \
+	src/io/materialfile.cpp \
 	src/io/MeshFile.cpp \
 	src/io/nifstream.cpp \
 	src/lib/importex/3ds.cpp \
@@ -382,6 +382,29 @@ lz4 {
     SOURCES += \
         lib/lz4frame.c \
         lib/xxhash.c
+}
+
+libfo76utils {
+    !*msvc*:QMAKE_CXXFLAGS += -Ilib/libfo76utils/src
+    else:INCLUDEPATH += lib/libfo76utils/src
+    HEADERS += $$files($$PWD/lib/libfo76utils/src/*.h, false)
+    HEADERS += $$files($$PWD/lib/libfo76utils/src/*.hpp, false)
+    SOURCES += $$PWD/lib/libfo76utils/src/ba2file.cpp
+    SOURCES += $$PWD/lib/libfo76utils/src/cdb_file.cpp
+    SOURCES += $$PWD/lib/libfo76utils/src/common.cpp
+    # SOURCES += $$PWD/lib/libfo76utils/src/courb24.cpp
+    # SOURCES += $$PWD/lib/libfo76utils/src/ddstxt.cpp
+    # SOURCES += $$PWD/lib/libfo76utils/src/downsamp.cpp
+    # SOURCES += $$PWD/lib/libfo76utils/src/esmfile.cpp
+    SOURCES += $$PWD/lib/libfo76utils/src/filebuf.cpp
+    # SOURCES += $$PWD/lib/libfo76utils/src/frtable.cpp
+    SOURCES += $$PWD/lib/libfo76utils/src/matcomps.cpp
+    SOURCES += $$PWD/lib/libfo76utils/src/mat_dump.cpp
+    SOURCES += $$PWD/lib/libfo76utils/src/material.cpp
+    # SOURCES += $$PWD/lib/libfo76utils/src/sdlvideo.cpp
+    # SOURCES += $$PWD/lib/libfo76utils/src/stringdb.cpp
+    # SOURCES += $$PWD/lib/libfo76utils/src/viewrtbl.cpp
+    SOURCES += $$PWD/lib/libfo76utils/src/zlib.cpp
 }
 
 ###############################

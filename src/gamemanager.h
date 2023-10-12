@@ -9,6 +9,7 @@
 #include <QStringBuilder>
 #include <QMutex>
 
+#include "material.hpp"
 
 class FSArchiveHandler;
 class FSArchiveFile;
