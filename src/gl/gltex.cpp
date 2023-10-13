@@ -165,121 +165,26 @@ QString TexCache::find( const QString & file, const QString & nifdir, QByteArray
 {
 	if ( file.isEmpty() )
 		return QString();
-
-	if ( QFile( file ).exists() )
+	if ( file.startsWith("#") && (file.length() == 9 || file.length() == 10) )
 		return file;
 
 	QSettings settings;
 
-	QString filename = QDir::toNativeSeparators( file );
+	QString filename( file );
 
 	QStringList extensions;
 	extensions << ".dds";
-	bool replaceExt = false;
 
 	bool textureAlternatives = settings.value( "Settings/Resources/Alternate Extensions", false ).toBool();
-	if ( textureAlternatives ) {
+	if ( textureAlternatives )
 		extensions << ".tga" << ".png" << ".bmp" << ".nif" << ".texcache";
-		for ( const QString ext : QStringList{ extensions } )
-		{
-			if ( filename.endsWith( ext, Qt::CaseInsensitive ) ) {
-				extensions.removeAll( ext );
-				extensions.prepend( ext );
-				filename = filename.left( filename.length() - ext.length() );
-				replaceExt = true;
-				break;
-			}
-		}
-	}
 
-	// attempt to find the texture in one of the folders
-	QDir dir;
+	// attempt to find the texture with one of the extensions
 	for ( const QString& ext : extensions ) {
-		if ( replaceExt ) {
-			filename += ext;
-		}
-
-		auto appdir = QDir::currentPath();
-		
-		// First search NIF root
-		dir.setPath( nifdir );
-		if ( dir.exists( filename ) ) {
-			return dir.filePath( filename );
-		}
-
-		// Next search NifSkope dir
-		dir.setPath( appdir );
-		if ( dir.exists( filename ) ) {
-			return dir.filePath( filename );
-		}
-
-		for ( QString folder : Game::GameManager::folders(game) ) {
-			// TODO: Always search nifdir without requiring a relative entry
-			// in folders?  Not too intuitive to require ".\" in your texture folder list
-			// even if it is added by default.
-			if ( folder.startsWith( "./" ) || folder.startsWith( ".\\" ) ) {
-				folder = nifdir + "/" + folder;
-			}
-
-			dir.setPath( folder );
-
-			if ( dir.exists( filename ) ) {
-				filename = dir.filePath( filename );
-				filename = QDir::toNativeSeparators( filename );
-				return filename;
-			}
-		}
-
-		// Search through archives last, and load any requested textures into memory.
-		for ( FSArchiveFile * archive : Game::GameManager::opened_archives(game) ) {
-			if ( archive ) {
-				filename = QDir::fromNativeSeparators( filename.toLower() );
-				if ( archive->hasFile( filename ) ) {
-					QByteArray outData;
-					archive->fileContents( filename, outData );
-
-					if ( !outData.isEmpty() ) {
-						data = outData;
-						filename = QDir::toNativeSeparators( filename );
-						return filename;
-					}
-				}
-			}
-		}
-
-		// For Skyrim and FO4 which occasionally leave the textures off
-		if ( !filename.startsWith( "textures", Qt::CaseInsensitive ) ) {
-			QRegularExpression re( "textures[\\\\/]", QRegularExpression::CaseInsensitiveOption );
-			int texIdx = filename.indexOf( re );
-			if ( texIdx > 0 ) {
-				filename.remove( 0, texIdx );
-			} else {
-				while ( filename.startsWith( "/" ) || filename.startsWith( "\\" ) )
-					filename.remove( 0, 1 );
-
-				if ( !filename.startsWith( "textures", Qt::CaseInsensitive ) && !filename.startsWith( "shaders", Qt::CaseInsensitive ) )
-					filename.prepend( "textures\\" );
-			}
-
-			return find( filename, nifdir, data, game );
-		}
-
-		if ( !replaceExt )
-			break;
-
-		// Remove file extension
-		filename = filename.left( filename.length() - ext.length() );
+		QString	fullPath(Game::GameManager::find_file(game, filename, "textures", ext.toStdString().c_str()));
+		if (!fullPath.isEmpty())
+			return fullPath;
 	}
-
-	bool searchFallback = settings.value("Settings/Resources/Other Games Fallback", true).toBool();
-	if ( searchFallback && game != Game::OTHER )
-		return find(file, nifdir, data, Game::OTHER);
-
-	// Fix separators
-	filename = QDir::toNativeSeparators( filename );
-
-	if ( replaceExt )
-		return filename + extensions.value( 0 ); // Restore original file extension
 
 	return filename;
 }
@@ -373,6 +278,7 @@ int TexCache::bind( const QString & fname, Game::GameMode game )
 		tx->data = QByteArray();
 		tx->mipmaps = 0;
 		tx->reload  = false;
+		tx->game = game;
 
 		textures.insert( tx->filename, tx );
 
@@ -422,12 +328,13 @@ int TexCache::bind( const QModelIndex & iSource, Game::GameMode game )
 					tx = new Tex();
 					tx->id = 0;
 					tx->reload = false;
+					tx->game = game;
 					try
 					{
 						glGenTextures( 1, &tx->id );
 						glBindTexture( GL_TEXTURE_2D, tx->id );
 						embedTextures.insert( iData, tx );
-						texLoad( iData, tx->format, tx->target, tx->width, tx->height, tx->mipmaps, tx->id );
+						texLoad( game, iData, tx->format, tx->target, tx->width, tx->height, tx->mipmaps, tx->id );
 					}
 					catch ( QString & e ) {
 						tx->status = e;
@@ -555,7 +462,7 @@ void TexCache::Tex::load()
 
 	try
 	{
-		texLoad( filepath, format, target, width, height, mipmaps, data, id );
+		texLoad( game, filepath, format, target, width, height, mipmaps, data, id );
 	}
 	catch ( QString & e )
 	{
@@ -565,7 +472,7 @@ void TexCache::Tex::load()
 
 bool TexCache::Tex::saveAsFile( const QModelIndex & index, QString & savepath )
 {
-	texLoad( index, format, target, width, height, mipmaps, id );
+	texLoad( game, index, format, target, width, height, mipmaps, id );
 
 	if ( savepath.toLower().endsWith( ".tga" ) ) {
 		return texSaveTGA( index, savepath, width, height );
@@ -579,5 +486,5 @@ bool TexCache::Tex::savePixelData( NifModel * nif, const QModelIndex & iSource, 
 	Q_UNUSED( iSource );
 	// gltexloaders function goes here
 	//qDebug() << "TexCache::Tex:savePixelData: Packing" << iSource << "from file" << filepath << "to" << iData;
-	return texSaveNIF( nif, filepath, iData );
+	return texSaveNIF( game, nif, filepath, iData );
 }

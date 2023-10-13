@@ -479,7 +479,7 @@ QString Renderer::setupProgram( Shape * mesh, const QString & hint )
 	mesh->activeProperties( props );
 
 	auto nif = NifModel::fromValidIndex(mesh->index());
-	if ( !shader_ready 
+	if ( !shader_ready
 		 || hint.isNull()
 		 || mesh->scene->hasOption(Scene::DisableShaders)
 		 || mesh->scene->hasVisMode(Scene::VisSilhouette)
@@ -572,8 +572,8 @@ bool Renderer::Program::uniSampler( BSShaderLightingProperty * bsprop, UniformTy
 		if ( fname.isEmpty() )
 			fname = alternate;
 
-		if ( !fname.isEmpty() && (!activateTextureUnit( texunit ) 
-								   || !(bsprop->bind( textureSlot, fname, TexClampMode(clamp) ) 
+		if ( !fname.isEmpty() && (!activateTextureUnit( texunit )
+										|| !(bsprop->bind( textureSlot, fname, TexClampMode(clamp) )
 										|| bsprop->bind( textureSlot, alternate, TexClampMode(3) ))) )
 			return uniSamplerBlank( var, texunit );
 
@@ -601,14 +601,17 @@ bool Renderer::Program::uniSamplerBlank( UniformType var, int & texunit )
 	return true;
 }
 
-static QString white = "shaders/white.dds";
-static QString black = "shaders/black.dds";
-static QString lighting = "shaders/lighting.dds";
-static QString gray = "shaders/gray.dds";
-static QString magenta = "shaders/magenta.dds";
-static QString default_n = "shaders/default_n.dds";
-static QString default_ns = "shaders/default_ns.dds";
-static QString cube = "shaders/cubemap.dds";
+static QString white = "#FFFFFFFF";
+static QString black = "#FF000000";
+static QString lighting = "#FF00F040";
+static QString reflectivity = "#FF0A0A0A";
+static QString gray = "#FF808080s";
+static QString magenta = "#FFFF00FF";
+static QString default_n = "#FFFF8080";
+static QString default_ns = "#7F7F0000";
+static QString cube_sk = "textures/cubemaps/bleakfallscube_e.dds";
+static QString cube_fo4_76 = "textures/shared/cubemaps/mipblur_defaultoutside1.dds";
+static QString cube_sf = "textures/cubemaps/cell_cityplazacube.dds";
 
 bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & props,
 							 const QVector<QModelIndex> & iBlocks, bool eval )
@@ -782,7 +785,7 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 			prog->uni1f( GLOW_MULT, lsp->emissiveMult );
 		else
 			prog->uni1f( GLOW_MULT, 0 );
-		
+
 		prog->uni1i( HAS_EMIT, lsp->hasEmittance );
 		prog->uni1i( HAS_MAP_GLOW, lsp->hasGlowMap );
 		prog->uni3f( GLOW_COLOR, lsp->emissiveColor.red(), lsp->emissiveColor.green(), lsp->emissiveColor.blue() );
@@ -836,7 +839,10 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 		// Always bind cube regardless of shader settings
 		GLint uniCubeMap = prog->uniformLocations[SAMP_CUBE];
 		if ( uniCubeMap >= 0 ) {
-			QString fname = bsprop->fileName( 4 );
+			QString	fname;
+			QString	cube = (nifVersion < 128 ? cube_sk : (nifVersion < 160 ? cube_fo4_76 : cube_sf));
+			if ( nifVersion < 160 )
+				fname = bsprop->fileName( 4 );
 			if ( fname.isEmpty() )
 				fname = cube;
 
@@ -850,7 +856,7 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 		prog->uniSampler( bsprop, SAMP_ENV_MASK, 5, texunit, white, clamp );
 
 		if ( nifVersion >= 151 ) {
-			prog->uniSampler( bsprop, SAMP_REFLECTIVITY, 8, texunit, black, clamp );
+			prog->uniSampler( bsprop, SAMP_REFLECTIVITY, 8, texunit, reflectivity, clamp );
 			prog->uniSampler( bsprop, SAMP_LIGHTING, 9, texunit, lighting, clamp );
 		}
 
@@ -921,6 +927,7 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 			GLint uniCubeMap = prog->uniformLocations[SAMP_CUBE];
 			if ( uniCubeMap >= 0 ) {
 				QString fname = bsprop->fileName( 2 );
+				QString	cube = (nifVersion < 128 ? cube_sk : (nifVersion < 160 ? cube_fo4_76 : cube_sf));
 				if ( fname.isEmpty() )
 					fname = cube;
 
@@ -933,7 +940,7 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 			}
 			prog->uniSampler( bsprop, SAMP_SPECULAR, 4, texunit, white, clamp );
 			if ( nifVersion >= 151 ) {
-				prog->uniSampler( bsprop, SAMP_REFLECTIVITY, 6, texunit, black, clamp );
+				prog->uniSampler( bsprop, SAMP_REFLECTIVITY, 6, texunit, reflectivity, clamp );
 				prog->uniSampler( bsprop, SAMP_LIGHTING, 7, texunit, lighting, clamp );
 			}
 
@@ -1011,7 +1018,7 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 	// setup blending
 
 	glProperty( mesh->alphaProperty );
-	
+
 	if ( mat && scene->hasOption(Scene::DoBlending) ) {
 		static const GLenum blendMap[11] = {
 			GL_ONE, GL_ZERO, GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR,
@@ -1048,7 +1055,7 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 		// setup vertex colors
 
 		//glProperty( props.get< VertexColorProperty >(), glIsEnabled( GL_COLOR_ARRAY ) );
-		
+
 		// setup material
 
 		glProperty( props.get<MaterialProperty>(), props.get<SpecularProperty>() );

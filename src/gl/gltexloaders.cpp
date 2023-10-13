@@ -623,7 +623,7 @@ GLuint texLoadBMP( QIODevice & f, QString & texformat, GLenum & target, GLuint &
 	return 0;
 }
 
-GLuint texLoadDDS( const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint & id )
+GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint & id )
 {
 	GLuint result = 0;
 	gli::texture texture;
@@ -643,9 +643,8 @@ GLuint texLoadDDS( const QString & filepath, QString & format, GLenum & target, 
 	} else {
 		mipmaps = 0;
 		QString file = filepath;
-		file.replace( '/', "\\" );
 		Message::append( "One or more textures failed to load.",
-						 QString( "'%1' is corrupt or unsupported." ).arg( file )
+							QString( "'%1' is corrupt or unsupported." ).arg( file )
 		);
 	}
 
@@ -656,10 +655,10 @@ GLuint texLoadDDS( const QString & filepath, QString & format, GLenum & target, 
 }
 
 // (public function, documented in gltexloaders.h)
-bool texLoad( const QModelIndex & iData, QString & texformat, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint & id )
+bool texLoad( const Game::GameMode game, const QModelIndex & iData, QString & texformat, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint & id )
 {
 	bool ok = false;
-	
+
 	auto nif = NifModel::fromValidIndex(iData);
 	if ( nif ) {
 		mipmaps = nif->get<uint>( iData, "Num Mipmaps" );
@@ -807,8 +806,8 @@ bool texLoad( const QModelIndex & iData, QString & texformat, GLenum & target, G
 			buf.buffer().prepend( QByteArray::fromRawData( dds, sizeof( hdr ) ) );
 			buf.buffer().prepend( QByteArray::fromStdString( "DDS " ) );
 
-			mipmaps = texLoadDDS( QString( "[%1] NiPixelData" ).arg( nif->getBlockNumber( iData ) ), 
-								  texformat, target, width, height, mipmaps, buf.buffer(), id );
+			mipmaps = texLoadDDS( game, QString( "[%1] NiPixelData" ).arg( nif->getBlockNumber( iData ) ),
+									texformat, target, width, height, mipmaps, buf.buffer(), id );
 
 			ok = (mipmaps > 0);
 		}
@@ -818,7 +817,7 @@ bool texLoad( const QModelIndex & iData, QString & texformat, GLenum & target, G
 }
 
 //! Load NiPixelData or NiPersistentSrcTextureRendererData from a NifModel
-GLuint texLoadNIF( QIODevice & f, QString & texformat, GLenum & target, GLuint & width, GLuint & height, GLuint & id )
+GLuint texLoadNIF( const Game::GameMode game, QIODevice & f, QString & texformat, GLenum & target, GLuint & width, GLuint & height, GLuint & id )
 {
 	GLuint mipmaps = 0;
 	target = GL_TEXTURE_2D;
@@ -838,7 +837,7 @@ GLuint texLoadNIF( QIODevice & f, QString & texformat, GLenum & target, GLuint &
 		if ( !iData.isValid() || iData == QModelIndex() )
 			throw QString( "this is not a normal .nif file; there should be only pixel data as root blocks" );
 
-		texLoad( iData, texformat, target, width, height, mipmaps, id );
+		texLoad( game, iData, texformat, target, width, height, mipmaps, id );
 	}
 
 	return mipmaps;
@@ -960,7 +959,7 @@ GLuint GLI_create_texture_fallback( gli::texture& texture, GLenum & target, GLui
 		case gli::TARGET_CUBE:
 			if ( gli::is_compressed( texture.format() ) )
 				glCompressedTexImage2D(
-					gli::is_target_cube( texture.target() ) ? static_cast<GLenum>(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face) 
+					gli::is_target_cube( texture.target() ) ? static_cast<GLenum>(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face)
 					: target,
 					static_cast<GLint>(level),
 					fmt.Internal,
@@ -1113,24 +1112,37 @@ gli::texture load_if_valid( const char * data, unsigned int size )
 }
 
 
-bool texLoad( const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint & id)
+bool texLoad( const Game::GameMode game, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint & id)
 {
-	return texLoad( filepath, format, target, width, height, mipmaps, *(new QByteArray()), id );
+	return texLoad( game, filepath, format, target, width, height, mipmaps, *(new QByteArray()), id );
 }
 
-bool texLoad( const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint & id )
+bool texLoad( const Game::GameMode game, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint & id )
 {
 	width = height = mipmaps = 0;
 
+	std::string	filepathStr = filepath.toStdString();
 	if ( data.isEmpty() ) {
-		QFile tmpF( filepath );
-
-		if ( !tmpF.open( QIODevice::ReadOnly ) )
+		if (filepathStr.starts_with('#') && (filepathStr.length() == 9 || filepathStr.length() == 10)) {
+			// generate 1x1 texture from an RGBA color in "#AABBGGRR" format
+			std::uint32_t	c = 0;
+			for (size_t i = 1; i < 9; i++) {
+				std::uint32_t	b = std::uint32_t(filepathStr[i]);
+				c = (c << 4) | (((b & 0x10) ? b : (b + 9)) & 0x0F);
+			}
+			width = 1;
+			height = 1;
+			mipmaps = 1;
+			format = (filepathStr.length() < 10 ? "R8G8B8A8_UNORM" : "R8G8B8A8_SRGB");
+			target = GL_TEXTURE_2D;
+			glBindTexture( target, id );
+			glPixelStorei( GL_UNPACK_ALIGNMENT, 4 );
+			glPixelStorei( GL_UNPACK_SWAP_BYTES, GL_TRUE );
+			glTexImage2D( target, 0, (filepathStr.length() < 10 ? GL_RGBA8 : GL_SRGB8_ALPHA8), 1, 1, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, &c );
+			return true;
+		} else if (!Game::GameManager::get_file(data, game, filepath, "textures", "")) {
 			throw QString( "could not open file" );
-
-		data = tmpF.readAll();
-
-		tmpF.close();
+		}
 
 		if ( data.isEmpty() )
 			return false;
@@ -1141,17 +1153,21 @@ bool texLoad( const QString & filepath, QString & format, GLenum & target, GLuin
 		throw QString( "could not open buffer" );
 
 	bool isSupported = true;
-	if ( filepath.endsWith( ".dds", Qt::CaseInsensitive ) )
-		mipmaps = texLoadDDS( filepath, format, target, width, height, mipmaps, data, id );
-	else if ( filepath.endsWith( ".tga", Qt::CaseInsensitive ) )
+	if ( filepath.endsWith( ".dds", Qt::CaseInsensitive ) ) {
+		if ( filepathStr.find("/cubemaps/") != std::string::npos && data.size() >= 148 ) {
+			data[108] = data[108] | 0x08;	// DDSCAPS_COMPLEX
+			data[113] = data[113] | 0xFE;	// DDSCAPS2_CUBEMAP*
+		}
+		mipmaps = texLoadDDS( game, filepath, format, target, width, height, mipmaps, data, id );
+	} else if ( filepath.endsWith( ".tga", Qt::CaseInsensitive ) )
 		mipmaps = texLoadTGA( f, format, target, width, height, id );
 	else if ( filepath.endsWith( ".bmp", Qt::CaseInsensitive ) )
 		mipmaps = texLoadBMP( f, format, target, width, height, id );
 	else if ( filepath.endsWith( ".nif", Qt::CaseInsensitive ) || filepath.endsWith( ".texcache", Qt::CaseInsensitive ) )
-		mipmaps = texLoadNIF( f, format, target, width, height, id );
+		mipmaps = texLoadNIF( game, f, format, target, width, height, id );
 	else
 		isSupported = false;
-	
+
 	f.close();
 	data.clear();
 
@@ -1175,9 +1191,8 @@ bool texLoad( const QString & filepath, QString & format, GLenum & target, GLuin
 	// Power of Two check
 	if ( (width & (width - 1)) || (height & (height - 1)) ) {
 		QString file = filepath;
-		file.replace( '/', "\\" );
 		Message::append( "One or more texture dimensions are not a power of two.",
-						 QString( "'%1' is %2 x %3." ).arg( file ).arg( width ).arg( height )
+							QString( "'%1' is %2 x %3." ).arg( file ).arg( width ).arg( height )
 		);
 	}
 
@@ -1187,10 +1202,11 @@ bool texLoad( const QString & filepath, QString & format, GLenum & target, GLuin
 bool texIsSupported( const QString & filepath )
 {
 	return (filepath.endsWith( ".dds", Qt::CaseInsensitive )
-			 || filepath.endsWith( ".tga", Qt::CaseInsensitive )
-			 || filepath.endsWith( ".bmp", Qt::CaseInsensitive )
-			 || filepath.endsWith( ".nif", Qt::CaseInsensitive )
-			 || filepath.endsWith( ".texcache", Qt::CaseInsensitive )
+					|| filepath.startsWith( "#" ) && ( filepath.length() == 9 || filepath.length() == 10 )
+					|| filepath.endsWith( ".tga", Qt::CaseInsensitive )
+					|| filepath.endsWith( ".bmp", Qt::CaseInsensitive )
+					|| filepath.endsWith( ".nif", Qt::CaseInsensitive )
+					|| filepath.endsWith( ".texcache", Qt::CaseInsensitive )
 	);
 }
 
@@ -1263,9 +1279,9 @@ bool texSaveDDS( const QModelIndex & index, const QString & filepath, const GLui
 
 	// header flags
 	header[pos++] = ( 1 << 0 )                       // caps = 1
-	                | ( 1 << 1 )                     // height = 1
-	                | ( 1 << 2 )                     // width = 1
-	                | ( (compressed ? 0 : 1) << 3 ); // pitch, and 4 bits reserved
+									| ( 1 << 1 )                     // height = 1
+									| ( 1 << 2 )                     // width = 1
+									| ( (compressed ? 0 : 1) << 3 ); // pitch, and 4 bits reserved
 
 	header[pos++] = ( 1 << 4 );                      // 4 bits reserved, pixelformat = 1, 3 bits reserved
 
@@ -1274,7 +1290,7 @@ bool texSaveDDS( const QModelIndex & index, const QString & filepath, const GLui
 	bool hasMipMaps = ( mipmaps > 1 );
 
 	header[pos++] = ( (hasMipMaps ? 1 : 0) << 1 )    // 1 bit reserved, mipmapcount
-	                | ( (compressed ? 1 : 0) << 3 ); // 1 bit reserved, linearsize, 3 bits reserved, depth = 0
+									| ( (compressed ? 1 : 0) << 3 ); // 1 bit reserved, linearsize, 3 bits reserved, depth = 0
 
 	pos++;
 
@@ -1331,9 +1347,9 @@ bool texSaveDDS( const QModelIndex & index, const QString & filepath, const GLui
 	// pixel format flags
 	bool alphapixels = (format == 1 );             //|| format == 5 || format == 6);
 	header[pos] = ( (alphapixels ? 1 : 0) << 0 )   // alpha pixels
-	              | ( (alphapixels ? 1 : 0) << 1 ) // alpha
-	              | ( (compressed ? 1 : 0) << 2 )  // fourcc
-	              | ( (compressed ? 0 : 1) << 6 ); // rgb
+								| ( (alphapixels ? 1 : 0) << 1 ) // alpha
+								| ( (compressed ? 1 : 0) << 2 )  // fourcc
+								| ( (compressed ? 0 : 1) << 6 ); // rgb
 	pos += 4;
 
 	// pixel format fourcc
@@ -1425,7 +1441,7 @@ bool texSaveDDS( const QModelIndex & index, const QString & filepath, const GLui
 	/*
 	if ( alphapixels )
 	{
-	    mask[3] = 0xff000000;
+		mask[3] = 0xff000000;
 	}*/
 
 	// red mask
@@ -1490,10 +1506,10 @@ bool texSaveTGA( const QModelIndex & index, const QString & filepath, const GLui
 	// It also won't work with DXT compressed or palletised textures
 	/*
 	if( nif->get<quint32>( index, "Pixel Format" ) == 0 ) {
-	    glGetTexImage( GL_TEXTURE_2D, 0, GL_BGR, GL_UNSIGNED_BYTE, data );
+		glGetTexImage( GL_TEXTURE_2D, 0, GL_BGR, GL_UNSIGNED_BYTE, data );
 	}
 	else if( nif->get<quint32>( index, "Pixel Format") == 1 ) {
-	    glGetTexImage( GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, data );
+		glGetTexImage( GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, data );
 	}*/
 
 	glGetTexImage( GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixl );
@@ -1501,10 +1517,10 @@ bool texSaveTGA( const QModelIndex & index, const QString & filepath, const GLui
 	//quint32 mask[4] = { 0x00000000, 0x00000000, 0x00000000, 0x00000000 };
 	/*
 	if ( nif->getVersionNumber() < 0x14000004 ) {
-	    mask[0] = nif->get<uint>(index, "Blue Mask");
-	    mask[1] = nif->get<uint>(index, "Green Mask");
-	    mask[2] = nif->get<uint>(index, "Red Mask");
-	    mask[3] = nif->get<uint>(index, "Alpha Mask");
+		mask[0] = nif->get<uint>(index, "Blue Mask");
+		mask[1] = nif->get<uint>(index, "Green Mask");
+		mask[2] = nif->get<uint>(index, "Red Mask");
+		mask[3] = nif->get<uint>(index, "Alpha Mask");
 	}
 	*/
 
@@ -1578,7 +1594,7 @@ bool texSaveTGA( const QModelIndex & index, const QString & filepath, const GLui
 }
 
 
-bool texSaveNIF( NifModel * nif, const QString & filepath, QModelIndex & iData )
+bool texSaveNIF( const Game::GameMode game, NifModel * nif, const QString & filepath, QModelIndex & iData )
 {
 	// Work out the extension and format
 	// If DDS raw, DXT1 or DXT5, copy directly from texture
@@ -1660,8 +1676,8 @@ bool texSaveNIF( NifModel * nif, const QString & filepath, QModelIndex & iData )
 		// ignore palette for now; what uses these? theoretically they don't exist past 4.2.2.0
 
 /*
-        <add name="Palette" type="Ref" template="NiPalette">Link to NiPalette, for 8-bit textures.</add>
-    </niobject>
+		<add name="Palette" type="Ref" template="NiPalette">Link to NiPalette, for 8-bit textures.</add>
+		</niobject>
 */
 
 		nif->set<quint32>( iData, "Num Mipmaps", pix.get<quint32>( iPixData, "Num Mipmaps" ) );
@@ -1697,7 +1713,7 @@ bool texSaveNIF( NifModel * nif, const QString & filepath, QModelIndex & iData )
 		QString format;
 
 		// fastest way to get parameters and ensure texture is active
-		if ( texLoad( filepath, format, target, width, height, mipmaps, id ) ) {
+		if ( texLoad( game, filepath, format, target, width, height, mipmaps, id ) ) {
 			//qDebug() << "Width" << width << "height" << height << "mipmaps" << mipmaps << "format" << format;
 		} else {
 			qCCritical( nsIo ) << QObject::tr( "Error importing %1" ).arg( filepath );
@@ -1969,7 +1985,7 @@ bool texSaveNIF( NifModel * nif, const QString & filepath, QModelIndex & iData )
 		QByteArray result = nif->get<QByteArray>( iFaceData, "Pixel Data" );
 		for ( int i = 0; i < 16; i++ )
 		{
-		    qDebug() << "Comparing byte " << i << ": result " << (quint8)result[i] << ", original " << (quint8)ddsData[i];
+			qDebug() << "Comparing byte " << i << ": result " << (quint8)result[i] << ", original " << (quint8)ddsData[i];
 		}
 		*/
 

@@ -84,6 +84,7 @@ class TexCache final : public QObject
 		QString format;
 		//! Status messages
 		QString status;
+		Game::GameMode	game = Game::OTHER;
 
 		//! Load the texture
 		void load();

@@ -37,6 +37,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pragma warning(push, 0)
 #endif
 
+#include "gamemanager.h"
 #include <gli.hpp>
 
 #ifdef _MSC_VER
@@ -76,8 +77,8 @@ extern gli::texture load_if_valid( const char * data, unsigned int size );
  * @param mipmaps	Contains the number of mipmaps on successful load.
  * @return			True if the load was successful, false otherwise.
  */
-extern bool texLoad( const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint & id );
-extern bool texLoad( const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint & id );
+extern bool texLoad( const Game::GameMode game, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint & id );
+extern bool texLoad( const Game::GameMode game, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint & id );
 
 /*! A function for loading textures.
  *
@@ -93,7 +94,7 @@ extern bool texLoad( const QString & filepath, QString & format, GLenum & target
  * @param mipmaps	Contains the number of mipmaps on successful load.
  * @return			True if the load was successful, false otherwise.
  */
-extern bool texLoad( const QModelIndex & iData, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint & id );
+extern bool texLoad( const Game::GameMode game, const QModelIndex & iData, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint & id );
 
 /*! A function which checks whether the given file can be loaded.
  *
@@ -139,6 +140,6 @@ bool texSaveTGA( const QModelIndex & index, const QString & filepath, const GLui
  * @param filepath	The source texture to convert
  * @param iData		The pixel data to write
  */
-bool texSaveNIF( class NifModel * nif, const QString & filepath, QModelIndex & iData );
+bool texSaveNIF( const Game::GameMode game, class NifModel * nif, const QString & filepath, QModelIndex & iData );
 
 #endif
