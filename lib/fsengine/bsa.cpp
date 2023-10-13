@@ -34,6 +34,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "dds.h"
 #include "zlib/zlib.h"
 #include "lz4frame.h"
+#include "zlib.hpp"
 
 #include <QByteArray>
 #include <QDateTime>
@@ -664,10 +665,19 @@ bool BSA::fileContents( const QString & fn, QByteArray & content )
 							if ( chunk.packedSize > 0 ) {
 								chunkData.resize( chunk.packedSize );
 								if ( bsa.read( chunkData.data(), chunk.packedSize ) == chunk.packedSize ) {
-									chunkData = gUncompress( chunkData, chunk.packedSize );
-
-									if ( chunkData.size() != chunk.unpackedSize )
-										qCritical() << "Size does not match at " << chunk.offset;
+									if ( version == SF_BSAHEADER_VERSION3 ) {
+										std::vector< unsigned char >	chunkDataTmp;
+										chunkDataTmp.resize( chunk.unpackedSize );
+										chunkData.resize( chunk.unpackedSize );
+										if ( ZLibDecompressor::decompressLZ4Raw( chunkDataTmp.data(), chunk.unpackedSize, reinterpret_cast< const unsigned char * >(chunkData.constData()), chunk.packedSize ) != chunk.unpackedSize )
+											qCritical() << "Size does not match at " << chunk.offset;
+										else
+											std::memcpy( chunkData.data(), chunkDataTmp.data(), chunk.unpackedSize );
+									} else {
+										chunkData = gUncompress( chunkData, chunk.packedSize );
+										if ( chunkData.size() != chunk.unpackedSize )
+											qCritical() << "Size does not match at " << chunk.offset;
+									}
 								}
 							} else if ( !(bsa.read( chunkData.data(), chunk.unpackedSize ) == chunk.unpackedSize) ) {
 								qCritical() << "Size does not match at " << chunk.offset;
