@@ -11,6 +11,61 @@
 namespace Game
 {
 
+struct BA2Files {
+	std::map< GameMode, BA2File* >	archives;
+	~BA2Files();
+	const BA2File* operator[](GameMode game) const
+	{
+		std::map< GameMode, BA2File* >::const_iterator	i = archives.find(game);
+		if (i == archives.end())
+			return nullptr;
+		return i->second;
+	}
+	void open_folders(GameMode game, const QStringList& folders);
+	void close_archive(GameMode game);
+	void close_all();
+};
+
+BA2Files::~BA2Files()
+{
+	close_all();
+}
+
+void BA2Files::open_folders(GameMode game, const QStringList& folders)
+{
+	close_archive(game);
+	archives[game] = nullptr;
+	std::vector< std::string >	tmp;
+	for (const auto& s : folders) {
+		if (!s.isEmpty())
+			tmp.push_back(s.toStdString());
+	}
+	if (tmp.size() > 0)
+		archives[game] = new BA2File(tmp);
+}
+
+void BA2Files::close_archive(GameMode game)
+{
+	std::map< GameMode, BA2File* >::iterator	i = archives.find(game);
+	if (i != archives.end()) {
+		if (i->second)
+			delete i->second;
+		i->second = nullptr;
+	}
+}
+
+void BA2Files::close_all()
+{
+	for (std::map< GameMode, BA2File* >::iterator i = archives.begin(); i != archives.end(); i++)
+	{
+		if (i->second)
+			delete i->second;
+		i->second = nullptr;
+	}
+}
+
+static BA2Files	ba2Files;
+
 static const auto GAME_PATHS = QString("Game Paths");
 static const auto GAME_FOLDERS = QString("Game Folders");
 static const auto GAME_ARCHIVES = QString("Game Archives");
@@ -18,6 +73,9 @@ static const auto GAME_STATUS = QString("Game Status");
 static const auto GAME_MGR_VER = QString("Game Manager Version");
 
 static const QStringList ARCHIVE_EXT{"*.bsa", "*.ba2"};
+
+static CE2MaterialDB	starfield_materials;
+static bool	have_materials_cdb = false;
 
 QString registry_game_path( const QString& key )
 {
@@ -36,31 +94,10 @@ QString registry_game_path( const QString& key )
 	if ( data_path_dir.exists() )
 		return QDir::cleanPath(data_path);
 
+#else
+	(void) key;
 #endif
 	return {};
-}
-
-QStringList archives_list( const QString& path, const QString& data_dir, const QString& folder = {} )
-{
-	if ( path.isEmpty() )
-		return {};
-
-	QStringList list;
-	QDir path_dir(path);
-	if ( path_dir.exists(data_dir) )
-		path_dir.cd(data_dir);
-	for ( const auto& finfo : path_dir.entryInfoList(ARCHIVE_EXT, QDir::Files) )
-		list.append(finfo.absoluteFilePath());
-
-	if ( folder.isEmpty() )
-		return list;
-
-	// Remove the archives that do not contain this folder
-	QStringList list_filtered;
-	for ( const auto& f : list )
-		if ( GameManager::archive_contains_folder(f, folder) )
-			list_filtered.append( f );
-	return list_filtered;
 }
 
 QStringList existing_folders(GameMode game, QString path)
@@ -209,17 +246,6 @@ void GameManager::init_settings( int& manager_version, QProgressDialog* dlg ) co
 		paths.insert(game.name, game.path);
 		folders.insert(game.name, existing_folders(game.id, game.path));
 
-		// Filter and insert archives
-		QStringList filtered;
-		if ( game.id == FALLOUT_4 || game.id == FALLOUT_76 )
-			filtered.append(archives_list(game.path, DATA.value(game.id, {}), "materials"));
-		if ( game.id == STARFIELD )
-			filtered.append(archives_list(game.path, DATA.value(game.id, {}), "geometries"));
-		filtered.append(archives_list(game.path, DATA.value(game.id, {}), "textures"));
-		filtered.removeDuplicates();
-
-		archives.insert(game.name, filtered);
-
 		// Game Enabled Status
 		status.insert(game.name, !game.path.isEmpty());
 	}
@@ -252,35 +278,6 @@ void GameManager::update_settings( int& manager_version, QProgressDialog * dlg )
 	}
 
 	settings.setValue(GAME_MGR_VER, manager_version);
-}
-
-QList<FSArchiveFile*> GameManager::opened_archives( const GameMode game )
-{
-	if ( !status(game) )
-		return {};
-
-	QList<FSArchiveFile *> archives;
-	if ( game == FALLOUT_3NV ) {
-		for ( const auto& an : get()->handles.value(FALLOUT_3) )
-			archives.append(an->getArchive());
-		for ( const auto& an : get()->handles.value(FALLOUT_NV) )
-			archives.append(an->getArchive());
-	}
-	else {
-		for ( const auto& an : get()->handles.value(game) )
-			archives.append(an->getArchive());
-	}
-	return archives;
-}
-
-bool GameManager::archive_contains_folder( const QString& archive, const QString& folder )
-{
-	if ( BSA::canOpen(archive) ) {
-		auto bsa = std::make_unique<BSA>(archive);
-		if ( bsa && bsa->open() )
-			return bsa->getRootFolder()->children.contains(folder.toLower());
-	}
-	return false;
 }
 
 QString GameManager::path( const GameMode game )
@@ -318,6 +315,112 @@ bool GameManager::status(const GameMode game)
 	return get()->game_status.value(game, false);
 }
 
+std::string GameManager::get_full_path(const QString& name, const char* archive_folder, const char* extension)
+{
+	std::string	s = name.toLower().replace('\\', '/').toStdString();
+	if (archive_folder && *archive_folder) {
+		std::string	d("/");
+		d += archive_folder;
+		if (!d.ends_with('/'))
+			d += '/';
+		size_t	n = s.find(d);
+		if (n != std::string::npos)
+			s.erase(0, n + 1);
+		else if (!s.starts_with(d.c_str() + 1))
+			s.insert(0, d.c_str() + 1);
+	}
+	if (extension && *extension && !s.ends_with(extension)) {
+		size_t	n = s.rfind('.');
+		if (n != std::string::npos) {
+			size_t	d = s.rfind('/');
+			if (d == std::string::npos || d < n)
+				s.resize(n);
+		}
+		s += extension;
+	}
+	return s;
+}
+
+QString GameManager::find_file(const GameMode game, const QString& path, const char* archiveFolder, const char* extension)
+{
+	std::string	fullPath(get_full_path(path, archiveFolder, extension));
+	const BA2File*	ba2File = ba2Files[game];
+	if (!ba2File) {
+		try
+		{
+			ba2Files.open_folders(game, folders(game));
+			ba2File = ba2Files[game];
+		}
+		catch (...)
+		{
+		}
+		if (!ba2File) {
+			qWarning() << "Archive(s) not loaded for game " << STRING[game];
+			return QString();
+		}
+	}
+	if (ba2File->findFile(fullPath))
+		return QString::fromStdString(fullPath);
+	return QString();
+}
+
+bool GameManager::get_file(std::vector< unsigned char >& data, const GameMode game, const std::string& fullPath)
+{
+	const BA2File*	ba2File = ba2Files[game];
+	if (!ba2File) {
+		try
+		{
+			ba2Files.open_folders(game, folders(game));
+			ba2File = ba2Files[game];
+		}
+		catch (...)
+		{
+		}
+		if (!ba2File) {
+			qWarning() << "Archive(s) not loaded for game " << STRING[game];
+			return false;
+		}
+	}
+	if (!ba2File->findFile(fullPath)) {
+		qWarning() << "File '" << fullPath.c_str() << "' not found in archives";
+		return false;
+	}
+	ba2File->extractFile(data, fullPath);
+	return true;
+}
+
+bool GameManager::get_file(std::vector< unsigned char >& data, const GameMode game, const QString& path, const char* archiveFolder, const char* extension)
+{
+	std::string	fullPath(get_full_path(path, archiveFolder, extension));
+	return get_file(data, game, fullPath);
+}
+
+bool GameManager::get_file(QByteArray& data, const GameMode game, const QString& path, const char* archiveFolder, const char* extension)
+{
+	std::string	fullPath(get_full_path(path, archiveFolder, extension));
+	std::vector< unsigned char >	tmpData;
+	if (!get_file(tmpData, game, fullPath))
+		return false;
+	data.resize(tmpData.size());
+	std::memcpy(data.data(), tmpData.data(), tmpData.size());
+	return true;
+}
+
+const CE2MaterialDB* GameManager::materials(const GameMode game)
+{
+	if ( game == STARFIELD ) {
+		if (!have_materials_cdb && ba2Files[game]) {
+			std::vector< unsigned char >	cdb_data;
+			if (get_file(cdb_data, game, std::string("materials/materialsbeta.cdb")))
+				starfield_materials.loadCDBFile(cdb_data.data(), cdb_data.size());
+			have_materials_cdb = true;
+		}
+		if (have_materials_cdb)
+			return &starfield_materials;
+	}
+	return (CE2MaterialDB*) 0;
+}
+
 QStringList GameManager::find_folders(const GameMode game)
 {
 	return existing_folders(game, get()->game_paths.value(game, {}));
@@ -338,15 +441,8 @@ QStringList GameManager::find_archives( const GameMode game )
 
 QStringList GameManager::filter_archives( const QStringList& list, const QString& folder )
 {
-	if ( folder.isEmpty() )
-		return list;
-
-	QStringList filtered;
-	for ( auto f : list ) {
-		if ( archive_contains_folder(f, folder) )
-			filtered.append(f);
-	}
-	return filtered;
+	(void) folder;
+	return list;
 }
 
 void GameManager::save() const
@@ -355,7 +451,7 @@ void GameManager::save() const
 	QVariantMap paths, folders, archives, status;
 	for ( const auto& p : game_paths.toStdMap() )
 		paths.insert(StringForMode(p.first), p.second);
-	
+
 	for ( const auto& f : game_folders.toStdMap() )
 		folders.insert(StringForMode(f.first), f.second);
 
@@ -393,8 +489,8 @@ void GameManager::load_archives()
 	QMutexLocker locker(&mutex);
 	// Reset the currently open archive handles
 	handles.clear();
-	for ( const auto ar : game_archives.toStdMap() ) {
-		for ( const auto an : ar.second ) {
+	for ( const auto& ar : game_archives.toStdMap() ) {
+		for ( const auto& an : ar.second ) {
 			// Skip loading of archives for disabled games
 			if ( game_status.value(ar.first, false) == false )
 				continue;

@@ -9,6 +9,7 @@
 #include <QStringBuilder>
 #include <QMutex>
 
+#include "ba2file.hpp"
 #include "material.hpp"
 
 class FSArchiveHandler;
@@ -56,7 +57,7 @@ enum GameMode : int
 
 	// Not a physical game, exclude from NUM_GAMES count
 	// Fallout 3 and Fallout NV cannot be differentiated by version
-	FALLOUT_3NV, 
+	FALLOUT_3NV,
 };
 
 using GameMap = QMap<GameMode, QString>;
@@ -221,8 +222,8 @@ public:
 
 	static GameManager* get();
 
-	static QList <FSArchiveFile *> opened_archives(const GameMode game);
-	static bool archive_contains_folder(const QString& archive, const QString& folder);
+//	static QList <FSArchiveFile *> opened_archives(const GameMode game);
+//	static bool archive_contains_folder(const QString& archive, const QString& folder);
 
 	//! Game installation path
 	static QString path(const GameMode game);
@@ -234,6 +235,13 @@ public:
 	static QStringList archives(const GameMode game);
 	//! Game enabled status in the GameManager
 	static bool status(const GameMode game);
+
+	static std::string get_full_path(const QString& name, const char* archive_folder, const char* extension);
+	static QString find_file(const GameMode game, const QString& path, const char* archiveFolder, const char* extension);
+	static bool get_file(std::vector< unsigned char >& data, const GameMode game, const std::string& fullPath);
+	static bool get_file(std::vector< unsigned char >& data, const GameMode game, const QString& path, const char* archiveFolder, const char* extension);
+	static bool get_file(QByteArray& data, const GameMode game, const QString& path, const char* archiveFolder, const char* extension);
+	static const CE2MaterialDB* materials(const GameMode game);
 
 	//! Find applicable data folders at the game installation path
 	static QStringList find_folders(const GameMode game);
