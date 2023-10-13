@@ -326,7 +326,7 @@ public:
 		: parentModel( model ), parentItem( parent ) {}
 
 	NifItem( BaseModel * model, const NifData & data, NifItem * parent )
-		: parentModel( model ), itemData( data ), parentItem( parent ) {}
+		: itemData( data ), parentModel( model ), parentItem( parent ) {}
 
 	~NifItem()
 	{
