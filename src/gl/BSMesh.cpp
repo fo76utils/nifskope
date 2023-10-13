@@ -299,8 +299,8 @@ void BSMesh::updateData(const NifModel* nif)
 		transColors = mesh->colors;
 		hasVertexColors = !transColors.empty();
 		transNorms = mesh->normals;
-		transTangents = mesh->tangents;
-		transBitangents = mesh->bitangents;
+		transTangents = mesh->bitangents;
+		transBitangents = mesh->tangents;
 		weightsUNORM = mesh->weights;
 		gpuLODs = mesh->lods;
 
