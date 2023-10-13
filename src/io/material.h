@@ -63,9 +63,6 @@ public:
 protected:
 	bool openFile();
 	virtual bool readFile();
-	QByteArray find( QString path, Game::GameMode game );
-	QString toLocalPath( QString path ) const;
-
 
 	QStringList textureList;
 

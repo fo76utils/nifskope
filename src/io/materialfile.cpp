@@ -48,12 +48,8 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Material::Material( QString name, Game::GameMode game )
 {
-	localPath = toLocalPath( name.replace( "\\", "/" ) );
-	if ( localPath.startsWith( "data/", Qt::CaseInsensitive ) ) {
-		localPath.remove( 0, 5 );
-	}
-	data = find( localPath, game );
-
+	if (!name.isEmpty())
+		Game::GameManager::get_file(data, game, name, "materials", "");
 	fileExists = !data.isEmpty();
 }
 
@@ -106,55 +102,6 @@ bool Material::readFile()
 		in >> ucMaskWrites;
 
 	return in.status() == QDataStream::Ok;
-}
-
-QByteArray Material::find( QString path, Game::GameMode game )
-{
-	QSettings settings;
-
-	QString filename;
-	QDir dir;
-	for ( QString folder : Game::GameManager::folders(game) ) {
-		dir.setPath( folder );
-
-		if ( dir.exists( path ) ) {
-			filename = QDir::fromNativeSeparators( dir.filePath( path ) );
-
-			QFile f( filename );
-			if ( f.open( QIODevice::ReadOnly ) )
-				return f.readAll();
-		}
-	}
-
-	for ( FSArchiveFile * archive : Game::GameManager::opened_archives(game) ) {
-		if ( archive ) {
-			filename = QDir::fromNativeSeparators( path.toLower() );
-			if ( archive->hasFile( filename ) ) {
-				QByteArray outData;
-				archive->fileContents( filename, outData );
-
-				if ( !outData.isEmpty() ) {
-					return outData;
-				}
-			}
-		}
-	}
-
-	return QByteArray();
-}
-
-QString Material::toLocalPath( QString path ) const
-{
-	QFileInfo finfo( path );
-
-	QString p = path;
-	if ( finfo.isAbsolute() ) {
-		int idx = path.indexOf( "materials", 0, Qt::CaseInsensitive );
-
-		p = path.right( path.length() - idx );
-	}
-
-	return p;
 }
 
 bool Material::isValid() const
