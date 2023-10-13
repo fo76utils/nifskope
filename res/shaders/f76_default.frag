@@ -90,6 +90,35 @@ float LightingFuncGGX_REF0(float NdotL, float NdotH, float NdotV, float LdotH, f
 	return specular;
 }
 
+vec3 fresnel_n(float NdotV, vec3 f0)
+{
+	vec4	a = vec4(-1.14821728, 2.88290570, -2.73468842, 1.0);
+	float	f = ((a.r * NdotV + a.g) * NdotV + a.b) * NdotV + a.a;
+	return f0 + ((vec3(1.0) - f0) * f * f);
+}
+
+float fresnel_w(float NdotV)
+{
+	vec4	a = vec4(-1.30214688, 3.32294874, -2.87825095, 1.0);
+	float	f = ((a.r * NdotV + a.g) * NdotV + a.b) * NdotV + a.a;
+	return f * f;
+}
+
+vec3 fresnel_r(float NdotV, vec3 f0, float r)
+{
+	vec4	a7 = vec4(-46.17083701, 68.74246739, -30.81940082, 4.71893658);
+	vec4	a6 = vec4(223.01575965, -340.62859168, 148.74583666, -19.50419017);
+	vec4	a5 = vec4(-438.85219655, 686.93794385, -296.61404938, 33.58358064);
+	vec4	a4 = vec4(445.11796866, -715.92562804, 311.90860291, -31.69608504);
+	vec4	a3 = vec4(-238.97873321, 398.18372723, -180.61901689, 18.38409556);
+	vec4	a2 = vec4(59.14333584, -103.76723412, 51.62678633, -6.46862429);
+	vec4	a1 = vec4(-2.33005272, 4.00815577, -1.95860285, 0.24186313);
+	vec4	a0 = vec4(-1.04024587, 2.67572852, -2.62832432, 0.99366783);
+	vec4	a = ((((((a7 * r + a6) * r + a5) * r + a4) * r + a3) * r + a2) * r + a1) * r + a0;
+	float	f = ((a.r * NdotV + a.g) * NdotV + a.b) * NdotV + a.a;
+	return f0 + ((vec3(1.0) - f0) * f * f);
+}
+
 vec3 LightingFuncGGX_REF(float NdotL, float NdotH, float NdotV, float LdotH, float roughness, vec3 F0)
 {
 	float alpha = roughness * roughness;
@@ -99,9 +128,7 @@ vec3 LightingFuncGGX_REF(float NdotL, float NdotH, float NdotV, float LdotH, flo
 	float D = alphaSqr / (denom * denom);
 	// no pi because BRDF -> lighting
 	// F (Fresnel term)
-	float F_a = 1.0;
-	float F_b = pow(1.0 - LdotH, 5.0);
-	vec3 F = mix(vec3(F_b), vec3(F_a), F0);
+	vec3 F = fresnel_n(LdotH, F0);
 	// G (remapped hotness, see Unreal Shading)
 	float k = (alpha + 2 * roughness + 1) / 8.0;
 	float G = NdotL * NdotV / (mix(NdotL, 1, k) * mix(NdotV, 1, k));
@@ -190,14 +217,6 @@ float OrenNayarFull(vec3 L, vec3 V, vec3 N, float roughness, float NdotL)
 	return L1 + L2;
 }
 
-// Schlick's Fresnel approximation
-float fresnelSchlick(float VdotH, float F0)
-{
-	float base = 1.0 - VdotH;
-	float exp = pow(base, fresnelPower);
-	return clamp(exp + F0 * (1.0 - exp), 0.0, 1.0);
-}
-
 vec3 fresnelSchlickRoughness(float NdotV, vec3 F0, float roughness)
 {
 	return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - NdotV, 5.0);
@@ -253,7 +272,7 @@ void main(void)
 	float NdotL = dot(normal, L);
 	float NdotL0 = max(NdotL, FLT_EPSILON);
 	float NdotH = max(dot(normal, H), FLT_EPSILON);
-	float NdotV = max(dot(normal, V), FLT_EPSILON);
+	float NdotV = max(abs(dot(normal, V)), FLT_EPSILON);
 	float VdotH = max(dot(V, H), FLT_EPSILON);
 	float LdotH = max(dot(L, H), FLT_EPSILON);
 	float NdotNegL = max(dot(normal, -L), FLT_EPSILON);
@@ -281,11 +300,9 @@ void main(void)
 	} else if ( hasGlowMap ) {
 		emissive += glowMap.rgb * glowMult;
 	}
-
 	emissive *= lightingMap.a;
-	vec3	f0 = reflMap.rgb;
-	if ( f0.g == 0.0 && f0.b == 0.0 )
-		f0 = vec3(reflMap.r);
+
+	vec3	f0 = (reflMap.g == 0 && reflMap.b == 0) ? vec3(reflMap.r) : reflMap.rgb;
 	f0 = max(f0, vec3(0.02));
 
 	// Specular
@@ -305,15 +322,16 @@ void main(void)
 	vec3	ambient = A.rgb / 0.75;
 	if ( hasCubeMap ) {
 		refl = textureLod(CubeMap, reflectedWS, 8.0 - smoothness * 8.0).rgb;
-		refl *= envReflection * specStrength;
+		refl *= envReflection * specStrength * ao;
 		refl *= ambient;
 		ambient *= textureLod(CubeMap, reflectedWS, 8.0).rgb;
 	} else {
+		refl = vec3(0.05) * ambient * envReflection * specStrength * ao;
 		ambient *= 0.05;
 	}
-	vec3	f = fresnelSchlickRoughness(NdotV, f0, 1.0 - smoothness);
-	refl *= f * ao;
-	albedo *= (1.0 - f);
+	vec3	f = fresnel_r(NdotV, f0, roughness);
+	refl *= f;
+	albedo *= (vec3(1.0) - f);
 
 	//vec3 soft = vec3(0.0);
 	//float wrap = NdotL;
