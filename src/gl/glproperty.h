@@ -665,7 +665,7 @@ public:
 	bool bind( int id, const QString & fname = QString(), TexClampMode mode = TexClampMode::WRAP_S_WRAP_T );
 	bool bind( int id, const QVector<QVector<Vector2> > & texcoords );
 
-	bool bindCube( int id, const QString & fname = QString() );
+	bool bindCube( const QString & fname = QString() );
 
 	//! Checks if the params of the shader depend on data from block
 	bool isParamBlock( const QModelIndex & block ) { return ( block == iBlock || block == iTextureSet ); }

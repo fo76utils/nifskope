@@ -991,10 +991,8 @@ bool BSShaderLightingProperty::bind( int id, const QVector<QVector<Vector2> > & 
 	return false;
 }
 
-bool BSShaderLightingProperty::bindCube( int id, const QString & fname )
+bool BSShaderLightingProperty::bindCube( const QString & fname )
 {
-	Q_UNUSED( id );
-
 	GLuint result = 0;
 
 	if ( !fname.isEmpty() )
