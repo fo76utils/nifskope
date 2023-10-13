@@ -2,6 +2,7 @@
 
 #include "data/niftypes.h"
 #include "gl/gltools.h"
+#include "gamemanager.h"
 
 #include <QByteArray>
 #include <QDataStream>
@@ -16,7 +17,10 @@ class MeshFile
 public:
 	MeshFile(const QString& path);
 
-	static bool readBytes(const QString& path, QByteArray& data);
+	static inline bool readBytes(const QString& path, QByteArray& data)
+	{
+		return Game::GameManager::get_file(data, Game::STARFIELD, path, "geometries", ".mesh");
+	}
 
 	bool isValid();
 

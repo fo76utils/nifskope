@@ -31,35 +31,6 @@ MeshFile::MeshFile(const QString& filepath)
 	}
 }
 
-bool MeshFile::readBytes(const QString& path, QByteArray& data)
-{
-	QDir dir;
-	for ( QString folder : Game::GameManager::folders(Game::STARFIELD) ) {
-		dir.setPath(folder);
-		if ( dir.exists(path) ) {
-			QFile f(dir.absoluteFilePath(path));
-			if ( f.open(QIODevice::ReadOnly) ) {
-				data = f.readAll();
-				return true;
-			}
-		}
-	}
-
-	auto archives = Game::GameManager::opened_archives(Game::STARFIELD);
-	for ( FSArchiveFile* archive : archives ) {
-		if ( archive && archive->hasFolder("geometries") ) {
-			if ( archive->hasFile(path) ) {
-				if ( archive->fileContents(path, data) ) {
-					return true;
-				} else {
-					qWarning() << "Could not load:" << path;
-				}
-			}
-		}
-	}
-	return false;
-}
-
 bool MeshFile::isValid()
 {
 	return !data.isNull();
