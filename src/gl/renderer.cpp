@@ -480,11 +480,11 @@ QString Renderer::setupProgram( Shape * mesh, const QString & hint )
 
 	auto nif = NifModel::fromValidIndex(mesh->index());
 	if ( !shader_ready
-		 || hint.isNull()
-		 || mesh->scene->hasOption(Scene::DisableShaders)
-		 || mesh->scene->hasVisMode(Scene::VisSilhouette)
-		 || !nif
-		 || (nif->getBSVersion() == 0)
+			|| hint.isNull()
+			|| mesh->scene->hasOption(Scene::DisableShaders)
+			|| mesh->scene->hasVisMode(Scene::VisSilhouette)
+			|| !nif
+			|| (nif->getBSVersion() == 0)
 	) {
 		setupFixedFunction( mesh, props );
 		return {};
@@ -611,10 +611,14 @@ static QString default_n = "#FFFF8080";
 static QString default_ns = "#7F7F0000";
 static QString cube_sk = "textures/cubemaps/bleakfallscube_e.dds";
 static QString cube_fo4_76 = "textures/shared/cubemaps/mipblur_defaultoutside1.dds";
+#if 0
 static QString cube_sf = "textures/cubemaps/cell_cityplazacube.dds";
+#else
+static QString cube_sf = "textures/cubemaps/spaceglowcubemap.dds";
+#endif
 
 bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & props,
-							 const QVector<QModelIndex> & iBlocks, bool eval )
+								const QVector<QModelIndex> & iBlocks, bool eval )
 {
 	auto nif = NifModel::fromValidIndex( mesh->index() );
 	if ( !nif )
@@ -671,7 +675,7 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 		if ( scene->hasOption(Scene::DoErrorColor) && nifVersion < 172 ) // TODO: Hide error color until CDB reading
 			alt = magenta;
 
-		bool result = prog->uniSampler( bsprop, SAMP_BASE, 0, texunit, alt, clamp, forced );
+		prog->uniSampler( bsprop, SAMP_BASE, 0, texunit, alt, clamp, forced );
 	} else {
 		GLint uniBaseMap = prog->uniformLocations[SAMP_BASE];
 		if ( uniBaseMap >= 0 && (texprop || (bsprop && lsp)) ) {
@@ -713,7 +717,7 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 	}
 
 	if ( bsprop && !esp ) {
-		prog->uniSampler( bsprop, SAMP_GLOW, 2, texunit, black, clamp );
+		prog->uniSampler( bsprop, SAMP_GLOW, ( nifVersion < 160 ? 2 : 7 ), texunit, black, clamp );
 	} else if ( !bsprop ) {
 		GLint uniGlowMap = prog->uniformLocations[SAMP_GLOW];
 		if ( uniGlowMap >= 0 && texprop ) {
@@ -740,7 +744,51 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 	}
 
 	// BSLightingShaderProperty
-	if ( lsp ) {
+	if ( nifVersion >= 160 ) {
+		prog->uni1f( LIGHT_EFF1, 1.0f );
+		prog->uni1f( LIGHT_EFF2, 1.0f );
+		prog->uni1f( ALPHA, 1.0f );
+		prog->uni2f( UV_SCALE, 1.0f, 1.0f );
+		prog->uni2f( UV_OFFSET, 0.0f, 0.0f );
+		prog->uni4m( MAT_VIEW, mesh->viewTrans().toMatrix4() );
+		prog->uni4m( MAT_WORLD, mesh->worldTrans().toMatrix4() );
+		prog->uni1i( G2P_COLOR, 0.5f );
+		prog->uni1i( HAS_TINT_COLOR, 0 );
+		prog->uni1i( HAS_MAP_DETAIL, 0 );
+		prog->uni1i( HAS_MAP_TINT, 0 );
+		prog->uni1i( HAS_SOFT, 0 );
+		prog->uni1i( HAS_RIM, 0 );
+		prog->uni1i( HAS_MAP_BACK, 0 );
+		prog->uni1f( GLOW_MULT, 0.0f );
+		prog->uni1i( HAS_EMIT, 0 );
+		prog->uni1i( HAS_MAP_GLOW, 0 );
+		prog->uni3f( GLOW_COLOR, 0.0f, 0.0f, 0.0f );
+		prog->uni1f( SPEC_SCALE, 1.0f );
+		// Assure specular power does not break the shaders
+		prog->uni1f( SPEC_GLOSS, 1.0f );
+		prog->uni3f( SPEC_COLOR, 1.0f, 1.0f, 1.0f );
+		prog->uni1i( HAS_MAP_SPEC, 0 );
+		prog->uni1i( DOUBLE_SIDE, 0 );
+		prog->uni1f( G2P_SCALE, 0.5f );
+		prog->uni1f( SS_ROLLOFF, 1.0f );
+		prog->uni1f( POW_FRESNEL, 5.0f );
+		prog->uni1f( POW_RIM, 1.0f );
+		prog->uni1f( POW_BACK, 1.0f );
+		prog->uni1i( HAS_MAP_CUBE, 1 );
+		prog->uni1i( HAS_MASK_ENV, 0 );
+		prog->uni1f( ENV_REFLECTION, 1.0f );
+		// Always bind cube regardless of shader settings
+		GLint uniCubeMap = prog->uniformLocations[SAMP_CUBE];
+		if ( uniCubeMap >= 0 ) {
+			QString	fname = cube_sf;
+
+			if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( fname ) )
+				return false;
+
+			fn->glUniform1i( uniCubeMap, texunit++ );
+		}
+		prog->uni1i( HAS_MAP_HEIGHT, 0 );
+	} else if ( lsp ) {
 		prog->uni1f( LIGHT_EFF1, lsp->lightingEffect1 );
 		prog->uni1f( LIGHT_EFF2, lsp->lightingEffect2 );
 
@@ -846,8 +894,8 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 			if ( fname.isEmpty() )
 				fname = cube;
 
-			if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( 4, fname ) )
-				if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( 4, cube ) )
+			if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( fname ) )
+				if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( cube ) )
 					return false;
 
 			fn->glUniform1i( uniCubeMap, texunit++ );
@@ -855,7 +903,7 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 		// Always bind mask regardless of shader settings
 		prog->uniSampler( bsprop, SAMP_ENV_MASK, 5, texunit, white, clamp );
 
-		if ( nifVersion >= 151 ) {
+		if ( nifVersion >= 151 && nifVersion < 160 ) {
 			prog->uniSampler( bsprop, SAMP_REFLECTIVITY, 8, texunit, reflectivity, clamp );
 			prog->uniSampler( bsprop, SAMP_LIGHTING, 9, texunit, lighting, clamp );
 		}
@@ -931,8 +979,8 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 				if ( fname.isEmpty() )
 					fname = cube;
 
-				if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( 2, fname ) )
-					if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( 2, cube ) )
+				if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( fname ) )
+					if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( cube ) )
 						return false;
 
 
