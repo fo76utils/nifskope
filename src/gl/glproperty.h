@@ -35,6 +35,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "icontrollable.h" // Inherited
 #include "data/niftypes.h"
+#include "material.hpp"
 
 #include <QHash>
 #include <QPersistentModelIndex>
@@ -695,6 +696,7 @@ public:
 	TexClampMode clampMode = CLAMP_S_CLAMP_T;
 
 	Material * getMaterial() const { return material; }
+	const CE2Material * getSFMaterial() const { return sf_material; }
 
 protected:
 	ShaderFlags::SF1 flags1 = ShaderFlags::SLSF1_ZBuffer_Test;
@@ -705,7 +707,9 @@ protected:
 	QPersistentModelIndex iWetMaterial;
 
 	Material * material = nullptr;
+	const CE2Material * sf_material = nullptr;
 	void setMaterial( Material * newMaterial );
+	void setSFMaterial( const QString & mat_name );
 
 	void updateImpl( const NifModel * nif, const QModelIndex & block ) override;
 	virtual void resetParams();
@@ -772,6 +776,7 @@ protected:
 	void setController( const NifModel * nif, const QModelIndex & controller ) override final;
 	void updateImpl( const NifModel * nif, const QModelIndex & block ) override;
 	void resetParams() override;
+	bool updateStarfieldParams( const NifModel * nif );
 	void updateParams( const NifModel * nif );
 	void setTintColor( const NifModel* nif, const QString & itemName );
 

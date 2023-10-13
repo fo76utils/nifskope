@@ -323,7 +323,7 @@ void TexturingProperty::updateImpl( const NifModel * nif, const QModelIndex & in
 			if ( iTex.isValid() ) {
 				textures[t].iSource  = nif->getBlockIndex( nif->getLink( iTex, "Source" ), "NiSourceTexture" );
 				textures[t].coordset = nif->get<int>( iTex, "UV Set" );
-				
+
 				int filterMode = 0, clampMode = 0;
 				if ( nif->checkVersion( 0, 0x14010002 ) ) {
 					filterMode = nif->get<int>( iTex, "Filter Mode" );
@@ -851,6 +851,8 @@ void BSShaderLightingProperty::updateImpl( const NifModel * nif, const QModelInd
 		iTextureSet = nif->getBlockIndex( nif->getLink( iBlock, "Texture Set" ), "BSShaderTextureSet" );
 		iWetMaterial = nif->getIndex( iBlock, "Root Material" );
 	}
+	if ( nif->getBSVersion() >= 172 )
+		setSFMaterial( nif->get<QString>( iBlock, "Name" ) );
 }
 
 void BSShaderLightingProperty::resetParams()
@@ -895,6 +897,37 @@ void BSShaderLightingProperty::setMaterial( Material * newMaterial )
 		delete material;
 	}
 	material = newMaterial;
+}
+
+void BSShaderLightingProperty::setSFMaterial( const QString & mat_name )
+{
+	sf_material = nullptr;
+	const CE2MaterialDB	*materials = Game::GameManager::materials( Game::STARFIELD );
+	if ( !materials )
+		return;
+
+	std::string	path = mat_name.toStdString();
+	if ( path.empty() )
+		return;
+	for ( size_t i = 0; i < path.length(); i++ ) {
+		char	c = path[i];
+		if ( c >= 'A' && c <= 'Z' )
+			c += ( 'a' - 'A' );
+		else if ( c == '\\' )
+			c = '/';
+		path[i] = c;
+	}
+	if ( !path.starts_with( "materials/" ) ) {
+		size_t	n = path.find( "/materials/" );
+		if ( n != std::string::npos )
+			path.erase( 0, n + 1 );
+		else
+			path.insert( 0, "materials/" );
+	}
+	if ( !path.ends_with( ".mat" ) )
+		path += ".mat";
+
+	sf_material = materials->findMaterial( path );
 }
 
 bool BSShaderLightingProperty::bind( int id, const QString & fname, TexClampMode mode )
@@ -1001,9 +1034,72 @@ enum
 	BGSM20_MAX = 10
 };
 
+enum
+{
+	CE2M_DIFFUSE = 0,
+	CE2M_NORMAL = 1,
+	CE2M_OPACITY = 2,
+	CE2M_ROUGHNESS = 3,
+	CE2M_METALNESS = 4,
+	CE2M_AO = 5,
+	CE2M_HEIGHT = 6,
+	CE2M_EMISSIVE = 7,
+	CE2M_TRANSMISSIVE = 8,
+	CE2M_CURVATURE = 9,
+	CE2M_MASK = 10,
+	CE2M_TEXTURE11 = 11,
+	CE2M_ZOFFSET = 12,
+	CE2M_TEXTURE13 = 13,
+	CE2M_TEXTURE14 = 14,
+	CE2M_TEXTURE15 = 15,
+	CE2M_TEXTURE16 = 16,
+	CE2M_TEXTURE17 = 17,
+	CE2M_TEXTURE18 = 18,
+	CE2M_TEXTURE19 = 19,
+	CE2M_ID = 20,
+	CE2M_LAYER_0 = 0,
+	CE2M_LAYER_1 = 22,
+	CE2M_LAYER_2 = 44,
+	CE2M_LAYER_3 = 66,
+	CE2M_LAYER_4 = 88,
+	CE2M_LAYER_5 = 110,
+	CE2M_BLENDER_0 = 21,
+	CE2M_BLENDER_1 = 43,
+	CE2M_BLENDER_2 = 65,
+	CE2M_BLENDER_3 = 87,
+	CE2M_BLENDER_4 = 109
+};
+
 QString BSShaderLightingProperty::fileName( int id ) const
 {
 	const NifModel * nif;
+
+	// Starfield
+	if ( sf_material ) {
+		int	layer = id / 22;
+		int	tex_num = id % 22;
+		if ( tex_num == 21 && layer <= 4 && sf_material->blenders[layer] ) {
+			if ( !sf_material->blenders[layer]->texturePath->empty() )
+				return QString( sf_material->blenders[layer]->texturePath->c_str() );
+			if ( sf_material->blenders[layer]->textureReplacementEnabled ) {
+				std::string	s;
+				printToString( s, "#%08X", (unsigned int) sf_material->blenders[layer]->textureReplacement );
+				return QString::fromStdString( s );
+			}
+		} else if ( tex_num <= 20 && layer <= 5 && sf_material->layerMask & (1 << layer) ) {
+			const CE2Material::Material * m = sf_material->layers[layer]->material;
+			if ( m && m->textureSet ) {
+				if ( m->textureSet->texturePathMask & (1 << tex_num) )
+					return QString( m->textureSet->texturePaths[tex_num]->c_str() );
+				if ( m->textureSet->textureReplacementMask & (1 << tex_num) ) {
+					std::string	s;
+					printToString( s, "#%08X", (unsigned int) m->textureSet->textureReplacements[tex_num] );
+					return QString::fromStdString( s );
+				}
+			}
+		}
+		return QString();
+	}
 
 	// Fallout 4
 	nif = NifModel::fromValidIndex(iWetMaterial);
@@ -1225,9 +1321,23 @@ void BSLightingShaderProperty::resetParams()
 	backlightPower = 0.0;
 }
 
+bool BSLightingShaderProperty::updateStarfieldParams( const NifModel * nif )
+{
+	setSFMaterial( nif->get<QString>( iBlock, "Name" ) );
+	if ( !sf_material )
+		return false;
+
+	return true;
+}
+
 void BSLightingShaderProperty::updateParams( const NifModel * nif )
 {
 	resetParams();
+
+	if ( nif->getBSVersion() >= 172 ) {
+		if ( updateStarfieldParams( nif ) )
+			return;
+	}
 
 	setFlags1( nif );
 	setFlags2( nif );
@@ -1355,11 +1465,11 @@ void BSLightingShaderProperty::updateParams( const NifModel * nif )
 		}
 
 		// Environment Map, Mask and Reflection Scale
-		hasEnvironmentMap = 
+		hasEnvironmentMap =
 			( isST(ShaderFlags::ST_EnvironmentMap) && hasSF1(ShaderFlags::SLSF1_Environment_Mapping) )
 			|| ( isST(ShaderFlags::ST_EyeEnvmap) && hasSF1(ShaderFlags::SLSF1_Eye_Environment_Mapping) )
 			|| ( nif->getBSVersion() == 100 && hasMultiLayerParallax );
-		
+
 		useEnvironmentMask = hasEnvironmentMap && !textures.value( 5, "" ).isEmpty();
 
 		if ( isST( ShaderFlags::ST_EnvironmentMap ) )
@@ -1403,7 +1513,7 @@ void BSEffectShaderProperty::updateImpl( const NifModel * nif, const QModelIndex
 		updateParams(nif);
 }
 
-void BSEffectShaderProperty::resetParams() 
+void BSEffectShaderProperty::resetParams()
 {
 	BSShaderLightingProperty::resetParams();
 
@@ -1492,7 +1602,7 @@ void BSEffectShaderProperty::updateParams( const NifModel * nif )
 		falloff.softDepth = m->fSoftDepth;
 
 	} else { // m == nullptr
-		
+
 		hasSourceTexture = !nif->get<QString>( iBlock, "Source Texture" ).isEmpty();
 		hasGreyscaleMap = !nif->get<QString>( iBlock, "Greyscale Texture" ).isEmpty();
 
