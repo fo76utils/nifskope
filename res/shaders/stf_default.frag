@@ -1,6 +1,212 @@
 #version 130
 #extension GL_ARB_shader_texture_lod : require
 
+struct UVStream {
+	vec2	scale;
+	vec2	offset;
+	bool	useChannelTwo;
+};
+
+struct TextureSet {
+	sampler2D	textures[21];
+	bool	texturesEnabled[21];
+	float	floatParam;
+};
+
+struct Material {
+	vec4	color;
+	bool	colorModeLerp;
+	TextureSet	textureSet;
+};
+
+struct Layer {
+	Material	material;
+	UVStream	uvStream;
+};
+
+struct Blender {
+	UVStream	uvStream;
+	sampler2D	maskTexture;
+	bool	maskTextureEnabled;
+	// 0 = "Linear" (default), 1 = "Additive", 2 = "PositionContrast",
+	// 3 = "None", 4 = "CharacterCombine", 5 = "Skin"
+	uint	blendMode;
+	// 0 = "Red" (default), 1 = "Green", 2 = "Blue", 3 = "Alpha"
+	uint	colorChannel;
+	float	floatParams[5];
+	bool	boolParams[8];
+};
+
+struct LayeredEmissivityComponent {
+	bool	isEnabled;
+	uint	firstLayerIndex;
+	vec4	firstLayerTint;
+	uint	firstLayerMaskIndex;
+	bool	secondLayerActive;
+	uint	secondLayerIndex;
+	vec4	secondLayerTint;
+	uint	secondLayerMaskIndex;
+	uint	firstBlenderIndex;
+	uint	firstBlenderMode;
+	bool	thirdLayerActive;
+	uint	thirdLayerIndex;
+	vec4	thirdLayerTint;
+	uint	thirdLayerMaskIndex;
+	uint	secondBlenderIndex;
+	uint	secondBlenderMode;
+	float	emissiveClipThreshold;
+	bool	adaptiveEmittance;
+	float	luminousEmittance;
+	float	exposureOffset;
+	bool	enableAdaptiveLimits;
+	float	maxOffsetEmittance;
+	float	minOffsetEmittance;
+};
+
+struct EmissiveSettingsComponent {
+	bool	isEnabled;
+	uint	emissiveSourceLayer;
+	vec4	emissiveTint;
+	uint	emissiveMaskSourceBlender;
+	float	emissiveClipThreshold;
+	bool	adaptiveEmittance;
+	float	luminousEmittance;
+	float	exposureOffset;
+	bool	enableAdaptiveLimits;
+	float	maxOffsetEmittance;
+	float	minOffsetEmittance;
+};
+
+struct TerrainTintSettingsComponent {
+	bool	isEnabled;
+	float	terrainBlendStrength;
+	float	terrainBlendGradientFactor;
+};
+
+struct DecalSettingsComponent {
+	bool	isDecal;
+	float	materialOverallAlpha;
+	uint	writeMask;
+	bool	isPlanet;
+	bool	isProjected;
+	bool	useParallaxOcclusionMapping;
+	sampler2D	surfaceHeightMap;
+	float	parallaxOcclusionScale;
+	bool	parallaxOcclusionShadows;
+	uint	maxParralaxOcclusionSteps;
+	uint	renderLayer;
+	bool	useGBufferNormals;
+	uint	blendMode;
+	bool	animatedDecalIgnoresTAA;
+};
+
+struct EffectSettingsComponent {
+	bool	useFallOff;
+	bool	useRGBFallOff;
+	float	falloffStartAngle;
+	float	falloffStopAngle;
+	float	falloffStartOpacity;
+	float	falloffStopOpacity;
+	bool	vertexColorBlend;
+	bool	isAlphaTested;
+	float	alphaTestThreshold;
+	bool	noHalfResOptimization;
+	bool	softEffect;
+	float	softFalloffDepth;
+	bool	emissiveOnlyEffect;
+	bool	emissiveOnlyAutomaticallyApplied;
+	bool	receiveDirectionalShadows;
+	bool	receiveNonDirectionalShadows;
+	bool	isGlass;
+	bool	frosting;
+	float	frostingUnblurredBackgroundAlphaBlend;
+	float	frostingBlurBias;
+	float	materialOverallAlpha;
+	bool	zTest;
+	bool	zWrite;
+	uint	blendingMode;
+	bool	backLightingEnable;
+	float	backlightingScale;
+	float	backlightingSharpness;
+	float	backlightingTransparencyFactor;
+	vec4	backLightingTintColor;
+	bool	depthMVFixup;
+	bool	depthMVFixupEdgesOnly;
+	bool	forceRenderBeforeOIT;
+	uint	depthBiasInUlp;
+};
+
+struct OpacityComponent {
+	uint	firstLayerIndex;
+	bool	secondLayerActive;
+	uint	secondLayerIndex;
+	uint	firstBlenderIndex;
+	// 0 = "Lerp", 1 = "Additive", 2 = "Subtractive", 3 = "Multiplicative"
+	uint	firstBlenderMode;
+	bool	thirdLayerActive;
+	uint	thirdLayerIndex;
+	uint	secondBlenderIndex;
+	uint	secondBlenderMode;
+	float	specularOpacityOverride;
+};
+
+struct AlphaSettingsComponent {
+	bool	hasOpacity;
+	float	alphaTestThreshold;
+	uint	opacitySourceLayer;
+	// 0 = "Linear" (default), 1 = "Additive", 2 = "PositionContrast", 3 = "None"
+	uint	alphaBlenderMode;
+	bool	useDetailBlendMask;
+	bool	useVertexColor;
+	uint	vertexColorChannel;
+	UVStream	opacityUVstream;
+	float	heightBlendThreshold;
+	float	heightBlendFactor;
+	float	position;
+	float	contrast;
+	bool	useDitheredTransparency;
+};
+
+struct TranslucencySettingsComponent {
+	bool	isEnabled;
+	bool	isThin;
+	bool	flipBackFaceNormalsInViewSpace;
+	bool	useSSS;
+	float	sssWidth;
+	float	sssStrength;
+	float	transmissiveScale;
+	float	transmittanceWidth;
+	float	specLobe0RoughnessScale;
+	float	specLobe1RoughnessScale;
+	uint	transmittanceSourceLayer;
+};
+
+struct TerrainSettingsComponent {
+	bool	isEnabled;
+	uint	textureMappingType;
+	float	rotationAngle;
+	float	blendSoftness;
+	float	tilingDistance;
+	float	maxDisplacement;
+	float	displacementMidpoint;
+};
+
+struct LayeredMaterial {
+	uint	shaderModel;
+	bool	isTwoSided;
+	bool	layersEnabled[6];
+	Layer	layers[6];
+	Blender	blenders[5];
+	LayeredEmissivityComponent	layeredEmissivity;
+	EmissiveSettingsComponent	emissiveSettings;
+	DecalSettingsComponent	decalSettings;
+	EffectSettingsComponent	effectSettings;
+	OpacityComponent	opacity;
+	AlphaSettingsComponent	alphaSettings;
+	TranslucencySettingsComponent	translucencySettings;
+	TerrainSettingsComponent	terrainSettings;
+};
+
 uniform sampler2D BaseMap;
 uniform sampler2D NormalMap;
 uniform sampler2D GlowMap;
@@ -10,41 +216,24 @@ uniform sampler2D GreyscaleMap;
 uniform samplerCube CubeMap;
 
 uniform vec4 solidColor;
-uniform vec3 specColor;
-uniform float specStrength;
-uniform float specGlossiness; // "Smoothness" in FO4; 0-1
-uniform float fresnelPower;
-
-uniform float paletteScale;
 
 uniform vec3 glowColor;
 uniform float glowMult;
 
 uniform float alpha;
 
-uniform vec3 tintColor;
-
 uniform vec2 uvScale;
 uniform vec2 uvOffset;
 
 uniform bool hasEmit;
 uniform bool hasGlowMap;
-uniform bool hasSoftlight;
-uniform bool hasTintColor;
 uniform bool hasCubeMap;
-uniform bool hasSpecularMap;
-uniform bool greyscaleColor;
-uniform bool doubleSided;
-
-uniform float subsurfaceRolloff;
-uniform float rimPower;
-uniform float backlightPower;
-
-uniform float envReflection;
 
 uniform bool isWireframe;
 uniform bool isSkinned;
 uniform mat4 worldMatrix;
+
+uniform	LayeredMaterial	lm;
 
 in vec3 LightDir;
 in vec3 ViewDir;
@@ -250,15 +439,13 @@ void main(void)
 	vec4	baseMap = texture2D(BaseMap, offset);
 	vec4	normalMap = texture2D(NormalMap, offset);
 	vec4	lightingMap = vec4(0.25, 1.0, 0.0, 1.0);
-	if ( hasSpecularMap )
-		lightingMap = texture2D(LightingMap, offset);
 	vec4	reflMap = texture2D(ReflMap, offset);
 	vec4	glowMap = texture2D(GlowMap, offset);
 
 	vec3 normal = normalMap.rgb;
 	// Calculate missing blue channel
 	normal.b = sqrt(1.0 - dot(normal.rg, normal.rg));
-	if ( !gl_FrontFacing && doubleSided ) {
+	if ( !gl_FrontFacing && lm.isTwoSided ) {
 		normal *= -1.0;
 	}
 	// For _msn (Test with FSF1_Face)
@@ -285,11 +472,6 @@ void main(void)
 	vec4 color;
 	vec3 albedo = baseMap.rgb * C.rgb;
 	vec3 diffuse = A.rgb + D.rgb * NdotL0;
-	if ( greyscaleColor ) {
-		vec4 luG = colorLookup(baseMap.g, paletteScale * C.r);
-
-		albedo = luG.rgb;
-	}
 
 	// Emissive
 	vec3 emissive = vec3(0.0);
@@ -308,7 +490,6 @@ void main(void)
 
 	// Specular
 	float	smoothness = lightingMap.r;
-	// smoothness = clamp(smoothness * specGlossiness, 0.0, 1.0);
 	float	roughness = max(1.0 - smoothness, 0.02);
 	float	ao = roughness * roughness * 0.5;
 	ao = lightingMap.g * NdotV / (NdotV + ao - (NdotV * ao));
@@ -324,11 +505,11 @@ void main(void)
 	if ( hasCubeMap ) {
 		float	cubeScale = 1.0;	// 0.00052201 for cell_cityplazacube.dds
 		refl = textureLod(CubeMap, reflectedWS, 8.0 - smoothness * 8.0).rgb;
-		refl *= envReflection * specStrength * ao * cubeScale;
+		refl *= ao * cubeScale;
 		refl *= ambient;
 		ambient *= textureLod(CubeMap, reflectedWS, 8.0).rgb * cubeScale;
 	} else {
-		refl = vec3(0.05) * ambient * envReflection * specStrength * ao;
+		refl = vec3(0.05) * ambient * ao;
 		ambient *= 0.05;
 	}
 	vec3	f = fresnel_r(NdotV, f0, roughness);
