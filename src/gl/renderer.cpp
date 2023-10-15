@@ -601,6 +601,92 @@ bool Renderer::Program::uniSamplerBlank( UniformType var, int & texunit )
 	return true;
 }
 
+void Renderer::Program::uni1b( const char * var, bool x )
+{
+	GLint	n = f->glGetUniformLocation( id, var );
+	if ( n >= 0 )
+		f->glUniform1i( n, int(x) );
+}
+
+void Renderer::Program::uni1i( const char * var, int x )
+{
+	GLint	n = f->glGetUniformLocation( id, var );
+	if ( n >= 0 )
+		f->glUniform1i( n, x );
+}
+
+void Renderer::Program::uni1f( const char * var, float x )
+{
+	GLint	n = f->glGetUniformLocation( id, var );
+	if ( n >= 0 )
+		f->glUniform1f( n, x );
+}
+
+void Renderer::Program::uni2f( const char * var, float x, float y )
+{
+	GLint	n = f->glGetUniformLocation( id, var );
+	if ( n >= 0 )
+		f->glUniform2f( n, x, y );
+}
+
+void Renderer::Program::uni4f( const char * var, FloatVector4 x )
+{
+	GLint	n = f->glGetUniformLocation( id, var );
+	if ( n >= 0 )
+		f->glUniform4f( n, x[0], x[1], x[2], x[3] );
+}
+
+void Renderer::Program::uni4c( const char * var, std::uint32_t c, bool isSRGB)
+{
+	GLint	n = f->glGetUniformLocation( id, var );
+	if ( n < 0 )
+		return;
+	FloatVector4	x(c);
+	if (!isSRGB)
+		x *= 1.0f / 255.0f;
+	else
+		x.srgbExpand();
+	f->glUniform4f( n, x[0], x[1], x[2], x[3] );
+}
+
+void Renderer::Program::uniSampler( BSShaderLightingProperty * bsprop, int & texunit, const char * var1, const char * var2, const std::string * texturePath, std::uint32_t textureReplacement, int textureReplacementMode, const CE2Material::UVStream * uvStream )
+{
+	GLint	n = f->glGetUniformLocation( id, var1 );
+	bool	textureEnabled = false;
+	if ( n >= 0 && activateTextureUnit( texunit ) ) {
+		TexClampMode	clampMode = TexClampMode::WRAP_S_WRAP_T;
+		if ( uvStream ) {
+			// TODO: "Border" mode is not implemented yet
+			if ( uvStream->textureAddressMode == 2 )
+				clampMode = TexClampMode::MIRRORED_S_MIRRORED_T;
+			else
+				clampMode = TexClampMode::CLAMP_S_CLAMP_T;
+		}
+		char	txtNameBuf[16];
+		const char*	s = "";
+		if ( texturePath )
+			s = texturePath->c_str();
+		if ( *s == '\0' && textureReplacementMode >= 1 ) {
+			if ( textureReplacementMode == 1 )
+				std::sprintf( txtNameBuf, "#%08X", (unsigned int) textureReplacement );
+			else
+				std::sprintf( txtNameBuf, "#%08Xs", (unsigned int) textureReplacement );
+			s = txtNameBuf;
+		}
+		if ( *s ) {
+			if ( bsprop->bind( -1, QString(s), clampMode ) ) {
+				f->glUniform1i( n, texunit++ );
+				textureEnabled = true;
+			}
+		}
+	}
+	if ( var2 && *var2 ) {
+		n = f->glGetUniformLocation( id, var2 );
+		if ( n >= 0 )
+			f->glUniform1i( n, int(textureEnabled) );
+	}
+}
+
 static QString white = "#FFFFFFFF";
 static QString black = "#FF000000";
 static QString lighting = "#FF00F040";

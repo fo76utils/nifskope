@@ -43,6 +43,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <array>
 #include <string>
 
+#include "material.hpp"
 
 //! @file renderer.h Renderer, Renderer::ConditionSingle, Renderer::ConditionGroup, Renderer::Shader, Renderer::Program
 
@@ -355,8 +356,18 @@ public:
 		void uni3m( UniformType var, const Matrix & val );
 		void uni4m( UniformType var, const Matrix4 & val );
 		bool uniSampler( class BSShaderLightingProperty * bsprop, UniformType var, int textureSlot,
-						 int & texunit, const QString & alternate, uint clamp, const QString & forced = {} );
+							int & texunit, const QString & alternate, uint clamp, const QString & forced = {} );
 		bool uniSamplerBlank( UniformType var, int & texunit );
+
+		void uni1b( const char * var, bool x );
+		void uni1i( const char * var, int x );
+		void uni1f( const char * var, float x );
+		void uni2f( const char * var, float x, float y );
+		void uni4f( const char * var, FloatVector4 x );
+		void uni4c( const char * var, std::uint32_t c, bool isSRGB = false);
+		// var1 = sampler2D variable, var2 = bool variable (texture enabled)
+		// textureReplacementMode <= 0: disabled, 1: enabled, 2: enabled (sRGB)
+		void uniSampler( BSShaderLightingProperty * bsprop, int & texunit, const char * var1, const char * var2, const std::string * texturePath, std::uint32_t textureReplacement, int textureReplacementMode, const CE2Material::UVStream * uvStream );
 	};
 
 	QMap<QString, Shader *> shaders;
