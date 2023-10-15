@@ -726,8 +726,8 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh, const PropertyList 
 		const CE2MaterialDB *	matDB = Game::GameManager::materials( Game::STARFIELD );
 		if ( !matDB )
 			return false;
-		//if ( lsp )
-		//	mat = matDB->findMaterial( nif->get<QString>( lsp->iBlock, "Name" ).toStdString() );
+		if ( lsp )
+			mat = matDB->findMaterial( nif->get<QString>( lsp->index(), "Name" ).toStdString() );
 		if ( !mat )
 			mat = matDB->findMaterial( std::string("materials/test/generic/test_generic_white.mat") );
 	}
