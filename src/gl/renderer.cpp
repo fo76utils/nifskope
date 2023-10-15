@@ -602,90 +602,92 @@ bool Renderer::Program::uniSamplerBlank( UniformType var, int & texunit )
 	return true;
 }
 
-void Renderer::Program::uni1b( const char * var, bool x )
+#ifdef __GNUC__
+__attribute__ ((__format__ (__printf__, 2, 3)))
+#endif
+int Renderer::Program::uniLocation( const char * fmt, ... ) const
 {
-	GLint	n = f->glGetUniformLocation( id, var );
-	if ( n >= 0 )
-		f->glUniform1i( n, int(x) );
+	char	varNameBuf[256];
+	std::va_list	ap;
+	va_start(ap, fmt);
+	std::vsnprintf(varNameBuf, 256, fmt, ap);
+	va_end(ap);
+	varNameBuf[255] = '\0';
+	return f->glGetUniformLocation( id, varNameBuf );
 }
 
-void Renderer::Program::uni1i( const char * var, int x )
+void Renderer::Program::uni1b_l( int l, bool x )
 {
-	GLint	n = f->glGetUniformLocation( id, var );
-	if ( n >= 0 )
-		f->glUniform1i( n, x );
+	f->glUniform1i( l, int(x) );
 }
 
-void Renderer::Program::uni1f( const char * var, float x )
+void Renderer::Program::uni1i_l( int l, int x )
 {
-	GLint	n = f->glGetUniformLocation( id, var );
-	if ( n >= 0 )
-		f->glUniform1f( n, x );
+	f->glUniform1i( l, x );
 }
 
-void Renderer::Program::uni2f( const char * var, float x, float y )
+void Renderer::Program::uni1f_l( int l, float x )
 {
-	GLint	n = f->glGetUniformLocation( id, var );
-	if ( n >= 0 )
-		f->glUniform2f( n, x, y );
+	f->glUniform1f( l, x );
 }
 
-void Renderer::Program::uni4f( const char * var, FloatVector4 x )
+void Renderer::Program::uni2f_l( int l, float x, float y )
 {
-	GLint	n = f->glGetUniformLocation( id, var );
-	if ( n >= 0 )
-		f->glUniform4f( n, x[0], x[1], x[2], x[3] );
+	f->glUniform2f( l, x, y );
 }
 
-void Renderer::Program::uni4c( const char * var, std::uint32_t c, bool isSRGB)
+void Renderer::Program::uni4f_l( int l, FloatVector4 x )
 {
-	GLint	n = f->glGetUniformLocation( id, var );
-	if ( n < 0 )
-		return;
+	f->glUniform4f( l, x[0], x[1], x[2], x[3] );
+}
+
+void Renderer::Program::uni4c_l( int l, std::uint32_t c, bool isSRGB)
+{
 	FloatVector4	x(c);
 	if (!isSRGB)
 		x *= 1.0f / 255.0f;
 	else
 		x.srgbExpand();
-	f->glUniform4f( n, x[0], x[1], x[2], x[3] );
+	f->glUniform4f( l, x[0], x[1], x[2], x[3] );
 }
 
-void Renderer::Program::uniSampler( BSShaderLightingProperty * bsprop, int & texunit, const char * var1, const char * var2, const std::string * texturePath, std::uint32_t textureReplacement, int textureReplacementMode, const CE2Material::UVStream * uvStream )
+bool Renderer::Program::uniSampler_l( BSShaderLightingProperty * bsprop, int & texunit, int l, const std::string * texturePath, std::uint32_t textureReplacement, int textureReplacementMode, const CE2Material::UVStream * uvStream )
 {
-	GLint	n = f->glGetUniformLocation( id, var1 );
-	bool	textureEnabled = false;
-	if ( n >= 0 && activateTextureUnit( texunit ) ) {
+	if ( l >= 0 && activateTextureUnit( texunit ) ) {
 		TexClampMode	clampMode = TexClampMode::WRAP_S_WRAP_T;
 		if ( uvStream ) {
-			// TODO: "Border" mode is not implemented yet
-			if ( uvStream->textureAddressMode == 2 )
+			if ( uvStream->textureAddressMode == 3 ) {
+				FloatVector4	borderColor(textureReplacement);	// this may be incorrect
+				if ( textureReplacementMode > 1 )
+					borderColor.srgbExpand();
+				else
+					borderColor *= 1.0f / 255.0f;
+				glTexParameterfv( GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, &(borderColor.v[0]) );
+				clampMode = TexClampMode::BORDER_S_BORDER_T;
+			} else if ( uvStream->textureAddressMode == 2 )
 				clampMode = TexClampMode::MIRRORED_S_MIRRORED_T;
 			else
 				clampMode = TexClampMode::CLAMP_S_CLAMP_T;
 		}
-		char	txtNameBuf[16];
-		const char*	s = "";
-		if ( texturePath )
-			s = texturePath->c_str();
-		if ( *s == '\0' && textureReplacementMode >= 1 ) {
+		if ( texturePath && !texturePath->empty() ) {
+			if ( bsprop->bind( -1, QString::fromStdString(*texturePath), clampMode ) ) {
+				f->glUniform1i( l, texunit++ );
+				return true;
+			}
+		}
+		if ( textureReplacementMode >= 1 ) {
+			char	txtNameBuf[16];
 			if ( textureReplacementMode == 1 )
 				std::sprintf( txtNameBuf, "#%08X", (unsigned int) textureReplacement );
 			else
 				std::sprintf( txtNameBuf, "#%08Xs", (unsigned int) textureReplacement );
-			s = txtNameBuf;
-		}
-		if ( *s ) {
-			if ( bsprop->bind( -1, QString(s), clampMode ) ) {
-				f->glUniform1i( n, texunit++ );
-				textureEnabled = true;
+			if ( bsprop->bind( -1, QString(txtNameBuf), clampMode ) ) {
+				f->glUniform1i( l, texunit++ );
+				return true;
 			}
 		}
 	}
-	if ( var2 && *var2 ) {
-		n = f->glGetUniformLocation( id, var2 );
-		if ( n >= 0 )
-			f->glUniform1i( n, int(textureEnabled) );
-	}
+	return false;
 }
 
 static QString white = "#FFFFFFFF";
@@ -704,14 +706,17 @@ static QString cube_sf = "textures/cubemaps/cell_cityplazacube.dds";
 static QString cube_sf = "textures/cubemaps/spaceglowcubemap.dds";
 #endif
 
-bool Renderer::setupProgramSF( Program * prog, Shape * mesh, const PropertyList & props,
-								const QVector<QModelIndex> & iBlocks, bool eval )
+static const std::uint32_t defaultSFTextureSet[21] = {
+	0xFFFF00FFU, 0xFFFF8080U, 0xFFFFFFFFU, 0xFFC0C0C0U, 0xFF000000U, 0xFFF0F0F0U,
+	0xFF000000U, 0xFF000000U, 0xFF000000U, 0xFF808080U, 0xFF000000U, 0xFF808080U,
+	0xFF000000U, 0xFF000000U, 0xFF808080U, 0xFF808080U, 0xFF808080U, 0xFF000000U,
+	0xFF000000U, 0xFFFFFFFFU, 0xFF808080U
+};
+
+bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 {
 	auto nif = NifModel::fromValidIndex( mesh->index() );
 	if ( !nif )
-		return false;
-
-	if ( eval && !prog->conditions.eval( nif, iBlocks ) )
 		return false;
 
 	fn->glUseProgram( prog->id );
@@ -736,10 +741,16 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh, const PropertyList 
 
 	mesh->depthWrite = true;
 	mesh->depthTest = true;
+	if ( mat->flags & CE2Material::Flag_IsEffect ) {
+		mesh->depthWrite = bool(mat->effectSettings->flags & CE2Material::EffectFlag_ZWrite);
+		mesh->depthTest = bool(mat->effectSettings->flags & CE2Material::EffectFlag_ZTest);
+	}
+
+	prog->uni1i_l( prog->uniLocation("lm.shaderModel"), mat->shaderModel );
+	prog->uni1b_l( prog->uniLocation("lm.isTwoSided"), bool(mat->flags & CE2Material::Flag_TwoSided) );
 
 	// texturing
 
-	TexturingProperty * texprop = props.get<TexturingProperty>();
 	BSShaderLightingProperty * bsprop = mesh->bssp;
 	if ( !bsprop )
 		return false;
@@ -748,26 +759,70 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh, const PropertyList 
 	//	to be accessible from here
 
 	int texunit = 0;
-#if 0
-	{
-		QString forced;
-		if ( scene->hasOption(Scene::DoLighting) && scene->hasVisMode(Scene::VisNormalsOnly) )
-			forced = white;
 
-		QString alt = white;
-		if ( scene->hasOption(Scene::DoErrorColor) )
-			alt = magenta;
+	for ( int i = 0; i < CE2Material::maxLayers; i++ ) {
+		bool	layerEnabled = bool(mat->layerMask & (1 << i));
+		prog->uni1b_l( prog->uniLocation("lm.layersEnabled[%d]", i), layerEnabled );
+		if ( !layerEnabled )
+			continue;
+		const CE2Material::Layer *	layer = mat->layers[i];
+		const CE2Material::Blender *	blender = nullptr;
+		if ( i > 0 && i <= CE2Material::maxBlenders )
+			blender = mat->blenders[i - 1];
+		if ( layer->material ) {
 
-		prog->uniSampler( bsprop, SAMP_BASE, 0, texunit, alt, clamp, forced );
+		} else {
+			prog->uni4f_l( prog->uniLocation("lm.layers[%d].material.color", i), FloatVector4(1.0f) );
+			prog->uni1b_l( prog->uniLocation("lm.layers[%d].material.colorModeLerp", i), false );
+		}
+		if ( layer->material && layer->material->textureSet ) {
+			const CE2Material::TextureSet *	textureSet = layer->material->textureSet;
+			prog->uni1f_l( prog->uniLocation("lm.layers[%d].material.textureSet.floatParam", i), textureSet->floatParam );
+			for ( int j = 0; j < CE2Material::TextureSet::maxTexturePaths; j++ ) {
+				const std::string *	texturePath = nullptr;
+				if ( textureSet->texturePathMask & (1 << j) )
+					texturePath = textureSet->texturePaths[j];
+				std::uint32_t	textureReplacement = textureSet->textureReplacements[j];
+				int	textureReplacementMode = 0;
+				if ( textureSet->textureReplacementMask & (1 << j) )
+					textureReplacementMode = ( j == 0 || j == 7 ? 2 : 1 );
+				if ( j == 0 && scene->hasOption(Scene::DoLighting) && scene->hasVisMode(Scene::VisNormalsOnly) ) {
+					texturePath = nullptr;
+					textureReplacement = 0xFFFFFFFFU;
+					textureReplacementMode = 1;
+				}
+				if ( j == 0 && !textureReplacementMode && scene->hasOption(Scene::DoErrorColor) ) {
+					textureReplacement = 0xFFFF00FFU;	// magenta
+					textureReplacementMode = 1;
+				}
+				if ( j == 1 && !scene->hasOption(Scene::DoLighting) ) {
+					texturePath = nullptr;
+					textureReplacement = 0xFFFF8080U;
+					textureReplacementMode = 1;
+				}
+				bool	textureEnabled = prog->uniSampler_l( bsprop, texunit, prog->uniLocation("lm.layers[%d].material.textureSet.textures[%d]", i, j ), texturePath, textureReplacement, textureReplacementMode, layer->uvStream );
+				prog->uni1b_l( prog->uniLocation("lm.layers[%d].material.textureSet.texturesEnabled[%d]", i, j), textureEnabled );
+			}
+		} else {
+			prog->uni1f_l( prog->uniLocation("lm.layers[%d].material.textureSet.floatParam", i), 0.5f );
+			for ( int j = 0; j < CE2Material::TextureSet::maxTexturePaths; j++ ) {
+				bool	textureEnabled = prog->uniSampler_l( bsprop, texunit, prog->uniLocation("lm.layers[%d].material.textureSet.textures[%d]", i, j ), nullptr, defaultSFTextureSet[j], int(j < 6), layer->uvStream );
+				prog->uni1b_l( prog->uniLocation("lm.layers[%d].material.textureSet.texturesEnabled[%d]", i, j), textureEnabled );
+			}
+		}
+		if ( layer->uvStream ) {
+			prog->uni2f_l( prog->uniLocation("lm.layers[%d].uvStream.scale", i), layer->uvStream->scaleAndOffset[0], layer->uvStream->scaleAndOffset[1] );
+			prog->uni2f_l( prog->uniLocation("lm.layers[%d].uvStream.offset", i), layer->uvStream->scaleAndOffset[2], layer->uvStream->scaleAndOffset[3] );
+			prog->uni1b_l( prog->uniLocation("lm.layers[%d].uvStream.useChannelTwo", i), (layer->uvStream->channel > 1) );
+		} else {
+			prog->uni2f_l( prog->uniLocation("lm.layers[%d].uvStream.scale", i), 1.0f, 1.0f );
+			prog->uni2f_l( prog->uniLocation("lm.layers[%d].uvStream.offset", i), 0.0f, 0.0f );
+			prog->uni1b_l( prog->uniLocation("lm.layers[%d].uvStream.useChannelTwo", i), false );
+		}
+		if ( blender ) {
+			// TODO
+		}
 	}
-
-	{
-		QString forced;
-		if ( !scene->hasOption(Scene::DoLighting) )
-			forced = default_n;
-		prog->uniSampler( bsprop, SAMP_NORMAL, 1, texunit, default_n, clamp, forced );
-	}
-#endif
 
 	prog->uni4m( MAT_VIEW, mesh->viewTrans().toMatrix4() );
 	prog->uni4m( MAT_WORLD, mesh->worldTrans().toMatrix4() );
@@ -813,18 +868,6 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh, const PropertyList 
 			} else {
 				return false;
 			}
-		} else if ( texprop ) {
-			int txid = it;
-			if ( txid < 0 )
-				return false;
-
-			int set = texprop->coordSet( txid );
-
-			if ( set < 0 || !(set < mesh->coords.count()) || !mesh->coords[set].count() )
-				return false;
-
-			glEnableClientState( GL_TEXTURE_COORD_ARRAY );
-			glTexCoordPointer( 2, GL_FLOAT, 0, mesh->coords[set].constData() );
 		} else if ( bsprop ) {
 			int txid = it;
 			if ( txid < 0 )
@@ -918,11 +961,10 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 	auto nif = NifModel::fromValidIndex( mesh->index() );
 	if ( !nif )
 		return false;
-	if ( nif->getBSVersion() >= 160 )
-		return setupProgramSF( prog, mesh, props, iBlocks, eval );
-
 	if ( eval && !prog->conditions.eval( nif, iBlocks ) )
 		return false;
+	if ( nif->getBSVersion() >= 160 )
+		return setupProgramSF( prog, mesh );
 
 	fn->glUseProgram( prog->id );
 

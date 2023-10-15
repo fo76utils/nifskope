@@ -208,27 +208,10 @@ struct LayeredMaterial {
 	TerrainSettingsComponent	terrainSettings;
 };
 
-uniform sampler2D BaseMap;
-uniform sampler2D NormalMap;
-uniform sampler2D GlowMap;
-uniform sampler2D ReflMap;
-uniform sampler2D LightingMap;
-uniform sampler2D GreyscaleMap;
 uniform samplerCube CubeMap;
+uniform bool hasCubeMap;
 
 uniform vec4 solidColor;
-
-uniform vec3 glowColor;
-uniform float glowMult;
-
-uniform float alpha;
-
-uniform vec2 uvScale;
-uniform vec2 uvOffset;
-
-uniform bool hasEmit;
-uniform bool hasGlowMap;
-uniform bool hasCubeMap;
 
 uniform bool isWireframe;
 uniform bool isSkinned;
@@ -424,9 +407,45 @@ vec3 tonemap(vec3 x)
 	return ((x*(_A*x+_C*_B)+_D*_E)/(x*(_A*x+_B)+_D*_F))-_E/_F;
 }
 
-vec4 colorLookup(float x, float y)
+void getLayer(int n, inout vec4 baseMap, inout vec3 normalMap, inout vec3 pbrMap, inout vec4 emissiveMap)
 {
-	return texture2D(GreyscaleMap, vec2(clamp(x, 0.0, 1.0), clamp(y, 0.0, 1.0)));
+	vec2	offset;
+	if ( lm.layers[n].uvStream.useChannelTwo )
+		offset = gl_TexCoord[1].st;	// this may be incorrect
+	else
+		offset = gl_TexCoord[0].st;
+	offset = offset * lm.layers[n].uvStream.scale + lm.layers[n].uvStream.offset;
+	// _height.dds
+	// TODO: implement parallax mapping
+//if ( lm.layers[n].material.textureSet.texturesEnabled[6] )
+//	float	heightMap = texture2D(lm.layers[n].material.textureSet.textures[6], offset).r;
+	// _color.dds
+	if ( lm.layers[n].material.textureSet.texturesEnabled[0] )
+		baseMap.rgb = texture2D(lm.layers[n].material.textureSet.textures[0], offset).rgb;
+	// _normal.dds
+	if ( lm.layers[n].material.textureSet.texturesEnabled[1] ) {
+		normalMap.rg = texture2D(lm.layers[n].material.textureSet.textures[1], offset).rg;
+		// Calculate missing blue channel
+		normalMap.b = sqrt(1.0 - dot(normalMap.rg, normalMap.rg));
+	}
+	// _opacity.dds
+	if ( lm.layers[n].material.textureSet.texturesEnabled[2] )
+		baseMap.a = texture2D(lm.layers[n].material.textureSet.textures[2], offset).r;
+	// _rough.dds
+	if ( lm.layers[n].material.textureSet.texturesEnabled[3] )
+		pbrMap.r = texture2D(lm.layers[n].material.textureSet.textures[3], offset).r;
+	// _metal.dds
+	if ( lm.layers[n].material.textureSet.texturesEnabled[4] )
+		pbrMap.g = texture2D(lm.layers[n].material.textureSet.textures[4], offset).r;
+	// _ao.dds
+	if ( lm.layers[n].material.textureSet.texturesEnabled[5] )
+		pbrMap.b = texture2D(lm.layers[n].material.textureSet.textures[5], offset).r;
+	// _emissive.dds
+	if ( lm.layers[n].material.textureSet.texturesEnabled[7] )
+		emissiveMap.rgb = texture2D(lm.layers[n].material.textureSet.textures[7], offset).rgb;
+	// _transmissive.dds
+	if ( lm.layers[n].material.textureSet.texturesEnabled[8] )
+		emissiveMap.a = texture2D(lm.layers[n].material.textureSet.textures[8], offset).r;
 }
 
 void main(void)
@@ -435,17 +454,21 @@ void main(void)
 		gl_FragColor = solidColor;
 		return;
 	}
-	vec2 offset = gl_TexCoord[0].st * uvScale + uvOffset;
 
-	vec4	baseMap = texture2D(BaseMap, offset);
-	vec4	normalMap = texture2D(NormalMap, offset);
-	vec4	lightingMap = vec4(0.25, 1.0, 0.0, 1.0);
-	vec4	reflMap = texture2D(ReflMap, offset);
-	vec4	glowMap = texture2D(GlowMap, offset);
+	vec4	baseMap = vec4(0.0, 0.0, 0.0, 1.0);
+	vec3	normalMap = vec3(0.0, 0.0, 1.0);
+	vec3	pbrMap = vec3(0.75, 0.0, 0.9);	// roughness, metalness, AO
+	vec4	emissiveMap = vec4(0.0, 0.0, 0.0, 0.0);	// alpha = translucency
+	float	alpha = 1.0;
+
+	for (int i = 0; i < 6; i++) {
+		if ( lm.layersEnabled[i] ) {
+			getLayer(i, baseMap, normalMap, pbrMap, emissiveMap);
+			break;
+		}
+	}
 
 	vec3 normal = normalMap.rgb;
-	// Calculate missing blue channel
-	normal.b = sqrt(1.0 - dot(normal.rg, normal.rg));
 	if ( !gl_FrontFacing && lm.isTwoSided ) {
 		normal *= -1.0;
 	}
@@ -470,30 +493,30 @@ void main(void)
 	vec3 reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(reflectedVS, 0.0)));
 	reflectedWS.z = -reflectedWS.z;
 
-	vec4 color;
-	vec3 albedo = baseMap.rgb * C.rgb;
-	vec3 diffuse = A.rgb + D.rgb * NdotL0;
+	vec4	color;
+	vec3	albedo = baseMap.rgb;
+	vec3	diffuse = A.rgb + D.rgb * NdotL0;
 
-	// Emissive
-	vec3 emissive = vec3(0.0);
-	if ( hasEmit ) {
-		emissive += glowColor * glowMult;
-		if ( hasGlowMap ) {
-			emissive *= glowMap.rgb;
-		}
-	} else if ( hasGlowMap ) {
-		emissive += glowMap.rgb * glowMult;
-	}
-	emissive *= lightingMap.a;
+	// TODO: Emissive
+	vec3	emissive = vec3(0.0);
+	//if ( hasEmit ) {
+	//	emissive += glowColor * glowMult;
+	//	if ( hasGlowMap ) {
+	//		emissive *= glowMap.rgb;
+	//	}
+	//} else if ( hasGlowMap ) {
+	//	emissive += glowMap.rgb * glowMult;
+	//}
+	//emissive *= lightingMap.a;
 
-	vec3	f0 = (reflMap.g == 0 && reflMap.b == 0) ? vec3(reflMap.r) : reflMap.rgb;
-	f0 = max(f0, vec3(0.02));
+	vec3	f0 = albedo * pbrMap.g * 0.96 + 0.04;
+	albedo = albedo * (1.0 - pbrMap.g);
 
 	// Specular
-	float	smoothness = lightingMap.r;
-	float	roughness = max(1.0 - smoothness, 0.02);
+	float	smoothness = 1.0 - pbrMap.r;
+	float	roughness = max(pbrMap.r, 0.02);
 	float	ao = roughness * roughness * 0.5;
-	ao = lightingMap.g * NdotV / (NdotV + ao - (NdotV * ao));
+	ao = pbrMap.b * NdotV / (NdotV + ao - (NdotV * ao));
 	vec3	spec = LightingFuncGGX_REF(NdotL0, NdotH, NdotV, LdotH, roughness, f0) * NdotL0 * D.rgb;
 
 	// Diffuse

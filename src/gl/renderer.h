@@ -359,21 +359,24 @@ public:
 							int & texunit, const QString & alternate, uint clamp, const QString & forced = {} );
 		bool uniSamplerBlank( UniformType var, int & texunit );
 
-		void uni1b( const char * var, bool x );
-		void uni1i( const char * var, int x );
-		void uni1f( const char * var, float x );
-		void uni2f( const char * var, float x, float y );
-		void uni4f( const char * var, FloatVector4 x );
-		void uni4c( const char * var, std::uint32_t c, bool isSRGB = false);
-		// var1 = sampler2D variable, var2 = bool variable (texture enabled)
+#ifdef __GNUC__
+		__attribute__ ((__format__ (__printf__, 2, 3)))
+#endif
+		int uniLocation( const char * fmt, ... ) const;
+		void uni1b_l( int l, bool x );
+		void uni1i_l( int l, int x );
+		void uni1f_l( int l, float x );
+		void uni2f_l( int l, float x, float y );
+		void uni4f_l( int l, FloatVector4 x );
+		void uni4c_l( int l, std::uint32_t c, bool isSRGB = false );
 		// textureReplacementMode <= 0: disabled, 1: enabled, 2: enabled (sRGB)
-		void uniSampler( BSShaderLightingProperty * bsprop, int & texunit, const char * var1, const char * var2, const std::string * texturePath, std::uint32_t textureReplacement, int textureReplacementMode, const CE2Material::UVStream * uvStream );
+		bool uniSampler_l( BSShaderLightingProperty * bsprop, int & texunit, int l, const std::string * texturePath, std::uint32_t textureReplacement, int textureReplacementMode, const CE2Material::UVStream * uvStream );
 	};
 
 	QMap<QString, Shader *> shaders;
 	QMap<QString, Program *> programs;
 
-	bool setupProgramSF( Program *, Shape *, const PropertyList &, const QVector<QModelIndex> & iBlocks, bool eval = true );
+	bool setupProgramSF( Program *, Shape * );
 	bool setupProgram( Program *, Shape *, const PropertyList &, const QVector<QModelIndex> & iBlocks, bool eval = true );
 	void setupFixedFunction( Shape *, const PropertyList & );
 
