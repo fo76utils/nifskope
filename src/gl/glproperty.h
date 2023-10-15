@@ -630,7 +630,7 @@ struct UVScale
 	float x;
 	float y;
 
-	UVScale() { reset(); }	
+	UVScale() { reset(); }
 	void reset() { x = y = 1.0f; }
 	void set( float _x, float _y ) { x = _x; y = _y; }
 	void set( const Vector2 & v) { x = v[0]; y = v[1]; }
@@ -776,7 +776,6 @@ protected:
 	void setController( const NifModel * nif, const QModelIndex & controller ) override final;
 	void updateImpl( const NifModel * nif, const QModelIndex & block ) override;
 	void resetParams() override;
-	bool updateStarfieldParams( const NifModel * nif );
 	void updateParams( const NifModel * nif );
 	void setTintColor( const NifModel* nif, const QString & itemName );
 

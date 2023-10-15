@@ -851,8 +851,6 @@ void BSShaderLightingProperty::updateImpl( const NifModel * nif, const QModelInd
 		iTextureSet = nif->getBlockIndex( nif->getLink( iBlock, "Texture Set" ), "BSShaderTextureSet" );
 		iWetMaterial = nif->getIndex( iBlock, "Root Material" );
 	}
-	if ( nif->getBSVersion() >= 172 )
-		setSFMaterial( nif->get<QString>( iBlock, "Name" ) );
 }
 
 void BSShaderLightingProperty::resetParams()
@@ -885,6 +883,7 @@ void BSShaderLightingProperty::clear()
 	Property::clear();
 
 	setMaterial(nullptr);
+	sf_material = nullptr;
 }
 
 void BSShaderLightingProperty::setMaterial( Material * newMaterial )
@@ -1032,72 +1031,13 @@ enum
 	BGSM20_MAX = 10
 };
 
-enum
-{
-	CE2M_DIFFUSE = 0,
-	CE2M_NORMAL = 1,
-	CE2M_OPACITY = 2,
-	CE2M_ROUGHNESS = 3,
-	CE2M_METALNESS = 4,
-	CE2M_AO = 5,
-	CE2M_HEIGHT = 6,
-	CE2M_EMISSIVE = 7,
-	CE2M_TRANSMISSIVE = 8,
-	CE2M_CURVATURE = 9,
-	CE2M_MASK = 10,
-	CE2M_TEXTURE11 = 11,
-	CE2M_ZOFFSET = 12,
-	CE2M_TEXTURE13 = 13,
-	CE2M_TEXTURE14 = 14,
-	CE2M_TEXTURE15 = 15,
-	CE2M_TEXTURE16 = 16,
-	CE2M_TEXTURE17 = 17,
-	CE2M_TEXTURE18 = 18,
-	CE2M_TEXTURE19 = 19,
-	CE2M_ID = 20,
-	CE2M_LAYER_0 = 0,
-	CE2M_LAYER_1 = 22,
-	CE2M_LAYER_2 = 44,
-	CE2M_LAYER_3 = 66,
-	CE2M_LAYER_4 = 88,
-	CE2M_LAYER_5 = 110,
-	CE2M_BLENDER_0 = 21,
-	CE2M_BLENDER_1 = 43,
-	CE2M_BLENDER_2 = 65,
-	CE2M_BLENDER_3 = 87,
-	CE2M_BLENDER_4 = 109
-};
-
 QString BSShaderLightingProperty::fileName( int id ) const
 {
 	const NifModel * nif;
 
-	// Starfield
-	if ( sf_material ) {
-		int	layer = id / 22;
-		int	tex_num = id % 22;
-		if ( tex_num == 21 && layer <= 4 && sf_material->blenders[layer] ) {
-			if ( !sf_material->blenders[layer]->texturePath->empty() )
-				return QString( sf_material->blenders[layer]->texturePath->c_str() );
-			if ( sf_material->blenders[layer]->textureReplacementEnabled ) {
-				std::string	s;
-				printToString( s, "#%08X", (unsigned int) sf_material->blenders[layer]->textureReplacement );
-				return QString::fromStdString( s );
-			}
-		} else if ( tex_num <= 20 && layer <= 5 && sf_material->layerMask & (1 << layer) ) {
-			const CE2Material::Material * m = sf_material->layers[layer]->material;
-			if ( m && m->textureSet ) {
-				if ( m->textureSet->texturePathMask & (1 << tex_num) )
-					return QString( m->textureSet->texturePaths[tex_num]->c_str() );
-				if ( m->textureSet->textureReplacementMask & (1 << tex_num) ) {
-					std::string	s;
-					printToString( s, "#%08X", (unsigned int) m->textureSet->textureReplacements[tex_num] );
-					return QString::fromStdString( s );
-				}
-			}
-		}
+	// Starfield (not implemented here)
+	if ( sf_material )
 		return QString();
-	}
 
 	// Fallout 4
 	nif = NifModel::fromValidIndex(iWetMaterial);
@@ -1263,7 +1203,10 @@ void BSLightingShaderProperty::updateImpl( const NifModel * nif, const QModelInd
 	BSShaderLightingProperty::updateImpl( nif, index );
 
 	if ( index == iBlock ) {
-		setMaterial(name.endsWith(".bgsm", Qt::CaseInsensitive) ? new ShaderMaterial(name, scene->game) : nullptr);
+		if ( nif->getBSVersion() >= 160 && !name.isEmpty() )
+			setSFMaterial( name );
+		else
+			setMaterial(name.endsWith(".bgsm", Qt::CaseInsensitive) ? new ShaderMaterial(name, scene->game) : nullptr);
 		updateParams(nif);
 	}
 	else if ( index == iTextureSet ) {
@@ -1319,22 +1262,13 @@ void BSLightingShaderProperty::resetParams()
 	backlightPower = 0.0;
 }
 
-bool BSLightingShaderProperty::updateStarfieldParams( const NifModel * nif )
-{
-	setSFMaterial( nif->get<QString>( iBlock, "Name" ) );
-	if ( !sf_material )
-		return false;
-
-	return true;
-}
-
 void BSLightingShaderProperty::updateParams( const NifModel * nif )
 {
 	resetParams();
 
 	if ( nif->getBSVersion() >= 172 ) {
-		if ( updateStarfieldParams( nif ) )
-			return;
+		setSFMaterial( nif->get<QString>( iBlock, "Name" ) );
+		return;
 	}
 
 	setFlags1( nif );
@@ -1504,7 +1438,10 @@ void BSEffectShaderProperty::updateImpl( const NifModel * nif, const QModelIndex
 	BSShaderLightingProperty::updateImpl( nif, index );
 
 	if ( index == iBlock ) {
-		setMaterial(name.endsWith(".bgem", Qt::CaseInsensitive) ? new EffectMaterial(name, scene->game) : nullptr);
+		if ( nif->getBSVersion() >= 160 && !name.isEmpty() )
+			setSFMaterial( name );
+		else
+			setMaterial(name.endsWith(".bgem", Qt::CaseInsensitive) ? new EffectMaterial(name, scene->game) : nullptr);
 		updateParams(nif);
 	}
 	else if ( index == iTextureSet )
