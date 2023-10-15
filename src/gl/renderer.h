@@ -373,6 +373,7 @@ public:
 	QMap<QString, Shader *> shaders;
 	QMap<QString, Program *> programs;
 
+	bool setupProgramSF( Program *, Shape *, const PropertyList &, const QVector<QModelIndex> & iBlocks, bool eval = true );
 	bool setupProgram( Program *, Shape *, const PropertyList &, const QVector<QModelIndex> & iBlocks, bool eval = true );
 	void setupFixedFunction( Shape *, const PropertyList & );
 

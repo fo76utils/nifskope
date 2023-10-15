@@ -41,6 +41,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "io/material.h"
 #include "model/nifmodel.h"
 #include "ui/settingsdialog.h"
+#include "gamemanager.h"
 
 #include <QCoreApplication>
 #include <QDebug>
@@ -703,12 +704,222 @@ static QString cube_sf = "textures/cubemaps/cell_cityplazacube.dds";
 static QString cube_sf = "textures/cubemaps/spaceglowcubemap.dds";
 #endif
 
+bool Renderer::setupProgramSF( Program * prog, Shape * mesh, const PropertyList & props,
+								const QVector<QModelIndex> & iBlocks, bool eval )
+{
+	auto nif = NifModel::fromValidIndex( mesh->index() );
+	if ( !nif )
+		return false;
+
+	if ( eval && !prog->conditions.eval( nif, iBlocks ) )
+		return false;
+
+	fn->glUseProgram( prog->id );
+
+	auto scene = mesh->scene;
+	auto lsp = mesh->bslsp;
+	if ( !lsp )
+		return false;
+
+	const CE2Material *	mat = lsp->getSFMaterial();
+	if ( !mat ) {
+		const CE2MaterialDB *	matDB = Game::GameManager::materials( Game::STARFIELD );
+		if ( !matDB )
+			return false;
+		//if ( lsp )
+		//	mat = matDB->findMaterial( nif->get<QString>( lsp->iBlock, "Name" ).toStdString() );
+		if ( !mat )
+			mat = matDB->findMaterial( std::string("materials/test/generic/test_generic_white.mat") );
+	}
+	if ( !mat )
+		return false;
+
+	mesh->depthWrite = true;
+	mesh->depthTest = true;
+
+	// texturing
+
+	TexturingProperty * texprop = props.get<TexturingProperty>();
+	BSShaderLightingProperty * bsprop = mesh->bssp;
+	if ( !bsprop )
+		return false;
+	// BSShaderLightingProperty * bsprop = props.get<BSShaderLightingProperty>();
+	// TODO: BSLSP has been split off from BSShaderLightingProperty so it needs
+	//	to be accessible from here
+
+	int texunit = 0;
+#if 0
+	{
+		QString forced;
+		if ( scene->hasOption(Scene::DoLighting) && scene->hasVisMode(Scene::VisNormalsOnly) )
+			forced = white;
+
+		QString alt = white;
+		if ( scene->hasOption(Scene::DoErrorColor) )
+			alt = magenta;
+
+		prog->uniSampler( bsprop, SAMP_BASE, 0, texunit, alt, clamp, forced );
+	}
+
+	{
+		QString forced;
+		if ( !scene->hasOption(Scene::DoLighting) )
+			forced = default_n;
+		prog->uniSampler( bsprop, SAMP_NORMAL, 1, texunit, default_n, clamp, forced );
+	}
+#endif
+
+	prog->uni4m( MAT_VIEW, mesh->viewTrans().toMatrix4() );
+	prog->uni4m( MAT_WORLD, mesh->worldTrans().toMatrix4() );
+	prog->uni1i( HAS_MAP_CUBE, 1 );
+	// Always bind cube regardless of shader settings
+	GLint uniCubeMap = prog->uniformLocations[SAMP_CUBE];
+	if ( uniCubeMap >= 0 ) {
+		QString	fname = cube_sf;
+
+		if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( fname ) )
+			return false;
+
+		fn->glUniform1i( uniCubeMap, texunit++ );
+	}
+
+	QMapIterator<int, Program::CoordType> itx( prog->texcoords );
+
+	while ( itx.hasNext() ) {
+		itx.next();
+
+		if ( !activateTextureUnit( itx.key() ) )
+			return false;
+
+		auto it = itx.value();
+		if ( it == Program::CT_TANGENT ) {
+			if ( mesh->transTangents.count() ) {
+				glEnableClientState( GL_TEXTURE_COORD_ARRAY );
+				glTexCoordPointer( 3, GL_FLOAT, 0, mesh->transTangents.constData() );
+			} else if ( mesh->tangents.count() ) {
+				glEnableClientState( GL_TEXTURE_COORD_ARRAY );
+				glTexCoordPointer( 3, GL_FLOAT, 0, mesh->tangents.constData() );
+			} else {
+				return false;
+			}
+
+		} else if ( it == Program::CT_BITANGENT ) {
+			if ( mesh->transBitangents.count() ) {
+				glEnableClientState( GL_TEXTURE_COORD_ARRAY );
+				glTexCoordPointer( 3, GL_FLOAT, 0, mesh->transBitangents.constData() );
+			} else if ( mesh->bitangents.count() ) {
+				glEnableClientState( GL_TEXTURE_COORD_ARRAY );
+				glTexCoordPointer( 3, GL_FLOAT, 0, mesh->bitangents.constData() );
+			} else {
+				return false;
+			}
+		} else if ( texprop ) {
+			int txid = it;
+			if ( txid < 0 )
+				return false;
+
+			int set = texprop->coordSet( txid );
+
+			if ( set < 0 || !(set < mesh->coords.count()) || !mesh->coords[set].count() )
+				return false;
+
+			glEnableClientState( GL_TEXTURE_COORD_ARRAY );
+			glTexCoordPointer( 2, GL_FLOAT, 0, mesh->coords[set].constData() );
+		} else if ( bsprop ) {
+			int txid = it;
+			if ( txid < 0 )
+				return false;
+
+			int set = 0;
+
+			if ( set < 0 || !(set < mesh->coords.count()) || !mesh->coords[set].count() )
+				return false;
+
+			glEnableClientState( GL_TEXTURE_COORD_ARRAY );
+			glTexCoordPointer( 2, GL_FLOAT, 0, mesh->coords[set].constData() );
+		}
+	}
+
+	// setup lighting
+
+	//glEnable( GL_LIGHTING );
+
+	// setup blending
+
+	if ( mat && scene->hasOption(Scene::DoBlending) ) {
+		static const GLenum blendMapS[8] = {
+			GL_SRC_ALPHA,	// "AlphaBlend"
+			GL_SRC_ALPHA,	// "Additive"
+			GL_SRC_ALPHA,	// "SourceSoftAdditive" (TODO: not implemented yet)
+			GL_DST_COLOR,	// "Multiply"
+			GL_SRC_ALPHA,	// "DestinationSoftAdditive" (not implemented)
+			GL_SRC_ALPHA,	// "DestinationInvertedSoftAdditive" (not implemented)
+			GL_SRC_ALPHA,	// "TakeSmaller" (not implemented)
+			GL_ZERO	// "None"
+		};
+		static const GLenum blendMapD[8] = {
+			GL_ONE_MINUS_SRC_ALPHA,	// "AlphaBlend"
+			GL_ONE,	// "Additive"
+			GL_ONE,	// "SourceSoftAdditive"
+			GL_ZERO,	// "Multiply"
+			GL_ONE_MINUS_SRC_ALPHA,	// "DestinationSoftAdditive"
+			GL_ONE_MINUS_SRC_ALPHA,	// "DestinationInvertedSoftAdditive"
+			GL_ONE_MINUS_SRC_ALPHA,	// "TakeSmaller"
+			GL_ONE	// "None"
+		};
+
+		if ( mat->flags & CE2Material::Flag_AlphaBlending ) {
+			glEnable( GL_BLEND );
+			if ( mat->flags & CE2Material::Flag_IsEffect )
+				glBlendFunc( blendMapS[mat->effectSettings->blendMode], blendMapD[mat->effectSettings->blendMode] );
+			else if ( mat->flags & CE2Material::Flag_IsDecal )
+				glBlendFunc( blendMapS[mat->decalSettings->blendMode], blendMapD[mat->decalSettings->blendMode] );
+		} else {
+			glDisable( GL_BLEND );
+		}
+
+		if ( (mat->flags & CE2Material::Flag_IsEffect) && (mat->effectSettings->flags & CE2Material::EffectFlag_IsAlphaTested) ) {
+			glEnable( GL_ALPHA_TEST );
+			glAlphaFunc( GL_GREATER, mat->effectSettings->alphaThreshold );
+		} else if ( mat->flags & CE2Material::Flag_HasOpacity && mat->alphaThreshold > 0.0f ) {
+			glEnable( GL_ALPHA_TEST );
+			glAlphaFunc( GL_GREATER, mat->alphaThreshold );
+		} else {
+			glDisable( GL_ALPHA_TEST );
+		}
+	}
+
+	glDisable( GL_COLOR_MATERIAL );
+	glEnable( GL_DEPTH_TEST );
+	glDepthMask( GL_TRUE );
+	glDepthFunc( GL_LEQUAL );
+	if ( mat->flags & CE2Material::Flag_TwoSided ) {
+		glDisable( GL_CULL_FACE );
+	} else {
+		glEnable( GL_CULL_FACE );
+		glCullFace( GL_BACK );
+	}
+	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+
+	if ( !mesh->depthTest ) {
+		glDisable( GL_DEPTH_TEST );
+	}
+
+	if ( !mesh->depthWrite || mesh->translucent ) {
+		glDepthMask( GL_FALSE );
+	}
+
+	return true;
+}
+
 bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & props,
 								const QVector<QModelIndex> & iBlocks, bool eval )
 {
 	auto nif = NifModel::fromValidIndex( mesh->index() );
 	if ( !nif )
 		return false;
+	if ( nif->getBSVersion() >= 160 )
+		return setupProgramSF( prog, mesh, props, iBlocks, eval );
 
 	if ( eval && !prog->conditions.eval( nif, iBlocks ) )
 		return false;
@@ -727,17 +938,6 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 		mat = esp->getMaterial();
 
 	QString default_n = (nifVersion >= 151) ? ::default_ns : ::default_n;
-
-	// TODO: Temp for pre CDB material reading
-	if ( !mat && nifVersion >= 172 ) {
-		if ( lsp ) {
-			mesh->depthWrite = true;
-			mesh->depthTest = true;
-		} else if ( esp ) {
-			mesh->depthWrite = false;
-			mesh->depthTest = false;
-		}
-	}
 
 	// texturing
 
@@ -758,7 +958,7 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 			forced = white;
 
 		QString alt = white;
-		if ( scene->hasOption(Scene::DoErrorColor) && nifVersion < 172 ) // TODO: Hide error color until CDB reading
+		if ( scene->hasOption(Scene::DoErrorColor) )
 			alt = magenta;
 
 		prog->uniSampler( bsprop, SAMP_BASE, 0, texunit, alt, clamp, forced );
@@ -803,7 +1003,7 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 	}
 
 	if ( bsprop && !esp ) {
-		prog->uniSampler( bsprop, SAMP_GLOW, ( nifVersion < 160 ? 2 : 7 ), texunit, black, clamp );
+		prog->uniSampler( bsprop, SAMP_GLOW, 2, texunit, black, clamp );
 	} else if ( !bsprop ) {
 		GLint uniGlowMap = prog->uniformLocations[SAMP_GLOW];
 		if ( uniGlowMap >= 0 && texprop ) {
@@ -830,51 +1030,7 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 	}
 
 	// BSLightingShaderProperty
-	if ( nifVersion >= 160 ) {
-		prog->uni1f( LIGHT_EFF1, 1.0f );
-		prog->uni1f( LIGHT_EFF2, 1.0f );
-		prog->uni1f( ALPHA, 1.0f );
-		prog->uni2f( UV_SCALE, 1.0f, 1.0f );
-		prog->uni2f( UV_OFFSET, 0.0f, 0.0f );
-		prog->uni4m( MAT_VIEW, mesh->viewTrans().toMatrix4() );
-		prog->uni4m( MAT_WORLD, mesh->worldTrans().toMatrix4() );
-		prog->uni1i( G2P_COLOR, 0.5f );
-		prog->uni1i( HAS_TINT_COLOR, 0 );
-		prog->uni1i( HAS_MAP_DETAIL, 0 );
-		prog->uni1i( HAS_MAP_TINT, 0 );
-		prog->uni1i( HAS_SOFT, 0 );
-		prog->uni1i( HAS_RIM, 0 );
-		prog->uni1i( HAS_MAP_BACK, 0 );
-		prog->uni1f( GLOW_MULT, 0.0f );
-		prog->uni1i( HAS_EMIT, 0 );
-		prog->uni1i( HAS_MAP_GLOW, 0 );
-		prog->uni3f( GLOW_COLOR, 0.0f, 0.0f, 0.0f );
-		prog->uni1f( SPEC_SCALE, 1.0f );
-		// Assure specular power does not break the shaders
-		prog->uni1f( SPEC_GLOSS, 1.0f );
-		prog->uni3f( SPEC_COLOR, 1.0f, 1.0f, 1.0f );
-		prog->uni1i( HAS_MAP_SPEC, 0 );
-		prog->uni1i( DOUBLE_SIDE, 0 );
-		prog->uni1f( G2P_SCALE, 0.5f );
-		prog->uni1f( SS_ROLLOFF, 1.0f );
-		prog->uni1f( POW_FRESNEL, 5.0f );
-		prog->uni1f( POW_RIM, 1.0f );
-		prog->uni1f( POW_BACK, 1.0f );
-		prog->uni1i( HAS_MAP_CUBE, 1 );
-		prog->uni1i( HAS_MASK_ENV, 0 );
-		prog->uni1f( ENV_REFLECTION, 1.0f );
-		// Always bind cube regardless of shader settings
-		GLint uniCubeMap = prog->uniformLocations[SAMP_CUBE];
-		if ( uniCubeMap >= 0 ) {
-			QString	fname = cube_sf;
-
-			if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( fname ) )
-				return false;
-
-			fn->glUniform1i( uniCubeMap, texunit++ );
-		}
-		prog->uni1i( HAS_MAP_HEIGHT, 0 );
-	} else if ( lsp ) {
+	if ( lsp ) {
 		prog->uni1f( LIGHT_EFF1, lsp->lightingEffect1 );
 		prog->uni1f( LIGHT_EFF2, lsp->lightingEffect2 );
 
@@ -973,10 +1129,8 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 		// Always bind cube regardless of shader settings
 		GLint uniCubeMap = prog->uniformLocations[SAMP_CUBE];
 		if ( uniCubeMap >= 0 ) {
-			QString	fname;
-			QString	cube = (nifVersion < 128 ? cube_sk : (nifVersion < 160 ? cube_fo4_76 : cube_sf));
-			if ( nifVersion < 160 )
-				fname = bsprop->fileName( 4 );
+			QString	fname = bsprop->fileName( 4 );
+			QString	cube = (nifVersion < 128 ? cube_sk : cube_fo4_76);
 			if ( fname.isEmpty() )
 				fname = cube;
 
@@ -989,7 +1143,7 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 		// Always bind mask regardless of shader settings
 		prog->uniSampler( bsprop, SAMP_ENV_MASK, 5, texunit, white, clamp );
 
-		if ( nifVersion >= 151 && nifVersion < 160 ) {
+		if ( nifVersion >= 151 ) {
 			prog->uniSampler( bsprop, SAMP_REFLECTIVITY, 8, texunit, reflectivity, clamp );
 			prog->uniSampler( bsprop, SAMP_LIGHTING, 9, texunit, lighting, clamp );
 		}
@@ -1061,7 +1215,7 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 			GLint uniCubeMap = prog->uniformLocations[SAMP_CUBE];
 			if ( uniCubeMap >= 0 ) {
 				QString fname = bsprop->fileName( 2 );
-				QString	cube = (nifVersion < 128 ? cube_sk : (nifVersion < 160 ? cube_fo4_76 : cube_sf));
+				QString	cube = (nifVersion < 128 ? cube_sk : cube_fo4_76);
 				if ( fname.isEmpty() )
 					fname = cube;
 
