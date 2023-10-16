@@ -259,6 +259,7 @@ bool Renderer::Shader::load( const QString & filepath )
 Renderer::Program::Program( const QString & n, QOpenGLFunctions * fn )
 	: f( fn ), name( n ), id( 0 )
 {
+	uniformLocationsSF.resize( 2048, std::pair< std::uint32_t, int >(0, -1) );
 	id = f->glCreateProgram();
 }
 
@@ -636,13 +637,16 @@ int Renderer::Program::uniLocation( const char * fmt, ... )
 	}
 	va_end(ap);
 	*sp = '\0';
-	std::map< std::uint32_t, int >::const_iterator	i = uniformLocationsSF.find(h);
-	if ( i != uniformLocationsSF.end() )
-		return i->second;
+	size_t	hashMask = uniformLocationsSF.size() - 1;
+	size_t	i = h & hashMask;
+	for ( ; uniformLocationsSF[i].first; i = (i + 1) & hashMask) {
+		if ( uniformLocationsSF[i].first == h )
+			return uniformLocationsSF[i].second;
+	}
 	int	l = f->glGetUniformLocation( id, varNameBuf );
-	uniformLocationsSF.insert( std::pair< std::uint32_t, int >(h, l) );
+	uniformLocationsSF[i] = std::pair< std::uint32_t, int >(h, l);
 #if 0
-	std::fprintf(stderr, "Hash 0x%08X: uniform '%s'\n", (unsigned int) h, varNameBuf);
+	std::fprintf(stderr, "Hash 0x%08X: uniform '%s' location %d\n", (unsigned int) h, varNameBuf, l);
 	if ( l < 0 )
 		std::fprintf( stderr, "Warning: uniform '%s' not found\n", varNameBuf );
 #endif
@@ -688,7 +692,7 @@ bool Renderer::Program::uniSampler_l( BSShaderLightingProperty * bsprop, int & t
 {
 	if ( l >= 0 && activateTextureUnit( texunit ) ) {
 		TexClampMode	clampMode = TexClampMode::WRAP_S_WRAP_T;
-		if ( uvStream ) {
+		if ( uvStream && uvStream->textureAddressMode ) {
 			if ( uvStream->textureAddressMode == 3 ) {
 				FloatVector4	borderColor(textureReplacement);	// this may be incorrect
 				if ( textureReplacementMode > 1 )
@@ -708,12 +712,11 @@ bool Renderer::Program::uniSampler_l( BSShaderLightingProperty * bsprop, int & t
 				return true;
 			}
 		}
-		if ( textureReplacementMode >= 1 ) {
+		if ( textureReplacementMode > 0 ) {
+			static const char	textureReplacementModes[4] = { '\0', '\0', 's', 'n' };
 			char	txtNameBuf[16];
-			if ( textureReplacementMode == 1 )
-				std::sprintf( txtNameBuf, "#%08X", (unsigned int) textureReplacement );
-			else
-				std::sprintf( txtNameBuf, "#%08Xs", (unsigned int) textureReplacement );
+			std::sprintf( txtNameBuf, "#%08X ", (unsigned int) textureReplacement );
+			txtNameBuf[9] = textureReplacementModes[textureReplacementMode & 3];
 			if ( bsprop->bind( -1, QString(txtNameBuf), clampMode ) ) {
 				f->glUniform1i( l, texunit++ );
 				return true;
@@ -730,14 +733,10 @@ static QString reflectivity = "#FF0A0A0A";
 static QString gray = "#FF808080s";
 static QString magenta = "#FFFF00FF";
 static QString default_n = "#FFFF8080";
-static QString default_ns = "#7F7F0000";
+static QString default_ns = "#FFFF8080n";
 static QString cube_sk = "textures/cubemaps/bleakfallscube_e.dds";
 static QString cube_fo4_76 = "textures/shared/cubemaps/mipblur_defaultoutside1.dds";
-#if 0
 static QString cube_sf = "textures/cubemaps/cell_cityplazacube.dds";
-#else
-static QString cube_sf = "textures/cubemaps/spaceglowcubemap.dds";
-#endif
 
 static const std::uint32_t defaultSFTextureSet[21] = {
 	0xFFFF00FFU, 0xFFFF8080U, 0xFFFFFFFFU, 0xFFC0C0C0U, 0xFF000000U, 0xFFF0F0F0U,
@@ -779,8 +778,12 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 		mesh->depthTest = bool(mat->effectSettings->flags & CE2Material::EffectFlag_ZTest);
 	}
 
+	prog->uni1b_l( prog->uniLocation("isWireframe"), false );
+	prog->uni1f_l( prog->uniLocation("envReflection"), 1.0f );
 	prog->uni1i_l( prog->uniLocation("lm.shaderModel"), mat->shaderModel );
+	prog->uni1b_l( prog->uniLocation("lm.isEffect"), bool(mat->flags & CE2Material::Flag_IsEffect) );
 	prog->uni1b_l( prog->uniLocation("lm.isTwoSided"), bool(mat->flags & CE2Material::Flag_TwoSided) );
+	prog->uni1b_l( prog->uniLocation("lm.hasOpacityComponent"), bool(mat->flags & CE2Material::Flag_HasOpacityComponent) );
 
 	// texturing
 
@@ -803,7 +806,8 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 		if ( i > 0 && i <= CE2Material::maxBlenders )
 			blender = mat->blenders[i - 1];
 		if ( layer->material ) {
-
+			prog->uni4f_l( prog->uniLocation("lm.layers[%d].material.color", i), layer->material->color );
+			prog->uni1b_l( prog->uniLocation("lm.layers[%d].material.colorModeLerp", i), bool(layer->material->colorMode) );
 		} else {
 			prog->uni4f_l( prog->uniLocation("lm.layers[%d].material.color", i), FloatVector4(1.0f) );
 			prog->uni1b_l( prog->uniLocation("lm.layers[%d].material.colorModeLerp", i), false );
@@ -818,7 +822,7 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 				std::uint32_t	textureReplacement = textureSet->textureReplacements[j];
 				int	textureReplacementMode = 0;
 				if ( textureSet->textureReplacementMask & (1 << j) )
-					textureReplacementMode = ( j == 0 || j == 7 ? 2 : 1 );
+					textureReplacementMode = ( j == 0 || j == 7 ? 2 : ( j == 1 ? 3 : 1 ) );
 				if ( j == 0 && scene->hasOption(Scene::DoLighting) && scene->hasVisMode(Scene::VisNormalsOnly) ) {
 					texturePath = nullptr;
 					textureReplacement = 0xFFFFFFFFU;
@@ -962,6 +966,11 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 			glAlphaFunc( GL_GREATER, mat->alphaThreshold );
 		} else {
 			glDisable( GL_ALPHA_TEST );
+		}
+
+		if ( mat->flags & CE2Material::Flag_IsDecal ) {
+			glEnable( GL_POLYGON_OFFSET_FILL );
+			glPolygonOffset( -1.0f, -1.0f );
 		}
 	}
 
@@ -1401,6 +1410,11 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 			glAlphaFunc( GL_GREATER, float( mat->iAlphaTestRef ) / 255.0 );
 		} else {
 			glDisable( GL_ALPHA_TEST );
+		}
+
+		if ( mat && mat->bDecal ) {
+			glEnable( GL_POLYGON_OFFSET_FILL );
+			glPolygonOffset( -1.0f, -1.0f );
 		}
 	}
 

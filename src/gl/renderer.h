@@ -345,7 +345,8 @@ public:
 		} };
 
 		int uniformLocations[NUM_UNIFORM_TYPES];
-		std::map< std::uint32_t, int >	uniformLocationsSF;
+		// CRC32C(name), location
+		std::vector< std::pair< std::uint32_t, int > >	uniformLocationsSF;
 
 		void setUniformLocations();
 
@@ -371,7 +372,8 @@ public:
 		void uni2f_l( int l, float x, float y );
 		void uni4f_l( int l, FloatVector4 x );
 		void uni4c_l( int l, std::uint32_t c, bool isSRGB = false );
-		// textureReplacementMode <= 0: disabled, 1: enabled, 2: enabled (sRGB)
+		// textureReplacementMode <= 0: disabled, > 0: enabled
+		// 1: linear, 2: sRGB, 3: normal map (-1.0 to 1.0)
 		bool uniSampler_l( BSShaderLightingProperty * bsprop, int & texunit, int l, const std::string * texturePath, std::uint32_t textureReplacement, int textureReplacementMode, const CE2Material::UVStream * uvStream );
 	};
 
