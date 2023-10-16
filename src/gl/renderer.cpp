@@ -605,15 +605,48 @@ bool Renderer::Program::uniSamplerBlank( UniformType var, int & texunit )
 #ifdef __GNUC__
 __attribute__ ((__format__ (__printf__, 2, 3)))
 #endif
-int Renderer::Program::uniLocation( const char * fmt, ... ) const
+int Renderer::Program::uniLocation( const char * fmt, ... )
 {
 	char	varNameBuf[256];
 	std::va_list	ap;
 	va_start(ap, fmt);
-	std::vsnprintf(varNameBuf, 256, fmt, ap);
+	char	*sp = varNameBuf;
+	char	*endp = sp + 255;
+	std::uint32_t	h = 0;
+	for ( ; *fmt && sp < endp; fmt++, sp++ ) {
+		char	c = *fmt;
+		if ( c == '%' ) {
+			fmt++;
+			c = *fmt;
+			if ( c == 'd' ) {
+				int	n = va_arg(ap, int);
+				if ( n >= 10 && (sp + 1) < endp ) {
+					*sp = char((n / 10) & 15) | '0';
+					hashFunctionCRC32C< unsigned char >(h, (unsigned char) *sp);
+					sp++;
+					n = n % 10;
+				}
+				c = char(n & 15) | '0';
+			} else if ( c != '%' ) {
+				break;
+			}
+		}
+		*sp = c;
+		hashFunctionCRC32C< unsigned char >(h, (unsigned char) *sp);
+	}
 	va_end(ap);
-	varNameBuf[255] = '\0';
-	return f->glGetUniformLocation( id, varNameBuf );
+	*sp = '\0';
+	std::map< std::uint32_t, int >::const_iterator	i = uniformLocationsSF.find(h);
+	if ( i != uniformLocationsSF.end() )
+		return i->second;
+	int	l = f->glGetUniformLocation( id, varNameBuf );
+	uniformLocationsSF.insert( std::pair< std::uint32_t, int >(h, l) );
+#if 0
+	std::fprintf(stderr, "Hash 0x%08X: uniform '%s'\n", (unsigned int) h, varNameBuf);
+	if ( l < 0 )
+		std::fprintf( stderr, "Warning: uniform '%s' not found\n", varNameBuf );
+#endif
+	return l;
 }
 
 void Renderer::Program::uni1b_l( int l, bool x )

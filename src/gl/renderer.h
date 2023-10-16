@@ -345,6 +345,7 @@ public:
 		} };
 
 		int uniformLocations[NUM_UNIFORM_TYPES];
+		std::map< std::uint32_t, int >	uniformLocationsSF;
 
 		void setUniformLocations();
 
@@ -359,10 +360,11 @@ public:
 							int & texunit, const QString & alternate, uint clamp, const QString & forced = {} );
 		bool uniSamplerBlank( UniformType var, int & texunit );
 
+		// only supports %d format with integers in the range 0 to 99
 #ifdef __GNUC__
 		__attribute__ ((__format__ (__printf__, 2, 3)))
 #endif
-		int uniLocation( const char * fmt, ... ) const;
+		int uniLocation( const char * fmt, ... );
 		void uni1b_l( int l, bool x );
 		void uni1i_l( int l, int x );
 		void uni1f_l( int l, float x );
