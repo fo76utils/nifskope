@@ -46,6 +46,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QOpenGLContext>
 #include <QString>
 #include <QtEndian>
+#include <bit>
 
 #ifdef __APPLE__
 #include <gl3.h>
@@ -625,6 +626,33 @@ GLuint texLoadBMP( QIODevice & f, QString & texformat, GLenum & target, GLuint &
 
 GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint & id )
 {
+	char *	dataPtr = data.data();
+	if ( data.size() >= 148 && dataPtr[128] == 0x0A && dataPtr[84] == 'D' && dataPtr[85] == 'X' && dataPtr[86] == '1' && dataPtr[87] == '0' ) {
+		// work around GLI issues with float formats
+		// DXGI_FORMAT_R16G16B16A16_FLOAT -> DXGI_FORMAT_R8G8B8A8_UNORM_SRGB
+		dataPtr[128] = 0x1D;
+		dataPtr = dataPtr + 148;
+		size_t	n = (data.size() - 148) >> 3;
+		float	scale = 0.0f;
+		for ( size_t i = 0; i < n; i++ ) {
+			FloatVector4	c(FloatVector4::convertFloat16(FileBuffer::readUInt64Fast(dataPtr + (i << 3)), true));
+			scale += c.dotProduct3(c);
+		}
+		scale = 1.0f / std::min(std::max(float(std::sqrt(scale / float(int(n)))) * 1.125f, 1.0f), 65536.0f);
+		for ( size_t i = 0; i < n; i++ ) {
+			FloatVector4	c(FloatVector4::convertFloat16(FileBuffer::readUInt64Fast(dataPtr + (i << 3)), true));
+			float	a = c[3] * 255.0f;
+			c = (c * scale).srgbCompress();
+			c[3] = a;
+			std::uint32_t	b = std::uint32_t(c);
+			dataPtr[i << 2] = char(b & 0xFF);
+			dataPtr[(i << 2) + 1] = char((b >> 8) & 0xFF);
+			dataPtr[(i << 2) + 2] = char((b >> 16) & 0xFF);
+			dataPtr[(i << 2) + 3] = char((b >> 24) & 0xFF);
+		}
+		data.resize(((data.size() - 148) >> 1) + 148);
+	}
+
 	GLuint result = 0;
 	gli::texture texture;
 	if ( extStorageSupported ) {
@@ -1133,12 +1161,23 @@ bool texLoad( const Game::GameMode game, const QString & filepath, QString & for
 			width = 1;
 			height = 1;
 			mipmaps = 1;
-			format = (filepathStr.length() < 10 ? "R8G8B8A8_UNORM" : "R8G8B8A8_SRGB");
+			const char	*fmtName = "R8G8B8A8_UNORM";
+			GLint	fmt = GL_RGBA8;
+			char	fmtSuffix = filepathStr.c_str()[9] | 0x20;
+			if ( fmtSuffix == 's' ) {
+				fmtName = "R8G8B8A8_SRGB";
+				fmt = GL_SRGB8_ALPHA8;
+			} else if ( fmtSuffix == 'n' ) {
+				fmtName = "R8G8B8A8_SNORM";
+				fmt = GL_RGBA8_SNORM;
+				c = c ^ 0x80808080U;
+			}
+			format = fmtName;
 			target = GL_TEXTURE_2D;
 			glBindTexture( target, id );
 			glPixelStorei( GL_UNPACK_ALIGNMENT, 4 );
 			glPixelStorei( GL_UNPACK_SWAP_BYTES, GL_TRUE );
-			glTexImage2D( target, 0, (filepathStr.length() < 10 ? GL_RGBA8 : GL_SRGB8_ALPHA8), 1, 1, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, &c );
+			glTexImage2D( target, 0, fmt, 1, 1, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, &c );
 			return true;
 		} else if (!Game::GameManager::get_file(data, game, filepath, "textures", "")) {
 			throw QString( "could not open file" );

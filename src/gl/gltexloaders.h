@@ -70,7 +70,7 @@ extern gli::texture load_if_valid( const char * data, unsigned int size );
  * The parameters format, width, height and mipmaps will be filled with information about
  * the loaded texture.
  *
- * @param filepath	The full path to the texture that must be loaded.
+ * @param filepath	The full path to the texture that must be loaded. Can also be a color in the format "#AABBGGRR", "#AABBGGRRs" or "#AABBGGRRn" (hexadecimal) to generate a 1x1 texture from a solid color. Adding the 's' or 'n' suffix creates an sRGB or signed texture from the color, respectively.
  * @param format	Contain the format, for instance "DDS (DXT3)" or "TGA", on successful load.
  * @param width		Contains the texture width on successful load.
  * @param height	Contains the texture height on successful load.
