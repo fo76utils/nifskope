@@ -194,7 +194,9 @@ struct TerrainSettingsComponent {
 
 struct LayeredMaterial {
 	int	shaderModel;
+	bool	isEffect;
 	bool	isTwoSided;
+	bool	hasOpacityComponent;
 	bool	layersEnabled[6];
 	Layer	layers[6];
 	Blender	blenders[5];
@@ -208,8 +210,9 @@ struct LayeredMaterial {
 	TerrainSettingsComponent	terrainSettings;
 };
 
-uniform samplerCube CubeMap;
-uniform bool hasCubeMap;
+uniform samplerCube	CubeMap;
+uniform bool	hasCubeMap;
+uniform float	envReflection;
 
 uniform vec4 solidColor;
 
@@ -446,6 +449,7 @@ void getLayer(int n, inout vec4 baseMap, inout vec3 normalMap, inout vec3 pbrMap
 	// _transmissive.dds
 	if ( lm.layers[n].material.textureSet.texturesEnabled[8] )
 		emissiveMap.a = texture2D(lm.layers[n].material.textureSet.textures[8], offset).r;
+	baseMap *= lm.layers[n].material.color;
 }
 
 void main(void)
@@ -527,11 +531,10 @@ void main(void)
 	vec3	refl = vec3(0.0);
 	vec3	ambient = A.rgb / 0.75;
 	if ( hasCubeMap ) {
-		float	cubeScale = 1.0;	// 0.00052201 for cell_cityplazacube.dds
 		refl = textureLod(CubeMap, reflectedWS, 8.0 - smoothness * 8.0).rgb;
-		refl *= ao * cubeScale;
+		refl *= ao * envReflection;
 		refl *= ambient;
-		ambient *= textureLod(CubeMap, reflectedWS, 8.0).rgb * cubeScale;
+		ambient *= textureLod(CubeMap, reflectedWS, 8.0).rgb * envReflection;
 	} else {
 		refl = vec3(0.05) * ambient * ao;
 		ambient *= 0.05;
