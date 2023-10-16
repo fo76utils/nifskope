@@ -86,35 +86,6 @@ void BSMesh::drawShapes(NodeList* secondPass, bool presort)
 	if ( !Node::SELECTING )
 		scene->renderer->stopProgram();
 
-	// TODO: Show wireframe always for now, until material CDB reading
-	if ( !Node::SELECTING ) {
-		glDisable(GL_LIGHTING);
-		glDisable(GL_COLOR_MATERIAL);
-		glDisable(GL_TEXTURE_2D);
-		glDisable(GL_NORMALIZE);
-		glEnable(GL_DEPTH_TEST);
-		glDepthMask(GL_FALSE);
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glDisable(GL_ALPHA_TEST);
-		glDisable(GL_CULL_FACE);
-
-		glDisable(GL_FRAMEBUFFER_SRGB);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-		glEnable(GL_POLYGON_OFFSET_FILL);
-		glPolygonOffset(-0.5f, -1.5f);
-		glLineWidth(1.4f);
-		glColor(Color4(0.5, 0.5, 0.5, 0.1));
-		for ( const Triangle& tri : sortedTriangles ) {
-			glBegin(GL_TRIANGLES);
-			glVertex(transVerts.value(tri.v1()));
-			glVertex(transVerts.value(tri.v2()));
-			glVertex(transVerts.value(tri.v3()));
-			glEnd();
-		}
-	}
-
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_NORMAL_ARRAY);
 	glDisableClientState(GL_COLOR_ARRAY);
