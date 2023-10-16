@@ -208,6 +208,9 @@ void Shape::updateShader()
 		Material * mat = bssp->getMaterial();
 		if ( mat && (mat->hasAlphaBlend() || mat->hasAlphaTest() || mat->hasDecal()) )
 			drawInSecondPass = true;
+		const CE2Material *	sfMat = bssp->getSFMaterial();
+		if ( sfMat && (sfMat->flags & (CE2Material::Flag_AlphaBlending | CE2Material::Flag_IsEffect | CE2Material::Flag_IsWater | CE2Material::Flag_IsDecal)) )
+			drawInSecondPass = true;
 	}
 
 	if ( bssp ) {
