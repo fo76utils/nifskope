@@ -1,4 +1,4 @@
-name: Build CE2Utils
+name: Build NifSkope
 
 on:
   workflow_dispatch:
@@ -15,6 +15,7 @@ jobs:
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
+        submodules: true
     
     - name: 'Setup MSYS2'
       uses: msys2/setup-msys2@v2
@@ -22,18 +23,23 @@ jobs:
         msystem: MINGW64
         update: true
         cache: true
-        install: 'base-devel mingw-w64-x86_64-toolchain msys/scons mingw64/mingw-w64-x86_64-SDL2 mingw64/mingw-w64-x86_64-python-matplotlib mingw64/mingw-w64-x86_64-swig'
+        install: 'base-devel mingw-w64-x86_64-toolchain mingw64/mingw-w64-x86_64-SDL2 msys/p7zip mingw-w64-x86_64-qt5-base mingw64/mingw-w64-x86_64-qt5-3d mingw64/mingw-w64-x86_64-qt5-imageformats'
     
-    - name: 'Build with Scons'
+    - name: 'Build with qmake'
       shell: msys2 {0}
       run: |
-        scons -j 8
+        qmake NifSkope.pro
+        make -j 8
+        rm GeneratedFiles/.obj/renderer.o
+        qmake NifSkope.pro
+        make -j 8
     
     - name: 'Upload Artifacts'
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: build-win
-        path: '**/*.exe'
+        path: |
+          release
   
   
   build_linux:
@@ -45,19 +51,21 @@ jobs:
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
+        submodules: true
       
     - name: 'Install required packages'
       uses: awalsh128/cache-apt-pkgs-action@latest
       with:
-          packages: swig libsdl2-dev scons
+          packages: libsdl2-dev qtbase5-dev qt5-qmake qt5-image-formats-plugins
           version: 1.0
       
-    - name: 'Build with Scons'
+    - name: 'Build with qmake'
       run: |
-        scons -j 8
+        x86_64-linux-gnu-qmake NifSkope.pro
+        make -j 8
       
     - name: 'Upload Artifacts'
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: build-linux
-        path: '*'
+        path: 'release'
