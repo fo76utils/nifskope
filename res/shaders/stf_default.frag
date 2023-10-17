@@ -8,8 +8,8 @@ struct UVStream {
 };
 
 struct TextureSet {
-	sampler2D	textures[21];
-	bool	texturesEnabled[21];
+	sampler2D	textures[10];
+	bool	texturesEnabled[10];
 	float	floatParam;
 };
 
@@ -197,9 +197,9 @@ struct LayeredMaterial {
 	bool	isEffect;
 	bool	isTwoSided;
 	bool	hasOpacityComponent;
-	bool	layersEnabled[6];
-	Layer	layers[6];
-	Blender	blenders[5];
+	bool	layersEnabled[1];
+	Layer	layers[1];
+	Blender	blenders[1];
 	LayeredEmissivityComponent	layeredEmissivity;
 	EmissiveSettingsComponent	emissiveSettings;
 	DecalSettingsComponent	decalSettings;
@@ -414,7 +414,7 @@ void getLayer(int n, inout vec4 baseMap, inout vec3 normalMap, inout vec3 pbrMap
 {
 	vec2	offset;
 	if ( lm.layers[n].uvStream.useChannelTwo )
-		offset = gl_TexCoord[1].st;	// this may be incorrect
+		offset = gl_TexCoord[0].pq;	// this may be incorrect
 	else
 		offset = gl_TexCoord[0].st;
 	offset = offset * lm.layers[n].uvStream.scale + lm.layers[n].uvStream.offset;
@@ -465,7 +465,7 @@ void main(void)
 	vec4	emissiveMap = vec4(0.0, 0.0, 0.0, 0.0);	// alpha = translucency
 	float	alpha = 1.0;
 
-	for (int i = 0; i < 6; i++) {
+	for (int i = 0; i < 1; i++) {
 		if ( lm.layersEnabled[i] ) {
 			getLayer(i, baseMap, normalMap, pbrMap, emissiveMap);
 			break;

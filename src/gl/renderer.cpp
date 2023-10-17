@@ -42,6 +42,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "model/nifmodel.h"
 #include "ui/settingsdialog.h"
 #include "gamemanager.h"
+#include "gl/BSMesh.h"
 
 #include <QCoreApplication>
 #include <QDebug>
@@ -796,7 +797,7 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 
 	int texunit = 0;
 
-	for ( int i = 0; i < CE2Material::maxLayers; i++ ) {
+	for ( int i = 0; i < 1 /* CE2Material::maxLayers */; i++ ) {
 		bool	layerEnabled = bool(mat->layerMask & (1 << i));
 		prog->uni1b_l( prog->uniLocation("lm.layersEnabled[%d]", i), layerEnabled );
 		if ( !layerEnabled )
@@ -910,13 +911,12 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 			if ( txid < 0 )
 				return false;
 
-			int set = 0;
-
-			if ( set < 0 || !(set < mesh->coords.count()) || !mesh->coords[set].count() )
+			const MeshFile *	sfMesh = static_cast< BSMesh * >(mesh)->meshSelected;
+			if ( !sfMesh || sfMesh->coords.count() != sfMesh->positions.count() )
 				return false;
 
 			glEnableClientState( GL_TEXTURE_COORD_ARRAY );
-			glTexCoordPointer( 2, GL_FLOAT, 0, mesh->coords[set].constData() );
+			glTexCoordPointer( 4, GL_FLOAT, 0, sfMesh->coords.constData() );
 		}
 	}
 
@@ -1206,7 +1206,7 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 		prog->uni1i( HAS_MASK_ENV, lsp->useEnvironmentMask );
 		float refl = 0.0;
 		if ( lsp->hasEnvironmentMap && scene->hasOption(Scene::DoCubeMapping) && scene->hasOption(Scene::DoLighting) )
-			refl = lsp->environmentReflection;
+			refl = ( nifVersion < 151 ? lsp->environmentReflection : 1.0f );
 
 		prog->uni1f( ENV_REFLECTION, refl );
 

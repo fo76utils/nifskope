@@ -258,7 +258,7 @@ public:
 			CT_DECAL1,
 			CT_DECAL2,
 			CT_DECAL3,
-			CT_TANGENT,
+			CT_TANGENT = 24,
 			CT_BITANGENT,
 			CT_BONE,
 			CT_WEIGHT
