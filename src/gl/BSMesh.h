@@ -42,6 +42,7 @@ public:
 	QModelIndex vertexAt(int) const override;
 
 	QVector<std::shared_ptr<MeshFile>> meshes;
+	const MeshFile *	meshSelected = nullptr;
 
 	int materialID = 0;
 	QString materialPath;

@@ -21,6 +21,7 @@ void BSMesh::transformShapes()
 
 void BSMesh::drawShapes(NodeList* secondPass, bool presort)
 {
+	(void) presort;
 	if ( !scene->hasOption(Scene::ShowMarkers) && name.startsWith("EditorMarker") )
 		return;
 
@@ -82,7 +83,7 @@ void BSMesh::drawShapes(NodeList* secondPass, bool presort)
 
 	if ( sortedTriangles.count() )
 		glDrawElements(GL_TRIANGLES, sortedTriangles.count() * 3, GL_UNSIGNED_SHORT, sortedTriangles.constData());
-	
+
 	if ( !Node::SELECTING )
 		scene->renderer->stopProgram();
 
@@ -103,9 +104,11 @@ void BSMesh::drawSelection() const
 	if ( isHidden() || !scene->isSelModeObject() )
 		return;
 
-	auto& idx = scene->currentIndex;
 	auto& blk = scene->currentBlock;
+#if 0
+	auto& idx = scene->currentIndex;
 	auto nif = NifModel::fromValidIndex(blk);
+#endif
 	glDisable(GL_LIGHTING);
 	glDisable(GL_COLOR_MATERIAL);
 	glDisable(GL_TEXTURE_2D);
@@ -257,16 +260,29 @@ void BSMesh::updateData(const NifModel* nif)
 	lodLevel = std::min(scene->lodLevel, Scene::LodLevel(lodCount - 1));
 
 	auto meshIndex = (hasMeshLODs) ? 0 : lodLevel;
-	if ( lodCount > lodLevel ) {
+	meshSelected = meshes[meshIndex].get();
+	if ( lodCount > int(lodLevel) ) {
 		auto& mesh = meshes[meshIndex];
-		if ( lodLevel - 1 >= 0 && lodLevel - 1 < mesh->lods.size() ) {
+		if ( lodLevel > 0 && int(lodLevel) <= mesh->lods.size() ) {
 			sortedTriangles = mesh->lods[lodLevel - 1];
 		}
 		else {
 			sortedTriangles = mesh->triangles;
 		}
 		transVerts = mesh->positions;
-		coords = mesh->coords;
+		coords.resize( mesh->haveTexCoord2 ? 2 : 1 );
+		coords[0].resize( mesh->coords.size() );
+		for ( int i = 0; i < mesh->coords.size(); i++ ) {
+			coords[0][i][0] = mesh->coords[i][0];
+			coords[0][i][1] = mesh->coords[i][1];
+		}
+		if ( mesh->haveTexCoord2 ) {
+			coords[1].resize( mesh->coords.size() );
+			for ( int i = 0; i < mesh->coords.size(); i++ ) {
+				coords[1][i][0] = mesh->coords[i][2];
+				coords[1][i][1] = mesh->coords[i][3];
+			}
+		}
 		transColors = mesh->colors;
 		hasVertexColors = !transColors.empty();
 		transNorms = mesh->normals;

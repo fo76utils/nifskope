@@ -42,6 +42,7 @@ struct GltfStore
 
 void exportCreateInverseBoneMatrices(tinygltf::Model& model, QByteArray& bin, const BSMesh* bsmesh, int gltfSkinID, GltfStore& gltf)
 {
+	(void) gltf;
 	auto bufferViewIndex = model.bufferViews.size();
 	auto acc = tinygltf::Accessor();
 	acc.bufferView = bufferViewIndex;
@@ -154,7 +155,7 @@ bool exportCreateNodes(const NifModel* nif, const Scene* scene, tinygltf::Model&
 	// Add child nodes after first pass
 	for ( int i = 0; i < nif->getBlockCount(); i++ ) {
 		auto iBlock = nif->getBlockIndex(i);
-	
+
 		if ( nif->blockInherits(iBlock, "NiNode") ) {
 			auto children = nif->getChildLinks(i);
 			for ( const auto& child : children ) {
@@ -221,7 +222,7 @@ bool exportCreateNodes(const NifModel* nif, const Scene* scene, tinygltf::Model&
 				for ( int i = 0; i < mesh->boneNames.size(); i++ ) {
 					auto& name = mesh->boneNames.at(i);
 					auto trans = mesh->boneTransforms.at(i).toMatrix4().inverted();
-					
+
 					auto gltfNode = tinygltf::Node();
 					gltfNode.name = name.toStdString();
 					Vector3 translation;
@@ -266,7 +267,7 @@ bool exportCreateNodes(const NifModel* nif, const Scene* scene, tinygltf::Model&
 					auto it = std::find_if(model.nodes.begin(), model.nodes.end(), [&](const tinygltf::Node& n) {
 						return n.name == name.toStdString();
 					});
-		
+
 					int gltfNodeID = (it != model.nodes.end()) ? it - model.nodes.begin() : -1;
 					if ( gltfNodeID > -1 ) {
 						model.skins[skinID].joints.push_back(gltfNodeID);
@@ -286,8 +287,9 @@ bool exportCreateNodes(const NifModel* nif, const Scene* scene, tinygltf::Model&
 
 
 void exportCreatePrimitive(tinygltf::Model& model, QByteArray& bin, std::shared_ptr<MeshFile> mesh, tinygltf::Primitive& prim, std::string attr,
-						   int count, int componentType, int type, quint32& attributeIndex, GltfStore& gltf)
+							int count, int componentType, int type, quint32& attributeIndex, GltfStore& gltf)
 {
+	(void) gltf;
 	if ( count < 1 )
 		return;
 
@@ -379,14 +381,14 @@ void exportCreatePrimitive(tinygltf::Model& model, QByteArray& bin, std::shared_
 			bin.append(reinterpret_cast<const char*>(&v[3]), sizeof(v[3]));
 		}
 	} else if ( attr == "TEXCOORD_0" ) {
-		for ( const auto& v : mesh->coords[0] ) {
+		for ( const auto& v : mesh->coords ) {
 			bin.append(reinterpret_cast<const char*>(&v[0]), sizeof(v[0]));
 			bin.append(reinterpret_cast<const char*>(&v[1]), sizeof(v[1]));
 		}
-	} else if ( attr == "TEXCOORD_1" ) {
-		for ( const auto& v : mesh->coords[1] ) {
-			bin.append(reinterpret_cast<const char*>(&v[0]), sizeof(v[0]));
-			bin.append(reinterpret_cast<const char*>(&v[1]), sizeof(v[1]));
+	} else if ( attr == "TEXCOORD_1" && mesh->haveTexCoord2 ) {
+		for ( const auto& v : mesh->coords ) {
+			bin.append(reinterpret_cast<const char*>(&v[2]), sizeof(v[2]));
+			bin.append(reinterpret_cast<const char*>(&v[3]), sizeof(v[3]));
 		}
 	} else if ( attr == "COLOR_0" ) {
 		for ( const auto& v : mesh->colors ) {
@@ -437,7 +439,7 @@ void exportCreatePrimitive(tinygltf::Model& model, QByteArray& bin, std::shared_
 bool exportCreatePrimitives(tinygltf::Model& model, QByteArray& bin, const BSMesh* bsmesh, tinygltf::Mesh& gltfMesh,
 							quint32& attributeIndex, quint32 lodLevel, int materialID, GltfStore& gltf, qint32 meshLodLevel = -1)
 {
-	if ( lodLevel >= bsmesh->meshes.size() )
+	if ( int(lodLevel) >= bsmesh->meshes.size() )
 		return false;
 
 	auto& mesh = bsmesh->meshes[lodLevel];
@@ -450,13 +452,13 @@ bool exportCreatePrimitives(tinygltf::Model& model, QByteArray& bin, const BSMes
 	exportCreatePrimitive(model, bin, mesh, prim, "NORMAL", mesh->normals.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC3, attributeIndex, gltf);
 	exportCreatePrimitive(model, bin, mesh, prim, "TANGENT", mesh->tangentsBasis.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC4, attributeIndex, gltf);
 	if ( mesh->coords.size() > 0 ) {
-		exportCreatePrimitive(model, bin, mesh, prim, "TEXCOORD_0", mesh->coords[0].size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC2, attributeIndex, gltf);
+		exportCreatePrimitive(model, bin, mesh, prim, "TEXCOORD_0", mesh->coords.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC2, attributeIndex, gltf);
 	}
-	if ( mesh->coords.size() > 1 ) {
-		exportCreatePrimitive(model, bin, mesh, prim, "TEXCOORD_1", mesh->coords[1].size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC2, attributeIndex, gltf);
+	if ( mesh->coords.size() > 0 && mesh->haveTexCoord2 ) {
+		exportCreatePrimitive(model, bin, mesh, prim, "TEXCOORD_1", mesh->coords.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC2, attributeIndex, gltf);
 	}
 	exportCreatePrimitive(model, bin, mesh, prim, "COLOR_0", mesh->colors.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC4, attributeIndex, gltf);
-	
+
 	if ( mesh->weights.size() > 0 && mesh->weightsPerVertex > 0 ) {
 		exportCreatePrimitive(model, bin, mesh, prim, "WEIGHTS_0", mesh->weights.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC4, attributeIndex, gltf);
 	}
@@ -501,7 +503,7 @@ bool exportCreatePrimitives(tinygltf::Model& model, QByteArray& bin, const BSMes
 		bin.append(reinterpret_cast<const char*>(&v[1]), sizeof(v[1]));
 		bin.append(reinterpret_cast<const char*>(&v[2]), sizeof(v[2]));
 	}
-	
+
 	model.bufferViews.push_back(view);
 
 	gltfMesh.primitives.push_back(prim);
@@ -557,6 +559,7 @@ bool exportCreateMeshes(const NifModel* nif, const Scene* scene, tinygltf::Model
 
 void exportGltf(const NifModel* nif, const Scene* scene, const QModelIndex& index)
 {
+	(void) index;
 	QString filename = QFileDialog::getSaveFileName(qApp->activeWindow(), tr("Choose a .glTF file for export"), nif->getFilename(), "glTF (*.gltf)");
 	if ( filename.isEmpty() )
 		return;

@@ -56,7 +56,7 @@ quint32 MeshFile::readMesh()
 		in >> indicesSize;
 		triangles.resize(indicesSize / 3);
 
-		for ( int i = 0; i < indicesSize / 3; i++ ) {
+		for ( quint32 i = 0; i < indicesSize / 3; i++ ) {
 			Triangle tri;
 			in >> tri;
 			triangles[i] = tri;
@@ -90,38 +90,33 @@ quint32 MeshFile::readMesh()
 
 		quint32 numCoord1;
 		in >> numCoord1;
-		coords.append(TexCoords());
-		coords[0].resize(numCoord1);
+		coords.resize(numCoord1);
 
-		for ( int i = 0; i < coords[0].count(); i++ ) {
+		for ( int i = 0; i < coords.count(); i++ ) {
 			uint32_t uv;
 
 			in >> uv;
-      FloatVector4  uv_f(FloatVector4::convertFloat16(uv));
+			FloatVector4  uv_f(FloatVector4::convertFloat16(uv));
 
-			Vector2 coord;
-			coord[0] = uv_f[0];
-			coord[1] = uv_f[1];
-
-			coords[0][i] = coord;
+			coords[i][0] = uv_f[0];
+			coords[i][1] = uv_f[1];
+			coords[i][2] = 0.0f;
+			coords[i][3] = 0.0f;
 		}
 
 		quint32 numCoord2;
 		in >> numCoord2;
-		coords.append(TexCoords());
-		coords[1].resize(numCoord2);
+		numCoord2 = std::min(numCoord2, numCoord1);
+		haveTexCoord2 = bool(numCoord2);
 
-		for ( int i = 0; i < coords[1].count(); i++ ) {
+		for ( quint32 i = 0; i < numCoord2; i++ ) {
 			uint32_t uv;
 
 			in >> uv;
-      FloatVector4  uv_f(FloatVector4::convertFloat16(uv));
+			FloatVector4  uv_f(FloatVector4::convertFloat16(uv));
 
-			Vector2 coord;
-			coord[0] = uv_f[0];
-			coord[1] = uv_f[1];
-
-      coords[1][i] = coord;
+			coords[i][2] = uv_f[0];
+			coords[i][3] = uv_f[1];
 		}
 
 		quint32 numColor;
@@ -129,13 +124,12 @@ quint32 MeshFile::readMesh()
 		if ( numColor > 0 ) {
 			colors.resize(numColor + colors.count());
 		}
-		for ( int i = 0; i < numColor; i++ ) {
-			uint8_t r, g, b, a;
-			in >> b;
-			in >> g;
-			in >> r;
-			in >> a;
-			colors[i] = Color4(r / 255.0, g / 255.0, b / 255.0, a / 255.0);
+		for ( quint32 i = 0; i < numColor; i++ ) {
+			uint32_t	bgra;
+			in >> bgra;
+			FloatVector4	color(bgra);
+			color /= 255.0f;
+			colors[i] = Color4(color[0], color[1], color[2], color[3]);
 		}
 
 		quint32 numNormal;
@@ -175,7 +169,7 @@ quint32 MeshFile::readMesh()
 		}
 		for ( int i = 0; i < weights.count(); i++ ) {
 			QVector<QPair<quint16, quint16>> weightsUNORM;
-			for ( int j = 0; j < 8; j++ ) {
+			for ( quint32 j = 0; j < 8; j++ ) {
 				if ( j < numWeightsPerVertex ) {
 					quint16 b, w;
 					in >> b;
@@ -191,12 +185,12 @@ quint32 MeshFile::readMesh()
 		quint32 numLODs;
 		in >> numLODs;
 		lods.resize(numLODs);
-		for ( int i = 0; i < numLODs; i++ ) {
+		for ( quint32 i = 0; i < numLODs; i++ ) {
 			quint32 indicesSize2;
 			in >> indicesSize2;
 			lods[i].resize(indicesSize2 / 3);
 
-			for ( int j = 0; j < indicesSize2 / 3; j++ ) {
+			for ( quint32 j = 0; j < indicesSize2 / 3; j++ ) {
 				Triangle tri;
 				in >> tri;
 				lods[i][j] = tri;

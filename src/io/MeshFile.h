@@ -37,7 +37,8 @@ public:
 	//! Bitangents
 	QVector<Vector3> bitangents;
 	//! UV coordinate sets
-	QVector<QVector<Vector2>> coords;
+	bool	haveTexCoord2 = false;
+	QVector<Vector4> coords;
 	//! Weights
 	QVector<BoneWeightsUNorm> weights;
 	quint8 weightsPerVertex;
