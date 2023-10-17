@@ -1099,7 +1099,10 @@ QString BSShaderLightingProperty::fileName( int id ) const
 			}
 		}
 
-		return QString();
+		if ( nif->getBSVersion() < 151 )
+			return QString();
+		if ( id == 8 || id == 9 )
+			id++;
 	}
 
 	// From iTextureSet
