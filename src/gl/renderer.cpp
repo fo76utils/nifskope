@@ -648,9 +648,9 @@ int Renderer::Program::uniLocation( const char * fmt, ... )
 	uniformLocationsSF[i] = std::pair< std::uint32_t, int >(h, l);
 #if 0
 	std::fprintf(stderr, "Hash 0x%08X: uniform '%s' location %d\n", (unsigned int) h, varNameBuf, l);
-	if ( l < 0 )
-		std::fprintf( stderr, "Warning: uniform '%s' not found\n", varNameBuf );
 #endif
+	if ( l < 0 )
+		qWarning() << "Warning: uniform '" << varNameBuf << "' not found";
 	return l;
 }
 
@@ -689,41 +689,41 @@ void Renderer::Program::uni4c_l( int l, std::uint32_t c, bool isSRGB)
 	f->glUniform4f( l, x[0], x[1], x[2], x[3] );
 }
 
-bool Renderer::Program::uniSampler_l( BSShaderLightingProperty * bsprop, int & texunit, int l, const std::string * texturePath, std::uint32_t textureReplacement, int textureReplacementMode, const CE2Material::UVStream * uvStream )
+bool Renderer::Program::uniSampler_l( BSShaderLightingProperty * bsprop, int & texunit, int l1, int l2, const std::string * texturePath, std::uint32_t textureReplacement, int textureReplacementMode, const CE2Material::UVStream * uvStream )
 {
-	if ( l >= 0 && activateTextureUnit( texunit ) ) {
+	if ( l1 < 0 )
+		return false;
+	FloatVector4	c(textureReplacement);
+	if ( textureReplacementMode < 2 )
+		c *= 1.0f / 255.0f;	// UNORM
+	else if ( textureReplacementMode == 2 )
+		c.srgbExpand();	// SRGB
+	else
+		c = c * (1.0f / 127.5f) - 1.0f;	// SNORM
+	if ( texturePath && !texturePath->empty() && texunit >= 1 && texunit <= 15 && activateTextureUnit(texunit) ) {
 		TexClampMode	clampMode = TexClampMode::WRAP_S_WRAP_T;
 		if ( uvStream && uvStream->textureAddressMode ) {
 			if ( uvStream->textureAddressMode == 3 ) {
-				FloatVector4	borderColor(textureReplacement);	// this may be incorrect
-				if ( textureReplacementMode > 1 )
-					borderColor.srgbExpand();
-				else
-					borderColor *= 1.0f / 255.0f;
-				glTexParameterfv( GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, &(borderColor.v[0]) );
+				// this may be incorrect
+				glTexParameterfv( GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, &(c.v[0]) );
 				clampMode = TexClampMode::BORDER_S_BORDER_T;
 			} else if ( uvStream->textureAddressMode == 2 )
 				clampMode = TexClampMode::MIRRORED_S_MIRRORED_T;
 			else
 				clampMode = TexClampMode::CLAMP_S_CLAMP_T;
 		}
-		if ( texturePath && !texturePath->empty() ) {
-			if ( bsprop->bind( -1, QString::fromStdString(*texturePath), clampMode ) ) {
-				f->glUniform1i( l, texunit++ );
-				return true;
-			}
-		}
-		if ( textureReplacementMode > 0 ) {
-			static const char	textureReplacementModes[4] = { '\0', '\0', 's', 'n' };
-			char	txtNameBuf[16];
-			std::sprintf( txtNameBuf, "#%08X ", (unsigned int) textureReplacement );
-			txtNameBuf[9] = textureReplacementModes[textureReplacementMode & 3];
-			if ( bsprop->bind( -1, QString(txtNameBuf), clampMode ) ) {
-				f->glUniform1i( l, texunit++ );
-				return true;
-			}
+		if ( bsprop->bind( -1, QString::fromStdString(*texturePath), clampMode ) ) {
+			f->glUniform1i( uniLocation("textureUnits[%d]", texunit - 1), texunit );
+			f->glUniform1i( l1, texunit++ );
+			return true;
 		}
 	}
+	if ( textureReplacementMode > 0 && l2 >= 0 ) {
+		f->glUniform1i( l1, -1 );
+		f->glUniform4f( l2, c[0], c[1], c[2], c[3] );
+		return true;
+	}
+	f->glUniform1i( l1, 0 );
 	return false;
 }
 
@@ -785,6 +785,7 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 	prog->uni1b_l( prog->uniLocation("lm.isEffect"), bool(mat->flags & CE2Material::Flag_IsEffect) );
 	prog->uni1b_l( prog->uniLocation("lm.isTwoSided"), bool(mat->flags & CE2Material::Flag_TwoSided) );
 	prog->uni1b_l( prog->uniLocation("lm.hasOpacityComponent"), bool(mat->flags & CE2Material::Flag_HasOpacityComponent) );
+	prog->uni1b_l( prog->uniLocation("lm.decalSettings.isDecal"), bool(mat->flags & CE2Material::Flag_IsDecal) );
 
 	// texturing
 
@@ -797,14 +798,26 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 
 	int texunit = 0;
 
-	for ( int i = 0; i < 1 /* CE2Material::maxLayers */; i++ ) {
+	// Always bind cube to texture unit 0, regardless of shader settings
+	prog->uni1i( HAS_MAP_CUBE, 1 );
+	GLint uniCubeMap = prog->uniformLocations[SAMP_CUBE];
+	if ( uniCubeMap >= 0 ) {
+		QString	fname = cube_sf;
+
+		if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( fname ) )
+			return false;
+
+		fn->glUniform1i( uniCubeMap, texunit++ );
+	}
+
+	for ( int i = 0; i < 4 && i < CE2Material::maxLayers; i++ ) {
 		bool	layerEnabled = bool(mat->layerMask & (1 << i));
 		prog->uni1b_l( prog->uniLocation("lm.layersEnabled[%d]", i), layerEnabled );
 		if ( !layerEnabled )
 			continue;
 		const CE2Material::Layer *	layer = mat->layers[i];
 		const CE2Material::Blender *	blender = nullptr;
-		if ( i > 0 && i <= CE2Material::maxBlenders )
+		if ( i > 0 && i <= 3 && i <= CE2Material::maxBlenders )
 			blender = mat->blenders[i - 1];
 		if ( layer->material ) {
 			prog->uni4f_l( prog->uniLocation("lm.layers[%d].material.color", i), layer->material->color );
@@ -816,7 +829,7 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 		if ( layer->material && layer->material->textureSet ) {
 			const CE2Material::TextureSet *	textureSet = layer->material->textureSet;
 			prog->uni1f_l( prog->uniLocation("lm.layers[%d].material.textureSet.floatParam", i), textureSet->floatParam );
-			for ( int j = 0; j < CE2Material::TextureSet::maxTexturePaths; j++ ) {
+			for ( int j = 0; j < 11 && j < CE2Material::TextureSet::maxTexturePaths; j++ ) {
 				const std::string *	texturePath = nullptr;
 				if ( textureSet->texturePathMask & (1 << j) )
 					texturePath = textureSet->texturePaths[j];
@@ -829,52 +842,53 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 					textureReplacement = 0xFFFFFFFFU;
 					textureReplacementMode = 1;
 				}
-				if ( j == 0 && !textureReplacementMode && scene->hasOption(Scene::DoErrorColor) ) {
+				if ( j == 0 && textureReplacementMode < 1 && scene->hasOption(Scene::DoErrorColor) && !(mat->flags & CE2Material::Flag_IsDecal) ) {
 					textureReplacement = 0xFFFF00FFU;	// magenta
 					textureReplacementMode = 1;
 				}
 				if ( j == 1 && !scene->hasOption(Scene::DoLighting) ) {
 					texturePath = nullptr;
 					textureReplacement = 0xFFFF8080U;
-					textureReplacementMode = 1;
+					textureReplacementMode = 3;
 				}
-				bool	textureEnabled = prog->uniSampler_l( bsprop, texunit, prog->uniLocation("lm.layers[%d].material.textureSet.textures[%d]", i, j ), texturePath, textureReplacement, textureReplacementMode, layer->uvStream );
-				prog->uni1b_l( prog->uniLocation("lm.layers[%d].material.textureSet.texturesEnabled[%d]", i, j), textureEnabled );
+				prog->uniSampler_l( bsprop, texunit, prog->uniLocation("lm.layers[%d].material.textureSet.textures[%d]", i, j), prog->uniLocation("lm.layers[%d].material.textureSet.textureReplacements[%d]", i, j), texturePath, textureReplacement, textureReplacementMode, layer->uvStream );
 			}
 		} else {
 			prog->uni1f_l( prog->uniLocation("lm.layers[%d].material.textureSet.floatParam", i), 0.5f );
-			for ( int j = 0; j < CE2Material::TextureSet::maxTexturePaths; j++ ) {
-				bool	textureEnabled = prog->uniSampler_l( bsprop, texunit, prog->uniLocation("lm.layers[%d].material.textureSet.textures[%d]", i, j ), nullptr, defaultSFTextureSet[j], int(j < 6), layer->uvStream );
-				prog->uni1b_l( prog->uniLocation("lm.layers[%d].material.textureSet.texturesEnabled[%d]", i, j), textureEnabled );
+			for ( int j = 0; j < 11 && j < CE2Material::TextureSet::maxTexturePaths; j++ ) {
+				prog->uniSampler_l( bsprop, texunit, prog->uniLocation("lm.layers[%d].material.textureSet.textures[%d]", i, j), prog->uniLocation("lm.layers[%d].material.textureSet.textureReplacements[%d]", i, j), nullptr, defaultSFTextureSet[j], int(j < 6), layer->uvStream );
 			}
 		}
+		FloatVector4	scaleAndOffset(1.0f, 1.0f, 0.0f, 0.0f);
+		bool	useChannelTwo = false;
 		if ( layer->uvStream ) {
-			prog->uni2f_l( prog->uniLocation("lm.layers[%d].uvStream.scale", i), layer->uvStream->scaleAndOffset[0], layer->uvStream->scaleAndOffset[1] );
-			prog->uni2f_l( prog->uniLocation("lm.layers[%d].uvStream.offset", i), layer->uvStream->scaleAndOffset[2], layer->uvStream->scaleAndOffset[3] );
-			prog->uni1b_l( prog->uniLocation("lm.layers[%d].uvStream.useChannelTwo", i), (layer->uvStream->channel > 1) );
-		} else {
-			prog->uni2f_l( prog->uniLocation("lm.layers[%d].uvStream.scale", i), 1.0f, 1.0f );
-			prog->uni2f_l( prog->uniLocation("lm.layers[%d].uvStream.offset", i), 0.0f, 0.0f );
-			prog->uni1b_l( prog->uniLocation("lm.layers[%d].uvStream.useChannelTwo", i), false );
+			scaleAndOffset = layer->uvStream->scaleAndOffset;
+			useChannelTwo = (layer->uvStream->channel > 1);
 		}
+		prog->uni2f_l( prog->uniLocation("lm.layers[%d].uvStream.scale", i), scaleAndOffset[0], scaleAndOffset[1] );
+		prog->uni2f_l( prog->uniLocation("lm.layers[%d].uvStream.offset", i), scaleAndOffset[2], scaleAndOffset[3] );
+		prog->uni1b_l( prog->uniLocation("lm.layers[%d].uvStream.useChannelTwo", i), useChannelTwo );
 		if ( blender ) {
-			// TODO
+			const CE2Material::UVStream *	uvStream = blender->uvStream;
+			if ( uvStream ) {
+				scaleAndOffset = uvStream->scaleAndOffset;
+				useChannelTwo = (uvStream->channel > 1);
+			}
+			prog->uni2f_l( prog->uniLocation("lm.blenders[%d].uvStream.scale", i - 1), scaleAndOffset[0], scaleAndOffset[1] );
+			prog->uni2f_l( prog->uniLocation("lm.blenders[%d].uvStream.offset", i - 1), scaleAndOffset[2], scaleAndOffset[3] );
+			prog->uni1b_l( prog->uniLocation("lm.blenders[%d].uvStream.useChannelTwo", i - 1), useChannelTwo );
+			prog->uniSampler_l( bsprop, texunit, prog->uniLocation("lm.blenders[%d].maskTexture", i - 1), prog->uniLocation("lm.blenders[%d].maskTextureReplacement", i - 1), blender->texturePath, blender->textureReplacement, int(blender->textureReplacementEnabled), uvStream );
+			prog->uni1i_l( prog->uniLocation("lm.blenders[%d].blendMode", i - 1), int(blender->blendMode) );
+			prog->uni1i_l( prog->uniLocation("lm.blenders[%d].colorChannel", i - 1), int(blender->colorChannel) );
+			for ( int j = 0; j < CE2Material::Blender::maxFloatParams; j++ )
+				prog->uni1f_l( prog->uniLocation("lm.blenders[%d].floatParams[%d]", i - 1, j), blender->floatParams[j]);
+			for ( int j = 0; j < CE2Material::Blender::maxBoolParams; j++ )
+				prog->uni1b_l( prog->uniLocation("lm.blenders[%d].boolParams[%d]", i - 1, j), blender->boolParams[j]);
 		}
 	}
 
 	prog->uni4m( MAT_VIEW, mesh->viewTrans().toMatrix4() );
 	prog->uni4m( MAT_WORLD, mesh->worldTrans().toMatrix4() );
-	prog->uni1i( HAS_MAP_CUBE, 1 );
-	// Always bind cube regardless of shader settings
-	GLint uniCubeMap = prog->uniformLocations[SAMP_CUBE];
-	if ( uniCubeMap >= 0 ) {
-		QString	fname = cube_sf;
-
-		if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( fname ) )
-			return false;
-
-		fn->glUniform1i( uniCubeMap, texunit++ );
-	}
 
 	QMapIterator<int, Program::CoordType> itx( prog->texcoords );
 

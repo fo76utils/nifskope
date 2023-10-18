@@ -8,8 +8,9 @@ struct UVStream {
 };
 
 struct TextureSet {
-	sampler2D	textures[10];
-	bool	texturesEnabled[10];
+	// >= 1: textureUnits index + 1, -1: use replacement, 0: disabled
+	int	textures[11];
+	vec4	textureReplacements[11];
 	float	floatParam;
 };
 
@@ -26,8 +27,8 @@ struct Layer {
 
 struct Blender {
 	UVStream	uvStream;
-	sampler2D	maskTexture;
-	bool	maskTextureEnabled;
+	int	maskTexture;
+	vec4	maskTextureReplacement;
 	// 0 = "Linear" (default), 1 = "Additive", 2 = "PositionContrast",
 	// 3 = "None", 4 = "CharacterCombine", 5 = "Skin"
 	int	blendMode;
@@ -90,8 +91,8 @@ struct DecalSettingsComponent {
 	bool	isPlanet;
 	bool	isProjected;
 	bool	useParallaxOcclusionMapping;
-	bool	surfaceHeightMapEnabled;
-	sampler2D	surfaceHeightMap;
+	// >= 1: textureUnits index + 1, <= 0: disabled
+	int	surfaceHeightMap;
 	float	parallaxOcclusionScale;
 	bool	parallaxOcclusionShadows;
 	int	maxParralaxOcclusionSteps;
@@ -197,9 +198,9 @@ struct LayeredMaterial {
 	bool	isEffect;
 	bool	isTwoSided;
 	bool	hasOpacityComponent;
-	bool	layersEnabled[1];
-	Layer	layers[1];
-	Blender	blenders[1];
+	bool	layersEnabled[4];
+	Layer	layers[4];
+	Blender	blenders[3];
 	LayeredEmissivityComponent	layeredEmissivity;
 	EmissiveSettingsComponent	emissiveSettings;
 	DecalSettingsComponent	decalSettings;
@@ -213,6 +214,8 @@ struct LayeredMaterial {
 uniform samplerCube	CubeMap;
 uniform bool	hasCubeMap;
 uniform float	envReflection;
+
+uniform sampler2D	textureUnits[15];
 
 uniform vec4 solidColor;
 
@@ -259,7 +262,7 @@ float LightingFuncGGX_REF0(float NdotL, float NdotH, float NdotV, float LdotH, f
 	F = F0 + (1.0 - F0) * LdotH5;
 
 	// V
-	float k = alpha/2.0f;
+	float k = alpha/2.0;
 	vis = G1V(NdotL, k) * G1V(NdotV, k);
 
 	float specular = NdotL * D * F * vis;
@@ -410,46 +413,79 @@ vec3 tonemap(vec3 x)
 	return ((x*(_A*x+_C*_B)+_D*_E)/(x*(_A*x+_B)+_D*_F))-_E/_F;
 }
 
-void getLayer(int n, inout vec4 baseMap, inout vec3 normalMap, inout vec3 pbrMap, inout vec4 emissiveMap)
+vec2 getTexCoord(in UVStream uvStream)
 {
 	vec2	offset;
-	if ( lm.layers[n].uvStream.useChannelTwo )
+	if ( uvStream.useChannelTwo )
 		offset = gl_TexCoord[0].pq;	// this may be incorrect
 	else
 		offset = gl_TexCoord[0].st;
-	offset = offset * lm.layers[n].uvStream.scale + lm.layers[n].uvStream.offset;
+	return offset * uvStream.scale + uvStream.offset;
+}
+
+vec4 getLayerTexture(int layerNum, int textureNum, vec2 offset)
+{
+	int	n = lm.layers[layerNum].material.textureSet.textures[textureNum];
+	if ( n < 1 )
+		return lm.layers[layerNum].material.textureSet.textureReplacements[textureNum];
+	return texture2D(textureUnits[n - 1], offset);
+}
+
+float getBlenderMask(int n)
+{
+	float	r = 1.0;
+	if ( lm.blenders[n].maskTexture != 0 ) {
+		if ( lm.blenders[n].maskTexture < 0 ) {
+			r = lm.blenders[n].maskTextureReplacement.r;
+		} else {
+			vec2	offset = getTexCoord(lm.blenders[n].uvStream);
+			r = texture2D(textureUnits[lm.blenders[n].maskTexture - 1], offset).r;
+		}
+	}
+	if ( lm.blenders[n].colorChannel >= 0 )
+		r *= C[lm.blenders[n].colorChannel];
+	return r;
+}
+
+void getLayer(int n, inout vec4 baseMap, inout vec3 normalMap, inout vec3 pbrMap)
+{
+	vec2	offset = getTexCoord(lm.layers[n].uvStream);
 	// _height.dds
-	// TODO: implement parallax mapping
-//if ( lm.layers[n].material.textureSet.texturesEnabled[6] )
-//	float	heightMap = texture2D(lm.layers[n].material.textureSet.textures[6], offset).r;
+	if ( lm.layers[n].material.textureSet.textures[6] != 0 ) {
+		// TODO: implement parallax mapping correctly
+		vec3	V = normalize(ViewDir);
+		float	heightMap = getLayerTexture(n, 6, offset).r;
+		offset += heightMap * 0.025 * V.xy;
+	}
 	// _color.dds
-	if ( lm.layers[n].material.textureSet.texturesEnabled[0] )
-		baseMap.rgb = texture2D(lm.layers[n].material.textureSet.textures[0], offset).rgb;
+	if ( lm.layers[n].material.textureSet.textures[0] != 0 )
+		baseMap.rgb = getLayerTexture(n, 0, offset).rgb;
+	baseMap.rgb *= lm.layers[n].material.color.rgb;
 	// _normal.dds
-	if ( lm.layers[n].material.textureSet.texturesEnabled[1] ) {
-		normalMap.rg = texture2D(lm.layers[n].material.textureSet.textures[1], offset).rg;
+	if ( lm.layers[n].material.textureSet.textures[1] != 0 ) {
+		normalMap.rg = getLayerTexture(n, 1, offset).rg;
 		// Calculate missing blue channel
 		normalMap.b = sqrt(1.0 - dot(normalMap.rg, normalMap.rg));
 	}
 	// _opacity.dds
-	if ( lm.layers[n].material.textureSet.texturesEnabled[2] )
-		baseMap.a = texture2D(lm.layers[n].material.textureSet.textures[2], offset).r;
+	baseMap.a = 1.0;
+	if ( lm.alphaSettings.hasOpacity && n == lm.alphaSettings.opacitySourceLayer ) {
+		float	a = lm.layers[n].material.color.a;
+		if ( lm.alphaSettings.useVertexColor )
+			a *= C[lm.alphaSettings.vertexColorChannel];
+		if ( lm.layers[n].material.textureSet.textures[2] != 0 )
+			a *= getLayerTexture(n, 2, offset).r;
+		baseMap.a = a;
+	}
 	// _rough.dds
-	if ( lm.layers[n].material.textureSet.texturesEnabled[3] )
-		pbrMap.r = texture2D(lm.layers[n].material.textureSet.textures[3], offset).r;
+	if ( lm.layers[n].material.textureSet.textures[3] != 0 )
+		pbrMap.r = getLayerTexture(n, 3, offset).r;
 	// _metal.dds
-	if ( lm.layers[n].material.textureSet.texturesEnabled[4] )
-		pbrMap.g = texture2D(lm.layers[n].material.textureSet.textures[4], offset).r;
+	if ( lm.layers[n].material.textureSet.textures[4] != 0 )
+		pbrMap.g = getLayerTexture(n, 4, offset).r;
 	// _ao.dds
-	if ( lm.layers[n].material.textureSet.texturesEnabled[5] )
-		pbrMap.b = texture2D(lm.layers[n].material.textureSet.textures[5], offset).r;
-	// _emissive.dds
-	if ( lm.layers[n].material.textureSet.texturesEnabled[7] )
-		emissiveMap.rgb = texture2D(lm.layers[n].material.textureSet.textures[7], offset).rgb;
-	// _transmissive.dds
-	if ( lm.layers[n].material.textureSet.texturesEnabled[8] )
-		emissiveMap.a = texture2D(lm.layers[n].material.textureSet.textures[8], offset).r;
-	baseMap *= lm.layers[n].material.color;
+	if ( lm.layers[n].material.textureSet.textures[5] != 0 )
+		pbrMap.b = getLayerTexture(n, 5, offset).r;
 }
 
 void main(void)
@@ -459,20 +495,30 @@ void main(void)
 		return;
 	}
 
-	vec4	baseMap = vec4(0.0, 0.0, 0.0, 1.0);
-	vec3	normalMap = vec3(0.0, 0.0, 1.0);
+	vec4	baseMap = vec4(1.0, 1.0, 1.0, 1.0);
+	vec3	normal = vec3(0.0, 0.0, 1.0);
 	vec3	pbrMap = vec3(0.75, 0.0, 0.9);	// roughness, metalness, AO
-	vec4	emissiveMap = vec4(0.0, 0.0, 0.0, 0.0);	// alpha = translucency
 	float	alpha = 1.0;
 
-	for (int i = 0; i < 1; i++) {
-		if ( lm.layersEnabled[i] ) {
-			getLayer(i, baseMap, normalMap, pbrMap, emissiveMap);
-			break;
-		}
+	if ( lm.layersEnabled[0] ) {
+		if ( lm.decalSettings.isDecal && lm.layers[0].material.textureSet.textures[0] == 0 )
+			discard;
+		getLayer( 0, baseMap, normal, pbrMap );
 	}
+	//for (int i = 0; i < 3; i++) {
+	//	if ( lm.layersEnabled[i + 1] ) {
+	//		vec4	layerBaseMap = baseMap;
+	//		vec3	layerNormal = normal;
+	//		vec3	layerPBRMap = pbrMap;
+	//		getLayer(i + 1, layerBaseMap, layerNormal, layerPBRMap);
+	//		float	layerMask = getBlenderMask(i);
+	//		baseMap.rgb = mix(baseMap.rgb, layerBaseMap.rgb, layerMask);
+	//		baseMap.a *= layerBaseMap.a;
+	//		normal = normalize(mix(normal, layerNormal, layerMask));
+	//		pbrMap = mix(pbrMap, layerPBRMap, layerMask);
+	//	}
+	//}
 
-	vec3 normal = normalMap.rgb;
 	if ( !gl_FrontFacing && lm.isTwoSided ) {
 		normal *= -1.0;
 	}
@@ -497,21 +543,48 @@ void main(void)
 	vec3 reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(reflectedVS, 0.0)));
 	reflectedWS.z = -reflectedWS.z;
 
+	if ( lm.isEffect ) {
+		if ( lm.effectSettings.useFallOff || lm.effectSettings.useRGBFallOff ) {
+			float	startAngle = cos(radians(lm.effectSettings.falloffStartAngle));
+			float	stopAngle = cos(radians(lm.effectSettings.falloffStopAngle));
+			float	startOpacity = lm.effectSettings.falloffStartOpacity;
+			float	stopOpacity = lm.effectSettings.falloffStopOpacity;
+			float	f = 0.5;
+			if ( stopAngle > (startAngle + 0.000001) )
+				f = smoothstep(startAngle, stopAngle, NdotV);
+			else if ( startAngle > (stopAngle + 0.000001) )
+				f = 1.0 - smoothstep(stopAngle, startAngle, NdotV);
+			f = clamp(mix(startOpacity, stopOpacity, f), 0.0, 1.0);
+			if ( lm.effectSettings.useRGBFallOff )
+				baseMap.rgb *= f;
+			if ( lm.effectSettings.useFallOff )
+				baseMap.a *= f;
+		}
+		if ( lm.effectSettings.vertexColorBlend )
+			baseMap *= C;
+		alpha = lm.effectSettings.materialOverallAlpha;
+	}
+
+	if ( lm.decalSettings.isDecal ) {
+		// TODO
+	}
+
 	vec4	color;
 	vec3	albedo = baseMap.rgb;
 	vec3	diffuse = A.rgb + D.rgb * NdotL0;
 
-	// TODO: Emissive
+	// TODO: layered emissivity
 	vec3	emissive = vec3(0.0);
-	//if ( hasEmit ) {
-	//	emissive += glowColor * glowMult;
-	//	if ( hasGlowMap ) {
-	//		emissive *= glowMap.rgb;
-	//	}
-	//} else if ( hasGlowMap ) {
-	//	emissive += glowMap.rgb * glowMult;
-	//}
-	//emissive *= lightingMap.a;
+	if ( lm.emissiveSettings.isEnabled ) {
+		int	n = lm.emissiveSettings.emissiveSourceLayer;
+		if ( n <= 3 ) {
+			if ( lm.layersEnabled[n] && lm.layers[n].material.textureSet.textures[7] != 0 ) {
+				emissive = getLayerTexture(n, 7, getTexCoord(lm.layers[n].uvStream)).rgb;
+				emissive *= lm.emissiveSettings.emissiveTint.rgb;
+				emissive *= lm.emissiveSettings.emissiveTint.a;
+			}
+		}
+	}
 
 	vec3	f0 = albedo * pbrMap.g * 0.96 + 0.04;
 	albedo = albedo * (1.0 - pbrMap.g);
@@ -552,10 +625,6 @@ void main(void)
 	//	diffuse += soft;
 	//}
 
-	//if ( hasTintColor ) {
-	//	albedo *= tintColor;
-	//}
-
 	// Diffuse
 	color.rgb = diffuse * albedo * D.rgb;
 	// Ambient
@@ -568,8 +637,7 @@ void main(void)
 	color.rgb += emissive;
 
 	color.rgb = tonemap(color.rgb) / tonemap(vec3(1.0));
-	color.a = C.a * baseMap.a;
+	color.a = baseMap.a * alpha;
 
 	gl_FragColor = color;
-	gl_FragColor.a *= alpha;
 }
