@@ -129,7 +129,7 @@ quint32 MeshFile::readMesh()
 			in >> bgra;
 			FloatVector4	color(bgra);
 			color /= 255.0f;
-			colors[i] = Color4(color[0], color[1], color[2], color[3]);
+			colors[i] = Color4(color[2], color[1], color[0], color[3]);
 		}
 
 		quint32 numNormal;
