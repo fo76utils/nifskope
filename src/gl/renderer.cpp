@@ -740,7 +740,7 @@ static QString cube_fo4_76 = "textures/shared/cubemaps/mipblur_defaultoutside1.d
 static QString cube_sf = "textures/cubemaps/cell_cityplazacube.dds";
 
 static const std::uint32_t defaultSFTextureSet[21] = {
-	0xFFFF00FFU, 0xFFFF8080U, 0xFFFFFFFFU, 0xFFC0C0C0U, 0xFF000000U, 0xFFF0F0F0U,
+	0xFFFF00FFU, 0xFFFF8080U, 0xFFFFFFFFU, 0xFFC0C0C0U, 0xFF000000U, 0xFFFFFFFFU,
 	0xFF000000U, 0xFF000000U, 0xFF000000U, 0xFF808080U, 0xFF000000U, 0xFF808080U,
 	0xFF000000U, 0xFF000000U, 0xFF808080U, 0xFF808080U, 0xFF808080U, 0xFF000000U,
 	0xFF000000U, 0xFFFFFFFFU, 0xFF808080U
@@ -1216,12 +1216,9 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 
 		// Environment Mapping
 
-		prog->uni1i( HAS_MAP_CUBE, lsp->hasEnvironmentMap );
+		prog->uni1i( HAS_MAP_CUBE, scene->hasOption(Scene::DoCubeMapping) && scene->hasOption(Scene::DoLighting) && (lsp->hasEnvironmentMap || nifVersion >= 151) );
 		prog->uni1i( HAS_MASK_ENV, lsp->useEnvironmentMask );
-		float refl = 0.0;
-		if ( lsp->hasEnvironmentMap && scene->hasOption(Scene::DoCubeMapping) && scene->hasOption(Scene::DoLighting) )
-			refl = ( nifVersion < 151 ? lsp->environmentReflection : 1.0f );
-
+		float refl = ( nifVersion < 151 ? lsp->environmentReflection : 1.0f );
 		prog->uni1f( ENV_REFLECTION, refl );
 
 		// Always bind cube regardless of shader settings

@@ -83,7 +83,7 @@ float LightingFuncGGX_REF0(float NdotL, float NdotH, float NdotV, float LdotH, f
 	F = F0 + (1.0 - F0) * LdotH5;
 
 	// V
-	float k = alpha/2.0f;
+	float k = alpha/2.0;
 	vis = G1V(NdotL, k) * G1V(NdotV, k);
 
 	float specular = NdotL * D * F * vis;
@@ -217,6 +217,16 @@ float OrenNayarFull(vec3 L, vec3 V, vec3 N, float roughness, float NdotL)
 	return L1 + L2;
 }
 
+float OrenNayarAmbient(float NdotV, float roughness)
+{
+	vec4	a4 = vec4(0.10791894, 0.12358939, -0.57423268, 0.05777684);
+	vec4	a3 = vec4(-0.22177106, -0.25397314, 1.18003636, 0.27063903);
+	vec4	a2 = vec4(0.11189594, 0.12814090, -0.59538584, -0.64884410);
+	vec4	a1 = vec4(0.02764598, 0.03166416, -0.14711852, 0.17652043);
+	vec4	a = (((a4 * roughness + a3) * roughness + a2) * roughness + a1) * roughness;
+	return ((a.r * NdotV + a.g) * NdotV + a.b) * NdotV + a.a + 1.0;
+}
+
 vec3 fresnelSchlickRoughness(float NdotV, vec3 F0, float roughness)
 {
 	return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - NdotV, 5.0);
@@ -309,8 +319,6 @@ void main(void)
 	float	smoothness = lightingMap.r;
 	// smoothness = clamp(smoothness * specGlossiness, 0.0, 1.0);
 	float	roughness = max(1.0 - smoothness, 0.02);
-	float	ao = roughness * roughness * 0.5;
-	ao = lightingMap.g * NdotV / (NdotV + ao - (NdotV * ao));
 	vec3	spec = LightingFuncGGX_REF(NdotL0, NdotH, NdotV, LdotH, roughness, f0) * NdotL0 * D.rgb;
 
 	// Diffuse
@@ -319,19 +327,23 @@ void main(void)
 
 	// Environment
 	vec3	refl = vec3(0.0);
-	vec3	ambient = A.rgb / 0.75;
+	vec3	ambient = A.rgb / 0.375;
 	if ( hasCubeMap ) {
 		refl = textureLod(CubeMap, reflectedWS, 8.0 - smoothness * 8.0).rgb;
-		refl *= envReflection * specStrength * ao;
+		refl *= envReflection * specStrength;
 		refl *= ambient;
-		ambient *= textureLod(CubeMap, reflectedWS, 8.0).rgb;
+		ambient *= textureLod(CubeMap, reflectedWS, 7.0).rgb;
 	} else {
-		refl = vec3(0.05) * ambient * envReflection * specStrength * ao;
 		ambient *= 0.05;
+		refl = ambient;
 	}
 	vec3	f = fresnel_r(NdotV, f0, roughness);
-	refl *= f;
+	float	g = roughness * roughness * 0.5;
+	g = NdotV / (NdotV + g - (NdotV * g));
+	float	ao = lightingMap.g;
+	refl *= f * g * ao;
 	albedo *= (vec3(1.0) - f);
+	ao *= OrenNayarAmbient(NdotV, 1.0 - smoothness);
 
 	//vec3 soft = vec3(0.0);
 	//float wrap = NdotL;

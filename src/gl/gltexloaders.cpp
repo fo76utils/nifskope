@@ -633,12 +633,17 @@ GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, QString 
 		dataPtr[128] = 0x1D;
 		dataPtr = dataPtr + 148;
 		size_t	n = (data.size() - 148) >> 3;
-		float	scale = 0.0f;
-		for ( size_t i = 0; i < n; i++ ) {
-			FloatVector4	c(FloatVector4::convertFloat16(FileBuffer::readUInt64Fast(dataPtr + (i << 3)), true));
-			scale += c.dotProduct3(c);
+		FloatVector4	scale(1.0f);
+		if ( game == Game::STARFIELD && filepath.contains( "/cubemaps/" ) ) {
+			// normalize Starfield cube maps
+			scale = FloatVector4(0.0f);
+			for ( size_t i = 0; i < n; i++ ) {
+				FloatVector4	c(FloatVector4::convertFloat16(FileBuffer::readUInt64Fast(dataPtr + (i << 3)), true));
+				scale += c.maxValues(FloatVector4(0.0f));
+			}
+			scale[0] = 15.0f * (scale[0] + scale[1] + scale[2]) / float(int(n) * 3);
+			scale = FloatVector4(1.0f / std::min(std::max(scale[0], 1.0f), 65536.0f));
 		}
-		scale = 1.0f / std::min(std::max(float(std::sqrt(scale / float(int(n)))) * 1.125f, 1.0f), 65536.0f);
 		for ( size_t i = 0; i < n; i++ ) {
 			FloatVector4	c(FloatVector4::convertFloat16(FileBuffer::readUInt64Fast(dataPtr + (i << 3)), true));
 			float	a = c[3] * 255.0f;
@@ -1196,6 +1201,8 @@ bool texLoad( const Game::GameMode game, const QString & filepath, QString & for
 		if ( filepathStr.find("/cubemaps/") != std::string::npos && data.size() >= 148 ) {
 			data[108] = data[108] | 0x08;	// DDSCAPS_COMPLEX
 			data[113] = data[113] | 0xFE;	// DDSCAPS2_CUBEMAP*
+			if ( game == Game::FALLOUT_76 && data[84] == 'D' && data[85] == 'X' && data[86] == '1' && data[87] == '0' && data[128] == 'W' )
+				data[128] = 0x5B;	// DXGI_FORMAT_B8G8R8A8_UNORM -> DXGI_FORMAT_B8G8R8A8_UNORM_SRGB
 		}
 		mipmaps = texLoadDDS( game, filepath, format, target, width, height, mipmaps, data, id );
 	} else if ( filepath.endsWith( ".tga", Qt::CaseInsensitive ) )
