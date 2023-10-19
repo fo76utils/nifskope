@@ -370,7 +370,7 @@ public:
 		void uni1i_l( int l, int x );
 		void uni1f_l( int l, float x );
 		void uni2f_l( int l, float x, float y );
-		void uni4f_l( int l, FloatVector4 x );
+		void uni4f_l( int l, FloatVector4 x, bool isSRGB = false );
 		void uni4c_l( int l, std::uint32_t c, bool isSRGB = false );
 		// l1 = texture unit variable location, l2 = texture replacement location
 		// textureReplacementMode <= 0: disabled, > 0: enabled

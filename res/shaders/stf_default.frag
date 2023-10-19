@@ -484,7 +484,7 @@ void getLayer(int n, inout vec4 baseMap, inout vec3 normalMap, inout vec3 pbrMap
 		if ( lm.alphaSettings.useVertexColor )
 			a *= C[lm.alphaSettings.vertexColorChannel];
 		if ( lm.layers[n].material.textureSet.textures[2] != 0 )
-			a *= getLayerTexture(n, 2, offset).r;
+			a *= getLayerTexture(n, 2, getTexCoord(lm.alphaSettings.opacityUVstream)).r;
 		baseMap.a = a;
 	}
 	// _rough.dds
