@@ -477,16 +477,6 @@ void getLayer(int n, inout vec4 baseMap, inout vec3 normalMap, inout vec3 pbrMap
 		// Calculate missing blue channel
 		normalMap.b = sqrt(1.0 - dot(normalMap.rg, normalMap.rg));
 	}
-	// _opacity.dds
-	baseMap.a = 1.0;
-	if ( lm.alphaSettings.hasOpacity && n == lm.alphaSettings.opacitySourceLayer ) {
-		float	a = lm.layers[n].material.color.a;
-		if ( lm.alphaSettings.useVertexColor )
-			a *= C[lm.alphaSettings.vertexColorChannel];
-		if ( lm.layers[n].material.textureSet.textures[2] != 0 )
-			a *= getLayerTexture(n, 2, getTexCoord(lm.alphaSettings.opacityUVstream)).r;
-		baseMap.a = a;
-	}
 	// _rough.dds
 	if ( lm.layers[n].material.textureSet.textures[3] != 0 )
 		pbrMap.r = getLayerTexture(n, 3, offset).r;
@@ -553,6 +543,15 @@ void main(void)
 	vec3 reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(reflectedVS, 0.0)));
 	reflectedWS.z = -reflectedWS.z;
 
+	if ( lm.alphaSettings.hasOpacity && lm.alphaSettings.opacitySourceLayer < 4 && lm.layersEnabled[lm.alphaSettings.opacitySourceLayer] ) {
+		int	n = lm.alphaSettings.opacitySourceLayer;
+		if ( lm.alphaSettings.useVertexColor )
+			baseMap.a = C[lm.alphaSettings.vertexColorChannel];
+		if ( lm.layers[n].material.textureSet.textures[2] != 0 )
+			baseMap.a *= getLayerTexture(n, 2, getTexCoord(lm.alphaSettings.opacityUVstream)).r;
+		alpha = lm.layers[n].material.color.a;
+	}
+
 	if ( lm.isEffect ) {
 		if ( lm.effectSettings.useFallOff || lm.effectSettings.useRGBFallOff ) {
 			float	startAngle = cos(radians(lm.effectSettings.falloffStartAngle));
@@ -575,9 +574,8 @@ void main(void)
 		alpha = lm.effectSettings.materialOverallAlpha;
 	}
 
-	if ( lm.decalSettings.isDecal ) {
-		// TODO
-	}
+	if ( lm.decalSettings.isDecal )
+		alpha = lm.decalSettings.materialOverallAlpha;
 
 	vec4	color;
 	vec3	albedo = baseMap.rgb;
