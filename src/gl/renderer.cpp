@@ -769,14 +769,17 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 		return false;
 
 	const CE2Material *	mat = lsp->getSFMaterial();
+	bool	useErrorColor = false;
 	if ( !mat ) {
 		const CE2MaterialDB *	matDB = Game::GameManager::materials( Game::STARFIELD );
 		if ( !matDB )
 			return false;
 		if ( lsp )
 			mat = matDB->findMaterial( nif->get<QString>( lsp->index(), "Name" ).toStdString() );
-		if ( !mat )
+		if ( !mat ) {
 			mat = matDB->findMaterial( std::string("materials/test/generic/test_generic_white.mat") );
+			useErrorColor = scene->hasOption(Scene::DoErrorColor);
+		}
 	}
 	if ( !mat )
 		return false;
@@ -820,17 +823,17 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 	if ( mat->flags & CE2Material::Flag_LayeredEmissivity ) {
 		prog->uni1b_l( prog->uniLocation("lm.layeredEmissivity.isEnabled"), mat->layeredEmissiveSettings->isEnabled );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.firstLayerIndex"), mat->layeredEmissiveSettings->layer1Index );
-		prog->uni4c_l( prog->uniLocation("lm.layeredEmissivity.firstLayerTint"), mat->layeredEmissiveSettings->layer1Tint, true );
+		prog->uni4c_l( prog->uniLocation("lm.layeredEmissivity.firstLayerTint"), mat->layeredEmissiveSettings->layer1Tint );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.firstLayerMaskIndex"), mat->layeredEmissiveSettings->layer1MaskIndex );
 		prog->uni1b_l( prog->uniLocation("lm.layeredEmissivity.secondLayerActive"), mat->layeredEmissiveSettings->layer2Active );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.secondLayerIndex"), mat->layeredEmissiveSettings->layer2Index );
-		prog->uni4c_l( prog->uniLocation("lm.layeredEmissivity.secondLayerTint"), mat->layeredEmissiveSettings->layer2Tint, true );
+		prog->uni4c_l( prog->uniLocation("lm.layeredEmissivity.secondLayerTint"), mat->layeredEmissiveSettings->layer2Tint );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.secondLayerMaskIndex"), mat->layeredEmissiveSettings->layer2MaskIndex );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.firstBlenderIndex"), mat->layeredEmissiveSettings->blender1Index );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.firstBlenderMode"), mat->layeredEmissiveSettings->blender1Mode );
 		prog->uni1b_l( prog->uniLocation("lm.layeredEmissivity.thirdLayerActive"), mat->layeredEmissiveSettings->layer3Active );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.thirdLayerIndex"), mat->layeredEmissiveSettings->layer3Index );
-		prog->uni4c_l( prog->uniLocation("lm.layeredEmissivity.thirdLayerTint"), mat->layeredEmissiveSettings->layer3Tint, true );
+		prog->uni4c_l( prog->uniLocation("lm.layeredEmissivity.thirdLayerTint"), mat->layeredEmissiveSettings->layer3Tint );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.thirdLayerMaskIndex"), mat->layeredEmissiveSettings->layer3MaskIndex );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.secondBlenderIndex"), mat->layeredEmissiveSettings->blender2Index );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.secondBlenderMode"), mat->layeredEmissiveSettings->blender2Mode );
@@ -847,7 +850,7 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 	if ( mat->flags & CE2Material::Flag_Emissive ) {
 		prog->uni1b_l( prog->uniLocation("lm.emissiveSettings.isEnabled"), mat->emissiveSettings->isEnabled );
 		prog->uni1i_l( prog->uniLocation("lm.emissiveSettings.emissiveSourceLayer"), mat->emissiveSettings->sourceLayer );
-		prog->uni4f_l( prog->uniLocation("lm.emissiveSettings.emissiveTint"), mat->emissiveSettings->emissiveTint, true );
+		prog->uni4f_l( prog->uniLocation("lm.emissiveSettings.emissiveTint"), mat->emissiveSettings->emissiveTint );
 		prog->uni1i_l( prog->uniLocation("lm.emissiveSettings.emissiveMaskSourceBlender"), mat->emissiveSettings->maskSourceBlender );
 		prog->uni1f_l( prog->uniLocation("lm.emissiveSettings.emissiveClipThreshold"), mat->emissiveSettings->clipThreshold );
 		prog->uni1b_l( prog->uniLocation("lm.emissiveSettings.adaptiveEmittance"), mat->emissiveSettings->adaptiveEmittance );
@@ -906,7 +909,7 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 		prog->uni1f_l( prog->uniLocation("lm.effectSettings.backlightingScale"), mat->effectSettings->backlightScale );
 		prog->uni1f_l( prog->uniLocation("lm.effectSettings.backlightingSharpness"), mat->effectSettings->backlightSharpness );
 		prog->uni1f_l( prog->uniLocation("lm.effectSettings.backlightingTransparencyFactor"), mat->effectSettings->backlightTransparency );
-		prog->uni4f_l( prog->uniLocation("lm.effectSettings.backLightingTintColor"), mat->effectSettings->backlightTintColor, true );
+		prog->uni4f_l( prog->uniLocation("lm.effectSettings.backLightingTintColor"), mat->effectSettings->backlightTintColor );
 		prog->uni1b_l( prog->uniLocation("lm.effectSettings.depthMVFixup"), bool(mat->effectSettings->flags & CE2Material::EffectFlag_MVFixup) );
 		prog->uni1b_l( prog->uniLocation("lm.effectSettings.depthMVFixupEdgesOnly"), bool(mat->effectSettings->flags & CE2Material::EffectFlag_MVFixupEdgesOnly) );
 		prog->uni1b_l( prog->uniLocation("lm.effectSettings.forceRenderBeforeOIT"), bool(mat->effectSettings->flags & CE2Material::EffectFlag_RenderBeforeOIT) );
@@ -968,13 +971,9 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 				int	textureReplacementMode = 0;
 				if ( textureSet->textureReplacementMask & (1 << j) )
 					textureReplacementMode = ( j == 0 || j == 7 ? 2 : ( j == 1 ? 3 : 1 ) );
-				if ( j == 0 && scene->hasOption(Scene::DoLighting) && scene->hasVisMode(Scene::VisNormalsOnly) ) {
+				if ( j == 0 && ((scene->hasOption(Scene::DoLighting) && scene->hasVisMode(Scene::VisNormalsOnly)) || useErrorColor) ) {
 					texturePath = nullptr;
-					textureReplacement = 0xFFFFFFFFU;
-					textureReplacementMode = 1;
-				}
-				if ( j == 0 && textureReplacementMode < 1 && scene->hasOption(Scene::DoErrorColor) && !(mat->flags & (CE2Material::Flag_IsEffect | CE2Material::Flag_IsDecal)) ) {
-					textureReplacement = 0xFFFF00FFU;	// magenta
+					textureReplacement = (useErrorColor ? 0xFFFF00FFU : 0xFFFFFFFFU);
 					textureReplacementMode = 1;
 				}
 				if ( j == 1 && !scene->hasOption(Scene::DoLighting) ) {
