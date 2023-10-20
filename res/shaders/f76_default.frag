@@ -287,9 +287,9 @@ void main(void)
 	float LdotH = max(dot(L, H), FLT_EPSILON);
 	float NdotNegL = max(dot(normal, -L), FLT_EPSILON);
 
-	vec3 reflected = reflect(V, normal);
-	vec3 reflectedVS = b * reflected.x + t * reflected.y + N * reflected.z;
-	vec3 reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(reflectedVS, 0.0)));
+	mat3	btn = transpose(mat3(b, t, N));
+	vec3	reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(vec3(reflect(V, normal) * btn), 0.0)));
+	vec3	normalWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(vec3(-normal * btn), 0.0)));
 
 	vec4 color;
 	vec3 albedo = baseMap.rgb * C.rgb;
@@ -329,10 +329,10 @@ void main(void)
 	vec3	refl = vec3(0.0);
 	vec3	ambient = A.rgb / 0.375;
 	if ( hasCubeMap ) {
-		refl = textureLod(CubeMap, reflectedWS, 8.0 - smoothness * 8.0).rgb;
+		refl = textureLod(CubeMap, reflectedWS, 7.0 - smoothness * 7.0).rgb;
 		refl *= envReflection * specStrength;
 		refl *= ambient;
-		ambient *= textureLod(CubeMap, reflectedWS, 7.0).rgb;
+		ambient *= textureLod(CubeMap, normalWS, 6.0).rgb;
 	} else {
 		ambient *= 0.05;
 		refl = ambient;

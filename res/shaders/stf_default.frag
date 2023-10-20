@@ -538,10 +538,11 @@ void main(void)
 	float LdotH = max(dot(L, H), FLT_EPSILON);
 	float NdotNegL = max(dot(normal, -L), FLT_EPSILON);
 
-	vec3 reflected = reflect(V, normal);
-	vec3 reflectedVS = b * reflected.x + t * reflected.y + N * reflected.z;
-	vec3 reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(reflectedVS, 0.0)));
+	mat3	btn = transpose(mat3(b, t, N));
+	vec3	reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(vec3(reflect(V, normal) * btn), 0.0)));
 	reflectedWS.z = -reflectedWS.z;
+	vec3	normalWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(vec3(-normal * btn), 0.0)));
+	normalWS.z = -normalWS.z;
 
 	if ( lm.alphaSettings.hasOpacity && lm.alphaSettings.opacitySourceLayer < 4 && lm.layersEnabled[lm.alphaSettings.opacitySourceLayer] ) {
 		int	n = lm.alphaSettings.opacitySourceLayer;
@@ -613,7 +614,7 @@ void main(void)
 		refl = textureLod(CubeMap, reflectedWS, 8.0 - smoothness * 8.0).rgb;
 		refl *= envReflection;
 		refl *= ambient;
-		ambient *= textureLod(CubeMap, reflectedWS, 7.0).rgb * envReflection;
+		ambient *= textureLod(CubeMap, normalWS, 7.0).rgb * envReflection;
 	} else {
 		ambient *= 0.05;
 		refl = ambient;
