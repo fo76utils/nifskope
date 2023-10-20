@@ -334,7 +334,7 @@ void main(void)
 		refl *= ambient;
 		ambient *= textureLod(CubeMap, normalWS, 6.0).rgb;
 	} else {
-		ambient *= 0.05;
+		ambient /= 15.0;
 		refl = ambient;
 	}
 	vec3	f = fresnel_r(NdotV, f0, roughness);

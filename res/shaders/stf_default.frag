@@ -495,7 +495,7 @@ void main(void)
 		return;
 	}
 
-	vec4	baseMap = vec4(1.0, 1.0, 1.0, 1.0);
+	vec4	baseMap = vec4(0.0, 0.0, 0.0, 1.0);
 	vec3	normal = vec3(0.0, 0.0, 1.0);
 	vec3	pbrMap = vec3(0.75, 0.0, 1.0);	// roughness, metalness, AO
 	float	alpha = 1.0;
@@ -590,7 +590,7 @@ void main(void)
 			if ( lm.layersEnabled[n] && lm.layers[n].material.textureSet.textures[7] != 0 ) {
 				emissive = getLayerTexture(n, 7, getTexCoord(lm.layers[n].uvStream)).rgb;
 				emissive *= lm.emissiveSettings.emissiveTint.rgb;
-				emissive *= lm.emissiveSettings.emissiveTint.a;
+				emissive *= lm.emissiveSettings.emissiveTint.a * exp2(lm.emissiveSettings.exposureOffset * 0.5);
 			}
 		}
 	}
@@ -616,7 +616,7 @@ void main(void)
 		refl *= ambient;
 		ambient *= textureLod(CubeMap, normalWS, 7.0).rgb * envReflection;
 	} else {
-		ambient *= 0.05;
+		ambient /= 15.0;
 		refl = ambient;
 	}
 	vec3	f = fresnel_r(NdotV, f0, roughness);
