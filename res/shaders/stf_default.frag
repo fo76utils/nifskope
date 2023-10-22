@@ -309,8 +309,8 @@ vec3 LightingFuncGGX_REF(float NdotL, float NdotH, float NdotV, float LdotH, flo
 	// F (Fresnel term)
 	vec3 F = fresnel_n(LdotH, F0);
 	// G (remapped hotness, see Unreal Shading)
-	float k = (alpha + 2 * roughness + 1) / 8.0;
-	float G = NdotL * NdotV / (mix(NdotL, 1, k) * mix(NdotV, 1, k));
+	float	k = (alpha + 2 * roughness + 1) / 8.0;
+	float	G = NdotL / (mix(NdotL, 1, k) * mix(NdotV, 1, k));
 
 	return D * F * G / 4.0;
 }
@@ -337,18 +337,19 @@ float OrenNayar(vec3 L, vec3 V, vec3 N, float roughness, float NdotL)
 	return L1 * max( NdotL, FLT_EPSILON );
 }
 
-float OrenNayarFull(vec3 L, vec3 V, vec3 N, float roughness, float NdotL)
+float OrenNayarFull(vec3 L, vec3 V, vec3 N, float roughness, float NdotL0)
 {
-	//float NdotL = dot(N, L);
-	float NdotV = dot(N, V);
-	float LdotV = dot(L, V);
+	float	NdotV = max(dot(N, V), FLT_EPSILON);
 
-	float angleVN = acos(max(NdotV, FLT_EPSILON));
-	float angleLN = acos(max(NdotL, FLT_EPSILON));
+	float	angleVN = acos(NdotV);
+	float	angleLN = acos(NdotL0);
 
-	float alpha = max(angleVN, angleLN);
-	float beta = min(angleVN, angleLN);
-	float gamma = LdotV - NdotL * NdotV;
+	float	alpha = max(angleVN, angleLN);
+	float	beta = min(angleVN, angleLN);
+	float	gamma = 0.0;
+	//gamma = dot(L, V) - NdotL0 * NdotV;
+	if ( beta > 0.005 )
+		gamma = dot(normalize(cross(L, N)), normalize(cross(V, N)));
 
 	float roughnessSquared = roughness * roughness;
 	float roughnessSquared9 = (roughnessSquared / (roughnessSquared + 0.09));
@@ -368,8 +369,8 @@ float OrenNayarFull(vec3 L, vec3 V, vec3 N, float roughness, float NdotL)
 
 	// Avoid asymptote at pi/2
 	float asym = M_PI / 2.0;
-	float lim1 = asym + 0.01;
-	float lim2 = asym - 0.01;
+	float lim1 = asym + 0.005;
+	float lim2 = asym - 0.005;
 
 	float ab2 = (alpha + beta) / 2.0;
 
@@ -387,21 +388,21 @@ float OrenNayarFull(vec3 L, vec3 V, vec3 N, float roughness, float NdotL)
 	float A = gamma * C2 * tan(beta);
 	float B = (1.0 - abs(gamma)) * C3 * tan(ab2);
 
-	float L1 = max(FLT_EPSILON, NdotL) * (C1 + A + B);
+	float L1 = NdotL0 * (C1 + A + B);
 
 	// Interreflection
 	float twoBetaPi = 2.0 * beta / M_PI;
-	float L2 = 0.17 * max(FLT_EPSILON, NdotL) * (roughnessSquared / (roughnessSquared + 0.13)) * (1.0 - gamma * twoBetaPi * twoBetaPi);
+	float L2 = 0.17 * NdotL0 * (roughnessSquared / (roughnessSquared + 0.13)) * (1.0 - gamma * twoBetaPi * twoBetaPi);
 
 	return L1 + L2;
 }
 
 float OrenNayarAmbient(float NdotV, float roughness)
 {
-	vec4	a4 = vec4(0.10791894, 0.12358939, -0.57423268, 0.05777684);
-	vec4	a3 = vec4(-0.22177106, -0.25397314, 1.18003636, 0.27063903);
-	vec4	a2 = vec4(0.11189594, 0.12814090, -0.59538584, -0.64884410);
-	vec4	a1 = vec4(0.02764598, 0.03166416, -0.14711852, 0.17652043);
+	vec4	a4 = vec4(-0.61319173, 1.67989635, -1.74469001, 0.39303551);
+	vec4	a3 = vec4(1.26009045, -3.45214521, 3.58530224, -0.41831188);
+	vec4	a2 = vec4(-0.63577225, 1.74177294, -1.80896352, -0.30123290);
+	vec4	a1 = vec4(-0.15710246, 0.43038707, -0.44698386, 0.26241189);
 	vec4	a = (((a4 * roughness + a3) * roughness + a2) * roughness + a1) * roughness;
 	return ((a.r * NdotV + a.g) * NdotV + a.b) * NdotV + a.a + 1.0;
 }
@@ -601,10 +602,10 @@ void main(void)
 	// Specular
 	float	smoothness = 1.0 - pbrMap.r;
 	float	roughness = max(pbrMap.r, 0.02);
-	vec3	spec = LightingFuncGGX_REF(NdotL0, NdotH, NdotV, LdotH, roughness, f0) * NdotL0 * D.rgb;
+	vec3	spec = LightingFuncGGX_REF(NdotL0, NdotH, NdotV, LdotH, roughness, f0) * D.rgb;
 
 	// Diffuse
-	float diff = OrenNayarFull(L, V, normal, 1.0 - smoothness, NdotL);
+	float	diff = OrenNayarFull(L, V, normal, 1.0 - smoothness, NdotL0);
 	diffuse = vec3(diff);
 
 	// Environment
