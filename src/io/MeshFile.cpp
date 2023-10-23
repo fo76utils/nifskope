@@ -10,14 +10,6 @@
 
 double snormToDouble(int16_t x) { return x < 0 ? x / double(32768) : x / double(32767); }
 
-Vector3 UnpackUDEC3(quint32 n, bool& invertBitangent)
-{
-	FloatVector4  v(FloatVector4::convertX10Y10Z10(n));
-	invertBitangent = bool((n >> 31) & 1);
-
-	return Vector3(v[0], v[1], v[2]);
-}
-
 MeshFile::MeshFile(const QString& filepath)
 {
 	path = QDir::fromNativeSeparators(filepath.toLower()).toStdString();
@@ -138,10 +130,10 @@ quint32 MeshFile::readMesh()
 			normals.resize(numNormal + normals.count());
 		}
 		for ( int i = 0; i < normals.count(); i++ ) {
-			quint32 n;
+			quint32	n;
 			in >> n;
-			bool b = false;
-			normals[i] = UnpackUDEC3(n, b);
+			FloatVector4	v(FloatVector4::convertX10Y10Z10(n));
+			normals[i] = Vector3(v[0], v[1], v[2]);
 		}
 
 		quint32 numTangent;
@@ -152,14 +144,17 @@ quint32 MeshFile::readMesh()
 			bitangents.resize(numTangent + bitangents.count());
 		}
 		for ( int i = 0; i < tangents.count(); i++ ) {
-			quint32 n;
+			quint32	n;
 			in >> n;
-			bool b = false;
-			auto tan = UnpackUDEC3(n, b);
-			tangents[i] = tan;
+			bool	b = bool(n & 0x80000000U);
+			FloatVector4	v(FloatVector4::convertX10Y10Z10(n));
+			tangents[i] = Vector3(v[0], v[1], v[2]);
 			// For export
-			tangentsBasis[i] = Vector4(tan[0], tan[1], tan[2], (b) ? 1.0 : -1.0);
-			bitangents[i] = (b) ? Vector3::crossproduct(normals[i], tangents[i]) : Vector3::crossproduct(tangents[i], normals[i]);
+			tangentsBasis[i] = Vector4(v[0], v[1], v[2], (b) ? 1.0 : -1.0);
+			if (b)
+				v *= -1.0f;
+			v = v.crossProduct3(FloatVector4(normals[i][0], normals[i][1], normals[i][2], 0.0f));
+			bitangents[i] = Vector3(v[0], v[1], v[2]);
 		}
 
 		quint32 numWeights;
