@@ -815,7 +815,7 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 	}
 
 	prog->uni1b_l( prog->uniLocation("isWireframe"), false );
-	prog->uni1f_l( prog->uniLocation("envReflection"), 1.0f );
+	prog->uni1f_l( prog->uniLocation("envReflection"), 0.000104f );
 	prog->uni1i_l( prog->uniLocation("lm.shaderModel"), mat->shaderModel );
 	prog->uni1b_l( prog->uniLocation("lm.isEffect"), bool(mat->flags & CE2Material::Flag_IsEffect) );
 	prog->uni1b_l( prog->uniLocation("lm.isTwoSided"), bool(mat->flags & CE2Material::Flag_TwoSided) );

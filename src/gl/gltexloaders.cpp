@@ -626,6 +626,7 @@ GLuint texLoadBMP( QIODevice & f, QString & texformat, GLenum & target, GLuint &
 
 GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint & id )
 {
+#if 0
 	char *	dataPtr = data.data();
 	if ( data.size() >= 148 && dataPtr[128] == 0x0A && dataPtr[84] == 'D' && dataPtr[85] == 'X' && dataPtr[86] == '1' && dataPtr[87] == '0' ) {
 		// work around GLI issues with float formats
@@ -657,6 +658,7 @@ GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, QString 
 		}
 		data.resize(((data.size() - 148) >> 1) + 148);
 	}
+#endif
 
 	GLuint result = 0;
 	gli::texture texture;
