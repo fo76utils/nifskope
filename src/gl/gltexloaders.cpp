@@ -629,12 +629,12 @@ GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, QString 
 	(void) format;
 	(void) width;
 	(void) height;
-#if 1
+#if 0
 	(void) game;
 #else
 	char *	dataPtr = data.data();
 	if ( data.size() >= 148 && dataPtr[128] == 0x0A && dataPtr[84] == 'D' && dataPtr[85] == 'X' && dataPtr[86] == '1' && dataPtr[87] == '0' ) {
-		// work around GLI issues with float formats
+		// work around issues with float formats
 		// DXGI_FORMAT_R16G16B16A16_FLOAT -> DXGI_FORMAT_R8G8B8A8_UNORM_SRGB
 		dataPtr[128] = 0x1D;
 		dataPtr = dataPtr + 148;
