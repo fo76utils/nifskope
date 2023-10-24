@@ -313,8 +313,7 @@ void main(void)
 	}
 	emissive *= lightingMap.a;
 
-	vec3	f0 = (reflMap.g == 0 && reflMap.b == 0) ? vec3(reflMap.r) : reflMap.rgb;
-	f0 = max(f0, vec3(0.02));
+	vec3	f0 = max(reflMap.rgb, vec3(0.02));
 
 	// Specular
 	float	smoothness = lightingMap.r;

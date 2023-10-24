@@ -916,10 +916,17 @@ GLuint GLI_create_texture( gli::texture& texture, GLenum& target, GLuint& id )
 	glBindTexture( target, id );
 	glTexParameteri( target, GL_TEXTURE_BASE_LEVEL, 0 );
 	glTexParameteri( target, GL_TEXTURE_MAX_LEVEL, static_cast<GLint>(texture.levels() - 1) );
-	glTexParameteri( target, GL_TEXTURE_SWIZZLE_R, format.Swizzles[0] );
-	glTexParameteri( target, GL_TEXTURE_SWIZZLE_G, format.Swizzles[1] );
-	glTexParameteri( target, GL_TEXTURE_SWIZZLE_B, format.Swizzles[2] );
-	glTexParameteri( target, GL_TEXTURE_SWIZZLE_A, format.Swizzles[3] );
+	if ( gli::component_count(texture.format()) == 1 ) {
+		glTexParameteri( target, GL_TEXTURE_SWIZZLE_R, format.Swizzles[0] );
+		glTexParameteri( target, GL_TEXTURE_SWIZZLE_G, format.Swizzles[0] );
+		glTexParameteri( target, GL_TEXTURE_SWIZZLE_B, format.Swizzles[0] );
+		glTexParameteri( target, GL_TEXTURE_SWIZZLE_A, GL_ONE );
+	} else {
+		glTexParameteri( target, GL_TEXTURE_SWIZZLE_R, format.Swizzles[0] );
+		glTexParameteri( target, GL_TEXTURE_SWIZZLE_G, format.Swizzles[1] );
+		glTexParameteri( target, GL_TEXTURE_SWIZZLE_B, format.Swizzles[2] );
+		glTexParameteri( target, GL_TEXTURE_SWIZZLE_A, format.Swizzles[3] );
+	}
 
 	glm::tvec3<GLsizei> const textureExtent( texture.extent() );
 
@@ -985,10 +992,17 @@ GLuint GLI_create_texture_fallback( gli::texture& texture, GLenum & target, GLui
 	glTexParameteri( target, GL_TEXTURE_BASE_LEVEL, 0 );
 	glTexParameteri( target, GL_TEXTURE_MAX_LEVEL, static_cast<GLint>(texture.levels() - 1) );
 	// Texture swizzle is not supported by OpenGL ES 2.0 and OpenGL 3.2
-	glTexParameteri( target, GL_TEXTURE_SWIZZLE_R, fmt.Swizzles[0] );
-	glTexParameteri( target, GL_TEXTURE_SWIZZLE_G, fmt.Swizzles[1] );
-	glTexParameteri( target, GL_TEXTURE_SWIZZLE_B, fmt.Swizzles[2] );
-	glTexParameteri( target, GL_TEXTURE_SWIZZLE_A, fmt.Swizzles[3] );
+	if ( gli::component_count(texture.format()) == 1 ) {
+		glTexParameteri( target, GL_TEXTURE_SWIZZLE_R, fmt.Swizzles[0] );
+		glTexParameteri( target, GL_TEXTURE_SWIZZLE_G, fmt.Swizzles[0] );
+		glTexParameteri( target, GL_TEXTURE_SWIZZLE_B, fmt.Swizzles[0] );
+		glTexParameteri( target, GL_TEXTURE_SWIZZLE_A, GL_ONE );
+	} else {
+		glTexParameteri( target, GL_TEXTURE_SWIZZLE_R, fmt.Swizzles[0] );
+		glTexParameteri( target, GL_TEXTURE_SWIZZLE_G, fmt.Swizzles[1] );
+		glTexParameteri( target, GL_TEXTURE_SWIZZLE_B, fmt.Swizzles[2] );
+		glTexParameteri( target, GL_TEXTURE_SWIZZLE_A, fmt.Swizzles[3] );
+	}
 
 	for ( std::size_t layer = 0; layer < texture.layers(); ++layer )
 	for ( std::size_t face = 0; face < texture.faces(); ++face )
