@@ -8,6 +8,7 @@
 #include <QString>
 #include <QStringBuilder>
 #include <QMutex>
+#include <QAbstractItemModel>
 
 #include "ba2file.hpp"
 #include "material.hpp"
@@ -386,5 +387,13 @@ void GameManager::update_status(const QString& game, bool status)
 }
 
 } // end namespace Game
+
+static inline QModelIndex QModelIndex_child( const QModelIndex& m, int arow = 0, int acolumn = 0 )
+{
+	const QAbstractItemModel *	model = m.model();
+	if ( !model )
+		return QModelIndex();
+	return model->index( arow, acolumn, m );
+}
 
 #endif // GAMEMANAGER_H
