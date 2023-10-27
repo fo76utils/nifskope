@@ -704,8 +704,8 @@ protected:
 	ShaderFlags::SF2 flags2 = ShaderFlags::SLSF2_ZBuffer_Write;
 
 	//QVector<QString> textures;
-	QPersistentModelIndex iTextureSet;
-	QPersistentModelIndex iWetMaterial;
+	QPersistentModelIndex	iMaterialFile;	// .mat, .bgsm or .bgem
+	QPersistentModelIndex	iTextureSet;
 
 	Material * material = nullptr;
 	const CE2Material * sf_material = nullptr;

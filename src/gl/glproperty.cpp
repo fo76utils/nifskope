@@ -848,8 +848,10 @@ void BSShaderLightingProperty::updateImpl( const NifModel * nif, const QModelInd
 	Property::updateImpl( nif, index );
 
 	if ( index == iBlock ) {
+		iMaterialFile = nif->getIndex( iBlock, "Material" );
 		iTextureSet = nif->getBlockIndex( nif->getLink( iBlock, "Texture Set" ), "BSShaderTextureSet" );
-		iWetMaterial = nif->getIndex( iBlock, "Root Material" );
+		if ( nif->getBSVersion() >= 160 && !name.isEmpty() )
+			setSFMaterial( name );
 	}
 }
 
@@ -901,7 +903,7 @@ void BSShaderLightingProperty::setMaterial( Material * newMaterial )
 void BSShaderLightingProperty::setSFMaterial( const QString & mat_name )
 {
 	sf_material = nullptr;
-	const CE2MaterialDB	*materials = Game::GameManager::materials( Game::STARFIELD );
+	const CE2MaterialDB *	materials = Game::GameManager::materials( Game::STARFIELD );
 	if ( !materials )
 		return;
 
@@ -923,8 +925,11 @@ void BSShaderLightingProperty::setSFMaterial( const QString & mat_name )
 		else
 			path.insert( 0, "materials/" );
 	}
-	if ( !path.ends_with( ".mat" ) )
+	if ( !path.ends_with( ".mat" ) ) {
+		if ( path.ends_with( ".bgsm" ) || path.ends_with( ".bgem" ) )
+			path.resize( path.length() - 5 );
 		path += ".mat";
+	}
 
 	sf_material = materials->findMaterial( path );
 }
@@ -1044,7 +1049,7 @@ QString BSShaderLightingProperty::fileName( int id ) const
 		return QString();
 
 	// Fallout 4
-	nif = NifModel::fromValidIndex(iWetMaterial);
+	nif = NifModel::fromValidIndex(iMaterialFile);
 	if ( nif ) {
 		// BSLSP
 		auto m = static_cast<ShaderMaterial *>(material);
@@ -1110,7 +1115,7 @@ QString BSShaderLightingProperty::fileName( int id ) const
 	if ( nif ) {
 		if ( id >= 0 && id < nif->get<int>(iTextureSet, "Num Textures") ) {
 			QModelIndex iTextures = nif->getIndex(iTextureSet, "Textures");
-			return nif->get<QString>( iTextures.child(id, 0) );
+			return nif->get<QString>( QModelIndex_child( iTextures, id ) );
 		}
 
 		return QString();
@@ -1210,10 +1215,7 @@ void BSLightingShaderProperty::updateImpl( const NifModel * nif, const QModelInd
 	BSShaderLightingProperty::updateImpl( nif, index );
 
 	if ( index == iBlock ) {
-		if ( nif->getBSVersion() >= 160 && !name.isEmpty() )
-			setSFMaterial( name );
-		else
-			setMaterial(name.endsWith(".bgsm", Qt::CaseInsensitive) ? new ShaderMaterial(name, scene->game) : nullptr);
+		setMaterial(name.endsWith(".bgsm", Qt::CaseInsensitive) ? new ShaderMaterial(name, scene->game) : nullptr);
 		updateParams(nif);
 	}
 	else if ( index == iTextureSet ) {
@@ -1445,10 +1447,7 @@ void BSEffectShaderProperty::updateImpl( const NifModel * nif, const QModelIndex
 	BSShaderLightingProperty::updateImpl( nif, index );
 
 	if ( index == iBlock ) {
-		if ( nif->getBSVersion() >= 160 && !name.isEmpty() )
-			setSFMaterial( name );
-		else
-			setMaterial(name.endsWith(".bgem", Qt::CaseInsensitive) ? new EffectMaterial(name, scene->game) : nullptr);
+		setMaterial(name.endsWith(".bgem", Qt::CaseInsensitive) ? new EffectMaterial(name, scene->game) : nullptr);
 		updateParams(nif);
 	}
 	else if ( index == iTextureSet )
