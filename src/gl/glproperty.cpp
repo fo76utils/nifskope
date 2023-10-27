@@ -850,8 +850,10 @@ void BSShaderLightingProperty::updateImpl( const NifModel * nif, const QModelInd
 	if ( index == iBlock ) {
 		iMaterialFile = nif->getIndex( iBlock, "Material" );
 		iTextureSet = nif->getBlockIndex( nif->getLink( iBlock, "Texture Set" ), "BSShaderTextureSet" );
-		if ( nif->getBSVersion() >= 160 && !name.isEmpty() )
+		if ( nif->getBSVersion() >= 160 ) {
 			setSFMaterial( name );
+			const_cast< NifModel * >(nif)->loadSFMaterial( index );
+		}
 	}
 }
 

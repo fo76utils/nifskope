@@ -1896,19 +1896,6 @@ bool NifModel::load( QIODevice & device )
 							set<quint32>( newBlock, "Usage", metadata.usage );
 							set<quint32>( newBlock, "Access", metadata.access );
 						}
-
-						// load Fallout 4/76/Starfield external files
-						if ( bsVersion >= 160 ) {
-							if ( blktyp == "BSLightingShaderProperty" || blktyp == "BSEffectShaderProperty" )
-								loadSFMaterial( itemToIndex( root->child( c + 1 ) ) );
-							else if ( blktyp == "BSGeometry" )
-								loadMeshFiles( itemToIndex( root->child( c + 1 ) ) );
-						} else if ( bsVersion >= 130 ) {
-							if ( blktyp == "BSLightingShaderProperty" )
-								loadBGSMMaterial( itemToIndex( root->child( c + 1 ) ) );
-							else if ( blktyp == "BSEffectShaderProperty" )
-								loadBGEMMaterial( itemToIndex( root->child( c + 1 ) ) );
-						}
 					} else {
 						logWarning(tr("Block %1 (%2) not inserted!").arg(c).arg(blktyp));
 
