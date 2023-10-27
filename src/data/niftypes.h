@@ -43,6 +43,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cmath>
 #include <stdlib.h>
 
+#include "fp32vec4.hpp"
 
 //! @file niftypes.h Matrix, Matrix4, Triangle, Vector2, Vector3, Vector4, Color3, Color4, Quat
 
@@ -1499,6 +1500,19 @@ class ByteColor4 : public Color4
 public:
 	//! Default constructor
 	ByteColor4() { rgba[0] = rgba[1] = rgba[2] = rgba[3] = 1.0; }
+	ByteColor4( const std::uint32_t& c )
+	{
+		FloatVector4	v(c);
+		v /= 255.0f;
+		rgba[0] = v[0];
+		rgba[1] = v[1];
+		rgba[2] = v[2];
+		rgba[3] = v[3];
+	}
+	inline operator std::uint32_t() const
+	{
+		return std::uint32_t( FloatVector4(rgba[0], rgba[1], rgba[2], rgba[3]) * 255.0f );
+	}
 };
 
 
