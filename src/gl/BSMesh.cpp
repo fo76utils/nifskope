@@ -174,9 +174,9 @@ QString BSMesh::textStats() const
 void BSMesh::forMeshIndex(const NifModel* nif, std::function<void(const QString&, int)>& f)
 {
 	for ( int i = 0; i < 4; i++ ) {
-		auto meshArray = iMeshes.child(i, 0);
-		bool hasMesh = nif->get<bool>(meshArray.child(0, 0));
-		auto mesh = meshArray.child(1, 0);
+		auto meshArray = QModelIndex_child( iMeshes, i );
+		bool hasMesh = nif->get<bool>( QModelIndex_child( meshArray ) );
+		auto mesh = QModelIndex_child( meshArray, 1 );
 		if ( hasMesh ) {
 			auto meshPath = nif->get<QString>(mesh, "Mesh Path");
 			if ( !meshPath.startsWith("geometries", Qt::CaseInsensitive) ) {
@@ -260,7 +260,6 @@ void BSMesh::updateData(const NifModel* nif)
 	lodLevel = std::min(scene->lodLevel, Scene::LodLevel(lodCount - 1));
 
 	auto meshIndex = (hasMeshLODs) ? 0 : lodLevel;
-	meshSelected = meshes[meshIndex].get();
 	if ( lodCount > int(lodLevel) ) {
 		auto& mesh = meshes[meshIndex];
 		if ( lodLevel > 0 && int(lodLevel) <= mesh->lods.size() ) {
@@ -319,7 +318,7 @@ void BSMesh::updateData(const NifModel* nif)
 			boneTransforms.resize(numBones);
 			auto iBoneList = nif->getIndex(iSkinData, "Bone List");
 			for ( int i = 0; i < numBones; i++ ) {
-				auto iBone = iBoneList.child(i, 0);
+				auto iBone = QModelIndex_child( iBoneList, i );
 				Transform trans;
 				trans.rotation = nif->get<Matrix>(iBone, "Rotation");
 				trans.translation = nif->get<Vector3>(iBone, "Translation");

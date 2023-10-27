@@ -1,5 +1,6 @@
 #pragma once
 #include "glshape.h"
+#include "glscene.h"
 #include "io/MeshFile.h"
 
 #include <memory>
@@ -42,7 +43,17 @@ public:
 	QModelIndex vertexAt(int) const override;
 
 	QVector<std::shared_ptr<MeshFile>> meshes;
-	const MeshFile *	meshSelected = nullptr;
+	inline const MeshFile * getMeshFile() const
+	{
+		if ( meshes.size() > 0 ) {
+			if ( meshes[0]->lods.size() > 0 )
+				return meshes[0].get();
+			int	l = std::min( int(scene->lodLevel), int(meshes.size()) - 1 );
+			if ( l >= 0 )
+				return meshes[l].get();
+		}
+		return nullptr;
+	}
 
 	int materialID = 0;
 	QString materialPath;

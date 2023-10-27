@@ -1063,7 +1063,9 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 			if ( txid < 0 )
 				return false;
 
-			const MeshFile *	sfMesh = static_cast< BSMesh * >(mesh)->meshSelected;
+			if ( typeid(*mesh) != typeid(BSMesh) )
+				return false;
+			const MeshFile *	sfMesh = static_cast< BSMesh * >(mesh)->getMeshFile();
 			if ( !sfMesh || sfMesh->coords.count() != sfMesh->positions.count() )
 				return false;
 
