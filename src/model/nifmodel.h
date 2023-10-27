@@ -91,7 +91,7 @@ public:
 	// end QAbstractItemModel
 
 	// BaseModel
-	
+
 	void clear() override final;
 	bool load( QIODevice & device ) override final;
 	bool save( QIODevice & device ) const override final;
@@ -229,7 +229,7 @@ public:
 	//! Get the numerical index (or link) of the block an item belongs to.
 	// Return -1 if the item is the root or header or footer or null.
 	int getBlockNumber( const QModelIndex & index ) const;
-	
+
 	// Checks if blockNum is a valid block number.
 	bool isValidBlockNumber( qint32 blockNum ) const;
 
@@ -486,9 +486,21 @@ public:
 	template <typename T> bool set( const QModelIndex & itemParent, const QLatin1String & itemName, const T & val );
 	//! Set the value of a child item.
 	template <typename T> bool set( const QModelIndex & itemParent, const char * itemName, const T & val );
+protected:
+	//! Internal functions to set child item values without calling onItemValueChange().
+	template <typename T> bool setValue( const NifItem * itemParent, const QString & itemName, const T & val );
+	template <typename T> bool setValue( const NifItem * itemParent, const QLatin1String & itemName, const T & val );
+	template <typename T> bool setValue( const NifItem * itemParent, const char * itemName, const T & val );
 
 	// load item values from external .mat/.bgsm/.bgem/.mesh file
-	void loadSFMaterial( const QModelIndex & parent );
+	void loadSFBlender( NifItem * parent, const void * o, const void * layerUVStream = nullptr );
+	void loadSFLayer( NifItem * parent, const void * o );
+	void loadSFMaterial( NifItem * parent, const void * o );
+	void loadSFTextureWithReplacement( NifItem * parent, const char * texturePath, bool replacementEnabled, std::uint32_t replacementColor );
+	void loadSFTextureSet( NifItem * parent, const void * o );
+	void loadSFUVStream( NifItem * parent, const void * o, const void * p = nullptr );
+public:
+	void loadSFMaterial( const QModelIndex & parent, int lodLevel = 0 );
 	void loadBGSMMaterial( const QModelIndex & parent );
 	void loadBGEMMaterial( const QModelIndex & parent );
 	void loadMeshFiles( const QModelIndex & parent );
@@ -861,7 +873,7 @@ constexpr inline int NifModel::firstBlockRow() const
 }
 
 inline int NifModel::lastBlockRow() const
-{	
+{
 	return root->childCount() - 2; // The last root's child is always the footer.
 }
 
@@ -1284,6 +1296,19 @@ template <typename T> inline bool NifModel::set( const QModelIndex & itemParent,
 template <typename T> inline bool NifModel::set( const QModelIndex & itemParent, const char * itemName, const T & val )
 {
 	return set<T>( getItem(itemParent, QLatin1String(itemName), true), val );
+}
+
+template <typename T> inline bool NifModel::setValue( const NifItem * itemParent, const QString & itemName, const T & val )
+{
+	return NifItem::set<T>( getItem(itemParent, itemName, true), val );
+}
+template <typename T> inline bool NifModel::setValue( const NifItem * itemParent, const QLatin1String & itemName, const T & val )
+{
+	return NifItem::set<T>( getItem(itemParent, itemName, true), val );
+}
+template <typename T> inline bool NifModel::setValue( const NifItem * itemParent, const char * itemName, const T & val )
+{
+	return NifItem::set<T>( getItem(itemParent, QLatin1String(itemName), true), val );
 }
 
 
