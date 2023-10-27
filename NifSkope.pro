@@ -249,6 +249,7 @@ SOURCES += \
 	src/model/kfmmodel.cpp \
 	src/model/nifdelegate.cpp \
 	src/model/nifmodel.cpp \
+	src/model/nifextfiles.cpp \
 	src/model/nifproxymodel.cpp \
 	src/model/undocommands.cpp \
 	src/spells/animation.cpp \

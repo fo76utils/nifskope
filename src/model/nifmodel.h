@@ -487,6 +487,12 @@ public:
 	//! Set the value of a child item.
 	template <typename T> bool set( const QModelIndex & itemParent, const char * itemName, const T & val );
 
+	// load item values from external .mat/.bgsm/.bgem/.mesh file
+	void loadSFMaterial( const QModelIndex & parent );
+	void loadBGSMMaterial( const QModelIndex & parent );
+	void loadBGEMMaterial( const QModelIndex & parent );
+	void loadMeshFiles( const QModelIndex & parent );
+
 	// String resolving ("get ex")
 public:
 	//! Get the string value of an item, expanding string indices or subitems if necessary.

@@ -492,7 +492,7 @@ void NifModel::updateHeader()
 			if ( iBlockType < 0 ) {
 				blockTypes.append( blockName );
 				iBlockType = blockTypes.count() - 1;
-			}			
+			}
 			blockTypeIndices.append( iBlockType );
 
 			if ( itemBlockSizes ) {
@@ -777,7 +777,7 @@ QModelIndex NifModel::insertNiBlock( const QString & identifier, int at )
 	}
 
 	logMessage(tr("Could not insert NiBlock."), tr("Unknown block %1").arg(identifier), QMessageBox::Critical);
-	
+
 	return QModelIndex();
 }
 
@@ -1256,11 +1256,11 @@ QVariant NifModel::data( const QModelIndex & index, int role ) const
 				break;
 			case ValueCol:
 				{
-					auto vt = item->valueType();			
+					auto vt = item->valueType();
 
 					if ( vt == NifValue::tString || vt == NifValue::tFilePath ) {
 						return QString( resolveString( item ) ).replace( "\n", SPACE_QSTRING ).replace( "\r", SPACE_QSTRING );
-					
+
 					} else if ( vt == NifValue::tStringOffset ) {
 						int offset = item->get<int>();
 						if ( offset < 0 || offset == 0x0000FFFF )
@@ -1284,7 +1284,7 @@ QVariant NifModel::data( const QModelIndex & index, int role ) const
 							return tr( "<invalid offset>" );
 
 						return QString( &pBytes->data()[offset] );
-					
+
 					} else if ( vt == NifValue::tStringIndex ) {
 						int iStrIndex = item->get<int>();
 						if ( iStrIndex == -1 )
@@ -1300,7 +1300,7 @@ QVariant NifModel::data( const QModelIndex & index, int role ) const
 						auto itemString = getItem( headerStrings, iStrIndex );
 						QString s = itemString ? itemString->get<QString>() : QString("<?>");
 						return QString( "%2 [%1]" ).arg( iStrIndex ).arg( s );
-					
+
 					} else if ( vt == NifValue::tBlockTypeIndex ) {
 						int iBlock = item->get<int>();
 						auto itemBlockTypes = getItemX( item, "Block Types" );
@@ -1312,7 +1312,7 @@ QVariant NifModel::data( const QModelIndex & index, int role ) const
 							return tr( "%1 - <index invalid>" ).arg( iBlock );
 
 						return QString( "%2 [%1]" ).arg( iBlock ).arg( itemBlockEntry->get<QString>() );
-					
+
 					} else if ( item->isLink() ) {
 						int link = item->getLinkValue();
 						if ( link < 0 )
@@ -1329,7 +1329,7 @@ QVariant NifModel::data( const QModelIndex & index, int role ) const
 							return tr( "%1 (%2)" ).arg( link ).arg( blockName );
 
 						return tr( "%1 [%2]" ).arg( link ).arg( block->name() );
-					
+
 					} else if ( item->isCount() ) {
 						if ( item->hasStrType("BSVertexDesc") )
 							return item->get<BSVertexDesc>().toString();
@@ -1837,7 +1837,7 @@ bool NifModel::load( QIODevice & device )
 						//	the upper bit or the blocktypeindex seems to be related to PhysX
 						int blktypidx = get<int>( index( c, 0, getIndex( createIndex( header->row(), 0, header ), "Block Type Index" ) ) );
 						blktyp = get<QString>( index( blktypidx & 0x7FFF, 0, getIndex( createIndex( header->row(), 0, header ), "Block Types" ) ) );
-						
+
 						// 20.3.1.2 Custom Version
 						if ( version == 0x14030102 ) {
 							auto hash = get<quint32>(
@@ -1895,6 +1895,19 @@ bool NifModel::load( QIODevice & device )
 						if ( blktyp == "NiDataStream" ) {
 							set<quint32>( newBlock, "Usage", metadata.usage );
 							set<quint32>( newBlock, "Access", metadata.access );
+						}
+
+						// load Fallout 4/76/Starfield external files
+						if ( bsVersion >= 160 ) {
+							if ( blktyp == "BSLightingShaderProperty" || blktyp == "BSEffectShaderProperty" )
+								loadSFMaterial( itemToIndex( root->child( c + 1 ) ) );
+							else if ( blktyp == "BSGeometry" )
+								loadMeshFiles( itemToIndex( root->child( c + 1 ) ) );
+						} else if ( bsVersion >= 130 ) {
+							if ( blktyp == "BSLightingShaderProperty" )
+								loadBGSMMaterial( itemToIndex( root->child( c + 1 ) ) );
+							else if ( blktyp == "BSEffectShaderProperty" )
+								loadBGEMMaterial( itemToIndex( root->child( c + 1 ) ) );
 						}
 					} else {
 						logWarning(tr("Block %1 (%2) not inserted!").arg(c).arg(blktyp));
@@ -2244,10 +2257,10 @@ int NifModel::blockSize( const NifItem * item, NifSStream & stream ) const
 					int nRealSize = child->childCount();
 					int nCalcSize = evalArraySize( child );
 					if ( nRealSize != nCalcSize ) {
-						reportError( 
+						reportError(
 							child,
 							__func__,
-							tr( "The array's size (%1) does not match its calculated size (%2)." ).arg( nRealSize ).arg( nCalcSize ) 
+							tr( "The array's size (%1) does not match its calculated size (%2)." ).arg( nRealSize ).arg( nCalcSize )
 						);
 					}
 				}
@@ -2381,7 +2394,7 @@ bool NifModel::saveItem( const NifItem * parent, NifOStream & stream ) const
 					int nRealSize = child->childCount();
 					int nCalcSize = evalArraySize( child );
 					if ( nRealSize != nCalcSize ) {
-						logWarning( 
+						logWarning(
 							tr( "The size of %3 array (%1) does not match its calculated size (%2)." ).arg( nRealSize ).arg( nCalcSize ).arg( itemRepr(child) )
 						);
 					}
@@ -2395,7 +2408,7 @@ bool NifModel::saveItem( const NifItem * parent, NifOStream & stream ) const
 					return false;
 			}
 		}
-		
+
 		// Get material path if current item is the Name field of a shader property
 		if ( testSkip && child->hasName("Name") ) {
 			auto iStr = child->get<int>();
@@ -2441,7 +2454,7 @@ NifItem * NifModel::insertBranch( NifItem * parentItem, const NifData & data, in
 
 const NifItem * NifModel::getConditionCacheItem( const NifItem * item ) const
 {
-	// For an array of BSVertexData/BSVertexDataSSE structures ("fixed compounds", see "Vertex Data" in BSTriShape) 
+	// For an array of BSVertexData/BSVertexDataSSE structures ("fixed compounds", see "Vertex Data" in BSTriShape)
 	// we use the first structure in the array as a cache of condition values for all the structure fields.
 	const NifItem * compoundStruct = item->parent();
 	if ( compoundStruct ) {
@@ -2468,7 +2481,7 @@ bool NifModel::evalVersionImpl( const NifItem * item ) const
 		const NifItem * refItem = getConditionCacheItem( item );
 		if ( refItem != item )
 			return evalVersion( refItem );
-			
+
 		NifModelEval functor( this, getHeaderItem() );
 		if ( !item->verexpr().evaluateBool(functor) )
 			return false;
@@ -2505,8 +2518,8 @@ void NifModel::invalidateDependentConditions( NifItem * item )
 
 		// String check for Name in cond or arg
 		//	Note: May cause some false positives but this is OK
-		if ( c->cond().contains(name) 
-			|| c->arg().contains(name) 
+		if ( c->cond().contains(name)
+			|| c->arg().contains(name)
 			|| ( c->childCount() > 0 && !c->isArray() ) // If it has children but is not an array, let's reset conditions just to be safe.
 		) {
 			c->invalidateCondition();
@@ -2585,12 +2598,12 @@ void NifModel::updateLinks( int block, NifItem * parent )
 		NifItem * c = parent->child( l );
 		if ( !c )
 			continue;
-	
+
 		if ( c->childCount() > 0 ) {
 			updateLinks( block, c );
 			continue;
 		}
-	
+
 		int i = c->getLinkValue();
 		if ( i >= 0 ) {
 			if ( c->valueType() == NifValue::tUpLink ) {
@@ -2602,7 +2615,7 @@ void NifModel::updateLinks( int block, NifItem * parent )
 			}
 		}
 	}
-	
+
 	auto linkparents = parent->getLinkAncestorRows();
 	for ( int p : linkparents ) {
 		NifItem * c = parent->child( p );
@@ -2703,7 +2716,7 @@ bool NifModel::setLinkArray( NifItem * arrayRootItem, const QVector<qint32> & li
 
 	int nLinks = arrayRootItem->childCount();
 	if ( links.count() != nLinks ) {
-		reportError( 
+		reportError(
 			arrayRootItem,
 			__func__,
 			tr( "The input QVector's size (%1) does not match the array's size (%2)." ).arg( links.count() ).arg( nLinks )
@@ -2875,7 +2888,7 @@ bool NifModel::assignString( NifItem * item, const QString & string, bool replac
 			return false;
 		}
 		return BaseModel::set<QString>( itemString, string );
-	
+
 	} else if ( item->valueType() == NifValue::tStringIndex ) {
 		NifValue v( NifValue::tString );
 		v.set<QString>( string, this, item );
