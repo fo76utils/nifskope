@@ -221,6 +221,8 @@ void BSMesh::updateImpl(const NifModel* nif, const QModelIndex& index)
 {
 	qDebug() << "updateImpl";
 	Shape::updateImpl(nif, index);
+	if ( index != iBlock )
+		return;
 
 	iData = index;
 	iMeshes = nif->getIndex(index, "Meshes");
