@@ -6610,6 +6610,7 @@
     </enum>
 
     <struct name="BSUVStream" abstract="true" module="BSMain" versions="#STF#">
+        <field name="Name" type="SizedString" />
         <field name="U Scale" type="float" default="1.0" />
         <field name="V Scale" type="float" default="1.0" />
         <field name="U Offset" type="float" />
@@ -6632,29 +6633,31 @@
     </enum>
 
     <struct name="BSTextureSet" abstract="true" module="BSMain" versions="#STF#">
+        <field name="Name" type="SizedString" />
         <field name="Float Param" type="float" default="0.5" />
         <field name="Resolution Hint" type="BSTextureResolutionHint" />
-        <field name="Texture 0" type="BSTextureWithReplacement">Color Texture</field>
-        <field name="Texture 1" type="BSTextureWithReplacement">Normal Texture</field>
-        <field name="Texture 2" type="BSTextureWithReplacement">Opacity Texture</field>
-        <field name="Texture 3" type="BSTextureWithReplacement">Roughness Texture</field>
-        <field name="Texture 4" type="BSTextureWithReplacement">Metalness Texture</field>
-        <field name="Texture 5" type="BSTextureWithReplacement">Ambient Occlusion Texture</field>
-        <field name="Texture 6" type="BSTextureWithReplacement">Height Texture</field>
-        <field name="Texture 7" type="BSTextureWithReplacement">Emissive Texture</field>
-        <field name="Texture 8" type="BSTextureWithReplacement">Transmissive Texture</field>
-        <field name="Texture 9" type="BSTextureWithReplacement">Curvature Texture</field>
-        <field name="Texture 10" type="BSTextureWithReplacement">Mask Texture</field>
-        <field name="Texture 11" type="BSTextureWithReplacement" />
-        <field name="Texture 12" type="BSTextureWithReplacement">Z Offset Texture</field>
-        <field name="Texture 13" type="BSTextureWithReplacement" />
-        <field name="Texture 14" type="BSTextureWithReplacement" />
-        <field name="Texture 15" type="BSTextureWithReplacement" />
-        <field name="Texture 16" type="BSTextureWithReplacement" />
-        <field name="Texture 17" type="BSTextureWithReplacement" />
-        <field name="Texture 18" type="BSTextureWithReplacement" />
-        <field name="Texture 19" type="BSTextureWithReplacement" />
-        <field name="Texture 20" type="BSTextureWithReplacement">ID Texture</field>
+        <field name="Enable Mask" type="uint" />
+        <field name="Texture 0" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x000001">Color Texture</field>
+        <field name="Texture 1" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x000002">Normal Texture</field>
+        <field name="Texture 2" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x000004">Opacity Texture</field>
+        <field name="Texture 3" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x000008">Roughness Texture</field>
+        <field name="Texture 4" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x000010">Metalness Texture</field>
+        <field name="Texture 5" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x000020">Ambient Occlusion Texture</field>
+        <field name="Texture 6" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x000040">Height Texture</field>
+        <field name="Texture 7" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x000080">Emissive Texture</field>
+        <field name="Texture 8" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x000100">Transmissive Texture</field>
+        <field name="Texture 9" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x000200">Curvature Texture</field>
+        <field name="Texture 10" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x000400">Mask Texture</field>
+        <field name="Texture 11" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x000800" />
+        <field name="Texture 12" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x001000">Z Offset Texture</field>
+        <field name="Texture 13" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x002000" />
+        <field name="Texture 14" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x004000" />
+        <field name="Texture 15" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x008000" />
+        <field name="Texture 16" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x010000" />
+        <field name="Texture 17" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x020000" />
+        <field name="Texture 18" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x040000" />
+        <field name="Texture 19" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x080000" />
+        <field name="Texture 20" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x100000">ID Texture</field>
     </struct>
 
     <enum name="BSMaterialColorOverrideMode" storage="byte" versions="#STF#">
@@ -6663,12 +6666,14 @@
     </enum>
 
     <struct name="BSMaterial" abstract="true" module="BSMain" versions="#STF#">
+        <field name="Name" type="SizedString" />
         <field name="Color" type="Color4" />
         <field name="Color Override Mode" type="BSMaterialColorOverrideMode" />
         <field name="Texture Set" type="BSTextureSet" />
     </struct>
 
     <struct name="BSLayer" abstract="true" module="BSMain" versions="#STF#">
+        <field name="Name" type="SizedString" />
         <field name="Material" type="BSMaterial" />
         <field name="UV Stream" type="BSUVStream" />
     </struct>
@@ -6690,6 +6695,7 @@
     </enum>
 
     <struct name="BSBlender" abstract="true" module="BSMain" versions="#STF#">
+        <field name="Name" type="SizedString" />
         <field name="UV Stream" type="BSUVStream" />
         <field name="Mask Texture" type="BSTextureWithReplacement" />
         <field name="Blend Mode" type="BSBlenderMode" />
@@ -6755,6 +6761,7 @@
     </enum>
 
     <struct name="BSLayeredMaterial" abstract="true" module="BSMain" versions="#STF#">
+        <field name="Name" type="SizedString" />
         <field name="Layer 0 Enabled" type="bool" />
         <field name="Layer 0" type="BSLayer" cond="Layer 0 Enabled" />
         <field name="Layer 1 Enabled" type="bool" />
