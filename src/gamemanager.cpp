@@ -409,16 +409,16 @@ bool GameManager::get_file(QByteArray& data, const GameMode game, const QString&
 const CE2MaterialDB* GameManager::materials(const GameMode game)
 {
 	if ( game == STARFIELD ) {
-		if (!have_materials_cdb && ba2Files[game]) {
+		if ( !have_materials_cdb ) {
 			std::vector< unsigned char >	cdb_data;
 			if (get_file(cdb_data, game, std::string("materials/materialsbeta.cdb")))
 				starfield_materials.loadCDBFile(cdb_data.data(), cdb_data.size());
 			have_materials_cdb = true;
 		}
-		if (have_materials_cdb)
+		if ( have_materials_cdb )
 			return &starfield_materials;
 	}
-	return (CE2MaterialDB*) 0;
+	return nullptr;
 }
 
 QStringList GameManager::find_folders(const GameMode game)
