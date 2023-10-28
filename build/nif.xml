@@ -6765,7 +6765,7 @@
         <field name="Emissive Only Automatically Applied" type="bool" />
         <field name="Receive Directional Shadows" type="bool" />
         <field name="Receive Non-Directional Shadows" type="bool" />
-        <field name="IsGlass" type="bool" />
+        <field name="Is Glass" type="bool" />
         <field name="Frosting" type="bool" />
         <field name="Frosting Unblurred Background Alpha Blend" type="float" cond="Frosting" />
         <field name="Frosting Blur Bias" type="float" cond="Frosting" />
@@ -6861,7 +6861,7 @@
         <field name="Transmittance Width" type="float" />
         <field name="Spec Lobe 0 Roughness Scale" type="float" />
         <field name="Spec Lobe 1 Roughness Scale" type="float" />
-        <field name="TransmittanceSourceLayer" type="byte" />
+        <field name="Transmittance Source Layer" type="byte" />
     </struct>
 
     <enum name="BSShaderRoute" storage="byte" versions="#STF#">
