@@ -1052,10 +1052,10 @@ QString BSShaderLightingProperty::fileName( int id ) const
 
 	// Fallout 4
 	nif = NifModel::fromValidIndex(iMaterialFile);
-	if ( nif ) {
+	if ( nif && material && typeid(*material) == typeid(ShaderMaterial) ) {
 		// BSLSP
 		auto m = static_cast<ShaderMaterial *>(material);
-		if ( m && m->isValid() ) {
+		if ( m->isValid() ) {
 			auto tex = m->textures();
 			if ( tex.count() >= BGSM1_MAX ) {
 				switch ( id ) {
@@ -1110,6 +1110,17 @@ QString BSShaderLightingProperty::fileName( int id ) const
 			return QString();
 		if ( id == 8 || id == 9 )
 			id++;
+	} else if ( nif && material && typeid(*material) == typeid(EffectMaterial) ) {
+		// From effect material
+		auto m = static_cast<EffectMaterial*>(material);
+		if ( m->isValid() ) {
+			auto tex = m->textures();
+			if ( id == 6 || id == 7 )
+				id--;
+			return tex[id];
+		}
+
+		return QString();
 	}
 
 	// From iTextureSet
@@ -1118,17 +1129,6 @@ QString BSShaderLightingProperty::fileName( int id ) const
 		if ( id >= 0 && id < nif->get<int>(iTextureSet, "Num Textures") ) {
 			QModelIndex iTextures = nif->getIndex(iTextureSet, "Textures");
 			return nif->get<QString>( QModelIndex_child( iTextures, id ) );
-		}
-
-		return QString();
-	}
-
-	// From material
-	auto m = static_cast<EffectMaterial*>(material);
-	if ( m ) {
-		if (m->isValid()) {
-			auto tex = m->textures();
-			return tex[id];
 		}
 
 		return QString();
