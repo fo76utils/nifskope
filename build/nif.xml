@@ -6737,19 +6737,131 @@
         <field name="Use Dithered Transparency" type="bool" />
     </struct>
 
+    <enum name="BSEffectBlendMode" storage="byte" versions="#STF#">
+        <option name="AlphaBlend" value="0" />
+        <option name="Additive" value="1" />
+        <option name="SourceSoftAdditive" value="2" />
+        <option name="Multiply" value="3" />
+        <option name="DestinationSoftAdditive" value="4" />
+        <option name="DestinationInvertedSoftAdditive" value="5" />
+        <option name="TakeSmaller" value="6" />
+        <option name="None" value="7" />
+    </enum>
+
     <struct name="BSEffectSettingsComponent" abstract="true" module="BSMain" versions="#STF#">
+        <field name="Use Falloff" type="bool" />
+        <field name="Use RGB Falloff" type="bool" />
+        <field name="Falloff Start Angle" type="float" cond="Use Falloff #OR# Use RGB Falloff" />
+        <field name="Falloff Stop Angle" type="float" cond="Use Falloff #OR# Use RGB Falloff" />
+        <field name="Falloff Start Opacity" type="float" cond="Use Falloff #OR# Use RGB Falloff" />
+        <field name="Falloff Stop Opacity" type="float" cond="Use Falloff #OR# Use RGB Falloff" />
+        <field name="Vertex Color Blend" type="bool" />
+        <field name="Is Alpha Tested" type="bool" />
+        <field name="Alpha Test Threshold" type="float" cond="Is Alpha Tested" />
+        <field name="No Half Res Optimization" type="bool" />
+        <field name="Soft Effect" type="bool" />
+        <field name="Soft Falloff Depth" type="float" />
+        <field name="Emissive Only Effect" type="bool" />
+        <field name="Emissive Only Automatically Applied" type="bool" />
+        <field name="Receive Directional Shadows" type="bool" />
+        <field name="Receive Non-Directional Shadows" type="bool" />
+        <field name="IsGlass" type="bool" />
+        <field name="Frosting" type="bool" />
+        <field name="Frosting Unblurred Background Alpha Blend" type="float" cond="Frosting" />
+        <field name="Frosting Blur Bias" type="float" cond="Frosting" />
+        <field name="Material Overall Alpha" type="float" />
+        <field name="Z Test" type="bool" />
+        <field name="Z Write" type="bool" />
+        <field name="Blending Mode" type="BSEffectBlendMode" />
+        <field name="Backlighting Enable" type="bool" />
+        <field name="Backlighting Scale" type="float" cond="Backlighting Enable" />
+        <field name="Backlighting Sharpness" type="float" cond="Backlighting Enable" />
+        <field name="Backlighting Transparency Factor" type="float" cond="Backlighting Enable" />
+        <field name="Backlighting Tint Color" type="Color4" cond="Backlighting Enable" />
+        <field name="Depth MV Fixup" type="bool" />
+        <field name="Depth MV Fixup Edges Only" type="bool" />
+        <field name="Force Render Before OIT" type="bool" />
+        <field name="Depth Bias In Ulp" type="ushort" />
     </struct>
 
+    <enum name="BSProjectedDecalRenderLayer" storage="byte" versions="#STF#">
+        <option name="Top" value="0" />
+        <option name="Middle" value="1" />
+    </enum>
+
     <struct name="BSDecalSettingsComponent" abstract="true" module="BSMain" versions="#STF#">
+        <field name="Is Decal" type="bool" />
+        <field name="Material Overall Alpha" type="float" />
+        <field name="Write Mask" type="uint" />
+        <field name="Is Planet" type="bool" />
+        <field name="Is Projected" type="bool" />
+        <field name="Use Parallax Occlusion Mapping" type="bool" cond="Is Projected" />
+        <field name="Surface Height Map" type="SizedString" cond="Is Projected" />
+        <field name="Parallax Occlusion Scale" type="float" cond="Is Projected" />
+        <field name="Parallax Occlusion Shadows" type="bool" cond="Is Projected" />
+        <field name="Max Parralax Occlusion Steps" type="byte" cond="Is Projected" />
+        <field name="Render Layer" type="BSProjectedDecalRenderLayer" cond="Is Projected" />
+        <field name="Use G Buffer Normals" type="bool" cond="Is Projected" />
+        <field name="Blend Mode" type="BSAlphaBlendMode" />
+        <field name="Animated Decal Ignores TAA" type="bool" />
     </struct>
 
     <struct name="BSWaterSettingsComponent" abstract="true" module="BSMain" versions="#STF#">
+        <field name="Water Edge Falloff" type="float" />
+        <field name="Water Wetness Max Depth" type="float" />
+        <field name="Water Edge Normal Falloff" type="float" />
+        <field name="Water Depth Blur" type="float" />
+        <field name="Water Refraction Magnitude" type="float" />
+        <field name="Phytoplankton Reflectance Color R" type="float" />
+        <field name="Phytoplankton Reflectance Color G" type="float" />
+        <field name="Phytoplankton Reflectance Color B" type="float" />
+        <field name="Sediment Reflectance Color R" type="float" />
+        <field name="Sediment Reflectance Color G" type="float" />
+        <field name="Sediment Reflectance Color B" type="float" />
+        <field name="Yellow Matter Reflectance Color R" type="float" />
+        <field name="Yellow Matter Reflectance Color G" type="float" />
+        <field name="Yellow Matter Reflectance Color B" type="float" />
+        <field name="Max Concentration Plankton" type="float" />
+        <field name="Max Concentration Sediment" type="float" />
+        <field name="Max Concentration Yellow Matter" type="float" />
+        <field name="Reflectance R" type="float" />
+        <field name="Reflectance G" type="float" />
+        <field name="Reflectance B" type="float" />
+        <field name="Low LOD" type="bool" />
+        <field name="Placed Water" type="bool" />
     </struct>
 
+    <enum name="BSMaskSourceBlender" storage="byte" versions="#STF#">
+        <option name="None" value="0" />
+        <option name="Blender 0" value="1" />
+        <option name="Blender 1" value="2" />
+        <option name="Blender 2" value="3" />
+    </enum>
+
     <struct name="BSEmissiveSettingsComponent" abstract="true" module="BSMain" versions="#STF#">
+        <field name="Emissive Source Layer" type="byte" />
+        <field name="Emissive Tint" type="Color4" />
+        <field name="Emissive Mask Source Blender" type="BSMaskSourceBlender" />
+        <field name="Emissive Clip Threshold" type="float" />
+        <field name="Adaptive Emittance" type="bool" />
+        <field name="Luminous Emittance" type="float" />
+        <field name="Exposure Offset" type="float" />
+        <field name="Enable Adaptive Limits" type="bool" />
+        <field name="Max Offset Emittance" type="float" />
+        <field name="Min Offset Emittance" type="float" />
     </struct>
 
     <struct name="BSTranslucencySettingsComponent" abstract="true" module="BSMain" versions="#STF#">
+        <field name="Is Thin" type="bool" />
+        <field name="Flip Back Face Normals In View Space" type="bool" />
+        <field name="Use Subsurface Scattering" type="bool" />
+        <field name="Subsurface Scattering Width" type="float" cond="Use Subsurface Scattering" />
+        <field name="Subsurface Scattering Strength" type="float" cond="Use Subsurface Scattering" />
+        <field name="Transmissive Scale" type="float" />
+        <field name="Transmittance Width" type="float" />
+        <field name="Spec Lobe 0 Roughness Scale" type="float" />
+        <field name="Spec Lobe 1 Roughness Scale" type="float" />
+        <field name="TransmittanceSourceLayer" type="byte" />
     </struct>
 
     <enum name="BSShaderRoute" storage="byte" versions="#STF#">
