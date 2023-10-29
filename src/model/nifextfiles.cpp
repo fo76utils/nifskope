@@ -296,7 +296,48 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, int lodLevel )
 	if ( material )
 		isEffect = bool( material->flags & CE2Material::Flag_IsEffect );
 	setValue<bool>( m, "Is Effect", isEffect );
-	if ( isEffect ) {
+	if ( isEffect && ( o = getItem( itemToIndex(m), "Effect Settings" ) ) != nullptr ) {
+		const CE2Material::EffectSettings *	sp = material->effectSettings;
+		setValue<bool>( o, "Use Falloff", bool(sp->flags & CE2Material::EffectFlag_UseFalloff) );
+		setValue<bool>( o, "Use RGB Falloff", bool(sp->flags & CE2Material::EffectFlag_UseRGBFalloff) );
+		if ( sp->flags & ( CE2Material::EffectFlag_UseFalloff | CE2Material::EffectFlag_UseRGBFalloff ) ) {
+			setValue<float>( o, "Falloff Start Angle", sp->falloffStartAngle );
+			setValue<float>( o, "Falloff Stop Angle", sp->falloffStopAngle );
+			setValue<float>( o, "Falloff Start Opacity", sp->falloffStartOpacity );
+			setValue<float>( o, "Falloff Stop Opacity", sp->falloffStopOpacity );
+		}
+		setValue<bool>( o, "Vertex Color Blend", bool(sp->flags & CE2Material::EffectFlag_VertexColorBlend) );
+		setValue<bool>( o, "Is Alpha Tested", bool(sp->flags & CE2Material::EffectFlag_IsAlphaTested) );
+		if ( sp->flags & CE2Material::EffectFlag_IsAlphaTested )
+			setValue<float>( o, "Alpha Test Threshold", sp->alphaThreshold );
+		setValue<bool>( o, "No Half Res Optimization", bool(sp->flags & CE2Material::EffectFlag_NoHalfResOpt) );
+		setValue<bool>( o, "Soft Effect", bool(sp->flags & CE2Material::EffectFlag_SoftEffect) );
+		setValue<float>( o, "Soft Falloff Depth", sp->softFalloffDepth );
+		setValue<bool>( o, "Emissive Only Effect", bool(sp->flags & CE2Material::EffectFlag_EmissiveOnly) );
+		setValue<bool>( o, "Emissive Only Automatically Applied", bool(sp->flags & CE2Material::EffectFlag_EmissiveOnlyAuto) );
+		setValue<bool>( o, "Receive Directional Shadows", bool(sp->flags & CE2Material::EffectFlag_DirShadows) );
+		setValue<bool>( o, "Receive Non-Directional Shadows", bool(sp->flags & CE2Material::EffectFlag_NonDirShadows) );
+		setValue<bool>( o, "Is Glass", bool(sp->flags & CE2Material::EffectFlag_IsGlass) );
+		setValue<bool>( o, "Frosting", bool(sp->flags & CE2Material::EffectFlag_Frosting) );
+		if ( sp->flags & CE2Material::EffectFlag_Frosting ) {
+			setValue<float>( o, "Frosting Unblurred Background Alpha Blend", sp->frostingBgndBlend );
+			setValue<float>( o, "Frosting Blur Bias", sp->frostingBlurBias );
+		}
+		setValue<float>( o, "Material Overall Alpha", sp->materialAlpha );
+		setValue<bool>( o, "Z Test", bool(sp->flags & CE2Material::EffectFlag_ZTest) );
+		setValue<bool>( o, "Z Write", bool(sp->flags & CE2Material::EffectFlag_ZWrite) );
+		setValue<quint8>( o, "Blending Mode", sp->blendMode );
+		setValue<bool>( o, "Backlighting Enable", bool(sp->flags & CE2Material::EffectFlag_BacklightEnable) );
+		if ( sp->flags & CE2Material::EffectFlag_BacklightEnable ) {
+			setValue<float>( o, "Backlighting Scale", sp->backlightScale );
+			setValue<float>( o, "Backlighting Sharpness", sp->backlightSharpness );
+			setValue<float>( o, "Backlighting Transparency Factor", sp->backlightTransparency );
+			setValue<Color4>( o, "Backlighting Tint Color", Color4( sp->backlightTintColor[0], sp->backlightTintColor[1], sp->backlightTintColor[2], sp->backlightTintColor[3] ) );
+		}
+		setValue<bool>( o, "Depth MV Fixup", bool(sp->flags & CE2Material::EffectFlag_MVFixup) );
+		setValue<bool>( o, "Depth MV Fixup Edges Only", bool(sp->flags & CE2Material::EffectFlag_MVFixupEdgesOnly) );
+		setValue<bool>( o, "Force Render Before OIT", bool(sp->flags & CE2Material::EffectFlag_RenderBeforeOIT) );
+		setValue<quint16>( o, "Depth Bias In Ulp", quint16(sp->depthBias) );
 	}
 	bool	isDecal = false;
 	if ( material )
