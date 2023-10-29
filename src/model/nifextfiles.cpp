@@ -272,6 +272,7 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, int lodLevel )
 	setValue<QString>( m, "Shader Model", QString( material ? CE2Material::shaderModelNames[material->shaderModel] : "" ) );
 	setValue<quint8>( m, "Shader Route", ( material ? material->shaderRoute : 0 ) );
 	setValue<bool>( m, "Two Sided", ( material ? bool(material->flags & CE2Material::Flag_TwoSided) : false ) );
+	setValue<quint32>( m, "Physics Material Type", 0U );	// FIXME: not implemented in libfo76utils yet
 	bool	hasOpacity = false;
 	if ( material )
 		hasOpacity = bool( material->flags & CE2Material::Flag_HasOpacity );
@@ -343,25 +344,88 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, int lodLevel )
 	if ( material )
 		isDecal = bool( material->flags & CE2Material::Flag_IsDecal );
 	setValue<bool>( m, "Is Decal", isDecal );
-	if ( isDecal ) {
+	if ( isDecal && ( o = getItem( itemToIndex(m), "Decal Settings" ) ) != nullptr ) {
+		const CE2Material::DecalSettings *	sp = material->decalSettings;
+		setValue<float>( o, "Material Overall Alpha", sp->decalAlpha );
+		setValue<quint32>( o, "Write Mask", sp->writeMask );
+		setValue<bool>( o, "Is Planet", sp->isPlanet );
+		setValue<bool>( o, "Is Projected", sp->isProjected );
+		if ( sp->isProjected ) {
+			setValue<bool>( o, "Use Parallax Occlusion Mapping", sp->useParallaxMapping );
+			setValue<QString>( o, "Surface Height Map", sp->surfaceHeightMap->c_str() );
+			setValue<float>( o, "Parallax Occlusion Scale", sp->parallaxOcclusionScale );
+			setValue<bool>( o, "Parallax Occlusion Shadows", sp->parallaxOcclusionShadows );
+			setValue<quint8>( o, "Max Parralax Occlusion Steps", sp->maxParallaxSteps );
+			setValue<quint8>( o, "Render Layer", sp->renderLayer );
+			setValue<bool>( o, "Use G Buffer Normals", sp->useGBufferNormals );
+		}
+		setValue<quint8>( o, "Blend Mode", sp->blendMode );
+		setValue<bool>( o, "Animated Decal Ignores TAA", sp->animatedDecalIgnoresTAA );
 	}
 	bool	isWater = false;
 	if ( material )
 		isWater = bool( material->flags & CE2Material::Flag_IsWater );
 	setValue<bool>( m, "Is Water", isWater );
-	if ( isWater ) {
+	if ( isWater && ( o = getItem( itemToIndex(m), "Water Settings" ) ) != nullptr ) {
+		// FIXME: not implemented in libfo76utils yet
+		setValue<float>( o, "Water Edge Falloff", 0.0f );
+		setValue<float>( o, "Water Wetness Max Depth", 0.0f );
+		setValue<float>( o, "Water Edge Normal Falloff", 0.0f );
+		setValue<float>( o, "Water Depth Blur", 0.0f );
+		setValue<float>( o, "Water Refraction Magnitude", 0.0f );
+		setValue<float>( o, "Phytoplankton Reflectance Color R", 0.0f );
+		setValue<float>( o, "Phytoplankton Reflectance Color G", 0.0f );
+		setValue<float>( o, "Phytoplankton Reflectance Color B", 0.0f );
+		setValue<float>( o, "Sediment Reflectance Color R", 0.0f );
+		setValue<float>( o, "Sediment Reflectance Color G", 0.0f );
+		setValue<float>( o, "Sediment Reflectance Color B", 0.0f );
+		setValue<float>( o, "Yellow Matter Reflectance Color R", 0.0f );
+		setValue<float>( o, "Yellow Matter Reflectance Color G", 0.0f );
+		setValue<float>( o, "Yellow Matter Reflectance Color B", 0.0f );
+		setValue<float>( o, "Max Concentration Plankton", 0.0f );
+		setValue<float>( o, "Max Concentration Sediment", 0.0f );
+		setValue<float>( o, "Max Concentration Yellow Matter", 0.0f );
+		setValue<float>( o, "Reflectance R", 0.0f );
+		setValue<float>( o, "Reflectance G", 0.0f );
+		setValue<float>( o, "Reflectance B", 0.0f );
+		setValue<bool>( o, "Low LOD", false );
+		setValue<bool>( o, "Placed Water", false );
 	}
 	bool	isEmissive = false;
 	if ( material )
 		isEmissive = bool( material->flags & CE2Material::Flag_Emissive );
 	setValue<bool>( m, "Is Emissive", isEmissive );
-	if ( isEmissive ) {
+	if ( isEmissive && ( o = getItem( itemToIndex(m), "Emissive Settings" ) ) != nullptr ) {
+		const CE2Material::EmissiveSettings *	sp = material->emissiveSettings;
+		setValue<quint8>( o, "Emissive Source Layer", sp->sourceLayer );
+		setValue<Color4>( o, "Emissive Tint", Color4( sp->emissiveTint[0], sp->emissiveTint[1], sp->emissiveTint[2], sp->emissiveTint[3] ) );
+		setValue<quint8>( o, "Emissive Mask Source Blender", sp->maskSourceBlender );
+		setValue<float>( o, "Emissive Clip Threshold", sp->clipThreshold );
+		setValue<bool>( o, "Adaptive Emittance", sp->adaptiveEmittance );
+		setValue<float>( o, "Luminous Emittance", sp->luminousEmittance );
+		setValue<float>( o, "Exposure Offset", sp->exposureOffset );
+		setValue<bool>( o, "Enable Adaptive Limits", sp->enableAdaptiveLimits );
+		setValue<float>( o, "Max Offset Emittance", sp->maxOffset );
+		setValue<float>( o, "Min Offset Emittance", sp->minOffset );
 	}
 	bool	isTranslucent = false;
 	if ( material )
 		isTranslucent = bool( material->flags & CE2Material::Flag_Translucency );
 	setValue<bool>( m, "Is Translucent", isTranslucent );
-	if ( isTranslucent ) {
+	if ( isTranslucent && ( o = getItem( itemToIndex(m), "Translucency Settings" ) ) != nullptr ) {
+		const CE2Material::TranslucencySettings *	sp = material->translucencySettings;
+		setValue<bool>( o, "Is Thin", sp->isThin );
+		setValue<bool>( o, "Flip Back Face Normals In View Space", sp->flipBackFaceNormalsInVS );
+		setValue<bool>( o, "Use Subsurface Scattering", sp->useSSS );
+		if ( sp->useSSS ) {
+			setValue<float>( o, "Subsurface Scattering Width", sp->sssWidth );
+			setValue<float>( o, "Subsurface Scattering Strength", sp->sssStrength );
+		}
+		setValue<float>( o, "Transmissive Scale", sp->transmissiveScale );
+		setValue<float>( o, "Transmittance Width", sp->transmittanceWidth );
+		setValue<float>( o, "Spec Lobe 0 Roughness Scale", sp->specLobe0RoughnessScale );
+		setValue<float>( o, "Spec Lobe 1 Roughness Scale", sp->specLobe1RoughnessScale );
+		setValue<quint8>( o, "TransmittanceSourceLayer", sp->sourceLayer );
 	}
 }
 
