@@ -6790,7 +6790,6 @@
     </enum>
 
     <struct name="BSDecalSettingsComponent" abstract="true" module="BSMain" versions="#STF#">
-        <field name="Is Decal" type="bool" />
         <field name="Material Overall Alpha" type="float" />
         <field name="Write Mask" type="uint" />
         <field name="Is Planet" type="bool" />
