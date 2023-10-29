@@ -425,7 +425,7 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, int lodLevel )
 		setValue<float>( o, "Transmittance Width", sp->transmittanceWidth );
 		setValue<float>( o, "Spec Lobe 0 Roughness Scale", sp->specLobe0RoughnessScale );
 		setValue<float>( o, "Spec Lobe 1 Roughness Scale", sp->specLobe1RoughnessScale );
-		setValue<quint8>( o, "TransmittanceSourceLayer", sp->sourceLayer );
+		setValue<quint8>( o, "Transmittance Source Layer", sp->sourceLayer );
 	}
 }
 
