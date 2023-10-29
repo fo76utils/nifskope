@@ -255,6 +255,7 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, int lodLevel )
 	}
 
 	setValue<QString>( m, "Name", ( material ? material->name->c_str() : "" ) );
+	const CE2Material::UVStream *	alphaLayerUVStream = nullptr;
 	for ( int l = 0; l < 6; l++ ) {
 		bool	layerEnabled = false;
 		if ( material )
@@ -262,6 +263,8 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, int lodLevel )
 		setValue<bool>( m, QString("Layer %1 Enabled").arg(l), layerEnabled );
 		if ( layerEnabled ) {
 			loadSFLayer( getItem( itemToIndex( m ), QString("Layer %1").arg(l) ), material->layers[l] );
+			if ( l == material->alphaSourceLayer && material->layers[l] )
+				alphaLayerUVStream = material->layers[l]->uvStream;
 			if ( l > 0 && material->blenders[l - 1] )
 				loadSFBlender( getItem( itemToIndex( m ), QString("Blender %1").arg(l - 1) ), material->blenders[l - 1], material->layers[l]->uvStream );
 		}
@@ -273,7 +276,21 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, int lodLevel )
 	if ( material )
 		hasOpacity = bool( material->flags & CE2Material::Flag_HasOpacity );
 	setValue<bool>( m, "Has Opacity", hasOpacity );
-	if ( hasOpacity ) {
+	NifItem *	o;
+	if ( hasOpacity && ( o = getItem( itemToIndex(m), "Alpha Settings" ) ) != nullptr ) {
+		setValue<float>( o, "Alpha Test Threshold", material->alphaThreshold );
+		setValue<quint8>( o, "Opacity Source Layer", material->alphaSourceLayer );
+		setValue<quint8>( o, "Alpha Blender Mode", material->alphaBlendMode );
+		setValue<bool>( o, "Use Detail Blend Mask", bool(material->flags & CE2Material::Flag_AlphaDetailBlendMask) );
+		setValue<bool>( o, "Use Vertex Color", bool(material->flags & CE2Material::Flag_AlphaVertexColor) );
+		if ( material->flags & CE2Material::Flag_AlphaVertexColor )
+			setValue<quint8>( o, "Vertex Color Channel", material->alphaVertexColorChannel );
+		loadSFUVStream( getItem( itemToIndex(o), "Opacity UV Stream" ), material->alphaUVStream, alphaLayerUVStream );
+		setValue<float>( o, "Height Blend Threshold", material->alphaHeightBlendThreshold );
+		setValue<float>( o, "Height Blend Factor", material->alphaHeightBlendFactor );
+		setValue<float>( o, "Position", material->alphaPosition );
+		setValue<float>( o, "Contrast", material->alphaContrast );
+		setValue<bool>( o, "Use Dithered Transparency", bool(material->flags & CE2Material::Flag_DitheredTransparency) );
 	}
 	bool	isEffect = false;
 	if ( material )
