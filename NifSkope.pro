@@ -354,7 +354,7 @@ qhull {
 }
 
 gli {
-    !*msvc*:QMAKE_CXXFLAGS += -Ilib/gli/gli -Ilib/gli/external
+    !*msvc*:QMAKE_CXXFLAGS += -isystem lib/gli/gli -isystem lib/gli/external
     else:INCLUDEPATH += lib/gli/gli lib/gli/external
     HEADERS += $$files($$PWD/lib/gli/gli/*.hpp, true)
     HEADERS += $$files($$PWD/lib/gli/gli/*.inl, true)
