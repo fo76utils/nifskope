@@ -46,7 +46,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QOpenGLContext>
 #include <QString>
 #include <QtEndian>
-#include <bit>
 
 #ifdef __APPLE__
 #include <gl3.h>
