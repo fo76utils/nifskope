@@ -113,18 +113,27 @@ void NifModel::loadSFMaterial( NifItem * parent, const void * o )
 	const char *	name = "";
 	FloatVector4	color(1.0f);
 	unsigned char	colorMode = 0;
+	bool	isFlipbook = false;
 	const CE2Material::TextureSet *	textureSet = nullptr;
+	const CE2Material::Material * material = reinterpret_cast< const CE2Material::Material * >(o);
 	if ( o ) {
-		const CE2Material::Material * material = reinterpret_cast< const CE2Material::Material * >(o);
 		name = material->name->c_str();
 		color = material->color;
 		colorMode = material->colorMode;
+		isFlipbook = bool(material->flipbookFlags & 1);
 		textureSet = material->textureSet;
 	}
 	if ( parent ) {
 		setValue<QString>( parent, "Name", name );
 		setValue<Color4>( parent, "Color", Color4(color[0], color[1], color[2], color[3]) );
 		setValue<quint8>( parent, "Color Override Mode", colorMode );
+		setValue<bool>( parent, "Is Flipbook", isFlipbook );
+		if ( isFlipbook ) {
+			setValue<quint8>( parent, "Flipbook Columns", material->flipbookColumns );
+			setValue<quint8>( parent, "Flipbook Rows", material->flipbookRows );
+			setValue<float>( parent, "Flipbook FPS", material->flipbookFPS );
+			setValue<bool>( parent, "Flipbook Loops", bool(material->flipbookFlags & 2) );
+		}
 		loadSFTextureSet( getItem( itemToIndex( parent ), QString("Texture Set") ), textureSet );
 	}
 }
@@ -272,7 +281,7 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, int lodLevel )
 	setValue<QString>( m, "Shader Model", QString( material ? CE2Material::shaderModelNames[material->shaderModel] : "" ) );
 	setValue<quint8>( m, "Shader Route", ( material ? material->shaderRoute : 0 ) );
 	setValue<bool>( m, "Two Sided", ( material ? bool(material->flags & CE2Material::Flag_TwoSided) : false ) );
-	setValue<quint32>( m, "Physics Material Type", 0U );	// FIXME: not implemented in libfo76utils yet
+	setValue<quint8>( m, "Physics Material Type", ( material ? material->physicsMaterialType : 0 ) );
 	bool	hasOpacity = false;
 	if ( material )
 		hasOpacity = bool( material->flags & CE2Material::Flag_HasOpacity );
@@ -367,29 +376,29 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, int lodLevel )
 		isWater = bool( material->flags & CE2Material::Flag_IsWater );
 	setValue<bool>( m, "Is Water", isWater );
 	if ( isWater && ( o = getItem( itemToIndex(m), "Water Settings" ) ) != nullptr ) {
-		// FIXME: not implemented in libfo76utils yet
-		setValue<float>( o, "Water Edge Falloff", 0.0f );
-		setValue<float>( o, "Water Wetness Max Depth", 0.0f );
-		setValue<float>( o, "Water Edge Normal Falloff", 0.0f );
-		setValue<float>( o, "Water Depth Blur", 0.0f );
-		setValue<float>( o, "Water Refraction Magnitude", 0.0f );
-		setValue<float>( o, "Phytoplankton Reflectance Color R", 0.0f );
-		setValue<float>( o, "Phytoplankton Reflectance Color G", 0.0f );
-		setValue<float>( o, "Phytoplankton Reflectance Color B", 0.0f );
-		setValue<float>( o, "Sediment Reflectance Color R", 0.0f );
-		setValue<float>( o, "Sediment Reflectance Color G", 0.0f );
-		setValue<float>( o, "Sediment Reflectance Color B", 0.0f );
-		setValue<float>( o, "Yellow Matter Reflectance Color R", 0.0f );
-		setValue<float>( o, "Yellow Matter Reflectance Color G", 0.0f );
-		setValue<float>( o, "Yellow Matter Reflectance Color B", 0.0f );
-		setValue<float>( o, "Max Concentration Plankton", 0.0f );
-		setValue<float>( o, "Max Concentration Sediment", 0.0f );
-		setValue<float>( o, "Max Concentration Yellow Matter", 0.0f );
-		setValue<float>( o, "Reflectance R", 0.0f );
-		setValue<float>( o, "Reflectance G", 0.0f );
-		setValue<float>( o, "Reflectance B", 0.0f );
-		setValue<bool>( o, "Low LOD", false );
-		setValue<bool>( o, "Placed Water", false );
+		const CE2Material::WaterSettings *	sp = material->waterSettings;
+		setValue<float>( o, "Water Edge Falloff", sp->waterEdgeFalloff );
+		setValue<float>( o, "Water Wetness Max Depth", sp->waterWetnessMaxDepth );
+		setValue<float>( o, "Water Edge Normal Falloff", sp->waterEdgeNormalFalloff );
+		setValue<float>( o, "Water Depth Blur", sp->waterDepthBlur );
+		setValue<float>( o, "Water Refraction Magnitude", sp->reflectance[3] );
+		setValue<float>( o, "Phytoplankton Reflectance Color R", sp->phytoplanktonReflectance[0] );
+		setValue<float>( o, "Phytoplankton Reflectance Color G", sp->phytoplanktonReflectance[1] );
+		setValue<float>( o, "Phytoplankton Reflectance Color B", sp->phytoplanktonReflectance[2] );
+		setValue<float>( o, "Sediment Reflectance Color R", sp->sedimentReflectance[0] );
+		setValue<float>( o, "Sediment Reflectance Color G", sp->sedimentReflectance[1] );
+		setValue<float>( o, "Sediment Reflectance Color B", sp->sedimentReflectance[2] );
+		setValue<float>( o, "Yellow Matter Reflectance Color R", sp->yellowMatterReflectance[0] );
+		setValue<float>( o, "Yellow Matter Reflectance Color G", sp->yellowMatterReflectance[1] );
+		setValue<float>( o, "Yellow Matter Reflectance Color B", sp->yellowMatterReflectance[2] );
+		setValue<float>( o, "Max Concentration Plankton", sp->phytoplanktonReflectance[3] );
+		setValue<float>( o, "Max Concentration Sediment", sp->sedimentReflectance[3] );
+		setValue<float>( o, "Max Concentration Yellow Matter", sp->yellowMatterReflectance[3] );
+		setValue<float>( o, "Reflectance R", sp->reflectance[0] );
+		setValue<float>( o, "Reflectance G", sp->reflectance[1] );
+		setValue<float>( o, "Reflectance B", sp->reflectance[2] );
+		setValue<bool>( o, "Low LOD", sp->lowLOD );
+		setValue<bool>( o, "Placed Water", sp->placedWater );
 	}
 	bool	isEmissive = false;
 	if ( material )

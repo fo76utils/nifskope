@@ -6669,6 +6669,11 @@
         <field name="Name" type="SizedString" />
         <field name="Color" type="Color4" />
         <field name="Color Override Mode" type="BSMaterialColorOverrideMode" />
+        <field name="Is Flipbook" type="bool" />
+        <field name="Flipbook Columns" type="byte" cond="Is Flipbook" />
+        <field name="Flipbook Rows" type="byte" cond="Is Flipbook" />
+        <field name="Flipbook FPS" type="float" cond="Is Flipbook" />
+        <field name="Flipbook Loops" type="bool" cond="Is Flipbook" />
         <field name="Texture Set" type="BSTextureSet" />
     </struct>
 
@@ -6871,6 +6876,17 @@
         <option name="Water" value="4" />
     </enum>
 
+    <enum name="BSPhysicsMaterialType" storage="byte" versions="#STF#">
+        <option name="None" value="0" />
+        <option name="Carpet" value="1" />
+        <option name="Mat" value="2" />
+        <option name="MaterialGroundTileVinyl" value="3" />
+        <option name="MaterialMat" value="4" />
+        <option name="MaterialPHYIceDebrisLarge" value="5" />
+        <option name="Metal" value="6" />
+        <option name="Wood" value="7" />
+    </enum>
+
     <struct name="BSLayeredMaterial" abstract="true" module="BSMain" versions="#STF#">
         <field name="Name" type="SizedString" />
         <field name="Layer 0 Enabled" type="bool" />
@@ -6893,7 +6909,7 @@
         <field name="Shader Model" type="SizedString" default="BaseMaterial" />
         <field name="Shader Route" type="BSShaderRoute" />
         <field name="Two Sided" type="bool" />
-        <field name="Physics Material Type" type="uint" />
+        <field name="Physics Material Type" type="BSPhysicsMaterialType" />
         <field name="Has Opacity" type="bool" />
         <field name="Alpha Settings" type="BSAlphaSettingsComponent" cond="Has Opacity" />
         <field name="Is Effect" type="bool" />
