@@ -13,4 +13,4 @@ texcoords 2 bitangents
 texcoords 3 indices
 texcoords 4 weights
 
-shaders stf_default.vert stf_effectshader.frag
+shaders stf_default.vert stf_default.frag
