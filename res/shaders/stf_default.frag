@@ -1,4 +1,4 @@
-#version 130
+#version 400 compatibility
 #extension GL_ARB_shader_texture_lod : require
 
 struct UVStream {
