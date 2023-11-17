@@ -7,6 +7,7 @@
 #include <QCoreApplication>
 #include <QProgressDialog>
 #include <QDir>
+#include <QMessageBox>
 
 namespace Game
 {
@@ -40,8 +41,30 @@ void BA2Files::open_folders(GameMode game, const QStringList& folders)
 		if (!s.isEmpty())
 			tmp.push_back(s.toStdString());
 	}
-	if (tmp.size() > 0)
-		archives[game] = new BA2File(tmp);
+	while	(tmp.size() > 0) {
+		try {
+			archives[game] = new BA2File(tmp);
+			tmp.clear();
+		} catch (FO76UtilsError&) {
+			bool	foundError = false;
+			if (tmp.size() > 1) {
+				for (size_t i = 0; i < tmp.size(); ) {
+					try {
+						BA2File	tmp2(tmp[i].c_str());
+						i++;
+					} catch (FO76UtilsError&) {
+						QMessageBox::critical(nullptr, "NifSkope error", QString("Error opening archive folder '%1'").arg(tmp[i].c_str()));
+						tmp.erase(tmp.begin() + i, tmp.begin() + (i + 1));
+						foundError = true;
+					}
+				}
+			}
+			if (!foundError) {
+				QMessageBox::critical(nullptr, "NifSkope error", QString("Error opening archive folder(s)"));
+				break;
+			}
+		}
+	}
 }
 
 void BA2Files::close_archive(GameMode game)
