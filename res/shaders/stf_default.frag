@@ -1,4 +1,4 @@
-#version 400 compatibility
+#version 150 compatibility
 #extension GL_ARB_shader_texture_lod : require
 
 struct UVStream {
@@ -434,12 +434,47 @@ vec2 getTexCoord(in UVStream uvStream)
 	return offset * uvStream.scale + uvStream.offset;
 }
 
+vec4 getTextureN(int txtUnit, vec2 offset)
+{
+	switch (txtUnit) {
+		case 0:
+			return texture2D(textureUnits[0], offset);
+		case 1:
+			return texture2D(textureUnits[1], offset);
+		case 2:
+			return texture2D(textureUnits[2], offset);
+		case 3:
+			return texture2D(textureUnits[3], offset);
+		case 4:
+			return texture2D(textureUnits[4], offset);
+		case 5:
+			return texture2D(textureUnits[5], offset);
+		case 6:
+			return texture2D(textureUnits[6], offset);
+		case 7:
+			return texture2D(textureUnits[7], offset);
+		case 8:
+			return texture2D(textureUnits[8], offset);
+		case 9:
+			return texture2D(textureUnits[9], offset);
+		case 10:
+			return texture2D(textureUnits[10], offset);
+		case 11:
+			return texture2D(textureUnits[11], offset);
+		case 12:
+			return texture2D(textureUnits[12], offset);
+		case 13:
+			return texture2D(textureUnits[13], offset);
+	}
+	return texture2D(textureUnits[14], offset);
+}
+
 vec4 getLayerTexture(int layerNum, int textureNum, vec2 offset)
 {
 	int	n = lm.layers[layerNum].material.textureSet.textures[textureNum];
 	if ( n < 1 )
 		return lm.layers[layerNum].material.textureSet.textureReplacements[textureNum];
-	return texture2D(textureUnits[n - 1], offset);
+	return getTextureN(n - 1, offset);
 }
 
 float getBlenderMask(int n)
@@ -450,7 +485,7 @@ float getBlenderMask(int n)
 			r = lm.blenders[n].maskTextureReplacement.r;
 		} else {
 			vec2	offset = getTexCoord(lm.blenders[n].uvStream);
-			r = texture2D(textureUnits[lm.blenders[n].maskTexture - 1], offset).r;
+			r = getTextureN(lm.blenders[n].maskTexture - 1, offset).r;
 		}
 	}
 	if ( lm.blenders[n].colorChannel >= 0 )
