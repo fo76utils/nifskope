@@ -1024,6 +1024,8 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 				prog->uni1b_l( prog->uniLocation("lm.blenders[%d].boolParams[%d]", i - 1, j), blender->boolParams[j]);
 		}
 	}
+	for ( ; texunit <= 15 ; texunit++ )
+		prog->uni1i_l( prog->uniLocation("textureUnits[%d]", texunit - 1), texunit );
 
 	prog->uni4m( MAT_VIEW, mesh->viewTrans().toMatrix4() );
 	prog->uni4m( MAT_WORLD, mesh->worldTrans().toMatrix4() );
@@ -1292,7 +1294,7 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 		}
 
 		prog->uni1i( HAS_MAP_DETAIL, lsp->hasDetailMask );
-		prog->uniSampler( bsprop, SAMP_DETAIL, 3, texunit, "shaders/blankdetailmap.dds", clamp );
+		prog->uniSampler( bsprop, SAMP_DETAIL, 3, texunit, "#FF404040", clamp );
 
 		prog->uni1i( HAS_MAP_TINT, lsp->hasTintMask );
 		prog->uniSampler( bsprop, SAMP_TINT, 6, texunit, gray, clamp );
