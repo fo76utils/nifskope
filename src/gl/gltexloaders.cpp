@@ -1200,9 +1200,15 @@ bool texLoad( const Game::GameMode game, const QString & filepath, QString & for
 			format = fmtName;
 			target = GL_TEXTURE_2D;
 			glBindTexture( target, id );
+			GLint	savedUnpackAlignment = 4;
+			GLint	savedUnpackSwapBytes = GL_TRUE;
+			glGetIntegerv( GL_UNPACK_ALIGNMENT, &savedUnpackAlignment );
+			glGetIntegerv( GL_UNPACK_SWAP_BYTES, &savedUnpackSwapBytes );
 			glPixelStorei( GL_UNPACK_ALIGNMENT, 4 );
 			glPixelStorei( GL_UNPACK_SWAP_BYTES, GL_TRUE );
 			glTexImage2D( target, 0, fmt, 1, 1, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, &c );
+			glPixelStorei( GL_UNPACK_ALIGNMENT, savedUnpackAlignment );
+			glPixelStorei( GL_UNPACK_SWAP_BYTES, savedUnpackSwapBytes );
 			return true;
 		} else if (!Game::GameManager::get_file(data, game, filepath, "textures", "")) {
 			throw QString( "could not open file" );
