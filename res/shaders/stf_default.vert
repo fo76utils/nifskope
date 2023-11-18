@@ -1,4 +1,4 @@
-#version 150 compatibility
+#version 400 compatibility
 
 out vec3 LightDir;
 out vec3 ViewDir;

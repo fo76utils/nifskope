@@ -128,11 +128,11 @@ GLView * GLView::create( NifSkope * window )
 	} else {
 		fmt.setSampleBuffers( aa > 0 );
 	}
-	
+
 	// OpenGL version
-	fmt.setVersion( 2, 1 );
+	fmt.setVersion( 4, 0 );
 	// Ignored if version < 3.2
-	//fmt.setProfile(QGLFormat::CoreProfile);
+	fmt.setProfile( QGLFormat::CompatibilityProfile );
 
 	// V-Sync
 	fmt.setSwapInterval( 1 );
