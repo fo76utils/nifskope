@@ -709,7 +709,7 @@ bool Renderer::Program::uniSampler_l( BSShaderLightingProperty * bsprop, int & t
 		c.srgbExpand();	// SRGB
 	else
 		c = c * (1.0f / 127.5f) - 1.0f;	// SNORM
-	if ( texturePath && !texturePath->empty() && texunit >= 1 && texunit <= 15 && activateTextureUnit(texunit) ) {
+	if ( texturePath && !texturePath->empty() && texunit >= 1 && texunit <= 15 && activateTextureUnit(texunit, true) ) {
 		TexClampMode	clampMode = TexClampMode::WRAP_S_WRAP_T;
 		if ( uvStream && uvStream->textureAddressMode ) {
 			if ( uvStream->textureAddressMode == 3 ) {
@@ -1025,7 +1025,7 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 		}
 	}
 	for ( ; texunit <= 15 ; texunit++ ) {
-		if ( !activateTextureUnit( texunit ) )
+		if ( !activateTextureUnit( texunit, true ) )
 			return false;
 		if ( !bsprop->bind( -1, white, TexClampMode::WRAP_S_WRAP_T ) )
 			return false;

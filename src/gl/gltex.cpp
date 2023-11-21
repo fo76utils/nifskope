@@ -60,7 +60,8 @@ PFNGLCLIENTACTIVETEXTUREARBPROC glClientActiveTextureARB = nullptr;
 #endif
 
 //! Number of texture units
-GLint num_texture_units = 0;
+GLint	num_texture_units = 0;	// for glActiveTexture()
+GLint	num_txtunits_client = 0;	// for glClientActiveTexture()
 
 //! Maximum anisotropy
 float max_anisotropy = 1.0f;
@@ -80,14 +81,16 @@ void initializeTextureUnits( const QOpenGLContext * context )
 {
 	if ( context->hasExtension( "GL_ARB_multitexture" ) ) {
 		glGetIntegerv( GL_MAX_TEXTURE_IMAGE_UNITS_ARB, &num_texture_units );
+		glGetIntegerv( GL_MAX_TEXTURE_COORDS, &num_txtunits_client );
 
-		if ( num_texture_units < 1 )
-			num_texture_units = 1;
+		num_texture_units = std::max( num_texture_units, GLint(1) );
+		num_txtunits_client = std::max( num_txtunits_client, GLint(1) );
 
 		//qDebug() << "texture units" << num_texture_units;
 	} else {
 		qCWarning( nsGl ) << QObject::tr( "Multitexturing not supported." );
 		num_texture_units = 1;
+		num_txtunits_client = 1;
 	}
 
 	if ( context->hasExtension( "GL_EXT_texture_filter_anisotropic" ) ) {
@@ -107,7 +110,7 @@ void initializeTextureUnits( const QOpenGLContext * context )
 	initializeTextureLoaders( context );
 }
 
-bool activateTextureUnit( int stage )
+bool activateTextureUnit( int stage, bool noClient )
 {
 	if ( num_texture_units <= 1 )
 		return ( stage == 0 );
@@ -115,7 +118,8 @@ bool activateTextureUnit( int stage )
 	if ( stage < num_texture_units ) {
 
 		glActiveTextureARB( GL_TEXTURE0 + stage );
-		glClientActiveTextureARB( GL_TEXTURE0 + stage );
+		if ( stage < num_txtunits_client && !noClient )
+			glClientActiveTextureARB( GL_TEXTURE0 + stage );
 		return true;
 	}
 
@@ -129,14 +133,16 @@ void resetTextureUnits( int numTex )
 		return;
 	}
 
-	for ( int x = numTex - 1; x >= 0; x-- ) {
+	for ( int x = std::min( numTex, int(num_texture_units) ); --x >= 0; ) {
 		glActiveTextureARB( GL_TEXTURE0 + x );
 		glDisable( GL_TEXTURE_2D );
 		glMatrixMode( GL_TEXTURE );
 		glLoadIdentity();
 		glMatrixMode( GL_MODELVIEW );
-		glClientActiveTextureARB( GL_TEXTURE0 + x );
-		glDisableClientState( GL_TEXTURE_COORD_ARRAY );
+		if ( x < num_txtunits_client ) {
+			glClientActiveTextureARB( GL_TEXTURE0 + x );
+			glDisableClientState( GL_TEXTURE_COORD_ARRAY );
+		}
 	}
 }
 
@@ -384,7 +390,7 @@ void TexCache::setNifFolder( const QString & folder )
 QString TexCache::info( const QModelIndex & iSource )
 {
 	QString temp;
-	
+
 	auto nif = NifModel::fromValidIndex(iSource);
 	if ( nif ) {
 		if ( nif->get<quint8>( iSource, "Use External" ) == 0 ) {

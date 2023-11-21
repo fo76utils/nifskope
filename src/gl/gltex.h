@@ -148,10 +148,8 @@ protected:
 
 void initializeTextureUnits( const QOpenGLContext * );
 
-bool activateTextureUnit( int x );
-// TODO: The default of 8 is arbitrary because >8 causes GL paint errors
-//	This is a problem only if a mesh uses all 9 texture slots
-void resetTextureUnits( int numTex = 8 );
+bool activateTextureUnit( int x, bool noClient = false );
+void resetTextureUnits( int numTex = 16 );
 
 float get_max_anisotropy();
 
