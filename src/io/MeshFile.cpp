@@ -8,7 +8,10 @@
 #include <QFile>
 #include "fp32vec4.hpp"
 
+#if 0
+// x/32767 matches the min/max bounds in BSGeometry more accurately on average
 double snormToDouble(int16_t x) { return x < 0 ? x / double(32768) : x / double(32767); }
+#endif
 
 MeshFile::MeshFile(const QString& filepath)
 {
@@ -69,15 +72,16 @@ quint32 MeshFile::readMesh()
 		positions.resize(numPositions + positions.count());
 
 		for ( int i = 0; i < positions.count(); i++ ) {
-			int16_t x, y, z;
+			uint32_t	xy;
+			uint16_t	z;
 
-			in >> x;
-			in >> y;
+			in >> xy;
 			in >> z;
+			FloatVector4	xyz(FloatVector4::convertInt16((std::uint64_t(z) << 32) | xy));
+			xyz /= 32767.0f;
+			xyz *= scale;
 
-			// Dividing by 1024 is near exact previous game scale
-			// SNORM is / ~32768 though so scale is 32x smaller in .mesh
-			positions[i] = Vector3(snormToDouble(x), snormToDouble(y), snormToDouble(z)) * scale;
+			positions[i] = Vector3(xyz[0], xyz[1], xyz[2]);
 		}
 
 		quint32 numCoord1;
