@@ -135,7 +135,7 @@ void Shape::updateImpl( const NifModel * nif, const QModelIndex & index )
 
 	} else if ( (bssp && bssp->isParamBlock(index)) || (alphaProperty && index == alphaProperty->index()) ) {
 		updateShader();
-	
+
 	}
 }
 
@@ -209,7 +209,7 @@ void Shape::updateShader()
 		if ( mat && (mat->hasAlphaBlend() || mat->hasAlphaTest() || mat->hasDecal()) )
 			drawInSecondPass = true;
 		const CE2Material *	sfMat = bssp->getSFMaterial();
-		if ( sfMat && (sfMat->flags & (CE2Material::Flag_AlphaBlending | CE2Material::Flag_IsEffect | CE2Material::Flag_IsWater | CE2Material::Flag_IsDecal)) )
+		if ( sfMat && ( sfMat->shaderRoute != 0 || (sfMat->flags & CE2Material::Flag_IsDecal) ) )
 			drawInSecondPass = true;
 	}
 

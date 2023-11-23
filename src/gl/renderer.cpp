@@ -786,7 +786,8 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 
 	mesh->depthWrite = true;
 	mesh->depthTest = true;
-	if ( mat->flags & CE2Material::Flag_IsEffect ) {
+	bool	isEffect = ( (mat->flags & CE2Material::Flag_IsEffect) && mat->shaderRoute != 0 );
+	if ( isEffect ) {
 		mesh->depthWrite = bool(mat->effectSettings->flags & CE2Material::EffectFlag_ZWrite);
 		mesh->depthTest = bool(mat->effectSettings->flags & CE2Material::EffectFlag_ZTest);
 	}
@@ -822,7 +823,7 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 	prog->uni1f_l( prog->uniLocation("envReflection"), 1.0f );
 #endif
 	prog->uni1i_l( prog->uniLocation("lm.shaderModel"), mat->shaderModel );
-	prog->uni1b_l( prog->uniLocation("lm.isEffect"), bool(mat->flags & CE2Material::Flag_IsEffect) );
+	prog->uni1b_l( prog->uniLocation("lm.isEffect"), isEffect );
 	prog->uni1b_l( prog->uniLocation("lm.isTwoSided"), bool(mat->flags & CE2Material::Flag_TwoSided) );
 	prog->uni1b_l( prog->uniLocation("lm.hasOpacityComponent"), bool(mat->flags & CE2Material::Flag_HasOpacityComponent) );
 	if ( mat->flags & CE2Material::Flag_LayeredEmissivity ) {
@@ -885,7 +886,7 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 	} else {
 		prog->uni1b_l( prog->uniLocation("lm.decalSettings.isDecal"), false );
 	}
-	if ( mat->flags & CE2Material::Flag_IsEffect ) {
+	if ( isEffect ) {
 		prog->uni1b_l( prog->uniLocation("lm.effectSettings.useFallOff"), bool(mat->effectSettings->flags & CE2Material::EffectFlag_UseFalloff) );
 		prog->uni1b_l( prog->uniLocation("lm.effectSettings.useRGBFallOff"), bool(mat->effectSettings->flags & CE2Material::EffectFlag_UseRGBFalloff) );
 		prog->uni1f_l( prog->uniLocation("lm.effectSettings.falloffStartAngle"), mat->effectSettings->falloffStartAngle );
@@ -1109,20 +1110,20 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 			GL_ONE	// "None"
 		};
 
-		if ( mat->flags & CE2Material::Flag_AlphaBlending ) {
+		if ( isEffect ) {
 			glEnable( GL_BLEND );
-			if ( mat->flags & CE2Material::Flag_IsEffect ) {
-				if ( mat->effectSettings->flags & (CE2Material::EffectFlag_EmissiveOnly | CE2Material::EffectFlag_EmissiveOnlyAuto) )
-					glBlendFunc( GL_ONE, GL_ONE );
-				else
-					glBlendFunc( blendMapS[mat->effectSettings->blendMode], blendMapD[mat->effectSettings->blendMode] );
-			} else if ( mat->flags & CE2Material::Flag_IsDecal )
-				glBlendFunc( blendMapS[mat->decalSettings->blendMode], blendMapD[mat->decalSettings->blendMode] );
+			if ( mat->effectSettings->flags & (CE2Material::EffectFlag_EmissiveOnly | CE2Material::EffectFlag_EmissiveOnlyAuto) )
+				glBlendFunc( GL_ONE, GL_ONE );
+			else
+				glBlendFunc( blendMapS[mat->effectSettings->blendMode], blendMapD[mat->effectSettings->blendMode] );
+		} else if ( (mat->flags & CE2Material::Flag_IsDecal) && (mat->flags & CE2Material::Flag_AlphaBlending) ) {
+			glEnable( GL_BLEND );
+			glBlendFunc( blendMapS[mat->decalSettings->blendMode], blendMapD[mat->decalSettings->blendMode] );
 		} else {
 			glDisable( GL_BLEND );
 		}
 
-		if ( (mat->flags & CE2Material::Flag_IsEffect) && (mat->effectSettings->flags & CE2Material::EffectFlag_IsAlphaTested) ) {
+		if ( isEffect && (mat->effectSettings->flags & CE2Material::EffectFlag_IsAlphaTested) ) {
 			glEnable( GL_ALPHA_TEST );
 			glAlphaFunc( GL_GREATER, mat->effectSettings->alphaThreshold );
 		} else if ( mat->flags & CE2Material::Flag_HasOpacity && mat->alphaThreshold > 0.0f ) {
