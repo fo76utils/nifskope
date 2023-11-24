@@ -39,7 +39,7 @@ void BA2Files::open_folders(GameMode game, const QStringList& folders)
 	std::vector< std::string >	tmp;
 	for (const auto& s : folders) {
 		if (!s.isEmpty())
-			tmp.push_back(s.toStdString());
+			tmp.insert(tmp.begin(), s.toStdString());
 	}
 	while	(tmp.size() > 0) {
 		try {
