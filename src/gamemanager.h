@@ -223,9 +223,6 @@ public:
 
 	static GameManager* get();
 
-//	static QList <FSArchiveFile *> opened_archives(const GameMode game);
-//	static bool archive_contains_folder(const QString& archive, const QString& folder);
-
 	//! Game installation path
 	static QString path(const GameMode game);
 	//! Game data path
@@ -237,12 +234,20 @@ public:
 	//! Game enabled status in the GameManager
 	static bool status(const GameMode game);
 
+	//! Convert 'name' to lower case, replace backslashes with forward slashes, and make sure that the path begins with 'archive_folder' and ends with 'extension' (e.g. "textures" and ".dds").
 	static std::string get_full_path(const QString& name, const char* archive_folder, const char* extension);
+	//! Search for file 'path' in the resource archives and folders, and return the full path if the file is found, or an empty string otherwise.
 	static QString find_file(const GameMode game, const QString& path, const char* archiveFolder, const char* extension);
+	//! Find and load resource file to 'data'. The return value is true on success.
 	static bool get_file(std::vector< unsigned char >& data, const GameMode game, const std::string& fullPath);
 	static bool get_file(std::vector< unsigned char >& data, const GameMode game, const QString& path, const char* archiveFolder, const char* extension);
 	static bool get_file(QByteArray& data, const GameMode game, const QString& path, const char* archiveFolder, const char* extension);
+	//! Return pointer to Starfield material database, loading it first if necessary. On error, nullptr is returned.
 	static const CE2MaterialDB* materials(const GameMode game);
+	//! Close all currently opened resource archives and files.
+	static void close_archives();
+	//! Deallocate Starfield material database if it is currently loaded.
+	static void close_materials();
 
 	//! Find applicable data folders at the game installation path
 	static QStringList find_folders(const GameMode game);

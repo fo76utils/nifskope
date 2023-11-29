@@ -234,6 +234,7 @@
     <addaction name="menuExport"/>
     <addaction name="separator"/>
     <addaction name="aShredder"/>
+    <addaction name="aCloseArchives"/>
     <addaction name="aLoadXML"/>
     <addaction name="separator"/>
     <addaction name="aQuit"/>
@@ -1037,6 +1038,11 @@ background: qradialgradient(spread:pad, cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0
    </property>
    <property name="shortcut">
     <string>Alt+X</string>
+   </property>
+  </action>
+  <action name="aCloseArchives">
+   <property name="text">
+    <string>Close Archives</string>
    </property>
   </action>
   <action name="aShredder">

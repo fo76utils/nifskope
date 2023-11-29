@@ -180,6 +180,9 @@ public slots:
 
 	// Automatic slots
 
+	//! Close all resource folders and files.
+	void on_aCloseArchives_triggered();
+
 	//! Reparse the nif.xml and kfm.xml files.
 	void on_aLoadXML_triggered();
 
@@ -203,12 +206,12 @@ public slots:
 	void on_aViewTop_triggered( bool );
 	void on_aViewFront_triggered( bool );
 	void on_aViewLeft_triggered( bool );
-	
+
 	void on_aViewCenter_triggered();
 	void on_aViewFlip_triggered( bool );
 	void on_aViewPerspective_toggled( bool );
 	void on_aViewWalk_triggered( bool );
-	
+
 	void on_aViewUser_toggled( bool );
 	void on_aViewUserSave_triggered( bool );
 
@@ -375,7 +378,7 @@ private:
 
 	bool selecting = false;
 	bool initialShowEvent = true;
-	
+
 	QProgressBar * progress = nullptr;
 
 	QDockWidget * dList;

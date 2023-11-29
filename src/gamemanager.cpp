@@ -444,6 +444,20 @@ const CE2MaterialDB* GameManager::materials(const GameMode game)
 	return nullptr;
 }
 
+void GameManager::close_archives()
+{
+	ba2Files.close_all();
+}
+
+void GameManager::close_materials()
+{
+	if ( have_materials_cdb ) {
+		have_materials_cdb = false;
+		starfield_materials.~CE2MaterialDB();
+		(void) new( &starfield_materials ) CE2MaterialDB();
+	}
+}
+
 QStringList GameManager::find_folders(const GameMode game)
 {
 	return existing_folders(game, get()->game_paths.value(game, {}));

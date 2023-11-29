@@ -51,6 +51,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ui/widgets/xmlcheck.h"
 #include "ui/about_dialog.h"
 #include "ui/settingsdialog.h"
+#include "gamemanager.h"
 
 #include <QAction>
 #include <QApplication>
@@ -143,8 +144,8 @@ void NifSkope::initActions()
 	aSelectFont = ui->aSelectFont;
 
 	// Build all actions list
-	allActions = QSet<QAction *>::fromList( 
-		ui->tFile->actions() 
+	allActions = QSet<QAction *>::fromList(
+		ui->tFile->actions()
 		<< ui->mRender->actions()
 		<< ui->tRender->actions()
 		<< ui->tAnim->actions()
@@ -183,14 +184,14 @@ void NifSkope::initActions()
 
 	connect( ui->aBrowseArchive, &QAction::triggered, this, &NifSkope::archiveDlg );
 	connect( ui->aOpen, &QAction::triggered, this, &NifSkope::openDlg );
-	connect( ui->aSave, &QAction::triggered, this, &NifSkope::save );  
+	connect( ui->aSave, &QAction::triggered, this, &NifSkope::save );
 	connect( ui->aSaveAs, &QAction::triggered, this, &NifSkope::saveAsDlg );
 
 	ui->aReload->setDisabled(true);
 
 	// TODO: Assure Actions and Scene state are synced
 	// Set Data for Actions to pass onto Scene when clicking
-	/*	
+	/*
 		ShowAxes = 0x1,
 		ShowGrid = 0x2,
 		ShowNodes = 0x4,
@@ -317,7 +318,7 @@ void NifSkope::initActions()
 			ogl->setDebugMode( GLView::DbgColorPicker );
 		else
 			ogl->setDebugMode( GLView::DbgNone );
-		
+
 		ogl->update();
 	} );
 
@@ -519,7 +520,7 @@ void NifSkope::initMenu()
 
 	QActionGroup * grpTheme = new QActionGroup( this );
 
-	// Fill the action data with the integer correlating to 
+	// Fill the action data with the integer correlating to
 	// their position in WindowTheme and add to the action group.
 	int i = 0;
 	auto themes = ui->mTheme->actions();
@@ -539,7 +540,7 @@ void NifSkope::initToolBars()
 	// Status Bar
 	ui->statusbar->setContentsMargins( 0, 0, 0, 0 );
 	ui->statusbar->addPermanentWidget( progress );
-	
+
 	// TODO: Split off into own widget
 	ui->statusbar->addPermanentWidget( filePathWidget( this ) );
 
@@ -593,7 +594,7 @@ void NifSkope::initToolBars()
 	connect( animSlider, &FloatSlider::valueChanged, animSliderEdit, &FloatEdit::setValue );
 	connect( animSliderEdit, static_cast<void (FloatEdit::*)(float)>(&FloatEdit::sigEdited), ogl, &GLView::setSceneTime );
 	connect( animSliderEdit, static_cast<void (FloatEdit::*)(float)>(&FloatEdit::sigEdited), animSlider, &FloatSlider::setValue );
-	
+
 	// Animations
 	animGroups = new QComboBox( ui->tAnim );
 	animGroups->setMinimumWidth( 60 );
@@ -673,7 +674,7 @@ QMenu * NifSkope::lightingWidget()
 {
 	QMenu * mLight = new QMenu( this );
 	mLight->setObjectName( "mLight" );
-	
+
 
 	auto lightingWidget = new LightingWidget( ogl, mLight );
 	lightingWidget->setActions( {ui->aLighting, ui->aTextures, ui->aVertexColors,
@@ -827,7 +828,7 @@ void NifSkope::onLoadComplete( bool success, QString & fname )
 
 	} else {
 		// File failed to load
-		Message::append( this, NifModel::tr( readFail ), 
+		Message::append( this, NifModel::tr( readFail ),
 						 NifModel::tr( readFailFinal ).arg( fname ), QMessageBox::Critical );
 
 		nif->clear();
@@ -1119,7 +1120,7 @@ void NifSkope::loadTheme()
 	pal.setColor( QPalette::ColorGroup::Disabled, QPalette::HighlightedText, baseCTxtHighlightDark );
 
 	// Set Palette and Stylesheet
-	
+
 	QDir qssDir( QApplication::applicationDirPath() );
 	QStringList qssList( QStringList()
 						 << "style.qss"
@@ -1378,6 +1379,11 @@ void NifSkope::overrideViewFont()
 */
 
 
+void NifSkope::on_aCloseArchives_triggered()
+{
+	Game::GameManager::close_archives();
+}
+
 void NifSkope::on_aLoadXML_triggered()
 {
 	NifModel::loadXML();
@@ -1474,7 +1480,7 @@ void NifSkope::on_aViewWalk_triggered( bool checked )
 
 
 void NifSkope::on_aViewUserSave_triggered( bool checked )
-{ 
+{
 	Q_UNUSED( checked );
 	ogl->saveUserView();
 	ui->aViewUser->setChecked( true );
