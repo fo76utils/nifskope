@@ -415,6 +415,8 @@ void Renderer::updateSettings()
 	QSettings settings;
 
 	cfg.useShaders = settings.value( "Settings/Render/General/Use Shaders", true ).toBool();
+	cfg.cubeMapPathFO76 = settings.value( "Settings/Render/General/Cube Map Path FO 76", "textures/shared/cubemaps/mipblur_defaultoutside1.dds" ).toString();
+	cfg.cubeMapPathSTF = settings.value( "Settings/Render/General/Cube Map Path STF", "textures/cubemaps/cell_cityplazacube.dds" ).toString();
 
 	bool prevStatus = shader_ready;
 
@@ -745,8 +747,7 @@ static QString magenta = "#FFFF00FF";
 static QString default_n = "#FFFF8080";
 static QString default_ns = "#FFFF8080n";
 static QString cube_sk = "textures/cubemaps/bleakfallscube_e.dds";
-static QString cube_fo4_76 = "textures/shared/cubemaps/mipblur_defaultoutside1.dds";
-static QString cube_sf = "textures/cubemaps/cell_cityplazacube.dds";
+static QString cube_fo4 = "textures/shared/cubemaps/mipblur_defaultoutside1.dds";
 
 static const std::uint32_t defaultSFTextureSet[21] = {
 	0xFFFF00FFU, 0xFFFF8080U, 0xFFFFFFFFU, 0xFFC0C0C0U, 0xFF000000U, 0xFFFFFFFFU,
@@ -807,9 +808,7 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 	prog->uni1i( HAS_MAP_CUBE, scene->hasOption(Scene::DoCubeMapping) && scene->hasOption(Scene::DoLighting) );
 	GLint uniCubeMap = prog->uniformLocations[SAMP_CUBE];
 	if ( uniCubeMap >= 0 ) {
-		QString	fname = cube_sf;
-
-		if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( fname ) )
+		if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( cfg.cubeMapPathSTF ) )
 			return false;
 
 		fn->glUniform1i( uniCubeMap, texunit++ );
@@ -1376,7 +1375,7 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 		GLint uniCubeMap = prog->uniformLocations[SAMP_CUBE];
 		if ( uniCubeMap >= 0 ) {
 			QString	fname = bsprop->fileName( 4 );
-			QString	cube = (nifVersion < 128 ? cube_sk : cube_fo4_76);
+			const QString&	cube = (nifVersion < 151 ? (nifVersion < 128 ? cube_sk : cube_fo4) : cfg.cubeMapPathFO76);
 			if ( fname.isEmpty() )
 				fname = cube;
 
@@ -1461,7 +1460,7 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 			GLint uniCubeMap = prog->uniformLocations[SAMP_CUBE];
 			if ( uniCubeMap >= 0 ) {
 				QString fname = bsprop->fileName( 2 );
-				QString	cube = (nifVersion < 128 ? cube_sk : cube_fo4_76);
+				const QString&	cube = (nifVersion < 151 ? (nifVersion < 128 ? cube_sk : cube_fo4) : cfg.cubeMapPathFO76);
 				if ( fname.isEmpty() )
 					fname = cube;
 

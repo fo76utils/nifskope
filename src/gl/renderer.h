@@ -387,7 +387,9 @@ public:
 
 	struct Settings
 	{
-		bool useShaders = true;
+		bool	useShaders = true;
+		QString	cubeMapPathFO76;
+		QString	cubeMapPathSTF;
 	} cfg;
 };
 
