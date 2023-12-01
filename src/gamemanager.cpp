@@ -45,7 +45,7 @@ void BA2Files::open_folders(GameMode game, const QStringList& folders)
 		try {
 			archives[game] = new BA2File(tmp);
 			tmp.clear();
-		} catch (FO76UtilsError&) {
+		} catch (FO76UtilsError& e) {
 			bool	foundError = false;
 			if (tmp.size() > 1) {
 				for (size_t i = 0; i < tmp.size(); ) {
@@ -60,7 +60,7 @@ void BA2Files::open_folders(GameMode game, const QStringList& folders)
 				}
 			}
 			if (!foundError) {
-				QMessageBox::critical(nullptr, "NifSkope error", QString("Error opening archive folder(s)"));
+				QMessageBox::critical(nullptr, "NifSkope error", QString("Error opening archive folder(s): %1").arg(e.what()));
 				break;
 			}
 		}
