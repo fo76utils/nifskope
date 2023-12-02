@@ -340,17 +340,23 @@ bool GameManager::status(const GameMode game)
 
 std::string GameManager::get_full_path(const QString& name, const char* archive_folder, const char* extension)
 {
+	if (name.isEmpty())
+		return std::string();
 	std::string	s = name.toLower().replace('\\', '/').toStdString();
 	if (archive_folder && *archive_folder) {
-		std::string	d("/");
-		d += archive_folder;
+		std::string	d(archive_folder);
 		if (!d.ends_with('/'))
 			d += '/';
-		size_t	n = s.find(d);
-		if (n != std::string::npos)
-			s.erase(0, n + 1);
-		else if (!s.starts_with(d.c_str() + 1))
-			s.insert(0, d.c_str() + 1);
+		size_t	n = 0;
+		for ( ; n < s.length(); n = n + d.length()) {
+			n = s.find(d, n);
+			if (n == 0 || n == std::string::npos || s[n - 1] == '/')
+				break;
+		}
+		if (n == std::string::npos || n >= s.length())
+			s.insert(0, d);
+		else if (n)
+			s.erase(0, n);
 	}
 	if (extension && *extension && !s.ends_with(extension)) {
 		size_t	n = s.rfind('.');
