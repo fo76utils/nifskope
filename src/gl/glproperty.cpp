@@ -909,31 +909,9 @@ void BSShaderLightingProperty::setSFMaterial( const QString & mat_name )
 	if ( !materials )
 		return;
 
-	std::string	path = mat_name.toStdString();
-	if ( path.empty() )
-		return;
-	for ( size_t i = 0; i < path.length(); i++ ) {
-		char	c = path[i];
-		if ( c >= 'A' && c <= 'Z' )
-			c += ( 'a' - 'A' );
-		else if ( c == '\\' )
-			c = '/';
-		path[i] = c;
-	}
-	if ( !path.starts_with( "materials/" ) ) {
-		size_t	n = path.find( "/materials/" );
-		if ( n != std::string::npos )
-			path.erase( 0, n + 1 );
-		else
-			path.insert( 0, "materials/" );
-	}
-	if ( !path.ends_with( ".mat" ) ) {
-		if ( path.ends_with( ".bgsm" ) || path.ends_with( ".bgem" ) )
-			path.resize( path.length() - 5 );
-		path += ".mat";
-	}
-
-	sf_material = materials->findMaterial( path );
+	std::string	path( Game::GameManager::get_full_path( mat_name, "materials/", ".mat" ) );
+	if ( !path.empty() )
+		sf_material = materials->findMaterial( path );
 }
 
 bool BSShaderLightingProperty::bind( int id, const QString & fname, TexClampMode mode )
