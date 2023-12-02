@@ -224,34 +224,30 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, int lodLevel )
 		m = getItem( itemToIndex( p ), "Material" );
 	else
 		p = getItem( this->parent( parent ), false );
+	std::string	path( Game::GameManager::get_full_path( get<QString>( p, "Name" ), "materials/", ".mat" ) );
+	if ( p ) {
+		// calculate and set material ID
+		std::uint32_t	materialID = 0U;
+		for ( size_t i = 0; i < path.length(); i++ ) {
+			char	c = path[i];
+			hashFunctionCRC32( materialID, (unsigned char) ( c != '/' ? c : '\\' ) );
+		}
+		int	parentBlock = getParent( itemToIndex( p ) );
+		if ( parentBlock >= 0 && blockInherits( getBlockItem( parentBlock ), "BSGeometry" ) ) {
+			auto	links = getChildLinks( parentBlock );
+			for ( const auto link : links ) {
+				auto	idx = getBlockIndex( link );
+				if ( blockInherits( idx, "NiIntegerExtraData" ) )
+					set<quint32>( idx, "Integer Data", materialID );
+			}
+		}
+	}
 
 	const CE2MaterialDB *	materials = Game::GameManager::materials( Game::STARFIELD );
 	const CE2Material *	material = nullptr;
 	if ( materials ) {
-		std::string	path = get<QString>( p, "Name" ).toStdString();
-		if ( !path.empty() ) {
-			for ( size_t i = 0; i < path.length(); i++ ) {
-				char	c = path[i];
-				if ( c >= 'A' && c <= 'Z' )
-					c += ( 'a' - 'A' );
-				else if ( c == '\\' )
-					c = '/';
-				path[i] = c;
-			}
-			if ( !path.starts_with( "materials/" ) ) {
-				size_t	n = path.find( "/materials/" );
-				if ( n != std::string::npos )
-					path.erase( 0, n + 1 );
-				else
-					path.insert( 0, "materials/" );
-			}
-			if ( !path.ends_with( ".mat" ) ) {
-				if ( path.ends_with( ".bgsm" ) || path.ends_with( ".bgem" ) )
-					path.resize( path.length() - 5 );
-				path += ".mat";
-			}
+		if ( !path.empty() )
 			material = materials->findMaterial( path );
-		}
 	}
 
 	if ( lodLevel > 0 && material ) {
