@@ -238,7 +238,7 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, int lodLevel )
 			for ( const auto link : links ) {
 				auto	idx = getBlockIndex( link );
 				if ( blockInherits( idx, "NiIntegerExtraData" ) )
-					set<quint32>( idx, "Integer Data", materialID );
+					setValue<quint32>( getItem( idx ), "Integer Data", materialID );
 			}
 		}
 	}
