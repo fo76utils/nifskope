@@ -138,7 +138,7 @@ struct EffectSettingsComponent {
 	int	depthBiasInUlp;
 };
 
-struct OpacityComponent {
+struct OpacityComponent {	// for shader route = Effect
 	int	firstLayerIndex;
 	bool	secondLayerActive;
 	int	secondLayerIndex;
@@ -152,7 +152,7 @@ struct OpacityComponent {
 	float	specularOpacityOverride;
 };
 
-struct AlphaSettingsComponent {
+struct AlphaSettingsComponent {	// for shader route = Deferred
 	bool	hasOpacity;
 	float	alphaTestThreshold;
 	int	opacitySourceLayer;
@@ -506,19 +506,27 @@ void main(void)
 			discard;
 		getLayer( 0, baseMap, normal, pbrMap );
 	}
-	//for (int i = 0; i < 3; i++) {
-	//	if ( lm.layersEnabled[i + 1] ) {
-	//		vec4	layerBaseMap = baseMap;
-	//		vec3	layerNormal = normal;
-	//		vec3	layerPBRMap = pbrMap;
-	//		getLayer(i + 1, layerBaseMap, layerNormal, layerPBRMap);
-	//		float	layerMask = getBlenderMask(i);
-	//		baseMap.rgb = mix(baseMap.rgb, layerBaseMap.rgb, layerMask);
-	//		baseMap.a *= layerBaseMap.a;
-	//		normal = normalize(mix(normal, layerNormal, layerMask));
-	//		pbrMap = mix(pbrMap, layerPBRMap, layerMask);
-	//	}
-	//}
+	for (int i = 1; i < 4; i++) {
+		if ( false && lm.layersEnabled[i] ) {
+			vec4	layerBaseMap = baseMap;
+			vec3	layerNormal = normal;
+			vec3	layerPBRMap = pbrMap;
+			getLayer(i, layerBaseMap, layerNormal, layerPBRMap);
+			float	layerMask = getBlenderMask(i - 1);
+			switch ( lm.blenders[i - 1].blendMode) {
+				case 0:		// Linear
+					baseMap.rgb = mix(baseMap.rgb, layerBaseMap.rgb, layerMask);
+					baseMap.a *= layerBaseMap.a;
+					normal = normalize(mix(normal, layerNormal, layerMask));
+					pbrMap = mix(pbrMap, layerPBRMap, layerMask);
+					break;
+				case 1:		// Additive (TODO)
+					break;
+				case 2:		// PositionContrast (TODO)
+					break;
+			}
+		}
+	}
 
 	if ( !gl_FrontFacing && lm.isTwoSided ) {
 		normal *= -1.0;
@@ -555,6 +563,11 @@ void main(void)
 	}
 
 	if ( lm.isEffect ) {
+		if ( lm.hasOpacityComponent ) {
+			int	n = lm.opacity.firstLayerIndex;
+			if ( n < 4 && lm.layersEnabled[n] && lm.layers[n].material.textureSet.textures[2] != 0 )
+				baseMap.a = getLayerTexture(n, 2, getTexCoord(lm.layers[n].uvStream)).r;
+		}
 		if ( lm.effectSettings.useFallOff || lm.effectSettings.useRGBFallOff ) {
 			float	startAngle = cos(radians(lm.effectSettings.falloffStartAngle));
 			float	stopAngle = cos(radians(lm.effectSettings.falloffStopAngle));
@@ -612,10 +625,11 @@ void main(void)
 	vec3	refl = vec3(0.0);
 	vec3	ambient = A.rgb / 0.375;
 	if ( hasCubeMap ) {
-		refl = textureLod(CubeMap, reflectedWS, 8.0 - smoothness * 8.0).rgb;
+		float	cubeMaxMip = max(float(findMSB(textureSize(CubeMap, 0).x)), 1.0);
+		refl = textureLod(CubeMap, reflectedWS, cubeMaxMip * (1.0 - smoothness)).rgb;
 		refl *= envReflection;
 		refl *= ambient;
-		ambient *= textureLod(CubeMap, normalWS, 7.0).rgb * envReflection;
+		ambient *= textureLod(CubeMap, normalWS, cubeMaxMip - 1.0).rgb * envReflection;
 	} else {
 		ambient /= 15.0;
 		refl = ambient;
