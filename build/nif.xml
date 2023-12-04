@@ -6742,6 +6742,26 @@
         <field name="Use Dithered Transparency" type="bool" />
     </struct>
 
+    <enum name="BSOpacityBlenderMode" storage="byte" versions="#STF#">
+        <option name="Lerp" value="0" />
+        <option name="Additive" value="1" />
+        <option name="Subtractive" value="2" />
+        <option name="Multiplicative" value="3" />
+    </enum>
+
+    <struct name="BSOpacityComponent" abstract="true" module="BSMain" versions="#STF#">
+        <field name="First Layer Index" type="byte" />
+        <field name="Second Layer Active" type="bool" />
+        <field name="Second Layer Index" type="byte" />
+        <field name="First Blender Index" type="byte" />
+        <field name="First Blender Mode" type="BSOpacityBlenderMode" />
+        <field name="Third Layer Active" type="bool" />
+        <field name="Third Layer Index" type="byte" />
+        <field name="Second Blender Index" type="byte" />
+        <field name="Second Blender Mode" type="BSOpacityBlenderMode" />
+        <field name="Specular Opacity Override" type="float" />
+    </struct>
+
     <enum name="BSEffectBlendMode" storage="byte" versions="#STF#">
         <option name="AlphaBlend" value="0" />
         <option name="Additive" value="1" />
@@ -6910,8 +6930,10 @@
         <field name="Shader Route" type="BSShaderRoute" />
         <field name="Two Sided" type="bool" />
         <field name="Physics Material Type" type="BSPhysicsMaterialType" />
-        <field name="Has Opacity" type="bool" />
-        <field name="Alpha Settings" type="BSAlphaSettingsComponent" cond="Has Opacity" />
+        <field name="Has Opacity" type="bool" cond="Shader Route #NEQ# 1" />
+        <field name="Alpha Settings" type="BSAlphaSettingsComponent" cond="(Shader Route #NEQ# 1) #AND# Has Opacity" />
+        <field name="Has Opacity Component" type="bool" cond="Shader Route #EQ# 1" />
+        <field name="Opacity Settings" type="BSOpacityComponent" cond="(Shader Route #EQ# 1) #AND# Has Opacity Component" />
         <field name="Is Effect" type="bool" />
         <field name="Effect Settings" type="BSEffectSettingsComponent" cond="Is Effect" />
         <field name="Is Decal" type="bool" />
