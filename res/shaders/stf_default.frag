@@ -507,7 +507,7 @@ void main(void)
 		getLayer( 0, baseMap, normal, pbrMap );
 	}
 	for (int i = 1; i < 4; i++) {
-		if ( false && lm.layersEnabled[i] ) {
+		if ( lm.layersEnabled[i] ) {
 			vec4	layerBaseMap = baseMap;
 			vec3	layerNormal = normal;
 			vec3	layerPBRMap = pbrMap;
