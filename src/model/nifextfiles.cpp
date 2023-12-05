@@ -242,6 +242,10 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, int lodLevel )
 			}
 		}
 	}
+	if ( m ) {
+		for ( auto c : m->childIter() )
+			c->invalidateCondition();
+	}
 
 	const CE2MaterialDB *	materials = Game::GameManager::materials( Game::STARFIELD );
 	const CE2Material *	material = nullptr;
@@ -274,7 +278,7 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, int lodLevel )
 				loadSFBlender( getItem( itemToIndex( m ), QString("Blender %1").arg(l - 1) ), material->blenders[l - 1], material->layers[l]->uvStream );
 		}
 	}
-	setValue<QString>( m, "Shader Model", QString( material ? CE2Material::shaderModelNames[material->shaderModel] : "" ) );
+	setValue<QString>( m, "Shader Model", QString( material ? CE2Material::shaderModelNames[material->shaderModel] : "BaseMaterial" ) );
 	setValue<quint8>( m, "Shader Route", ( material ? material->shaderRoute : 0 ) );
 	setValue<bool>( m, "Two Sided", ( material ? bool(material->flags & CE2Material::Flag_TwoSided) : false ) );
 	setValue<quint8>( m, "Physics Material Type", ( material ? material->physicsMaterialType : 0 ) );
