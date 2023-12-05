@@ -1321,6 +1321,8 @@ void BSLightingShaderProperty::updateParams( const NifModel * nif )
 		if ( hasSoftlight )
 			lightingEffect1 = m->fSubsurfaceLightingRolloff;
 
+		isVertexAlphaAnimation = m->bTree;
+
 	} else { // m == nullptr
 
 		auto textures = nif->getArray<QString>(iTextureSet, "Textures");
