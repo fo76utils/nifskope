@@ -142,9 +142,9 @@ NifSkope::NifSkope()
 	ui->setupUi( this );
 
 	qApp->installEventFilter( this );
-	
+
 	// Init Dialogs
-	
+
 	if ( !options )
 		options = new SettingsDialog;
 
@@ -204,7 +204,7 @@ NifSkope::NifSkope()
 	tree->header()->resizeSection( NifModel::NameCol, 135 );
 	tree->header()->resizeSection( NifModel::ValueCol, 250 );
 	// Allow multi-row paste
-	//	Note: this has some side effects such as vertex selection 
+	//	Note: this has some side effects such as vertex selection
 	//	in viewport being wrong if you attempt to select many rows.
 	tree->setSelectionMode( QAbstractItemView::ExtendedSelection );
 	tree->doAutoExpanding = true;
@@ -259,7 +259,7 @@ NifSkope::NifSkope()
 
 	// Create InspectView
 	/* ********************** */
-	
+
 	inspect = new InspectView;
 	inspect->setNifModel( nif );
 	inspect->setScene( ogl->getScene() );
@@ -298,7 +298,7 @@ NifSkope::NifSkope()
 
 	// Set central widget and viewport
 	setCentralWidget( graphicsView );
-	
+
 	setContextMenuPolicy( Qt::NoContextMenu );
 
 	// Resize timer for eventFilter()
@@ -855,7 +855,7 @@ void NifSkope::openArchive( const QString & archive )
 				bsaView->collapseAll();
 				bsaProxyModel->resetFilter();
 			}
-				
+
 		} );
 
 		connect( ui->bsaFilenameOnly, &QCheckBox::toggled, bsaProxyModel, &BSAProxyModel::setFilterByNameOnly );
@@ -904,7 +904,7 @@ void NifSkope::openArchiveFileString( BSA * bsa, const QString & filepath )
 			//	filehash = hash.result();
 			//
 			//	QFileInfo f( path );
-			//	
+			//
 			//	checkFile( f, filehash );
 			//}
 
@@ -983,6 +983,21 @@ void NifSkope::reload()
 
 void NifSkope::load()
 {
+	{
+		QString	fname = currentFile.toLower().replace('\\', '/');
+		qsizetype	n1 = fname.indexOf(".ba2/");
+		qsizetype	n2 = fname.indexOf(".bsa/");
+		if ( n1 == qsizetype(-1) )
+			n1 = n2;
+		if ( n1 != qsizetype(-1) && currentArchive ) {
+			fname.remove( 0, n1 + 5 );
+			if ( !fname.isEmpty() ) {
+				openArchiveFileString( currentArchive, fname );
+				return;
+			}
+		}
+	}
+
 	emit beginLoading();
 
 	QFileInfo f( QDir::fromNativeSeparators( currentFile ) );
