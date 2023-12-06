@@ -296,7 +296,9 @@ void main(void)
 	vec3 albedo = baseMap.rgb * C.rgb;
 	vec3 diffuse = A.rgb + D.rgb * NdotL0;
 	if ( greyscaleColor ) {
-		vec4 luG = colorLookup(baseMap.g, paletteScale * C.r);
+		// work around incorrect format used by Fallout 76 grayscale textures
+		float	g = sqrt(baseMap.g);
+		vec4	luG = colorLookup(g * 1.13942692 - baseMap.g * 0.13942692, paletteScale * C.r);
 
 		albedo = luG.rgb;
 	}
