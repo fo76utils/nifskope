@@ -268,7 +268,7 @@ SettingsGeneral::SettingsGeneral( QWidget * parent ) :
 
 	QRegularExpression fileRe( "NifSkope_(.*)\\.qm", QRegularExpression::CaseInsensitiveOption );
 
-	for ( const QString file : directory.entryList( QStringList( "NifSkope_*.qm" ), QDir::Files | QDir::NoSymLinks ) )
+	for ( const QString& file : directory.entryList( QStringList( "NifSkope_*.qm" ), QDir::Files | QDir::NoSymLinks ) )
 	{
 		QRegularExpressionMatch fileReMatch = fileRe.match( file );
 		if ( fileReMatch.hasMatch() ) {
@@ -604,6 +604,7 @@ void SettingsResources::write()
 	if ( !isModified() )
 		return;
 
+	GameManager::close_archives();
 	auto mgr = GameManager::get();
 	mgr->save();
 	mgr->load_archives();
