@@ -1377,7 +1377,7 @@ void GLView::saveImage()
 	lay->addWidget( file, 0, 0, 1, -1 );
 
 	auto grpDir = new QButtonGroup( dlg );
-	
+
 	QRadioButton * nifskopeDir = new QRadioButton( tr( "NifSkope Directory" ), dlg );
 	nifskopeDir->setChecked( true );
 	nifskopeDir->setToolTip( tr( "Save to NifSkope screenshots directory" ) );
@@ -1412,29 +1412,24 @@ void GLView::saveImage()
 	lay->addLayout( pixBox, 1, 2, Qt::AlignRight );
 
 
-	// Image Size radio button lambda
-	auto btnSize = [dlg]( const QString & name ) {
-		auto btn = new QRadioButton( name, dlg );
-		btn->setCheckable( true );
-		
-		return btn;
-	};
-
 	// Get max viewport size for platform
-	GLint dims;
-	glGetIntegerv( GL_MAX_VIEWPORT_DIMS, &dims );
-	int maxSize = dims;
+	GLint	dims[2];
+	glGetIntegerv( GL_MAX_VIEWPORT_DIMS, dims );
 
 	// Default size
-	auto btnOneX = btnSize( "1x" );
+	auto btnOneX = new QRadioButton( "1x", dlg );
+	btnOneX->setCheckable( true );
 	btnOneX->setChecked( true );
 	// Disable any of these that would exceed the max viewport size of the platform
-	auto btnTwoX = btnSize( "2x" );
-	btnTwoX->setDisabled( (width() * 2) > maxSize || (height() * 2) > maxSize );
-	auto btnFourX = btnSize( "4x" );
-	btnFourX->setDisabled( (width() * 4) > maxSize || (height() * 4) > maxSize );
-	auto btnEightX = btnSize( "8x" );
-	btnEightX->setDisabled( (width() * 8) > maxSize || (height() * 8) > maxSize );
+	auto btnTwoX = new QRadioButton( "2x", dlg );
+	btnTwoX->setCheckable( true );
+	btnTwoX->setDisabled( (width() * 2) > dims[0] || (height() * 2) > dims[1] );
+	auto btnFourX = new QRadioButton( "4x", dlg );
+	btnFourX->setCheckable( true );
+	btnFourX->setDisabled( (width() * 4) > dims[0] || (height() * 4) > dims[1] );
+	auto btnEightX = new QRadioButton( "8x", dlg );
+	btnEightX->setCheckable( true );
+	btnEightX->setDisabled( (width() * 8) > dims[0] || (height() * 8) > dims[1] );
 
 
 	auto grpBox = new QGroupBox( tr( "Image Size" ), dlg );
@@ -1454,7 +1449,7 @@ void GLView::saveImage()
 	grpSize->addButton( btnEightX, 8 );
 
 	grpSize->setExclusive( true );
-	
+
 	lay->addWidget( grpBox, 2, 0, 1, -1 );
 
 
@@ -1481,7 +1476,7 @@ void GLView::saveImage()
 	);
 
 	// Validate on OK
-	connect( btnOk, &QPushButton::clicked, [&]() 
+	connect( btnOk, &QPushButton::clicked, [&]()
 		{
 			// Save JPEG Quality
 			QSettings settings;
@@ -1508,7 +1503,7 @@ void GLView::saveImage()
 
 				resizeGL( w, h );
 			}
-			
+
 			QOpenGLFramebufferObjectFormat fboFmt;
 			fboFmt.setTextureTarget( GL_TEXTURE_2D );
 			fboFmt.setInternalTextureFormat( GL_RGB );
