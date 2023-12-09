@@ -1506,7 +1506,7 @@ void GLView::saveImage()
 
 			QOpenGLFramebufferObjectFormat fboFmt;
 			fboFmt.setTextureTarget( GL_TEXTURE_2D );
-			fboFmt.setInternalTextureFormat( GL_RGB );
+			fboFmt.setInternalTextureFormat( GL_SRGB8 );
 			fboFmt.setMipmap( false );
 			fboFmt.setAttachment( QOpenGLFramebufferObject::Attachment::Depth );
 			fboFmt.setSamples( 16 / ss );
