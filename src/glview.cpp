@@ -1536,6 +1536,8 @@ void GLView::saveImage()
 			if ( file->file().endsWith( ".jpg", Qt::CaseInsensitive ) ) {
 				writer.setFormat( "jpg" );
 				writer.setQuality( 50 + pixQuality->value() / 2 );
+				writer.setOptimizedWrite( true );
+				writer.setProgressiveScanWrite( true );
 			} else if ( file->file().endsWith( ".webp", Qt::CaseInsensitive ) ) {
 				writer.setFormat( "webp" );
 				writer.setQuality( 75 + pixQuality->value() / 4 );
