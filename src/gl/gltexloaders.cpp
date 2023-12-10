@@ -36,6 +36,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "model/nifmodel.h"
 
 #include "dds.h"
+#include "sfcube.hpp"
 
 #include <QBuffer>
 #include <QByteArray>
@@ -623,6 +624,8 @@ GLuint texLoadBMP( QIODevice & f, QString & texformat, GLenum & target, GLuint &
 	return 0;
 }
 
+static SFCubeMapCache	sfCubeMapCache;
+
 GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint & id )
 {
 	(void) format;
@@ -633,34 +636,29 @@ GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, QString 
 #else
 	char *	dataPtr = data.data();
 	if ( data.size() >= 148 && dataPtr[128] == 0x0A && dataPtr[84] == 'D' && dataPtr[85] == 'X' && dataPtr[86] == '1' && dataPtr[87] == '0' ) {
-		// work around issues with float formats
-		// DXGI_FORMAT_R16G16B16A16_FLOAT -> DXGI_FORMAT_R8G8B8A8_UNORM_SRGB
-		dataPtr[128] = 0x1D;
-		dataPtr = dataPtr + 148;
-		size_t	n = (data.size() - 148) >> 3;
-		FloatVector4	scale(1.0f);
 		if ( game == Game::STARFIELD && filepath.contains( "/cubemaps/" ) ) {
-			// normalize Starfield cube maps
-			scale = FloatVector4(0.0f);
+			// normalize and filter Starfield cube maps
+			size_t	newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(dataPtr), data.size() );
+			data.resize( newSize );
+		} else {
+			// work around issues with float formats
+			// DXGI_FORMAT_R16G16B16A16_FLOAT -> DXGI_FORMAT_R8G8B8A8_UNORM_SRGB
+			dataPtr[128] = 0x1D;
+			dataPtr = dataPtr + 148;
+			size_t	n = (data.size() - 148) >> 3;
 			for ( size_t i = 0; i < n; i++ ) {
 				FloatVector4	c(FloatVector4::convertFloat16(FileBuffer::readUInt64Fast(dataPtr + (i << 3)), true));
-				scale += c.maxValues(FloatVector4(0.0f));
+				float	a = c[3] * 255.0f;
+				c.srgbCompress();
+				c[3] = a;
+				std::uint32_t	b = std::uint32_t(c);
+				dataPtr[i << 2] = char(b & 0xFF);
+				dataPtr[(i << 2) + 1] = char((b >> 8) & 0xFF);
+				dataPtr[(i << 2) + 2] = char((b >> 16) & 0xFF);
+				dataPtr[(i << 2) + 3] = char((b >> 24) & 0xFF);
 			}
-			scale[0] = 15.0f * (scale[0] + scale[1] + scale[2]) / float(int(n) * 3);
-			scale = FloatVector4(1.0f / std::min(std::max(scale[0], 1.0f), 65536.0f));
+			data.resize(((data.size() - 148) >> 1) + 148);
 		}
-		for ( size_t i = 0; i < n; i++ ) {
-			FloatVector4	c(FloatVector4::convertFloat16(FileBuffer::readUInt64Fast(dataPtr + (i << 3)), true));
-			float	a = c[3] * 255.0f;
-			c = (c * scale).srgbCompress();
-			c[3] = a;
-			std::uint32_t	b = std::uint32_t(c);
-			dataPtr[i << 2] = char(b & 0xFF);
-			dataPtr[(i << 2) + 1] = char((b >> 8) & 0xFF);
-			dataPtr[(i << 2) + 2] = char((b >> 16) & 0xFF);
-			dataPtr[(i << 2) + 3] = char((b >> 24) & 0xFF);
-		}
-		data.resize(((data.size() - 148) >> 1) + 148);
 	}
 #endif
 

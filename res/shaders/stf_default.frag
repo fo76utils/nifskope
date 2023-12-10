@@ -625,11 +625,11 @@ void main(void)
 	vec3	refl = vec3(0.0);
 	vec3	ambient = A.rgb / 0.375;
 	if ( hasCubeMap ) {
-		float	cubeMaxMip = max(float(findMSB(textureSize(CubeMap, 0).x)), 1.0);
-		refl = textureLod(CubeMap, reflectedWS, cubeMaxMip * (1.0 - smoothness)).rgb;
+		float	m = max(5.0 - (smoothness * smoothness * 5.0), 0.0);
+		refl = textureLod(CubeMap, reflectedWS, m).rgb;
 		refl *= envReflection;
 		refl *= ambient;
-		ambient *= textureLod(CubeMap, normalWS, cubeMaxMip - 1.0).rgb * envReflection;
+		ambient *= textureLod(CubeMap, normalWS, 6.0).rgb * envReflection;
 	} else {
 		ambient /= 15.0;
 		refl = ambient;

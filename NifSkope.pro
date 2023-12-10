@@ -162,6 +162,7 @@ HEADERS += \
 	src/gl/gltools.h \
 	src/gl/icontrollable.h \
 	src/gl/renderer.h \
+	src/gl/sfcube.hpp \
 	src/io/material.h \
 	src/io/MeshFile.h \
 	src/io/nifstream.h \
@@ -235,6 +236,7 @@ SOURCES += \
 	src/gl/gltexloaders.cpp \
 	src/gl/gltools.cpp \
 	src/gl/renderer.cpp \
+	src/gl/sfcube.cpp \
 	src/io/materialfile.cpp \
 	src/io/MeshFile.cpp \
 	src/io/nifstream.cpp \
