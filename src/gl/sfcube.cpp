@@ -149,7 +149,6 @@ void SFCubeMapFilter::processImage_Specular(
 {
 	float	a = roughness * roughness;
 	float	a2 = a * a;
-	float	minDP = (((a * 100.0f) - 2.0f) / std::min(a2 - 1.0f, -0.1f)) - 1.0f;
 	for (int n = 0; n < 6; n++) {
 		for (int y = y0; y < y1; y++) {
 			unsigned char *	p =
@@ -163,9 +162,11 @@ void SFCubeMapFilter::processImage_Specular(
 						i++) {
 					FloatVector4	v2(*i);
 					float	d = v2.dotProduct3(v1);
-					if (d > minDP) {
+					if (d > 0.0f) {
+						float	g1 = d;
+						float	g2 = d * (2.0f - a) + a;
 						d = (d + 1.0f) * (a2 - 1.0f) + 2.0f;
-						float	weight = a2 / (d * d * v2[3]);
+						float	weight = g1 * v2[3] / (g2 * d * d);
 						c += (inBuf[i - cubeCoordTable.begin()] * weight);
 						totalWeight += weight;
 					}
