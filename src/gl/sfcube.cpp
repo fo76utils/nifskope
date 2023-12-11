@@ -83,7 +83,9 @@ FloatVector4 SFCubeMapFilter::convertCoord(int x, int y, int w, int n)
 			v += FloatVector4(-0.5f, -0.5f, 0.5f, 0.0f);
 			break;
 	}
+	// normalize vector
 	float	scale = 1.0f / float(std::sqrt(v.dotProduct3(v)));
+	// v[3] = scale factor to account for variable angular resolution
 	v[3] = float(w);
 	v *= scale;
 	return v;
@@ -102,7 +104,7 @@ void SFCubeMapFilter::processImage_Copy(
 				p[0] = (unsigned char) (tmp & 0xFF);
 				p[1] = (unsigned char) ((tmp >> 8) & 0xFF);
 				p[2] = (unsigned char) ((tmp >> 16) & 0xFF);
-				p[3] = (unsigned char) ((tmp >> 24) & 0xFF);
+				p[3] = 0xFF;
 			}
 		}
 		outBufP = outBufP + faceDataSize;
@@ -117,27 +119,28 @@ void SFCubeMapFilter::processImage_Diffuse(
 			unsigned char *	p =
 				outBufP + (size_t(y * w) * sizeof(std::uint32_t));
 			for (int x = 0; x < w; x++, p = p + 4) {
+				// v1 = normal vector
 				FloatVector4	v1(cubeCoordTable[(n * h + y) * w + x]);
 				FloatVector4	c(0.0f);
 				float	totalWeight = 0.0f;
 				for (std::vector< FloatVector4 >::const_iterator
 						i = cubeCoordTable.begin(); i != cubeCoordTable.end();
 						i++) {
+					// v2 = light vector
 					FloatVector4	v2(*i);
 					float	weight = v2.dotProduct3(v1);
 					if (weight > 0.0f) {
-						weight /= v2[3];
+						weight *= v2[3];
 						c += (inBuf[i - cubeCoordTable.begin()] * weight);
 						totalWeight += weight;
 					}
 				}
 				c /= totalWeight;
-				c[3] = 1.0f;
 				std::uint32_t	tmp = std::uint32_t(c.srgbCompress());
 				p[0] = (unsigned char) (tmp & 0xFF);
 				p[1] = (unsigned char) ((tmp >> 8) & 0xFF);
 				p[2] = (unsigned char) ((tmp >> 16) & 0xFF);
-				p[3] = (unsigned char) ((tmp >> 24) & 0xFF);
+				p[3] = 0xFF;
 			}
 		}
 		outBufP = outBufP + faceDataSize;
@@ -153,31 +156,44 @@ void SFCubeMapFilter::processImage_Specular(
 		for (int y = y0; y < y1; y++) {
 			unsigned char *	p =
 				outBufP + (size_t(y * w) * sizeof(std::uint32_t));
+			// w must be a multiple of 4
 			for (int x = 0; x < w; x++, p = p + 4) {
-				FloatVector4	v1(cubeCoordTable[(n * h + y) * w + x]);
+				std::vector< FloatVector4 >::const_iterator	i =
+					cubeCoordTable.begin() + ((n * h + y) * w + (x & ~3));
+				// v1 = reflected view vector (R), assume V = N = R
+				FloatVector4	v1x(i[0][x & 3]);
+				FloatVector4	v1y(i[1][x & 3]);
+				FloatVector4	v1z(i[2][x & 3]);
 				FloatVector4	c(0.0f);
-				float	totalWeight = 0.0f;
-				for (std::vector< FloatVector4 >::const_iterator
-						i = cubeCoordTable.begin(); i != cubeCoordTable.end();
-						i++) {
-					FloatVector4	v2(*i);
-					float	d = v2.dotProduct3(v1);
-					if (d > 0.0f) {
-						float	g1 = d;
-						float	g2 = d * (2.0f - a) + a;
-						d = (d + 1.0f) * (a2 - 1.0f) + 2.0f;
-						float	weight = g1 * v2[3] / (g2 * d * d);
-						c += (inBuf[i - cubeCoordTable.begin()] * weight);
-						totalWeight += weight;
-					}
+				FloatVector4	totalWeight(0.0f);
+				for (i = cubeCoordTable.begin();
+					 (i + 4) <= cubeCoordTable.end(); i = i + 4) {
+					// v2 = light vector
+					FloatVector4	v2x(i[0]);
+					FloatVector4	v2y(i[1]);
+					FloatVector4	v2z(i[2]);
+					FloatVector4	v2w(i[3]);
+					// d = N·L = R·L = 2.0 * N·H * N·H - 1.0
+					FloatVector4	d = (v1x * v2x) + (v1y * v2y) + (v1z * v2z);
+					d.maxValues(FloatVector4(0.0f));
+					FloatVector4	g1 = d;
+					// g2 = geometry function denominator * 2.0 (a = k * 2.0)
+					FloatVector4	g2 = d * (2.0f - a) + a;
+					// D denominator = (N·H * N·H * (a2 - 1.0) + 1.0)² * 4.0
+					d = (d + 1.0f) * (a2 - 1.0f) + 2.0f;
+					FloatVector4	weight = g1 * v2w / (g2 * d * d);
+					c += (inBuf[i - cubeCoordTable.begin()] * weight[0]);
+					c += (inBuf[(i + 1) - cubeCoordTable.begin()] * weight[1]);
+					c += (inBuf[(i + 2) - cubeCoordTable.begin()] * weight[2]);
+					c += (inBuf[(i + 3) - cubeCoordTable.begin()] * weight[3]);
+					totalWeight += weight;
 				}
-				c /= totalWeight;
-				c[3] = 1.0f;
+				c /= totalWeight.dotProduct(FloatVector4(1.0f));
 				std::uint32_t	tmp = std::uint32_t(c.srgbCompress());
 				p[0] = (unsigned char) (tmp & 0xFF);
 				p[1] = (unsigned char) ((tmp >> 8) & 0xFF);
 				p[2] = (unsigned char) ((tmp >> 16) & 0xFF);
-				p[3] = (unsigned char) ((tmp >> 24) & 0xFF);
+				p[3] = 0xFF;
 			}
 		}
 		outBufP = outBufP + faceDataSize;
@@ -293,6 +309,23 @@ size_t SFCubeMapFilter::convertImage(unsigned char * buf, size_t bufSize)
 						cubeCoordTable[(n * h + y) * w + x] =
 							convertCoord(x, y, w, n);
 					}
+				}
+			}
+			if (m > (mipCnt - 9) && m < (mipCnt - 3)) {
+				// specular: reorder data for more efficient use of SIMD
+				for (size_t i = 0; (i + 4) <= cubeCoordTable.size(); i += 4) {
+					FloatVector4	v0 = cubeCoordTable[i];
+					FloatVector4	v1 = cubeCoordTable[i + 1];
+					FloatVector4	v2 = cubeCoordTable[i + 2];
+					FloatVector4	v3 = cubeCoordTable[i + 3];
+					cubeCoordTable[i] =
+						FloatVector4(v0[0], v1[0], v2[0], v3[0]);
+					cubeCoordTable[i + 1] =
+						FloatVector4(v0[1], v1[1], v2[1], v3[1]);
+					cubeCoordTable[i + 2] =
+						FloatVector4(v0[2], v1[2], v2[2], v3[2]);
+					cubeCoordTable[i + 3] =
+						FloatVector4(v0[3], v1[3], v2[3], v3[3]);
 				}
 			}
 			try {
