@@ -21,6 +21,8 @@ void main( void )
 	LightDir = gl_LightSource[0].position.xyz;
 
 	A = gl_LightSource[0].ambient;
+	A.rgb = vec3(sqrt(A.r) * 0.375);
 	C = gl_Color;
 	D = gl_LightSource[0].diffuse;
+	D.rgb = vec3(sqrt(D.r));
 }

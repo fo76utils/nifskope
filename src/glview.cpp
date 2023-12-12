@@ -724,19 +724,33 @@ void GLView::setFrontalLight( bool frontal )
 	update();
 }
 
+static float convertBrightnessValue( int value )
+{
+	if ( value < 720 ) {
+		// lower half of the slider range: sRGB curve from 0.0 to 1.0
+		if ( value < 1 )
+			return 0.0f;
+		if ( value <= 29 )
+			return float(value) / (720.0f * 12.92f);
+		return float(std::pow((float(value) + 39.6f) / 759.6f, 2.4f));
+	}
+	// upper half of the slider range: exponential from 1.0 to 16.0
+	if ( value == 720 )
+		return 1.0f;
+	if ( value >= 1440 )
+		return 16.0f;
+	return float(std::exp2(float(value - 720) / 180.0f));
+}
+
 void GLView::setBrightness( int value )
 {
-	if ( value > 900 ) {
-		value += pow(value - 900, 1.5);
-	}
-
-	brightness = float(value) / 720.0;
+	brightness = convertBrightnessValue( value );
 	update();
 }
 
 void GLView::setAmbient( int value )
 {
-	ambient = float( value ) / 1440.0;
+	ambient = convertBrightnessValue( value );
 	update();
 }
 

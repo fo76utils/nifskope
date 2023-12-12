@@ -294,7 +294,6 @@ void main(void)
 
 	vec4 color;
 	vec3 albedo = baseMap.rgb * C.rgb;
-	vec3 diffuse = A.rgb + D.rgb * NdotL0;
 	if ( greyscaleColor ) {
 		// work around incorrect format used by Fallout 76 grayscale textures
 		float	g = sqrt(baseMap.g);
@@ -325,11 +324,11 @@ void main(void)
 
 	// Diffuse
 	float	diff = OrenNayarFull(L, V, normal, 1.0 - smoothness, NdotL0);
-	diffuse = vec3(diff);
+	vec3	diffuse = vec3(diff);
 
 	// Environment
 	vec3	refl = vec3(0.0);
-	vec3	ambient = A.rgb / 0.375;
+	vec3	ambient = A.rgb;
 	if ( hasCubeMap ) {
 		refl = textureLod(CubeMap, reflectedWS, 7.0 - smoothness * 7.0).rgb;
 		refl *= envReflection * specStrength;

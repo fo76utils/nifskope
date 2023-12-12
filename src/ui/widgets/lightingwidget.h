@@ -41,7 +41,7 @@ private:
 		PlanarAngleMax = POS,
 
 		DirDefault = DirMax / 2,
-		AmbientDefault = AmbientMax * 3 / 8,
+		AmbientDefault = AmbientMax / 2,
 		DeclinationDefault = (DeclinationMax + DeclinationMin),
 		PlanarAngleDefault = (PlanarAngleMax + PlanarAngleMin)
 	};

@@ -594,7 +594,6 @@ void main(void)
 
 	vec4	color;
 	vec3	albedo = baseMap.rgb;
-	vec3	diffuse = A.rgb + D.rgb * NdotL0;
 
 	// TODO: layered emissivity
 	vec3	emissive = vec3(0.0);
@@ -619,11 +618,11 @@ void main(void)
 
 	// Diffuse
 	float	diff = OrenNayarFull(L, V, normal, 1.0 - smoothness, NdotL0);
-	diffuse = vec3(diff);
+	vec3	diffuse = vec3(diff);
 
 	// Environment
 	vec3	refl = vec3(0.0);
-	vec3	ambient = A.rgb / 0.375;
+	vec3	ambient = A.rgb;
 	if ( hasCubeMap ) {
 		float	m = max(5.0 - (smoothness * smoothness * 5.0), 0.0);
 		refl = textureLod(CubeMap, reflectedWS, m).rgb;
