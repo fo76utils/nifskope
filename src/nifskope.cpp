@@ -47,6 +47,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ui/widgets/inspect.h"
 #include "ui/about_dialog.h"
 #include "ui/settingsdialog.h"
+#include "gamemanager.h"
 
 #include <QAction>
 #include <QApplication>
@@ -1036,6 +1037,7 @@ void NifSkope::save()
 		return;
 	}
 
+	Game::GameManager::close_archives();
 	emit beginSave();
 
 	QString fname = currentFile;
