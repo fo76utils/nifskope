@@ -183,9 +183,9 @@ void SFCubeMapFilter::processImage_Specular(
 					d = (d + 1.0f) * (a2 - 1.0f) + 2.0f;
 					FloatVector4	weight = g1 * v2w / (g2 * d * d);
 					c += (inBuf[i - cubeCoordTable.begin()] * weight[0]);
-					c += (inBuf[(i + 1) - cubeCoordTable.begin()] * weight[1]);
-					c += (inBuf[(i + 2) - cubeCoordTable.begin()] * weight[2]);
-					c += (inBuf[(i + 3) - cubeCoordTable.begin()] * weight[3]);
+					c += (inBuf[(i - cubeCoordTable.begin()) + 1] * weight[1]);
+					c += (inBuf[(i - cubeCoordTable.begin()) + 2] * weight[2]);
+					c += (inBuf[(i - cubeCoordTable.begin()) + 3] * weight[3]);
 					totalWeight += weight;
 				}
 				c /= totalWeight.dotProduct(FloatVector4(1.0f));
