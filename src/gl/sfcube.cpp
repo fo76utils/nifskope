@@ -50,37 +50,37 @@ FloatVector4 SFCubeMapFilter::convertCoord(int x, int y, int w, int n)
 			v[0] = float(w);
 			v[1] = float(w - (y << 1));
 			v[2] = float(w - (x << 1));
-			v += FloatVector4(-0.5f, -0.5f, -0.5f, 0.0f);
+			v += FloatVector4(-1.0f, -1.0f, -1.0f, 0.0f);
 			break;
 		case 1:
 			v[0] = float(-w);
 			v[1] = float(w - (y << 1));
 			v[2] = float((x << 1) - w);
-			v += FloatVector4(0.5f, -0.5f, 0.5f, 0.0f);
+			v += FloatVector4(1.0f, -1.0f, 1.0f, 0.0f);
 			break;
 		case 2:
 			v[0] = float((x << 1) - w);
 			v[1] = float(w);
 			v[2] = float((y << 1) - w);
-			v += FloatVector4(0.5f, -0.5f, 0.5f, 0.0f);
+			v += FloatVector4(1.0f, -1.0f, 1.0f, 0.0f);
 			break;
 		case 3:
 			v[0] = float((x << 1) - w);
 			v[1] = float(-w);
 			v[2] = float(w - (y << 1));
-			v += FloatVector4(0.5f, 0.5f, -0.5f, 0.0f);
+			v += FloatVector4(1.0f, 1.0f, -1.0f, 0.0f);
 			break;
 		case 4:
 			v[0] = float((x << 1) - w);
 			v[1] = float(w - (y << 1));
 			v[2] = float(w);
-			v += FloatVector4(0.5f, -0.5f, -0.5f, 0.0f);
+			v += FloatVector4(1.0f, -1.0f, -1.0f, 0.0f);
 			break;
 		case 5:
 			v[0] = float(w - (x << 1));
 			v[1] = float(w - (y << 1));
 			v[2] = float(-w);
-			v += FloatVector4(-0.5f, -0.5f, 0.5f, 0.0f);
+			v += FloatVector4(-1.0f, -1.0f, 1.0f, 0.0f);
 			break;
 	}
 	// normalize vector
