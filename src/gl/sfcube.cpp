@@ -296,11 +296,9 @@ size_t SFCubeMapFilter::convertImage(unsigned char * buf, size_t bufSize)
 	std::thread *	threads[16];
 	for (int i = 0; i < 16; i++)
 		threads[i] = nullptr;
+	int	w = int(w0);
+	int	h = int(h0);
 	for (int m = 0; m < mipCnt; m++) {
-		int	w = int(w0 >> m);
-		int	h = int(h0 >> m);
-		w = w + int(w < 1);
-		h = h + int(h < 1);
 		if (w <= width && h <= height) {
 			cubeCoordTable.resize(size_t(w * h) * 6, FloatVector4(0.0f));
 			for (int n = 0; n < 6; n++) {
@@ -341,11 +339,9 @@ size_t SFCubeMapFilter::convertImage(unsigned char * buf, size_t bufSize)
 										(i + 1) * h / threadCnt);
 				}
 				for (int i = 0; i < threadCnt; i++) {
-					if (threads[i]) {
-						threads[i]->join();
-						delete threads[i];
-						threads[i] = nullptr;
-					}
+					threads[i]->join();
+					delete threads[i];
+					threads[i] = nullptr;
 				}
 			} catch (...) {
 				for (int i = 0; i < 16; i++) {
@@ -364,9 +360,9 @@ size_t SFCubeMapFilter::convertImage(unsigned char * buf, size_t bufSize)
 			for (int y = 0; y < h2; y++) {
 				for (int x = 0; x < w2; x++) {
 					int	x0 = x << 1;
-					int	x1 = x0 + (int(x0 + 1) < w);
+					int	x1 = x0 + int(w > 1);
 					int	y0 = y << 1;
-					int	y1 = y0 + (int(y0 + 1) < h);
+					int	y1 = y0 + int(h > 1);
 					FloatVector4	c0 = inBuf[(n * w * h) + (y0 * w + x0)];
 					FloatVector4	c1 = inBuf[(n * w * h) + (y0 * w + x1)];
 					FloatVector4	c2 = inBuf[(n * w * h) + (y1 * w + x0)];
@@ -376,8 +372,10 @@ size_t SFCubeMapFilter::convertImage(unsigned char * buf, size_t bufSize)
 				}
 			}
 		}
-		inBuf.resize(size_t(w2 * h2) * 6);
 		outBufP = outBufP + (size_t(w * h) * sizeof(std::uint32_t));
+		w = w2;
+		h = h2;
+		inBuf.resize(size_t(w * h) * 6);
 	}
 
 	buf[10] = buf[10] | 0x02;	// DDSD_MIPMAPCOUNT
