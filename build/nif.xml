@@ -6591,12 +6591,6 @@
         <field name="Mix Albedo" type="bool" />
     </struct>
 
-    <struct name="BSMaterialBGSM" abstract="true" module="BSMain" versions="#FO4# #F76#">
-    </struct>
-
-    <struct name="BSMaterialBGEM" abstract="true" module="BSMain" versions="#FO4# #F76#">
-    </struct>
-
     <enum name="BSTextureAddressMode" storage="byte" versions="#STF#">
         <option name="Wrap" value="0" />
         <option name="Clamp" value="1" />
@@ -6949,7 +6943,6 @@
     <niobject name="BSLightingShaderProperty" inherit="BSShaderProperty" stopcond="#BSVER# #GTE# 155 #AND# Name" module="BSMain" versions="#SKY_AND_LATER#">
         Bethesda shader property for Skyrim and later.
         <field name="Material" type="BSLayeredMaterial" abstract="true" vercond="#BS_GTE_STF#">Starfield material (.mat).</field>
-        <field name="Material" type="BSMaterialBGSM" abstract="true" vercond="#BS_FO4_F76#">Fallout 4/76 material file (.bgsm). Overrides shader properties if present.</field>
         <field name="Shader Flags 1" suffix="SK" type="SkyrimShaderPropertyFlags1" vercond="#NI_BS_LT_FO4#" default="0x82400301">Skyrim Shader Flags for setting render/shader options.</field>
         <field name="Shader Flags 2" suffix="SK" type="SkyrimShaderPropertyFlags2" vercond="#NI_BS_LT_FO4#" default="0x8021">Skyrim Shader Flags for setting render/shader options.</field>
         <field name="Shader Flags 1" suffix="FO4" type="Fallout4ShaderPropertyFlags1" vercond="#BS_FO4#" default="0x80400201">Fallout 4 Shader Flags. Mostly overridden if "Name" is a path to a BGSM/BGEM file.</field>
@@ -7013,7 +7006,6 @@
     <niobject name="BSEffectShaderProperty" inherit="BSShaderProperty" stopcond="#BSVER# #GTE# 155 #AND# Name" module="BSMain" versions="#SKY_AND_LATER#">
         Bethesda effect shader property for Skyrim and later.
         <field name="Material" type="BSLayeredMaterial" abstract="true" vercond="#BS_GTE_STF#">Starfield material (.mat).</field>
-        <field name="Material" type="BSMaterialBGEM" abstract="true" vercond="#BS_FO4_F76#">Fallout 4/76 material file (.bgem). Overrides shader properties if present.</field>
         <field name="Shader Flags 1" suffix="SK" type="SkyrimShaderPropertyFlags1" default="0x80000000" vercond="#NI_BS_LT_FO4#" />
         <field name="Shader Flags 2" suffix="SK" type="SkyrimShaderPropertyFlags2" default="0x20" vercond="#NI_BS_LT_FO4#" />
         <field name="Shader Flags 1" suffix="FO4" type="Fallout4ShaderPropertyFlags1" default="0x80000000" vercond="#BS_FO4#" />
@@ -8912,22 +8904,11 @@
         <field name="Unknown Structs" type="UnknownWeakReferenceStruct" length="Num Unknown 1" />
     </niobject>
 
-    <struct name="BSMeshFile" abstract="true" module="BSMain" versions="#STF#">
-        <field name="Version" type="uint" default="1" />
-        <field name="Indices Size" type="uint" />
-        <field name="Triangles" type="Triangle" length="Indices Size #DIV# 3" cond="Data Size #GT# 0" />
-        <field name="Vertex Coordinate Scale" type="float" default="1.0" />
-        <field name="Weights Per Vertex" type="uint" />
-        <field name="Num Verts" type="uint" />
-        <field name="Vertex Data" type="Vector3S16" length="Num Verts" cond="Data Size #GT# 0" />
-    </struct>
-
     <struct name="BSMesh" module="BSMain" versions="#STF#">
         <field name="Indices Size" type="uint" />
         <field name="Num Verts" type="uint" />
         <field name="Flags" type="uint" />
         <field name="Mesh Path" type="SizedString" />
-        <field name="Mesh Data" abstract="true" type="BSMeshFile" />
     </struct>
 
     <struct name="BSMeshArray" module="BSMain" versions="#STF#">
