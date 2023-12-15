@@ -49,6 +49,7 @@ class Material : public QObject
 	Q_OBJECT
 
 	friend class Renderer;
+	friend class NifModel;
 
 public:
 	Material( QString name, Game::GameMode game );
@@ -127,6 +128,7 @@ class ShaderMaterial : public Material
 	friend class Renderer;
 	friend class BSShaderLightingProperty;
 	friend class BSLightingShaderProperty;
+	friend class NifModel;
 
 public:
 	ShaderMaterial( QString name, Game::GameMode game );
@@ -210,6 +212,7 @@ class EffectMaterial : public Material
 	friend class Renderer;
 	friend class BSShaderLightingProperty;
 	friend class BSEffectShaderProperty;
+	friend class NifModel;
 
 public:
 	EffectMaterial( QString name, Game::GameMode game );

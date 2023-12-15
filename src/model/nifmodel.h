@@ -501,9 +501,7 @@ protected:
 	void loadSFUVStream( NifItem * parent, const void * o, const void * p = nullptr );
 public:
 	void loadSFMaterial( const QModelIndex & parent, int lodLevel = 0 );
-	void loadBGSMMaterial( const QModelIndex & parent );
-	void loadBGEMMaterial( const QModelIndex & parent );
-	void loadMeshFiles( const QModelIndex & parent );
+	void loadFO76Material( const QModelIndex & parent, const void * material );
 
 	// String resolving ("get ex")
 public:

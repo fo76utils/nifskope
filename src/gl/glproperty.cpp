@@ -848,7 +848,7 @@ void BSShaderLightingProperty::updateImpl( const NifModel * nif, const QModelInd
 	Property::updateImpl( nif, index );
 
 	if ( index == iBlock ) {
-		iMaterialFile = nif->getIndex( iBlock, "Material" );
+		iMaterialFile = nif->getIndex( iBlock, "Name" );
 		iTextureSet = nif->getBlockIndex( nif->getLink( iBlock, "Texture Set" ), "BSShaderTextureSet" );
 		if ( nif->getBSVersion() >= 160 ) {
 			setSFMaterial( name );
@@ -1196,7 +1196,13 @@ void BSLightingShaderProperty::updateImpl( const NifModel * nif, const QModelInd
 	BSShaderLightingProperty::updateImpl( nif, index );
 
 	if ( index == iBlock ) {
-		setMaterial(name.endsWith(".bgsm", Qt::CaseInsensitive) ? new ShaderMaterial(name, scene->game) : nullptr);
+		if ( name.endsWith(".bgsm", Qt::CaseInsensitive) ) {
+			setMaterial( new ShaderMaterial(name, scene->game) );
+			if ( nif->getBSVersion() >= 151 )
+				const_cast< NifModel * >(nif)->loadFO76Material( index, material );
+		} else {
+			setMaterial( nullptr );
+		}
 		updateParams(nif);
 	}
 	else if ( index == iTextureSet ) {
@@ -1430,7 +1436,13 @@ void BSEffectShaderProperty::updateImpl( const NifModel * nif, const QModelIndex
 	BSShaderLightingProperty::updateImpl( nif, index );
 
 	if ( index == iBlock ) {
-		setMaterial(name.endsWith(".bgem", Qt::CaseInsensitive) ? new EffectMaterial(name, scene->game) : nullptr);
+		if ( name.endsWith(".bgem", Qt::CaseInsensitive) ) {
+			setMaterial( new EffectMaterial(name, scene->game) );
+			if ( nif->getBSVersion() >= 151 )
+				const_cast< NifModel * >(nif)->loadFO76Material( index, material );
+		} else {
+			setMaterial( nullptr );
+		}
 		updateParams(nif);
 	}
 	else if ( index == iTextureSet )

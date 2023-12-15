@@ -39,6 +39,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "io/nifstream.h"
 #include "material.hpp"
 #include "gamemanager.h"
+#include "io/material.h"
 
 #include <QByteArray>
 #include <QColor>
@@ -455,23 +456,154 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, int lodLevel )
 	}
 }
 
-void NifModel::loadBGSMMaterial( const QModelIndex & parent )
+void NifModel::loadFO76Material( const QModelIndex & parent, const void * material )
 {
 	NifItem *	p = getItem( parent, false );
 	if ( !p )
 		return;
-}
+	for ( auto c : p->childIter() )
+		c->invalidateCondition();
 
-void NifModel::loadBGEMMaterial( const QModelIndex & parent )
-{
-	NifItem *	p = getItem( parent, false );
-	if ( !p )
-		return;
-}
+	const Material &	mat = *( static_cast< const Material * >( material ) );
+	const ShaderMaterial *	bgsm = nullptr;
+	const EffectMaterial *	bgem = nullptr;
+	if ( typeid( mat ) == typeid( ShaderMaterial ) )
+		bgsm = static_cast< const ShaderMaterial * >( material );
+	if ( typeid( mat ) == typeid( EffectMaterial ) )
+		bgem = static_cast< const EffectMaterial * >( material );
 
-void NifModel::loadMeshFiles( const QModelIndex & parent )
-{
-	NifItem *	p = getItem( parent, false );
-	if ( !p )
-		return;
+	QVector< quint32 >	sf1;
+	QVector< quint32 >	sf2;
+	if ( mat.bZBufferWrite )
+		sf1.append( 3166356979U );
+	if ( mat.bZBufferTest )
+		sf1.append( 1740048692U );
+	if ( mat.bDecal )
+		sf1.append( 3849131744U );
+	if ( mat.bTwoSided )
+		sf1.append( 759557230U );
+	if ( mat.bDecalNoFade )
+		sf1.append( 2994043788U );
+	if ( mat.bRefraction )
+		sf1.append( 1957349758U );
+	if ( mat.bRefractionFalloff )
+		sf1.append( 902349195U );
+	if ( mat.bEnvironmentMapping )
+		sf1.append( 2893749418U );
+	if ( mat.bGrayscaleToPaletteColor )
+		sf1.append( 442246519U );
+	if ( mat.bGlowmap )
+		sf1.append( 2399422528U );
+	if ( bgsm ) {
+		if ( bgsm->bEmitEnabled )
+			sf2.append( 2262553490U );
+		if ( bgsm->bModelSpaceNormals )
+			sf2.append( 2548465567U );
+		if ( bgsm->bExternalEmittance )
+			sf2.append( 2150459555U );
+		if ( bgsm->bCastShadows )
+			sf2.append( 1563274220U );
+		if ( bgsm->bHair )
+			sf2.append( 1264105798U );
+		if ( bgsm->bFacegen )
+			sf2.append( 314919375U );
+		if ( bgsm->bSkinTint )
+			sf2.append( 1483897208U );
+		if ( bgsm->bPBR )
+			sf2.append( 731263983U );
+	}
+	if ( bgem ) {
+		if ( bgem->bBloodEnabled )
+			sf2.append( 2078326675U );
+		if ( bgem->bEffectLightingEnabled )
+			sf2.append( 3473438218U );
+		if ( bgem->bFalloffEnabled )
+			sf2.append( 3980660124U );
+		if ( bgem->bFalloffColorEnabled )
+			sf2.append( 3448946507U );
+		if ( bgem->bGrayscaleToPaletteAlpha )
+			sf2.append( 2901038324U );
+		if ( bgem->bSoftEnabled )
+			sf2.append( 3503164976U );
+		if ( bgem->bEffectPbrSpecular )
+			sf2.append( 731263983U );
+	}
+	setValue<quint32>( p, "Num SF1", quint32( sf1.size() ) );
+	NifItem *	o = getItem( itemToIndex(p), "SF1" );
+	if ( o ) {
+		updateArraySize( o );
+		o->setArray<quint32>( sf1 );
+	}
+	setValue<quint32>( p, "Num SF2", quint32( sf2.size() ) );
+	o = getItem( itemToIndex(p), "SF2" );
+	if ( o ) {
+		updateArraySize( o );
+		o->setArray<quint32>( sf2 );
+	}
+
+	setValue<Vector2>( p, "UV Offset", Vector2( mat.fUOffset, mat.fVOffset ) );
+	setValue<Vector2>( p, "UV Scale", Vector2( mat.fUScale, mat.fVScale ) );
+	setValue<quint32>( p, "Texture Clamp Mode", quint32( mat.bTileU ) | ( quint32( mat.bTileV ) << 1 ) );
+	setValue<float>( p, "Alpha", mat.fAlpha );
+
+	if ( bgsm ) {
+		for ( qsizetype i = 0; i < 10; i++ ) {
+			if ( mat.textureList.size() > i )
+				setValue<QString>( p, QString("Texture %1").arg(i), mat.textureList[i] );
+			else
+				setValue<QString>( p, QString("Texture %1").arg(i), "" );
+		}
+		setValue<Color3>( p, "Emissive Color", mat.cEmittanceColor );
+		setValue<float>( p, "Emissive Multiple", bgsm->fEmittanceMult );
+		setValue<float>( p, "Refraction Strength", mat.fRefractionPower );
+		setValue<float>( p, "Smoothness", bgsm->fSmoothness );
+		setValue<Color3>( p, "Specular Color", bgsm->cSpecularColor );
+		setValue<float>( p, "Specular Strength", bgsm->fSpecularMult );
+		setValue<float>( p, "Grayscale to Palette Scale", bgsm->fGrayscaleToPaletteScale );
+		setValue<float>( p, "Fresnel Power", bgsm->fFresnelPower );
+		setValue<bool>( p, "Do Translucency", bgsm->bTranslucency );
+	} else if ( bgem ) {
+		if ( mat.textureList.size() > 0 )
+			setValue<QString>( p, "Source Texture", mat.textureList[0] );
+		else
+			setValue<QString>( p, "Source Texture", "" );
+		setValue<float>( p, "Lighting Influence", bgem->fLightingInfluence );
+		setValue<quint8>( p, "Env Map Min LOD", bgem->iEnvmapMinLOD );
+		setValue<float>( p, "Falloff Start Angle", bgem->fFalloffStartAngle );
+		setValue<float>( p, "Falloff Stop Angle", bgem->fFalloffStopAngle );
+		setValue<float>( p, "Falloff Start Opacity ", bgem->fFalloffStartOpacity );
+		setValue<float>( p, "Falloff Stop Opacity", bgem->fFalloffStopOpacity );
+		setValue<float>( p, "Refraction Power", mat.fRefractionPower );
+		setValue<Color4>( p, "Base Color", Color4( bgem->cBaseColor ) );
+		setValue<float>( p, "Base Color Scale", bgem->fBaseColorScale );
+		setValue<float>( p, "Soft Falloff Depth", bgem->fSoftDepth );
+		if ( mat.textureList.size() > 1 )
+			setValue<QString>( p, "Greyscale Texture", mat.textureList[1] );
+		else
+			setValue<QString>( p, "Greyscale Texture", "" );
+		if ( mat.textureList.size() > 2 )
+			setValue<QString>( p, "Env Map Texture", mat.textureList[2] );
+		else
+			setValue<QString>( p, "Env Map Texture", "" );
+		if ( mat.textureList.size() > 3 )
+			setValue<QString>( p, "Normal Texture", mat.textureList[3] );
+		else
+			setValue<QString>( p, "Normal Texture", "" );
+		if ( mat.textureList.size() > 4 )
+			setValue<QString>( p, "Env Mask Texture", mat.textureList[4] );
+		else
+			setValue<QString>( p, "Env Mask Texture", "" );
+		if ( mat.textureList.size() > 5 )
+			setValue<QString>( p, "Reflectance Texture", mat.textureList[5] );
+		else
+			setValue<QString>( p, "Reflectance Texture", "" );
+		if ( mat.textureList.size() > 6 )
+			setValue<QString>( p, "Lighting Texture", mat.textureList[6] );
+		else
+			setValue<QString>( p, "Lighting Texture", "" );
+		if ( mat.textureList.size() > 7 )
+			setValue<QString>( p, "Emit Gradient Texture", mat.textureList[7] );
+		else
+			setValue<QString>( p, "Emit Gradient Texture", "" );
+	}
 }
