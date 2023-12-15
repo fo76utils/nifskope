@@ -50,37 +50,37 @@ FloatVector4 SFCubeMapFilter::convertCoord(int x, int y, int w, int n)
 			v[0] = float(w);
 			v[1] = float(w - (y << 1));
 			v[2] = float(w - (x << 1));
-			v += FloatVector4(-1.0f, -1.0f, -1.0f, 0.0f);
+			v += FloatVector4(0.0f, -1.0f, -1.0f, 0.0f);
 			break;
 		case 1:
 			v[0] = float(-w);
 			v[1] = float(w - (y << 1));
 			v[2] = float((x << 1) - w);
-			v += FloatVector4(1.0f, -1.0f, 1.0f, 0.0f);
+			v += FloatVector4(0.0f, -1.0f, 1.0f, 0.0f);
 			break;
 		case 2:
 			v[0] = float((x << 1) - w);
 			v[1] = float(w);
 			v[2] = float((y << 1) - w);
-			v += FloatVector4(1.0f, -1.0f, 1.0f, 0.0f);
+			v += FloatVector4(1.0f, 0.0f, 1.0f, 0.0f);
 			break;
 		case 3:
 			v[0] = float((x << 1) - w);
 			v[1] = float(-w);
 			v[2] = float(w - (y << 1));
-			v += FloatVector4(1.0f, 1.0f, -1.0f, 0.0f);
+			v += FloatVector4(1.0f, 0.0f, -1.0f, 0.0f);
 			break;
 		case 4:
 			v[0] = float((x << 1) - w);
 			v[1] = float(w - (y << 1));
 			v[2] = float(w);
-			v += FloatVector4(1.0f, -1.0f, -1.0f, 0.0f);
+			v += FloatVector4(1.0f, -1.0f, 0.0f, 0.0f);
 			break;
 		case 5:
 			v[0] = float(w - (x << 1));
 			v[1] = float(w - (y << 1));
 			v[2] = float(-w);
-			v += FloatVector4(-1.0f, -1.0f, 1.0f, 0.0f);
+			v += FloatVector4(-1.0f, -1.0f, 0.0f, 0.0f);
 			break;
 	}
 	// normalize vector
@@ -211,9 +211,15 @@ void SFCubeMapFilter::threadFunction(
 {
 	if (m == 0) {
 		p->processImage_Copy(outBufP, w, h, y0, y1);
-	} else if (m < (maxMip - 2)) {
-		float	smoothness = float((maxMip - 3) - m) / float(maxMip - 3);
-		float	roughness = 1.0f - float(std::sqrt(smoothness));
+	} else if (m < (maxMip - 1)) {
+		float	roughness = 1.0f;	// at 4x4 resolution
+		if (m < (maxMip - 3)) {
+			float	tmp = float(m) / float(maxMip - 2);
+			// 8x8 resolution is also used to approximate the diffuse filter,
+			// with roughness = 6/7
+			tmp = tmp * float((maxMip - 2) * 48) / float((maxMip - 3) * 49);
+			roughness = 1.0f - float(std::sqrt(1.0 - tmp));
+		}
 		p->processImage_Specular(outBufP, w, h, y0, y1, roughness);
 	} else {
 		p->processImage_Diffuse(outBufP, w, h, y0, y1);
@@ -329,7 +335,7 @@ size_t SFCubeMapFilter::convertImage(unsigned char * buf, size_t bufSize)
 					}
 				}
 			}
-			if (m > (mipCnt - 9) && m < (mipCnt - 3)) {
+			if (m > (mipCnt - 9) && m < (mipCnt - 2)) {
 				// specular: reorder data for more efficient use of SIMD
 				transpose4x4(inBuf);
 				transpose4x4(cubeCoordTable);
@@ -360,7 +366,7 @@ size_t SFCubeMapFilter::convertImage(unsigned char * buf, size_t bufSize)
 				}
 				throw;
 			}
-			if (m > (mipCnt - 9) && m < (mipCnt - 3))
+			if (m > (mipCnt - 9) && m < (mipCnt - 2))
 				transpose4x4(inBuf);
 		}
 		// calculate mipmaps
