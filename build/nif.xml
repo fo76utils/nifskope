@@ -6955,6 +6955,16 @@
         <field name="UV Offset" type="TexCoord">Offset UVs</field>
         <field name="UV Scale" type="TexCoord" default="#VEC2_ONE#">Offset UV Scale to repeat tiling textures, see above.</field>
         <field name="Texture Set" type="Ref" template="BSShaderTextureSet">Texture Set, can have override in an esm/esp</field>
+        <field name="Texture 0" type="SizedString" abstract="true" vercond="#BS_F76#" cond="Name" />
+        <field name="Texture 1" type="SizedString" abstract="true" vercond="#BS_F76#" cond="Name" />
+        <field name="Texture 2" type="SizedString" abstract="true" vercond="#BS_F76#" cond="Name" />
+        <field name="Texture 3" type="SizedString" abstract="true" vercond="#BS_F76#" cond="Name" />
+        <field name="Texture 4" type="SizedString" abstract="true" vercond="#BS_F76#" cond="Name" />
+        <field name="Texture 5" type="SizedString" abstract="true" vercond="#BS_F76#" cond="Name" />
+        <field name="Texture 6" type="SizedString" abstract="true" vercond="#BS_F76#" cond="Name" />
+        <field name="Texture 7" type="SizedString" abstract="true" vercond="#BS_F76#" cond="Name" />
+        <field name="Texture 8" type="SizedString" abstract="true" vercond="#BS_F76#" cond="Name" />
+        <field name="Texture 9" type="SizedString" abstract="true" vercond="#BS_F76#" cond="Name" />
         <field name="Emissive Color" type="Color3" default="#VEC3_ZERO#">Glow color and alpha</field>
         <field name="Emissive Multiple" type="float" default="1.0" range="#F0_10#">Multiplied emissive colors</field>
         <field name="Root Material" type="NiFixedString" vercond="#BS_GTE_130#" />
