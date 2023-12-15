@@ -55,6 +55,7 @@ class SFCubeMapFilter {
 							   int w, int h, int y0, int y1, float roughness);
 	static void threadFunction(SFCubeMapFilter * p, unsigned char * outBufP,
 							   int w, int h, int m, int maxMip, int y0, int y1);
+	static void transpose4x4(std::vector< FloatVector4 >& v);
  public:
 	SFCubeMapFilter();
 	~SFCubeMapFilter();
