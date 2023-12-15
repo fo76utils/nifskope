@@ -544,9 +544,9 @@ void NifModel::loadFO76Material( const QModelIndex & parent, const void * materi
 	setValue<Vector2>( p, "UV Offset", Vector2( mat.fUOffset, mat.fVOffset ) );
 	setValue<Vector2>( p, "UV Scale", Vector2( mat.fUScale, mat.fVScale ) );
 	setValue<quint32>( p, "Texture Clamp Mode", quint32( mat.bTileU ) | ( quint32( mat.bTileV ) << 1 ) );
-	setValue<float>( p, "Alpha", mat.fAlpha );
 
 	if ( bgsm ) {
+		setValue<float>( p, "Alpha", mat.fAlpha );
 		for ( qsizetype i = 0; i < 10; i++ ) {
 			if ( mat.textureList.size() > i )
 				setValue<QString>( p, QString("Texture %1").arg(i), mat.textureList[i] );
@@ -567,14 +567,14 @@ void NifModel::loadFO76Material( const QModelIndex & parent, const void * materi
 			setValue<QString>( p, "Source Texture", mat.textureList[0] );
 		else
 			setValue<QString>( p, "Source Texture", "" );
-		setValue<float>( p, "Lighting Influence", bgem->fLightingInfluence );
+		setValue<quint8>( p, "Lighting Influence", quint8( int( std::min( std::max( bgem->fLightingInfluence, 0.0f ), 1.0f ) * 255.0f ) ) );
 		setValue<quint8>( p, "Env Map Min LOD", bgem->iEnvmapMinLOD );
 		setValue<float>( p, "Falloff Start Angle", bgem->fFalloffStartAngle );
 		setValue<float>( p, "Falloff Stop Angle", bgem->fFalloffStopAngle );
-		setValue<float>( p, "Falloff Start Opacity ", bgem->fFalloffStartOpacity );
+		setValue<float>( p, "Falloff Start Opacity", bgem->fFalloffStartOpacity );
 		setValue<float>( p, "Falloff Stop Opacity", bgem->fFalloffStopOpacity );
 		setValue<float>( p, "Refraction Power", mat.fRefractionPower );
-		setValue<Color4>( p, "Base Color", Color4( bgem->cBaseColor ) );
+		setValue<Color4>( p, "Base Color", Color4( bgem->cBaseColor[0], bgem->cBaseColor[1], bgem->cBaseColor[2], mat.fAlpha ) );
 		setValue<float>( p, "Base Color Scale", bgem->fBaseColorScale );
 		setValue<float>( p, "Soft Falloff Depth", bgem->fSoftDepth );
 		if ( mat.textureList.size() > 1 )
