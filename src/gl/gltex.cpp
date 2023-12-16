@@ -43,7 +43,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <QDebug>
 #include <QDir>
-#include <QFileSystemWatcher>
 #include <QListView>
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
@@ -153,8 +152,6 @@ void resetTextureUnits( int numTex )
 
 TexCache::TexCache( QObject * parent ) : QObject( parent )
 {
-	watcher = new QFileSystemWatcher( this );
-	connect( watcher, &QFileSystemWatcher::fileChanged, this, &TexCache::fileChanged );
 }
 
 TexCache::~TexCache()
@@ -247,33 +244,6 @@ bool TexCache::isSupported( const QString & filePath )
 	return texIsSupported( filePath );
 }
 
-void TexCache::fileChanged( const QString & filepath )
-{
-	QMutableHashIterator<QString, Tex *> it( textures );
-
-	while ( it.hasNext() ) {
-		it.next();
-
-		Tex * tx = it.value();
-
-		if ( tx && tx->filepath == filepath ) {
-			// Remove from watcher now to prevent multiple signals
-			watcher->removePath( tx->filepath );
-			if ( QFile::exists( tx->filepath ) ) {
-				tx->reload = true;
-				emit sigRefresh();
-			} else {
-				it.remove();
-
-				if ( tx->id )
-					glDeleteTextures( 1, &tx->id );
-
-				delete tx;
-			}
-		}
-	}
-}
-
 int TexCache::bind( const QString & fname, Game::GameMode game )
 {
 	Tex * tx = textures.value( fname );
@@ -305,10 +275,6 @@ int TexCache::bind( const QString & fname, Game::GameMode game )
 	}
 
 	if ( !tx->id || tx->reload ) {
-		if ( QFile::exists( tx->filepath ) && QFileInfo( tx->filepath ).isWritable()
-			 && ( !watcher->files().contains( tx->filepath ) ) )
-			watcher->addPath( tx->filepath );
-
 		tx->load();
 	} else {
 		if ( !tx->target )
@@ -374,10 +340,6 @@ void TexCache::flush()
 	}
 	qDeleteAll( embedTextures );
 	embedTextures.clear();
-
-	if ( !watcher->files().empty() ) {
-		watcher->removePaths( watcher->files() );
-	}
 }
 
 void TexCache::setNifFolder( const QString & folder )

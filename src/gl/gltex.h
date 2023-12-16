@@ -45,7 +45,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //! @file gltex.h TexCache etc. header
 
 class NifModel;
-class QFileSystemWatcher;
 class QOpenGLContext;
 
 typedef unsigned int GLuint;
@@ -53,7 +52,7 @@ typedef unsigned int GLenum;
 
 /*! A class for handling OpenGL textures.
  *
- * This class stores information on all loaded textures, and watches the texture files.
+ * This class stores information on all loaded textures.
  */
 class TexCache final : public QObject
 {
@@ -135,13 +134,9 @@ public slots:
 	 */
 	void setNifFolder( const QString & );
 
-protected slots:
-	void fileChanged( const QString & filepath );
-
 protected:
 	QHash<QString, Tex *> textures;
 	QHash<QModelIndex, Tex *> embedTextures;
-	QFileSystemWatcher * watcher;
 
 	QString nifFolder;
 };
