@@ -466,53 +466,6 @@ void SettingsRender::setDefault()
 	read();
 }
 
-#ifdef Q_OS_WIN32
-bool regFolderPath( QStringList & gamePaths, const QString & regPath, const QString & regValue, const QString & gameFolder,
-					 QStringList gameSubDirs = QStringList(), QStringList gameArchiveFilters = QStringList() )
-{
-	QSettings reg( regPath, QSettings::Registry32Format );
-
-	QString path = reg.value( regValue ).toString();
-	path.remove('"');
-	QDir dir( path );
-
-	if ( dir.exists() && dir.cd( gameFolder ) ) {
-		gamePaths.append( dir.path() );
-		if ( !gameSubDirs.isEmpty() ) {
-			for ( QString & sd : gameSubDirs ) {
-				gamePaths.append( dir.path() + sd );
-			}
-		}
-
-		if ( !gameArchiveFilters.isEmpty() ) {
-			dir.setNameFilters( gameArchiveFilters );
-			dir.setFilter( QDir::Dirs );
-			for ( QString & dn : dir.entryList() ) {
-				gamePaths << dir.filePath( dn );
-
-				if ( !gameSubDirs.isEmpty() ) {
-					for ( QString & sd : gameSubDirs ) {
-						gamePaths << dir.filePath( dn ) + sd;
-					}
-				}
-			}
-		}
-		return true;
-	}
-	return false;
-}
-
-bool regFolderPaths( QStringList & gamePaths, const QStringList & regPaths, const QString & regValue, const QString & gameFolder,
-					 QStringList gameSubDirs = QStringList(), QStringList gameArchiveFilters = QStringList() )
-{
-	bool result = false;
-	for ( const QString & path : regPaths ) {
-		result |= ::regFolderPath( gamePaths, path, regValue, gameFolder, gameSubDirs, gameArchiveFilters );
-	}
-	return result;
-}
-#endif
-
 /*
  * Resources
  */
