@@ -472,6 +472,23 @@ void NifModel::loadFO76Material( const QModelIndex & parent, const void * materi
 	if ( typeid( mat ) == typeid( EffectMaterial ) )
 		bgem = static_cast< const EffectMaterial * >( material );
 
+	quint32	shaderType = 0;
+	if ( bgsm ) {
+		if ( bgsm->bTerrain )
+			shaderType = 17;
+		else if ( bgsm->bEnvironmentMappingEye )
+			shaderType = 12;
+		else if ( bgsm->bHair )
+			shaderType = 5;
+		else if ( bgsm->bSkinTint )
+			shaderType = 4;
+		else if ( bgsm->bFacegen )
+			shaderType = 3;
+		else if ( bgsm->bEmitEnabled )
+			shaderType = 2;
+		setValue<quint32>( p, "Shader Type", shaderType );
+	}
+
 	QVector< quint32 >	sf1;
 	QVector< quint32 >	sf2;
 	if ( mat.bZBufferWrite )
@@ -561,7 +578,24 @@ void NifModel::loadFO76Material( const QModelIndex & parent, const void * materi
 		setValue<float>( p, "Specular Strength", bgsm->fSpecularMult );
 		setValue<float>( p, "Grayscale to Palette Scale", bgsm->fGrayscaleToPaletteScale );
 		setValue<float>( p, "Fresnel Power", bgsm->fFresnelPower );
+		o = getItem( itemToIndex(p), "Wetness" );
+		if ( o ) {
+			setValue<float>( o, "Spec Scale", bgsm->fWetnessControl_SpecScale );
+			setValue<float>( o, "Spec Power", bgsm->fWetnessControl_SpecPowerScale );
+			setValue<float>( o, "Min Var", bgsm->fWetnessControl_SpecMinvar );
+			setValue<float>( o, "Fresnel Power", bgsm->fWetnessControl_FresnelPower );
+			setValue<float>( o, "Metalness", bgsm->fWetnessControl_Metalness );
+		}
 		setValue<bool>( p, "Do Translucency", bgsm->bTranslucency );
+		if ( bgsm->bTranslucency && ( o = getItem( itemToIndex(p), "Translucency" ) ) != nullptr ) {
+			setValue<Color3>( o, "Subsurface Color", bgsm->cTranslucencySubsurfaceColor );
+			setValue<float>( o, "Transmissive Scale", bgsm->fTranslucencyTransmissiveScale );
+			setValue<float>( o, "Turbulence", bgsm->fTranslucencyTurbulence );
+			setValue<bool>( o, "Thick Object", bgsm->bTranslucencyThickObject );
+			setValue<bool>( o, "Mix Albedo", bgsm->bTranslucencyMixAlbedoWithSubsurfaceCol );
+		}
+		if ( shaderType == 5 )
+			setValue<Color3>( p, "Hair Tint Color", bgsm->cHairTintColor );
 	} else if ( bgem ) {
 		if ( mat.textureList.size() > 0 )
 			setValue<QString>( p, "Source Texture", mat.textureList[0] );
@@ -605,5 +639,12 @@ void NifModel::loadFO76Material( const QModelIndex & parent, const void * materi
 			setValue<QString>( p, "Emit Gradient Texture", mat.textureList[7] );
 		else
 			setValue<QString>( p, "Emit Gradient Texture", "" );
+	}
+	o = getItem( itemToIndex(p), "Luminance" );
+	if ( o ) {
+		setValue<float>( o, "Lum Emittance", mat.fLumEmittance );
+		setValue<float>( o, "Exposure Offset", mat.fAdaptativeEmissive_ExposureOffset );
+		setValue<float>( o, "Final Exposure Min", mat.fAdaptativeEmissive_FinalExposureMin );
+		setValue<float>( o, "Final Exposure Max", mat.fAdaptativeEmissive_FinalExposureMax );
 	}
 }
