@@ -2,13 +2,19 @@
 
 NifSkope is a tool for opening and editing the NetImmerse file format (NIF). NIF is used by video games such as Morrowind, Oblivion, Skyrim, Fallout 3/NV/4/76, Starfield, Civilization IV, and more. 
 
+This is an experimental fork of 2.0.dev9 with partial support for Starfield materials, and improvements and fixes to Fallout 76 rendering.
+
 ### Download
 
-You can download the latest official release from [niftools/nifskope](https://github.com/niftools/nifskope/releases). More frequent development builds are posted at [hexabits/nifskope](https://github.com/hexabits/nifskope/releases).
+Binary packages for Windows can be downloaded from [Releases](https://github.com/fo76utils/nifskope/releases). The most up to date builds (Windows and Linux) are automatically generated on any change to the source code, and are available as artifacts from GitHub workflows under [Actions](https://github.com/fo76utils/nifskope/actions). Note that downloading artifacts requires signing in to GitHub. Binaries have been built for CPUs with support for AVX2.
+
+Compiling the source code requires Qt 5, and [MSYS2](https://www.msys2.org/) on Windows. The complete list of dependencies, and the commands needed for building can be found in [main.yml](https://github.com/fo76utils/nifskope/blob/develop/.github/workflows/main.yml).
+
+You can also download the latest official release from [niftools/nifskope](https://github.com/niftools/nifskope/releases), or development builds from [hexabits/nifskope](https://github.com/hexabits/nifskope/releases).
 
 ### Issues
 
-Anyone can [report issues at GitHub](https://github.com/niftools/nifskope/issues).
+Anyone can report issues specific to this fork at [GitHub](https://github.com/fo76utils/nifskope/issues).
 
 
 ### Contribute
@@ -29,7 +35,7 @@ For information about development:
 Refer to these other documents in your installation folder or at the links provided:
 
 
-## [GLTF IMPORT/EXPORT](https://github.com/niftools/nifskope/blob/develop/README_GLTF.md)
+## [GLTF IMPORT/EXPORT](https://github.com/hexabits/nifskope/blob/develop/README_GLTF.md)
 
 ## [TROUBLESHOOTING](https://github.com/niftools/nifskope/blob/develop/TROUBLESHOOTING.md)
 
