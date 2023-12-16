@@ -1037,9 +1037,16 @@
               </widget>
              </item>
              <item>
+              <widget class="QPushButton" name="btnArchiveAdd">
+               <property name="text">
+                <string>Add Archive or File</string>
+               </property>
+              </widget>
+             </item>
+             <item>
               <widget class="QPushButton" name="btnFolderRemove">
                <property name="text">
-                <string>Remove Folder</string>
+                <string>Remove Path</string>
                </property>
               </widget>
              </item>

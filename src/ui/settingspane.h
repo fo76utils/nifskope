@@ -92,13 +92,14 @@ public:
 	void read() override final;
 	void write() override final;
 	void setDefault() override final;
-	
+
 	void select_first(QListWidget* list);
 	void manager_sync(bool make_connections = false);
 
 public slots:
 	void modifyPane() override;
 	void on_btnFolderAdd_clicked();
+	void on_btnArchiveAdd_clicked();
 	void on_btnFolderRemove_clicked();
 	void on_btnFolderDown_clicked();
 	void on_btnFolderUp_clicked();

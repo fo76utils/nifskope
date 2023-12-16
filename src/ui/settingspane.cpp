@@ -689,7 +689,7 @@ void SettingsResources::onBrowseClicked()
 		else
 			edt->setText(path);
 	}
-	
+
 	auto lbl = ui->resourcesGames->findChild<QLabel *>(btn->objectName().replace("btnBrowse", "lblGame"));
 	if ( lbl ) {
 		GameManager::update_game(lbl->text(), path);
@@ -754,6 +754,27 @@ void SettingsResources::on_btnFolderAdd_clicked()
 	folders->insertRow( 0 );
 	folders->setData( folders->index( 0, 0 ), path );
 	ui->foldersList->setCurrentIndex( folders->index( 0, 0 ) );
+	modifyPane();
+}
+
+void SettingsResources::on_btnArchiveAdd_clicked()
+{
+	QFileDialog	dialog( this );
+	dialog.setFileMode( QFileDialog::ExistingFiles );
+	dialog.setNameFilter( "Supported file types (*.ba2 *.bsa *.nif *.bto *.btr *.mesh *.bgsm *.bgem *.cdb *.mat *.dds)" );
+	dialog.setDirectory( GameManager::data(currentFolderItem()) );
+
+	QStringList	paths;
+	if ( dialog.exec() )
+		paths = dialog.selectedFiles();
+	if ( paths.size() < 1 )
+		return;
+
+	for ( qsizetype i = paths.size(); i-- > 0; ) {
+		folders->insertRow( 0 );
+		folders->setData( folders->index( 0, 0 ), paths.at( i ) );
+		ui->foldersList->setCurrentIndex( folders->index( 0, 0 ) );
+	}
 	modifyPane();
 }
 
