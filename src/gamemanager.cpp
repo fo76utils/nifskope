@@ -91,11 +91,8 @@ static BA2Files	ba2Files;
 
 static const auto GAME_PATHS = QString("Game Paths");
 static const auto GAME_FOLDERS = QString("Game Folders");
-static const auto GAME_ARCHIVES = QString("Game Archives");
 static const auto GAME_STATUS = QString("Game Status");
 static const auto GAME_MGR_VER = QString("Game Manager Version");
-
-static const QStringList ARCHIVE_EXT{"*.bsa", "*.ba2"};
 
 static CE2MaterialDB	starfield_materials;
 static bool	have_materials_cdb = false;
@@ -193,7 +190,6 @@ GameManager::GameManager()
 	}
 
 	load();
-	load_archives();
 }
 
 GameMode GameManager::get_game( uint32_t version, uint32_t user, uint32_t bsver )
@@ -260,7 +256,7 @@ GameManager* GameManager::get()
 void GameManager::init_settings( int& manager_version, QProgressDialog* dlg ) const
 {
 	QSettings settings;
-	QVariantMap paths, folders, archives, status;
+	QVariantMap paths, folders, status;
 	for ( int g = 0; g < NUM_GAMES; g++ ) {
 		process(dlg, g);
 		auto game = get_game_info(GameMode(g));
@@ -275,7 +271,6 @@ void GameManager::init_settings( int& manager_version, QProgressDialog* dlg ) co
 
 	settings.setValue(GAME_PATHS, paths);
 	settings.setValue(GAME_FOLDERS, folders);
-	settings.setValue(GAME_ARCHIVES, archives);
 	settings.setValue(GAME_STATUS, status);
 	settings.setValue(GAME_MGR_VER, ++manager_version);
 }
@@ -319,15 +314,6 @@ QStringList GameManager::folders( const GameMode game )
 		return folders(FALLOUT_NV) + folders(FALLOUT_3);
 	if ( status(game) )
 		return get()->game_folders.value(game, {});
-	return {};
-}
-
-QStringList GameManager::archives( const GameMode game )
-{
-	if ( game == FALLOUT_3NV )
-		return archives(FALLOUT_NV) + archives(FALLOUT_3);
-	if ( status(game) )
-		return get()->game_archives.value(game, {});
 	return {};
 }
 
@@ -469,44 +455,21 @@ QStringList GameManager::find_folders(const GameMode game)
 	return existing_folders(game, get()->game_paths.value(game, {}));
 }
 
-QStringList GameManager::find_archives( const GameMode game )
-{
-	QDir data_dir = QDir(GameManager::data(game));
-	if ( !data_dir.exists() )
-		return {};
-
-	QStringList archive_paths;
-	for ( const auto& a : data_dir.entryList(ARCHIVE_EXT, QDir::Files) )
-		archive_paths.append(data_dir.absoluteFilePath(a));
-
-	return archive_paths;
-}
-
-QStringList GameManager::filter_archives( const QStringList& list, const QString& folder )
-{
-	(void) folder;
-	return list;
-}
-
 void GameManager::save() const
 {
 	QSettings settings;
-	QVariantMap paths, folders, archives, status;
+	QVariantMap paths, folders, status;
 	for ( const auto& p : game_paths.toStdMap() )
 		paths.insert(StringForMode(p.first), p.second);
 
 	for ( const auto& f : game_folders.toStdMap() )
 		folders.insert(StringForMode(f.first), f.second);
 
-	for ( const auto& a : game_archives.toStdMap() )
-		archives.insert(StringForMode(a.first), a.second);
-
 	for ( const auto& s : game_status.toStdMap() )
 		status.insert(StringForMode(s.first), s.second);
 
 	settings.setValue(GAME_PATHS, paths);
 	settings.setValue(GAME_FOLDERS, folders);
-	settings.setValue(GAME_ARCHIVES, archives);
 	settings.setValue(GAME_STATUS, status);
 }
 
@@ -520,27 +483,8 @@ void GameManager::load()
 	for ( const auto& f : settings.value(GAME_FOLDERS).toMap().toStdMap() )
 		game_folders[ModeForString(f.first)] = f.second.toStringList();
 
-	for ( const auto& a : settings.value(GAME_ARCHIVES).toMap().toStdMap() )
-		game_archives[ModeForString(a.first)] = a.second.toStringList();
-
 	for ( const auto& s : settings.value(GAME_STATUS).toMap().toStdMap() )
 		game_status[ModeForString(s.first)] = s.second.toBool();
-}
-
-void GameManager::load_archives()
-{
-	QMutexLocker locker(&mutex);
-	// Reset the currently open archive handles
-	handles.clear();
-	for ( const auto& ar : game_archives.toStdMap() ) {
-		for ( const auto& an : ar.second ) {
-			// Skip loading of archives for disabled games
-			if ( game_status.value(ar.first, false) == false )
-				continue;
-			if ( auto a = FSArchiveHandler::openArchive(an) )
-				handles[ar.first].append(a);
-		}
-	}
 }
 
 void GameManager::clear()
@@ -548,7 +492,6 @@ void GameManager::clear()
 	QMutexLocker locker(&mutex);
 	game_paths.clear();
 	game_folders.clear();
-	game_archives.clear();
 	game_status.clear();
 }
 
@@ -562,12 +505,6 @@ void GameManager::insert_folders( const GameMode game, const QStringList& list )
 {
 	QMutexLocker locker(&mutex);
 	game_folders.insert(game, list);
-}
-
-void GameManager::insert_archives( const GameMode game, const QStringList& list )
-{
-	QMutexLocker locker(&mutex);
-	game_archives.insert(game, list);
 }
 
 void GameManager::insert_status( const GameMode game, bool status )

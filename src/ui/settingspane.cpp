@@ -530,10 +530,8 @@ SettingsResources::SettingsResources( QWidget * parent ) :
 	SettingsDialog::registerPage( parent, ui->name->text() );
 
 	folders = new QStringListModel( this );
-	archives = new QStringListModel( this );
 
 	ui->foldersList->setModel( folders );
-	ui->archivesList->setModel( archives );
 
 	// TODO: Hide for new asset manager for now
 	ui->btnAutoDetectGames->setHidden( true );
@@ -556,21 +554,6 @@ SettingsResources::SettingsResources( QWidget * parent ) :
 		}
 	);
 
-	// Move Up / Move Down Behavior
-	connect( ui->archivesList->selectionModel(), &QItemSelectionModel::currentChanged,
-		[this]( const QModelIndex & idx, const QModelIndex & last )
-		{
-			Q_UNUSED( last );
-
-			ui->btnArchiveUp->setEnabled( idx.row() > 0 );
-			ui->btnArchiveDown->setEnabled( idx.row() < archives->rowCount() - 1 );
-		}
-	);
-
-	connect( ui->archivesGameList->selectionModel(), &QItemSelectionModel::currentChanged,
-		this, &SettingsResources::setArchiveList
-	);
-	
 	connect( ui->foldersGameList->selectionModel(), &QItemSelectionModel::currentChanged,
 		this, &SettingsResources::setFolderList
 	);
@@ -588,10 +571,8 @@ void SettingsResources::read()
 	GameManager::get()->load();
 
 	select_first(ui->foldersGameList);
-	select_first(ui->archivesGameList);
 
 	setFolderList();
-	setArchiveList();
 
 	ui->chkAlternateExt->setChecked( settings.value( "Settings/Resources/Alternate Extensions", true ).toBool() );
 	ui->chkOtherGamesFallback->setChecked( settings.value("Settings/Resources/Other Games Fallback", true).toBool() );
@@ -607,7 +588,6 @@ void SettingsResources::write()
 	GameManager::close_archives();
 	auto mgr = GameManager::get();
 	mgr->save();
-	mgr->load_archives();
 
 	QSettings settings;
 	settings.setValue( "Settings/Resources/Alternate Extensions", ui->chkAlternateExt->isChecked() );
@@ -646,17 +626,13 @@ void SettingsResources::manager_sync( bool make_connections )
 		// Rename all GAME_%1 list items to the supported game at that position
 		auto game_txt = QString("GAME_%1");
 		auto folder_item = ui->foldersGameList->findItems(game_txt.arg(i), Qt::MatchExactly).value(0, nullptr);
-		auto archive_item = ui->archivesGameList->findItems(game_txt.arg(i), Qt::MatchExactly).value(0, nullptr);
-		if ( folder_item && archive_item ) {
+		if ( folder_item ) {
 			folder_item->setText(game_string);
-			archive_item->setText(game_string);
-			// Hide game items from Folders and Archives lists when game is disabled
+			// Hide game items from Folders list when game is disabled
 			folder_item->setHidden(!chk->isChecked());
-			archive_item->setHidden(!chk->isChecked());
 			if ( make_connections ) {
-				connect(chk, &QCheckBox::clicked, [chk, folder_item, archive_item]() {
+				connect(chk, &QCheckBox::clicked, [chk, folder_item]() {
 					folder_item->setHidden(!chk->isChecked());
-					archive_item->setHidden(!chk->isChecked());
 				});
 			}
 		}
@@ -680,12 +656,6 @@ void SettingsResources::setFolderList()
 {
 	folders->setStringList(GameManager::folders(currentFolderItem()));
 	ui->foldersList->setCurrentIndex( folders->index( 0, 0 ) );
-}
-
-void SettingsResources::setArchiveList()
-{
-	archives->setStringList(GameManager::archives(currentArchiveItem()));
-	ui->archivesList->setCurrentIndex( archives->index( 0, 0 ) );
 }
 
 void SettingsResources::select_first( QListWidget * list )
@@ -734,17 +704,9 @@ QString SettingsResources::currentFolderItem()
 	return ui->foldersGameList->currentItem()->text();
 }
 
-QString SettingsResources::currentArchiveItem()
-{
-	if ( !ui->archivesGameList->currentItem() )
-		return {};
-	return ui->archivesGameList->currentItem()->text();
-}
-
 void SettingsResources::modifyPane()
 {
 	GameManager::update_folders(currentFolderItem(), folders->stringList());
-	GameManager::update_archives(currentArchiveItem(), archives->stringList());
 	SettingsPane::modifyPane();
 }
 
@@ -829,71 +791,4 @@ void SettingsResources::on_btnFolderAutoDetect_clicked()
 	ui->foldersList->setCurrentIndex(folders->index(0, 0));
 
 	modifyPane();
-}
-
-void SettingsResources::on_btnArchiveAdd_clicked()
-{
-	QStringList files = QFileDialog::getOpenFileNames(
-		this,
-		"Select one or more archives",
-		GameManager::data(currentArchiveItem()),
-		"Archive (*.bsa *.ba2)"
-	);
-
-	setArchives(files);
-	modifyPane();
-}
-
-void SettingsResources::on_btnArchiveRemove_clicked()
-{
-	ui->archivesList->model()->removeRow( ui->archivesList->currentIndex().row() );
-	modifyPane();
-}
-
-void SettingsResources::on_btnArchiveDown_clicked()
-{
-	moveIdxDown( ui->archivesList );
-	modifyPane();
-}
-
-void SettingsResources::on_btnArchiveUp_clicked()
-{
-	moveIdxUp( ui->archivesList );
-	modifyPane();
-}
-
-void SettingsResources::on_btnArchiveAutoDetect_clicked()
-{
-	setArchives(GameManager::find_archives(currentArchiveItem()));
-	modifyPane();
-}
-
-void SettingsResources::setArchives( const QStringList& archiveList )
-{
-	QMessageBox msg(QMessageBox::Information, tr("Adding Archives"), tr("Please wait while archives are added."), QMessageBox::NoButton, this);
-	msg.setStandardButtons(QMessageBox::NoButton); // Actually hides "OK" button
-	msg.show();
-	qApp->processEvents(); // Sometimes msg text will not show without this
-	const auto& filtered = applicableArchives(archiveList);
-	archives->setStringList(archives->stringList() << filtered);
-	ui->archivesList->setCurrentIndex(archives->index(0, 0));
-	msg.close();
-	if ( filtered.size() < archiveList.size() ) {
-		QMessageBox::information(this, tr("Archives Added"), tr("Some archives were skipped because they were already added or NifSkope does not utilize them."));
-	}
-}
-
-QStringList SettingsResources::applicableArchives( const QStringList& archiveList )
-{
-	QStringList applicable;
-	for ( const auto& f : applicableFolders ) {
-		for ( const auto& a : GameManager::filter_archives(archiveList, f) ) {
-			if ( archives->stringList().contains(a, Qt::CaseInsensitive) )
-				continue;
-			applicable << a;
-		}
-	}
-	applicable.removeDuplicates();
-
-	return applicable;
 }

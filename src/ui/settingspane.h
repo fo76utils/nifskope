@@ -104,27 +104,16 @@ public slots:
 	void on_btnFolderUp_clicked();
 	void on_btnFolderAutoDetect_clicked();
 
-	void on_btnArchiveAdd_clicked();
-	void on_btnArchiveRemove_clicked();
-	void on_btnArchiveDown_clicked();
-	void on_btnArchiveUp_clicked();
-	void on_btnArchiveAutoDetect_clicked();
-
 	void setFolderList();
-	void setArchiveList();
 
 	void onBrowseClicked();
 
 private:
-	void setArchives( const QStringList& archiveList );
-	QStringList applicableArchives( const QStringList& archiveList );
 	std::unique_ptr<Ui::SettingsResources> ui;
 
 	QString currentFolderItem();
-	QString currentArchiveItem();
 
 	QStringListModel * folders;
-	QStringListModel * archives;
 
 	QStringList applicableFolders{ "materials", "textures", "geometries" };
 };
