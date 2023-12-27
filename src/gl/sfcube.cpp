@@ -174,9 +174,11 @@ void SFCubeMapFilter::processImage_Specular(
 					FloatVector4	v2x(i[0]);
 					FloatVector4	v2y(i[1]);
 					FloatVector4	v2z(i[2]);
-					FloatVector4	v2w(i[3]);
 					// d = N·L = R·L = 2.0 * N·H * N·H - 1.0
 					FloatVector4	d = (v1x * v2x) + (v1y * v2y) + (v1z * v2z);
+					if (d.getSignMask() == 15U)
+						continue;
+					FloatVector4	v2w(i[3]);
 					d.maxValues(FloatVector4(0.0f));
 					FloatVector4	g1 = d;
 					// g2 = geometry function denominator * 2.0 (a = k * 2.0)
