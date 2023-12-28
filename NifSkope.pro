@@ -162,7 +162,6 @@ HEADERS += \
 	src/gl/gltools.h \
 	src/gl/icontrollable.h \
 	src/gl/renderer.h \
-	src/gl/sfcube.hpp \
 	src/io/material.h \
 	src/io/MeshFile.h \
 	src/io/nifstream.h \
@@ -236,7 +235,6 @@ SOURCES += \
 	src/gl/gltexloaders.cpp \
 	src/gl/gltools.cpp \
 	src/gl/renderer.cpp \
-	src/gl/sfcube.cpp \
 	src/io/materialfile.cpp \
 	src/io/MeshFile.cpp \
 	src/io/nifstream.cpp \
@@ -405,6 +403,7 @@ libfo76utils {
     SOURCES += $$PWD/lib/libfo76utils/src/mat_dump.cpp
     SOURCES += $$PWD/lib/libfo76utils/src/material.cpp
     # SOURCES += $$PWD/lib/libfo76utils/src/sdlvideo.cpp
+    SOURCES += $$PWD/lib/libfo76utils/src/sfcube.cpp
     # SOURCES += $$PWD/lib/libfo76utils/src/stringdb.cpp
     # SOURCES += $$PWD/lib/libfo76utils/src/viewrtbl.cpp
     SOURCES += $$PWD/lib/libfo76utils/src/zlib.cpp

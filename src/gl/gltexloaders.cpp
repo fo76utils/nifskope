@@ -36,7 +36,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "model/nifmodel.h"
 
 #include "dds.h"
-#include "sfcube.hpp"
+#include "libfo76utils/src/sfcube.hpp"
 
 #include <QBuffer>
 #include <QByteArray>
