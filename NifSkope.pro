@@ -391,7 +391,8 @@ libfo76utils {
     HEADERS += $$files($$PWD/lib/libfo76utils/src/*.h, false)
     HEADERS += $$files($$PWD/lib/libfo76utils/src/*.hpp, false)
     SOURCES += $$PWD/lib/libfo76utils/src/ba2file.cpp
-    SOURCES += $$PWD/lib/libfo76utils/src/cdb_file.cpp
+    SOURCES += $$PWD/lib/libfo76utils/src/bsmatcdb.cpp
+    SOURCES += $$PWD/lib/libfo76utils/src/bsrefl.cpp
     SOURCES += $$PWD/lib/libfo76utils/src/common.cpp
     # SOURCES += $$PWD/lib/libfo76utils/src/courb24.cpp
     # SOURCES += $$PWD/lib/libfo76utils/src/ddstxt.cpp

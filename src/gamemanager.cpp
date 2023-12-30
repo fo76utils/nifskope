@@ -2,6 +2,7 @@
 
 #include "bsa.h"
 #include "message.h"
+#include "bsrefl.hpp"
 
 #include <QSettings>
 #include <QCoreApplication>
@@ -426,7 +427,7 @@ const CE2MaterialDB* GameManager::materials(const GameMode game)
 	if ( game == STARFIELD ) {
 		if ( !have_materials_cdb ) {
 			std::vector< unsigned char >	cdb_data;
-			if (get_file(cdb_data, game, std::string("materials/materialsbeta.cdb")))
+			if (get_file(cdb_data, game, std::string(BSReflStream::getDefaultMaterialDBPath())))
 				starfield_materials.loadCDBFile(cdb_data.data(), cdb_data.size());
 			have_materials_cdb = true;
 		}
