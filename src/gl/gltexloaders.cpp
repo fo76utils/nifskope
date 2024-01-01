@@ -638,7 +638,7 @@ GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, QString 
 	if ( data.size() >= 148 && dataPtr[128] == 0x0A && dataPtr[84] == 'D' && dataPtr[85] == 'X' && dataPtr[86] == '1' && dataPtr[87] == '0' ) {
 		if ( game == Game::STARFIELD && filepath.contains( "/cubemaps/" ) ) {
 			// normalize and filter Starfield cube maps
-			size_t	newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(dataPtr), data.size() );
+			size_t	newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(dataPtr), data.size(), true );
 			data.resize( newSize );
 		} else {
 			// work around issues with float formats
