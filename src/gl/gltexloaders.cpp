@@ -631,36 +631,15 @@ GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, QString 
 	(void) format;
 	(void) width;
 	(void) height;
-#if 0
-	(void) game;
-#else
-	char *	dataPtr = data.data();
-	if ( data.size() >= 148 && dataPtr[128] == 0x0A && dataPtr[84] == 'D' && dataPtr[85] == 'X' && dataPtr[86] == '1' && dataPtr[87] == '0' ) {
-		if ( game == Game::STARFIELD && filepath.contains( "/cubemaps/" ) ) {
-			// normalize and filter Starfield cube maps
-			size_t	newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(dataPtr), data.size(), true );
-			data.resize( newSize );
-		} else {
-			// work around issues with float formats
-			// DXGI_FORMAT_R16G16B16A16_FLOAT -> DXGI_FORMAT_R8G8B8A8_UNORM_SRGB
-			dataPtr[128] = 0x1D;
-			dataPtr = dataPtr + 148;
-			size_t	n = (data.size() - 148) >> 3;
-			for ( size_t i = 0; i < n; i++ ) {
-				FloatVector4	c(FloatVector4::convertFloat16(FileBuffer::readUInt64Fast(dataPtr + (i << 3)), true));
-				float	a = c[3] * 255.0f;
-				c.srgbCompress();
-				c[3] = a;
-				std::uint32_t	b = std::uint32_t(c);
-				dataPtr[i << 2] = char(b & 0xFF);
-				dataPtr[(i << 2) + 1] = char((b >> 8) & 0xFF);
-				dataPtr[(i << 2) + 2] = char((b >> 16) & 0xFF);
-				dataPtr[(i << 2) + 3] = char((b >> 24) & 0xFF);
-			}
-			data.resize(((data.size() - 148) >> 1) + 148);
-		}
+	if ( game == Game::STARFIELD && filepath.contains( "/cubemaps/" ) ) {
+		// normalize and filter Starfield cube maps
+		size_t	dataSize = size_t(data.size());
+		size_t	spaceRequired = 256 * 256 * 8 * 4 + 148;
+		if ( data.size() < spaceRequired )
+			data.resize( spaceRequired );
+		size_t	newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(data.data()), dataSize, true, spaceRequired );
+		data.resize( newSize );
 	}
-#endif
 
 	GLuint result = 0;
 	gli::texture texture;
