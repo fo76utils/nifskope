@@ -22,7 +22,7 @@ void BSMesh::transformShapes()
 void BSMesh::drawShapes(NodeList* secondPass, bool presort)
 {
 	(void) presort;
-	if ( !scene->hasOption(Scene::ShowMarkers) && name.startsWith("EditorMarker") )
+	if ( !scene->hasOption(Scene::ShowMarkers) && name.contains("EditorMarker") )
 		return;
 
 	// Draw translucent meshes in second pass
