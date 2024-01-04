@@ -107,12 +107,11 @@ void main( void )
 	mat3 tbnMatrix = mat3(b.x, t.x, N.x,
                           b.y, t.y, N.y,
                           b.z, t.z, N.z);
-	
+
 	ViewDir = tbnMatrix * -v.xyz;
 	LightDir = tbnMatrix * gl_LightSource[0].position.xyz;
-	
+
 	A = gl_LightSource[0].ambient;
-	A.rgb *= 1.2;
 	C = gl_Color;
 	D = gl_LightSource[0].diffuse;
 }
