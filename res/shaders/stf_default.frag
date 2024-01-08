@@ -213,7 +213,7 @@ struct LayeredMaterial {
 
 uniform samplerCube	CubeMap;
 uniform bool	hasCubeMap;
-uniform float	envReflection;
+uniform bool	hasSpecular;
 
 uniform sampler2D	textureUnits[15];
 
@@ -627,14 +627,18 @@ void main(void)
 		float	m = (1.0 - (smoothness * smoothness)) * 5.1041667;
 		m = max(m, 6.0 - (smoothness * 7.0));
 		refl = textureLod(CubeMap, reflectedWS, max(m, 0.0)).rgb;
-		refl *= envReflection;
 		refl *= ambient;
-		ambient *= textureLod(CubeMap, normalWS, 5.0).rgb * envReflection;
+		ambient *= textureLod(CubeMap, normalWS, 5.0).rgb;
 	} else {
 		ambient /= 15.0;
 		refl = ambient;
 	}
 	vec3	f = fresnel_r(NdotV, f0, roughness);
+	if (!hasSpecular) {
+		albedo = baseMap.rgb;
+		spec = vec3(0.0);
+		f = vec3(0.0);
+	}
 	float	g = roughness * roughness * 0.5;
 	g = NdotV / (NdotV + g - (NdotV * g));
 	float	ao = pbrMap.b;

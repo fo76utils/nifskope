@@ -11,8 +11,8 @@ uniform samplerCube CubeMap;
 
 uniform vec4 solidColor;
 uniform vec3 specColor;
+uniform bool hasSpecular;
 uniform float specStrength;
-uniform float specGlossiness; // "Smoothness" in FO4; 0-1
 uniform float fresnelPower;
 
 uniform float paletteScale;
@@ -318,7 +318,6 @@ void main(void)
 
 	// Specular
 	float	smoothness = lightingMap.r;
-	// smoothness = clamp(smoothness * specGlossiness, 0.0, 1.0);
 	float	roughness = max(1.0 - smoothness, 0.02);
 	vec3	spec = LightingFuncGGX_REF(NdotL0, NdotH, NdotV, LdotH, roughness, f0) * D.rgb;
 
@@ -339,6 +338,11 @@ void main(void)
 		refl = ambient;
 	}
 	vec3	f = fresnel_r(NdotV, f0, roughness);
+	if (!hasSpecular) {
+		albedo = max(albedo, reflMap.rgb);
+		spec = vec3(0.0);
+		f = vec3(0.0);
+	}
 	float	g = roughness * roughness * 0.5;
 	g = NdotV / (NdotV + g - (NdotV * g));
 	float	ao = lightingMap.g;

@@ -818,14 +818,13 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 #if 0
 	// scale for cell_cityplazacube.dds if loaded in float format
 	prog->uni1f_l( prog->uniLocation("envReflection"), 0.000104f );
-#else
-	prog->uni1f_l( prog->uniLocation("envReflection"), 1.0f );
 #endif
+	prog->uni1i( HAS_SPECULAR, int(scene->hasOption(Scene::DoSpecular)) );
 	prog->uni1i_l( prog->uniLocation("lm.shaderModel"), mat->shaderModel );
 	prog->uni1b_l( prog->uniLocation("lm.isEffect"), isEffect );
 	prog->uni1b_l( prog->uniLocation("lm.isTwoSided"), bool(mat->flags & CE2Material::Flag_TwoSided) );
 	prog->uni1b_l( prog->uniLocation("lm.hasOpacityComponent"), bool(mat->flags & CE2Material::Flag_HasOpacityComponent) );
-	if ( mat->flags & CE2Material::Flag_LayeredEmissivity ) {
+	if ( mat->flags & CE2Material::Flag_LayeredEmissivity && scene->hasOption(Scene::DoGlow) ) {
 		prog->uni1b_l( prog->uniLocation("lm.layeredEmissivity.isEnabled"), mat->layeredEmissiveSettings->isEnabled );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.firstLayerIndex"), mat->layeredEmissiveSettings->layer1Index );
 		prog->uni4c_l( prog->uniLocation("lm.layeredEmissivity.firstLayerTint"), mat->layeredEmissiveSettings->layer1Tint );
@@ -852,7 +851,7 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 	}	else {
 		prog->uni1b_l( prog->uniLocation("lm.layeredEmissivity.isEnabled"), false );
 	}
-	if ( mat->flags & CE2Material::Flag_Emissive ) {
+	if ( mat->flags & CE2Material::Flag_Emissive && scene->hasOption(Scene::DoGlow) ) {
 		prog->uni1b_l( prog->uniLocation("lm.emissiveSettings.isEnabled"), mat->emissiveSettings->isEnabled );
 		prog->uni1i_l( prog->uniLocation("lm.emissiveSettings.emissiveSourceLayer"), mat->emissiveSettings->sourceLayer );
 		prog->uni4f_l( prog->uniLocation("lm.emissiveSettings.emissiveTint"), mat->emissiveSettings->emissiveTint );
@@ -1332,8 +1331,10 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 		float s = ( scene->hasOption(Scene::DoSpecular) && scene->hasOption(Scene::DoLighting) ) ? lsp->specularStrength : 0.0;
 		prog->uni1f( SPEC_SCALE, s );
 
-		// Assure specular power does not break the shaders
-		prog->uni1f( SPEC_GLOSS, lsp->specularGloss);
+		if ( nifVersion >= 151 )
+			prog->uni1i( HAS_SPECULAR, int(scene->hasOption(Scene::DoSpecular)) );
+		else		// Assure specular power does not break the shaders
+			prog->uni1f( SPEC_GLOSS, lsp->specularGloss);
 		prog->uni3f( SPEC_COLOR, lsp->specularColor.red(), lsp->specularColor.green(), lsp->specularColor.blue() );
 		prog->uni1i( HAS_MAP_SPEC, lsp->hasSpecularMap );
 
