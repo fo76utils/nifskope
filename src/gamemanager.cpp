@@ -42,9 +42,11 @@ void BA2Files::open_folders(GameMode game, const QStringList& folders)
 		if (!s.isEmpty())
 			tmp.insert(tmp.begin(), s.toStdString());
 	}
+	std::vector< std::string >	excludePatterns;
+	excludePatterns.emplace_back(".nif");
 	while	(tmp.size() > 0) {
 		try {
-			archives[game] = new BA2File(tmp);
+			archives[game] = new BA2File(tmp, nullptr, &excludePatterns);
 			tmp.clear();
 		} catch (FO76UtilsError& e) {
 			bool	foundError = false;
