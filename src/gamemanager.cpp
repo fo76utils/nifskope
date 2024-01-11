@@ -40,33 +40,26 @@ void BA2Files::open_folders(GameMode game, const QStringList& folders)
 	std::vector< std::string >	tmp;
 	for (const auto& s : folders) {
 		if (!s.isEmpty())
-			tmp.insert(tmp.begin(), s.toStdString());
+			tmp.push_back(s.toStdString());
 	}
+	if (tmp.size() < 1)
+		return;
+	archives[game] = new BA2File();
 	std::vector< std::string >	excludePatterns;
 	excludePatterns.emplace_back(".nif");
-	while	(tmp.size() > 0) {
+	size_t	archivesLoaded = 0;
+	for (size_t i = tmp.size(); i-- > 0; ) {
 		try {
-			archives[game] = new BA2File(tmp, nullptr, &excludePatterns);
-			tmp.clear();
+			archives[game]->loadArchivePath(tmp[i].c_str(),
+											nullptr, &excludePatterns);
+			archivesLoaded++;
 		} catch (FO76UtilsError& e) {
-			bool	foundError = false;
-			if (tmp.size() > 1) {
-				for (size_t i = 0; i < tmp.size(); ) {
-					try {
-						BA2File	tmp2(tmp[i].c_str());
-						i++;
-					} catch (FO76UtilsError&) {
-						QMessageBox::critical(nullptr, "NifSkope error", QString("Error opening archive folder '%1'").arg(tmp[i].c_str()));
-						tmp.erase(tmp.begin() + i, tmp.begin() + (i + 1));
-						foundError = true;
-					}
-				}
-			}
-			if (!foundError) {
-				QMessageBox::critical(nullptr, "NifSkope error", QString("Error opening archive folder(s): %1").arg(e.what()));
-				break;
-			}
+			QMessageBox::critical(nullptr, "NifSkope error", QString("Error opening archive path '%1': %2").arg(tmp[i].c_str()).arg(e.what()));
 		}
+	}
+	if (!archivesLoaded) {
+		close_archive(game);
+		archives[game] = nullptr;
 	}
 }
 
