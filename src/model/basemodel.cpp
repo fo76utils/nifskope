@@ -142,7 +142,7 @@ int BaseModel::evalArraySize( const NifItem * array ) const
 			reportError( array, __func__, "The input item is not an array." );
 		return 0;
 	}
-	
+
 	if ( array == root ) {
 		reportError( array, __func__, "The input item is the root." );
 		return 0;
@@ -534,7 +534,7 @@ Qt::ItemFlags BaseModel::flags( const QModelIndex & index ) const
 		if ( index.column() == ValueCol )
 			flags |= Qt::ItemIsEditable;
 	}
-	
+
 	return flags;
 }
 
@@ -550,7 +550,10 @@ bool BaseModel::loadFromFile( const QString & file )
 
 	setState( Loading );
 
-	if ( f.exists() && finfo.isFile() && f.open( QIODevice::ReadOnly ) && load( f ) ) {
+	std::string	fileName;
+	if ( finfo.isFile() )
+		fileName = file.toStdString();
+	if ( f.exists() && finfo.isFile() && f.open( QIODevice::ReadOnly ) && load( f, fileName.c_str() ) ) {
 		fileinfo = finfo;
 		filename = finfo.baseName();
 		folder = finfo.absolutePath();
@@ -622,10 +625,10 @@ const NifItem * BaseModel::getItem( const NifItem * parent, const QString & name
 		QString right = name.right( name.length() - slashPos - SLASH_QSTRING.length() );
 
 		const NifItem * pp = ( left == DOTS_QSTRING ) ? parent->parent() : getItemInternal( parent, left, reportErrors );
-		return getItem( pp, right, reportErrors );	
+		return getItem( pp, right, reportErrors );
 	}
 
-	return getItemInternal( parent, name, reportErrors );	
+	return getItemInternal( parent, name, reportErrors );
 }
 
 const NifItem * BaseModel::getItem( const NifItem * parent, const QLatin1String & name, bool reportErrors ) const
@@ -871,7 +874,7 @@ void BaseModel::onArrayValuesChange( NifItem * arrayRootItem )
 	int x = arrayRootItem->childCount() - 1;
 	if ( x >= 0 ) {
 		emit dataChanged(
-			createIndex( 0, ValueCol, arrayRootItem->children().at(0) ), 
+			createIndex( 0, ValueCol, arrayRootItem->children().at(0) ),
 			createIndex( x, ValueCol, arrayRootItem->children().at(x) )
 		);
 	}

@@ -37,6 +37,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "spellbook.h"
 #include "data/niftypes.h"
 #include "io/nifstream.h"
+#include "gamemanager.h"
 
 #include <QByteArray>
 #include <QColor>
@@ -1784,7 +1785,7 @@ bool NifModel::setHeaderString( const QString & s, uint ver )
 	return false;
 }
 
-bool NifModel::load( QIODevice & device )
+bool NifModel::load( QIODevice & device, const char* fileName )
 {
 	QSettings settings;
 	bool ignoreSize = settings.value( "Ignore Block Size", true ).toBool();
@@ -1804,6 +1805,12 @@ bool NifModel::load( QIODevice & device )
 
 		resetState();
 		return false;
+	}
+
+	if ( fileName && *fileName ) {
+		Game::GameMode	game = Game::GameManager::get_game( version, cfg.userVersion, bsVersion );
+		Game::GameManager::close_archives();
+		Game::GameManager::add_temp_path( game, fileName, true );
 	}
 
 	int numblocks = 0;

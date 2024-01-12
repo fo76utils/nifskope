@@ -248,8 +248,9 @@ bool KfmModel::setHeaderString( const QString & s, uint ver )
 	return false;
 }
 
-bool KfmModel::load( QIODevice & device )
+bool KfmModel::load( QIODevice & device, const char* fileName )
 {
+	(void) fileName;
 	clear();
 
 	NifIStream stream( this, &device );

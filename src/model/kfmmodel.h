@@ -62,7 +62,7 @@ public:
 	void clear() override final;
 
 	// generic load and save to and from QIODevice
-	bool load( QIODevice & device ) override final;
+	bool load( QIODevice & device, const char* fileName = nullptr ) override final;
 	bool save( QIODevice & device ) const override final;
 
 	// is it a compound type?

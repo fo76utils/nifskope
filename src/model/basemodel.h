@@ -86,7 +86,7 @@ public:
 	//! Clear model data.
 	virtual void clear() = 0;
 	//! Generic load from QIODevice.
-	virtual bool load( QIODevice & device ) = 0;
+	virtual bool load( QIODevice & device, const char* fileName = nullptr ) = 0;
 	//! Generic save to QIODevice.
 	virtual bool save( QIODevice & device ) const = 0;
 	//! Get version as a string

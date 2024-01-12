@@ -93,7 +93,7 @@ public:
 	// BaseModel
 
 	void clear() override final;
-	bool load( QIODevice & device ) override final;
+	bool load( QIODevice & device, const char* fileName = nullptr ) override final;
 	bool save( QIODevice & device ) const override final;
 
 	QString getVersion() const override final { return version2string( version ); }
