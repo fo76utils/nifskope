@@ -10,6 +10,8 @@
 #include <QDir>
 #include <QMessageBox>
 
+#include <dirent.h>
+
 namespace Game
 {
 
@@ -26,6 +28,7 @@ struct BA2Files {
 	void open_folders(GameMode game, const QStringList& folders);
 	void close_archive(GameMode game);
 	void close_all();
+	bool add_folder(GameMode game, const char* pathName, bool ignoreErrors);
 };
 
 BA2Files::~BA2Files()
@@ -81,6 +84,22 @@ void BA2Files::close_all()
 			delete i->second;
 		i->second = nullptr;
 	}
+}
+
+bool BA2Files::add_folder(GameMode game, const char* pathName, bool ignoreErrors)
+{
+	if (!archives[game])
+		archives[game] = new BA2File();
+	std::vector< std::string >	excludePatterns;
+	excludePatterns.emplace_back(".nif");
+	try {
+		archives[game]->loadArchivePath(pathName, nullptr, &excludePatterns);
+	} catch (FO76UtilsError& e) {
+		if (!ignoreErrors)
+			QMessageBox::critical(nullptr, "NifSkope error", QString("Error opening archive path '%1': %2").arg(pathName).arg(e.what()));
+		return false;
+	}
+	return true;
 }
 
 static BA2Files	ba2Files;
@@ -444,6 +463,42 @@ void GameManager::close_materials()
 		starfield_materials.~CE2MaterialDB();
 		(void) new( &starfield_materials ) CE2MaterialDB();
 	}
+}
+
+bool GameManager::add_temp_path(const GameMode game, const char* pathName, bool ignoreErrors)
+{
+	if ( !pathName )
+		return false;
+	std::string	tmpPath( pathName );
+	while ( true ) {
+		if ( tmpPath.empty() )
+			return false;
+		std::uint32_t	extStr = 0U;
+		if ( tmpPath.length() > 4 ) {
+			extStr = FileBuffer::readUInt32Fast( tmpPath.c_str() + (tmpPath.length() - 4) );
+			extStr = extStr | ((extStr >> 1) & 0x20202020U);
+		}
+		if ( FileBuffer::checkType( extStr, ".nif" ) ) {
+			size_t	n1 = tmpPath.rfind('/');
+			size_t	n2 = tmpPath.rfind('\\');
+			if ( n1 == std::string::npos )
+				n1 = 0;
+			if ( n2 == std::string::npos )
+				n2 = 0;
+			tmpPath.resize( std::max( n1, n2 ) );
+			continue;
+		}
+		if ( FileBuffer::checkType( extStr, ".ba2" ) || FileBuffer::checkType( extStr, ".bsa" ) )
+			break;
+		DIR*	d = opendir( tmpPath.c_str() );
+		if ( d ) {
+			closedir( d );
+			break;
+		}
+	}
+	if ( !ba2Files[game] )
+		ba2Files.open_folders( game, folders(game) );
+	return ba2Files.add_folder( game, tmpPath.c_str(), ignoreErrors );
 }
 
 QStringList GameManager::find_folders(const GameMode game)

@@ -244,6 +244,8 @@ public:
 	static void close_archives();
 	//! Deallocate Starfield material database if it is currently loaded.
 	static void close_materials();
+	//! Open a folder or archive without adding it to the list of data paths.
+	static bool add_temp_path(const GameMode game, const char* pathName, bool ignoreErrors);
 
 	//! Find applicable data folders at the game installation path
 	static QStringList find_folders(const GameMode game);
