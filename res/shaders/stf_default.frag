@@ -392,7 +392,7 @@ vec4 getLayerTexture(int layerNum, int textureNum, vec2 offset)
 	int	n = lm.layers[layerNum].material.textureSet.textures[textureNum];
 	if ( n < 1 )
 		return lm.layers[layerNum].material.textureSet.textureReplacements[textureNum];
-	return texture2D(textureUnits[n - 1], offset);
+	return texture(textureUnits[n - 1], offset);
 }
 
 float getBlenderMask(int n)
@@ -403,7 +403,7 @@ float getBlenderMask(int n)
 			r = lm.blenders[n].maskTextureReplacement.r;
 		} else {
 			vec2	offset = getTexCoord(lm.blenders[n].uvStream);
-			r = texture2D(textureUnits[lm.blenders[n].maskTexture - 1], offset).r;
+			r = texture(textureUnits[lm.blenders[n].maskTexture - 1], offset).r;
 		}
 	}
 	if ( lm.blenders[n].colorChannel >= 0 )
@@ -428,7 +428,7 @@ vec2 parallaxMapping(int n, vec3 V, vec2 offset, float parallaxScale, float maxL
 	vec2	currentTextureCoords = offset;
 
 	// height from heightmap
-	float	heightFromTexture = texture2D( textureUnits[n], currentTextureCoords ).r;
+	float	heightFromTexture = texture( textureUnits[n], currentTextureCoords ).r;
 
 	// while point is above the surface
 	while ( curLayerHeight > heightFromTexture ) {
@@ -437,7 +437,7 @@ vec2 parallaxMapping(int n, vec3 V, vec2 offset, float parallaxScale, float maxL
 		// shift of texture coordinates
 		currentTextureCoords -= dtex;
 		// new height from heightmap
-		heightFromTexture = texture2D( textureUnits[n], currentTextureCoords ).r;
+		heightFromTexture = texture( textureUnits[n], currentTextureCoords ).r;
 	}
 
 	// previous texture coordinates
@@ -445,7 +445,7 @@ vec2 parallaxMapping(int n, vec3 V, vec2 offset, float parallaxScale, float maxL
 
 	// heights for linear interpolation
 	float	nextH = curLayerHeight - heightFromTexture;
-	float	prevH = curLayerHeight + layerHeight - texture2D( textureUnits[n], prevTCoords ).r;
+	float	prevH = curLayerHeight + layerHeight - texture( textureUnits[n], prevTCoords ).r;
 
 	// proportions for linear interpolation
 	float	weight = nextH / ( nextH - prevH );
@@ -540,7 +540,7 @@ void main(void)
 
 	mat3	btn = transpose(mat3(b, t, N));
 	vec3	reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(vec3(R * btn), 0.0)));
-	vec3	normalWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(vec3(-normal * btn), 0.0)));
+	vec3	normalWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(vec3(normal * btn), 0.0)));
 
 	if ( lm.alphaSettings.hasOpacity && lm.alphaSettings.opacitySourceLayer < 4 && lm.layersEnabled[lm.alphaSettings.opacitySourceLayer] ) {
 		int	n = lm.alphaSettings.opacitySourceLayer;
