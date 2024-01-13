@@ -1037,7 +1037,6 @@ void NifSkope::save()
 		return;
 	}
 
-	Game::GameManager::close_archives();
 	emit beginSave();
 
 	QString fname = currentFile;
