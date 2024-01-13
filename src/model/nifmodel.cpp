@@ -46,6 +46,8 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QSettings>
 #include <QStringBuilder>
 
+#include <dirent.h>
+
 //! @file nifmodel.cpp The NIF data model.
 
 const QString EMPTY_QSTRING;
@@ -1785,6 +1787,36 @@ bool NifModel::setHeaderString( const QString & s, uint ver )
 	return false;
 }
 
+static void setTempDataPath( const Game::GameMode game, const char * pathName )
+{
+	std::string	tmpPath( pathName ? pathName : "" );
+	while ( !tmpPath.empty() ) {
+		std::uint32_t	extStr = 0U;
+		if ( tmpPath.length() > 4 ) {
+			extStr = FileBuffer::readUInt32Fast( tmpPath.c_str() + (tmpPath.length() - 4) );
+			extStr = extStr | ((extStr >> 1) & 0x20202020U);
+		}
+		if ( FileBuffer::checkType( extStr, ".nif" ) ) {
+			size_t	n1 = tmpPath.rfind('/');
+			size_t	n2 = tmpPath.rfind('\\');
+			if ( n1 == std::string::npos )
+				n1 = 0;
+			if ( n2 == std::string::npos )
+				n2 = 0;
+			tmpPath.resize( std::max( n1, n2 ) );
+			continue;
+		}
+		if ( FileBuffer::checkType( extStr, ".ba2" ) || FileBuffer::checkType( extStr, ".bsa" ) )
+			break;
+		DIR*	d = opendir( tmpPath.c_str() );
+		if ( d ) {
+			closedir( d );
+			break;
+		}
+	}
+	Game::GameManager::set_temp_path( game, tmpPath.c_str(), true );
+}
+
 bool NifModel::load( QIODevice & device, const char* fileName )
 {
 	QSettings settings;
@@ -1807,11 +1839,7 @@ bool NifModel::load( QIODevice & device, const char* fileName )
 		return false;
 	}
 
-	if ( fileName && *fileName ) {
-		Game::GameMode	game = Game::GameManager::get_game( version, cfg.userVersion, bsVersion );
-		Game::GameManager::close_archives();
-		Game::GameManager::add_temp_path( game, fileName, true );
-	}
+	setTempDataPath( Game::GameManager::get_game( version, cfg.userVersion, bsVersion ), fileName );
 
 	int numblocks = 0;
 	numblocks = get<int>( header, "Num Blocks" );
