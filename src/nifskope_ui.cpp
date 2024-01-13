@@ -1381,7 +1381,7 @@ void NifSkope::overrideViewFont()
 
 void NifSkope::on_aCloseArchives_triggered()
 {
-	Game::GameManager::close_archives();
+	Game::GameManager::close_archives( true );
 }
 
 void NifSkope::on_aLoadXML_triggered()
