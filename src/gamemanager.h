@@ -241,11 +241,11 @@ public:
 	//! Return pointer to Starfield material database, loading it first if necessary. On error, nullptr is returned.
 	static const CE2MaterialDB* materials(const GameMode game);
 	//! Close all currently opened resource archives and files.
-	static void close_archives();
+	static void close_archives(bool tempPathsFirst = false);
 	//! Deallocate Starfield material database if it is currently loaded.
 	static void close_materials();
 	//! Open a folder or archive without adding it to the list of data paths.
-	static bool add_temp_path(const GameMode game, const char* pathName, bool ignoreErrors);
+	static bool set_temp_path(const GameMode game, const char* pathName, bool ignoreErrors);
 
 	//! Find applicable data folders at the game installation path
 	static QStringList find_folders(const GameMode game);
