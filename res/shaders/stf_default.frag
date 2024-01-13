@@ -244,31 +244,7 @@ in mat4 reflMatrix;
 
 #define FLT_EPSILON 1.192092896e-07F // smallest such that 1.0 + FLT_EPSILON != 1.0
 
-float G1V(float NdotV, float k)
-{
-	return 1.0 / (NdotV * (1.0 - k) + k);
-}
-
-float LightingFuncGGX_REF0(float NdotL, float NdotH, float NdotV, float LdotH, float roughness, float F0)
-{
-	float alpha = roughness * roughness;
-	float F, D, vis;
-	// D
-	float alphaSqr = alpha * alpha;
-	float denom = NdotH * NdotH * (alphaSqr - 1.0) + 1.0;
-	D = alphaSqr / (M_PI * denom * denom);
-	// F
-	float LdotH5 = pow(1.0 - LdotH, 5);
-	F = F0 + (1.0 - F0) * LdotH5;
-
-	// V
-	float k = alpha/2.0;
-	vis = G1V(NdotL, k) * G1V(NdotV, k);
-
-	float specular = NdotL * D * F * vis;
-	return specular;
-}
-
+// approximates Fresnel function for n = 1.5, mapped to f0 to 1.0
 vec3 fresnel_n(float NdotV, vec3 f0)
 {
 	vec4	a = vec4(-1.11050116, 2.79595384, -2.68545268, 1.0);
@@ -276,6 +252,7 @@ vec3 fresnel_n(float NdotV, vec3 f0)
 	return f0 + ((vec3(1.0) - f0) * f * f);
 }
 
+// Fresnel function for water (n = 1.3325)
 float fresnel_w(float NdotV)
 {
 	vec4	a = vec4(-1.30214688, 3.32294874, -2.87825095, 1.0);
@@ -283,6 +260,7 @@ float fresnel_w(float NdotV)
 	return f * f;
 }
 
+// Fresnel approximation for indirect lighting with roughness
 vec3 fresnel_r(float NdotV, vec3 f0, float r)
 {
 	vec4	a7 = vec4(-36.86082892, 56.89686549, -22.98377259, 2.81411820);
@@ -298,12 +276,14 @@ vec3 fresnel_r(float NdotV, vec3 f0, float r)
 	return f0 + ((vec3(1.0) - f0) * f * f);
 }
 
-vec3 LightingFuncGGX_REF(float NdotL, float NdotH, float NdotV, float LdotH, float roughness, vec3 F0)
+vec3 LightingFuncGGX_REF(float NdotL, float LdotR, float NdotV, float LdotH, float roughness, vec3 F0)
 {
 	float alpha = roughness * roughness;
 	// D (GGX normal distribution)
 	float alphaSqr = alpha * alpha;
-	float denom = NdotH * NdotH * (alphaSqr - 1.0) + 1.0;
+	// denom = NdotH * NdotH * (alphaSqr - 1.0) + 1.0,
+	// LdotR = NdotH * NdotH * 2.0 - 1.0
+	float denom = LdotR * alphaSqr + alphaSqr + (1.0 - LdotR);
 	float D = alphaSqr / (denom * denom);
 	// no pi because BRDF -> lighting
 	// F (Fresnel term)
@@ -312,29 +292,7 @@ vec3 LightingFuncGGX_REF(float NdotL, float NdotH, float NdotV, float LdotH, flo
 	float	k = (alpha + 2 * roughness + 1) / 8.0;
 	float	G = NdotL / (mix(NdotL, 1, k) * mix(NdotV, 1, k));
 
-	return D * F * G / 4.0;
-}
-
-float OrenNayar(vec3 L, vec3 V, vec3 N, float roughness, float NdotL)
-{
-	//float NdotL = dot(N, L);
-	float NdotV = dot(N, V);
-	float LdotV = dot(L, V);
-
-	float rough2 = roughness * roughness;
-
-	float A = 1.0 - 0.5 * (rough2 / (rough2 + 0.57));
-	float B = 0.45 * (rough2 / (rough2 + 0.09));
-
-	float a = min( NdotV, NdotL );
-	float b = max( NdotV, NdotL );
-	b = (sign(b) == 0.0) ? FLT_EPSILON : sign(b) * max( 0.01, abs(b) ); // For fudging the smoothness of C
-	float C = sqrt( (1.0 - a * a) * (1.0 - b * b) ) / b;
-
-	float gamma = LdotV - NdotL * NdotV;
-	float L1 = A + B * max( gamma, FLT_EPSILON ) * C;
-
-	return L1 * max( NdotL, FLT_EPSILON );
+	return D * F * G;
 }
 
 float OrenNayarFull(vec3 L, vec3 V, vec3 N, float roughness, float NdotL0)
@@ -407,11 +365,6 @@ float OrenNayarAmbient(float NdotV, float roughness)
 	return ((a.r * NdotV + a.g) * NdotV + a.b) * NdotV + a.a + 1.0;
 }
 
-vec3 fresnelSchlickRoughness(float NdotV, vec3 F0, float roughness)
-{
-	return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - NdotV, 5.0);
-}
-
 vec3 tonemap(vec3 x)
 {
 	float _A = 0.15;
@@ -458,16 +411,55 @@ float getBlenderMask(int n)
 	return r;
 }
 
+// parallax occlusion mapping based on code from
+// https://web.archive.org/web/20150419215321/http://sunandblackcat.com/tipFullView.php?l=eng&topicid=28
+
+vec2 parallaxMapping(int n, vec3 V, vec2 offset, float parallaxScale, float maxLayers)
+{
+	// determine optimal height of each layer
+	float	layerHeight = 1.0 / mix( maxLayers, 8.0, abs(V.z) );
+
+	// current height of the layer
+	float	curLayerHeight = 1.0;
+	// shift of texture coordinates for each layer
+	vec2	dtex = parallaxScale * V.xy * layerHeight / max( abs(V.z), 0.05 );
+
+	// current texture coordinates
+	vec2	currentTextureCoords = offset;
+
+	// height from heightmap
+	float	heightFromTexture = texture2D( textureUnits[n], currentTextureCoords ).r;
+
+	// while point is above the surface
+	while ( curLayerHeight > heightFromTexture ) {
+		// to the next layer
+		curLayerHeight -= layerHeight;
+		// shift of texture coordinates
+		currentTextureCoords -= dtex;
+		// new height from heightmap
+		heightFromTexture = texture2D( textureUnits[n], currentTextureCoords ).r;
+	}
+
+	// previous texture coordinates
+	vec2	prevTCoords = currentTextureCoords + dtex;
+
+	// heights for linear interpolation
+	float	nextH = curLayerHeight - heightFromTexture;
+	float	prevH = curLayerHeight + layerHeight - texture2D( textureUnits[n], prevTCoords ).r;
+
+	// proportions for linear interpolation
+	float	weight = nextH / ( nextH - prevH );
+
+	// return interpolation of texture coordinates
+	return mix( currentTextureCoords, prevTCoords, weight );
+}
+
 void getLayer(int n, inout vec4 baseMap, inout vec3 normalMap, inout vec3 pbrMap)
 {
 	vec2	offset = getTexCoord(lm.layers[n].uvStream);
 	// _height.dds
-	if ( lm.layers[n].material.textureSet.textures[6] != 0 ) {
-		// TODO: implement parallax mapping correctly
-		vec3	V = normalize(ViewDir);
-		float	heightMap = getLayerTexture(n, 6, offset).r;
-		offset += heightMap * 0.025 * V.xy;
-	}
+	if ( lm.layers[n].material.textureSet.textures[6] >= 1 )
+		offset = parallaxMapping( lm.layers[n].material.textureSet.textures[6] - 1, normalize(ViewDir), offset, 0.05, 80.0 );
 	// _color.dds
 	if ( lm.layers[n].material.textureSet.textures[0] != 0 )
 		baseMap.rgb = getLayerTexture(n, 0, offset).rgb;
@@ -476,7 +468,10 @@ void getLayer(int n, inout vec4 baseMap, inout vec3 normalMap, inout vec3 pbrMap
 	if ( lm.layers[n].material.textureSet.textures[1] != 0 ) {
 		normalMap.rg = getLayerTexture(n, 1, offset).rg;
 		// Calculate missing blue channel
-		normalMap.b = sqrt(1.0 - dot(normalMap.rg, normalMap.rg));
+		float	tmp = dot(normalMap.rg, normalMap.rg);
+		normalMap.b = sqrt(max(1.0 - tmp, 0.0));
+		if (tmp > 1.0)
+			normalMap.rg /= sqrt(tmp);
 	}
 	// _rough.dds
 	if ( lm.layers[n].material.textureSet.textures[3] != 0 )
@@ -531,27 +526,21 @@ void main(void)
 	if ( !gl_FrontFacing && lm.isTwoSided ) {
 		normal *= -1.0;
 	}
-	// For _msn (Test with FSF1_Face)
-	//normal.z = sqrt(1.0 - dot(normal.xy, normal.xy));
 
-	vec3 L = normalize(LightDir);
-	vec3 V = normalize(ViewDir);
-	vec3 R = reflect(-L, normal);
-	vec3 H = normalize(L + V);
+	vec3	L = normalize(LightDir);
+	vec3	V = normalize(ViewDir);
+	vec3	R = reflect(-V, normal);
+	vec3	H = normalize(L + V);
 
-	float NdotL = dot(normal, L);
-	float NdotL0 = max(NdotL, FLT_EPSILON);
-	float NdotH = max(dot(normal, H), FLT_EPSILON);
-	float NdotV = max(abs(dot(normal, V)), FLT_EPSILON);
-	float VdotH = max(dot(V, H), FLT_EPSILON);
-	float LdotH = max(dot(L, H), FLT_EPSILON);
-	float NdotNegL = max(dot(normal, -L), FLT_EPSILON);
+	float	NdotL = dot(normal, L);
+	float	NdotL0 = max(NdotL, FLT_EPSILON);
+	float	LdotR = dot(L, R);
+	float	NdotV = max(abs(dot(normal, V)), FLT_EPSILON);
+	float	LdotH = max(dot(L, H), FLT_EPSILON);
 
 	mat3	btn = transpose(mat3(b, t, N));
-	vec3	reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(vec3(reflect(V, normal) * btn), 0.0)));
-	reflectedWS.z = -reflectedWS.z;
+	vec3	reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(vec3(R * btn), 0.0)));
 	vec3	normalWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(vec3(-normal * btn), 0.0)));
-	normalWS.z = -normalWS.z;
 
 	if ( lm.alphaSettings.hasOpacity && lm.alphaSettings.opacitySourceLayer < 4 && lm.layersEnabled[lm.alphaSettings.opacitySourceLayer] ) {
 		int	n = lm.alphaSettings.opacitySourceLayer;
@@ -614,7 +603,7 @@ void main(void)
 	// Specular
 	float	smoothness = 1.0 - pbrMap.r;
 	float	roughness = max(pbrMap.r, 0.02);
-	vec3	spec = LightingFuncGGX_REF(NdotL0, NdotH, NdotV, LdotH, roughness, f0) * D.rgb;
+	vec3	spec = LightingFuncGGX_REF(NdotL0, LdotR, NdotV, LdotH, roughness, f0) * D.rgb;
 
 	// Diffuse
 	float	diff = OrenNayarFull(L, V, normal, 1.0 - smoothness, NdotL0);
