@@ -459,7 +459,7 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, int lodLevel )
 void NifModel::loadFO76Material( const QModelIndex & parent, const void * material )
 {
 	NifItem *	p = getItem( parent, false );
-	if ( !p )
+	if ( !p || !material )
 		return;
 	for ( auto c : p->childIter() )
 		c->invalidateCondition();
