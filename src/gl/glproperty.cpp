@@ -375,16 +375,16 @@ void TexturingProperty::updateImpl( const NifModel * nif, const QModelIndex & in
 
 				switch ( clampMode ) {
 				case 0:
-					textures[t].wrapS = GL_CLAMP;
-					textures[t].wrapT = GL_CLAMP;
+					textures[t].wrapS = GL_CLAMP_TO_EDGE;
+					textures[t].wrapT = GL_CLAMP_TO_EDGE;
 					break;
 				case 1:
-					textures[t].wrapS = GL_CLAMP;
+					textures[t].wrapS = GL_CLAMP_TO_EDGE;
 					textures[t].wrapT = GL_REPEAT;
 					break;
 				case 2:
 					textures[t].wrapS = GL_REPEAT;
-					textures[t].wrapT = GL_CLAMP;
+					textures[t].wrapT = GL_CLAMP_TO_EDGE;
 					break;
 				default:
 					textures[t].wrapS = GL_REPEAT;
@@ -930,16 +930,16 @@ bool BSShaderLightingProperty::bind( int id, const QString & fname, TexClampMode
 	switch ( mode )
 	{
 	case TexClampMode::CLAMP_S_CLAMP_T:
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
 		break;
 	case TexClampMode::CLAMP_S_WRAP_T:
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
 		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
 		break;
 	case TexClampMode::WRAP_S_CLAMP_T:
 		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
 		break;
 	case TexClampMode::MIRRORED_S_MIRRORED_T:
 		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT );
