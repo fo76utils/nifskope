@@ -121,6 +121,10 @@ public:
 	//! Checks whether the extension is supported
 	static bool isSupported( const QString & file );
 
+	//! Number of texture units
+	static int	num_texture_units;	// for glActiveTexture()
+	static int	num_txtunits_client;	// for glClientActiveTexture()
+
 signals:
 	void sigRefresh();
 
@@ -144,7 +148,7 @@ protected:
 void initializeTextureUnits( const QOpenGLContext * );
 
 bool activateTextureUnit( int x, bool noClient = false );
-void resetTextureUnits( int numTex = 16 );
+void resetTextureUnits( int numTex = 32 );
 
 float get_max_anisotropy();
 

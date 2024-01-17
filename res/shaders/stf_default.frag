@@ -8,7 +8,7 @@ struct UVStream {
 };
 
 struct TextureSet {
-	// >= 1: textureUnits index + 1, -1: use replacement, 0: disabled
+	// >= 1: textureUnits index, -1: use replacement, 0: disabled
 	int	textures[11];
 	vec4	textureReplacements[11];
 	float	floatParam;
@@ -91,7 +91,7 @@ struct DecalSettingsComponent {
 	bool	isPlanet;
 	bool	isProjected;
 	bool	useParallaxOcclusionMapping;
-	// >= 1: textureUnits index + 1, <= 0: disabled
+	// >= 1: textureUnits index, <= 0: disabled
 	int	surfaceHeightMap;
 	float	parallaxOcclusionScale;
 	bool	parallaxOcclusionShadows;
@@ -215,7 +215,7 @@ uniform samplerCube	CubeMap;
 uniform bool	hasCubeMap;
 uniform bool	hasSpecular;
 
-uniform sampler2D	textureUnits[15];
+uniform sampler2D	textureUnits[SF_NUM_TEXTURE_UNITS];
 
 uniform vec4 solidColor;
 
@@ -392,7 +392,7 @@ vec4 getLayerTexture(int layerNum, int textureNum, vec2 offset)
 	int	n = lm.layers[layerNum].material.textureSet.textures[textureNum];
 	if ( n < 1 )
 		return lm.layers[layerNum].material.textureSet.textureReplacements[textureNum];
-	return texture(textureUnits[n - 1], offset);
+	return texture(textureUnits[n], offset);
 }
 
 float getBlenderMask(int n)
@@ -403,7 +403,7 @@ float getBlenderMask(int n)
 			r = lm.blenders[n].maskTextureReplacement.r;
 		} else {
 			vec2	offset = getTexCoord(lm.blenders[n].uvStream);
-			r = texture(textureUnits[lm.blenders[n].maskTexture - 1], offset).r;
+			r = texture(textureUnits[lm.blenders[n].maskTexture], offset).r;
 		}
 	}
 	if ( lm.blenders[n].colorChannel >= 0 )
@@ -459,7 +459,7 @@ void getLayer(int n, inout vec4 baseMap, inout vec3 normalMap, inout vec3 pbrMap
 	vec2	offset = getTexCoord(lm.layers[n].uvStream);
 	// _height.dds
 	if ( lm.layers[n].material.textureSet.textures[6] >= 1 )
-		offset = parallaxMapping( lm.layers[n].material.textureSet.textures[6] - 1, normalize(ViewDir), offset, 0.05, 80.0 );
+		offset = parallaxMapping( lm.layers[n].material.textureSet.textures[6], normalize(ViewDir), offset, 0.05, 80.0 );
 	// _color.dds
 	if ( lm.layers[n].material.textureSet.textures[0] != 0 )
 		baseMap.rgb = getLayerTexture(n, 0, offset).rgb;

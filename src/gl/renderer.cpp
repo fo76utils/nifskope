@@ -227,6 +227,9 @@ bool Renderer::Shader::load( const QString & filepath )
 			throw QString( "couldn't open %1 for read access" ).arg( filepath );
 
 		QByteArray data = file.readAll();
+		int	n = data.indexOf( "SF_NUM_TEXTURE_UNITS" );
+		if ( n >= 0 )
+			data.replace( n, 20, QByteArray::number( TexCache::num_texture_units - 1 ) );
 
 		const char * src = data.constData();
 
@@ -711,7 +714,7 @@ bool Renderer::Program::uniSampler_l( BSShaderLightingProperty * bsprop, int & t
 		c.srgbExpand();	// SRGB
 	else
 		c = c * (1.0f / 127.5f) - 1.0f;	// SNORM
-	if ( texturePath && !texturePath->empty() && texunit >= 1 && texunit <= 15 && activateTextureUnit(texunit, true) ) {
+	if ( texturePath && !texturePath->empty() && texunit >= 2 && texunit < TexCache::num_texture_units && activateTextureUnit(texunit, true) ) {
 		TexClampMode	clampMode = TexClampMode::WRAP_S_WRAP_T;
 		if ( uvStream && uvStream->textureAddressMode ) {
 			if ( uvStream->textureAddressMode == 3 ) {
@@ -725,7 +728,8 @@ bool Renderer::Program::uniSampler_l( BSShaderLightingProperty * bsprop, int & t
 		}
 		if ( bsprop->bind( -1, QString::fromStdString(*texturePath), clampMode ) ) {
 			f->glUniform1i( uniLocation("textureUnits[%d]", texunit - 1), texunit );
-			f->glUniform1i( l1, texunit++ );
+			f->glUniform1i( l1, texunit - 1 );
+			texunit++;
 			return true;
 		}
 	}
@@ -813,7 +817,13 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 
 		fn->glUniform1i( uniCubeMap, texunit++ );
 	}
-
+	// TODO: texture unit 1 is reserved
+	if ( !activateTextureUnit( texunit, true ) )
+		return false;
+	if ( !bsprop->bind( -1, black, TexClampMode::CLAMP_S_CLAMP_T ) )
+		return false;
+	prog->uni1i_l( prog->uniLocation("textureUnits[%d]", texunit - 1), texunit );
+	texunit++;
 	prog->uni1b_l( prog->uniLocation("isWireframe"), false );
 #if 0
 	// scale for cell_cityplazacube.dds if loaded in float format
@@ -1023,7 +1033,7 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 				prog->uni1b_l( prog->uniLocation("lm.blenders[%d].boolParams[%d]", i - 1, j), blender->boolParams[j]);
 		}
 	}
-	for ( ; texunit <= 15 ; texunit++ ) {
+	for ( ; texunit < TexCache::num_texture_units ; texunit++ ) {
 		if ( !activateTextureUnit( texunit, true ) )
 			return false;
 		if ( !bsprop->bind( -1, white, TexClampMode::WRAP_S_WRAP_T ) )

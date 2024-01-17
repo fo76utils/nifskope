@@ -54,13 +54,12 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //! @file gltex.cpp TexCache management
 
 #ifdef WIN32
-PFNGLACTIVETEXTUREARBPROC glActiveTextureARB = nullptr;
-PFNGLCLIENTACTIVETEXTUREARBPROC glClientActiveTextureARB = nullptr;
+static PFNGLACTIVETEXTUREPROC glActiveTexture = nullptr;
+static PFNGLCLIENTACTIVETEXTUREPROC glClientActiveTexture = nullptr;
 #endif
 
-//! Number of texture units
-GLint	num_texture_units = 0;	// for glActiveTexture()
-GLint	num_txtunits_client = 0;	// for glClientActiveTexture()
+int TexCache::num_texture_units = 0;
+int TexCache::num_txtunits_client = 0;
 
 //! Maximum anisotropy
 float max_anisotropy = 1.0f;
@@ -79,17 +78,18 @@ float get_max_anisotropy()
 void initializeTextureUnits( const QOpenGLContext * context )
 {
 	if ( context->hasExtension( "GL_ARB_multitexture" ) ) {
-		glGetIntegerv( GL_MAX_TEXTURE_IMAGE_UNITS_ARB, &num_texture_units );
-		glGetIntegerv( GL_MAX_TEXTURE_COORDS, &num_txtunits_client );
+		GLint	tmp = 0;
+		glGetIntegerv( GL_MAX_TEXTURE_IMAGE_UNITS, &tmp );
+		tmp = std::min( std::max( tmp, GLint(1) ), GLint(32) );
+		TexCache::num_texture_units = tmp;
+		glGetIntegerv( GL_MAX_TEXTURE_COORDS, &tmp );
+		TexCache::num_txtunits_client = std::max( tmp, GLint(1) );
 
-		num_texture_units = std::max( num_texture_units, GLint(1) );
-		num_txtunits_client = std::max( num_txtunits_client, GLint(1) );
-
-		//qDebug() << "texture units" << num_texture_units;
+		//qDebug() << "texture units" << TexCache::num_texture_units;
 	} else {
 		qCWarning( nsGl ) << QObject::tr( "Multitexturing not supported." );
-		num_texture_units = 1;
-		num_txtunits_client = 1;
+		TexCache::num_texture_units = 1;
+		TexCache::num_txtunits_client = 1;
 	}
 
 	if ( context->hasExtension( "GL_EXT_texture_filter_anisotropic" ) ) {
@@ -99,11 +99,11 @@ void initializeTextureUnits( const QOpenGLContext * context )
 	}
 
 #ifdef WIN32
-	if ( !glActiveTextureARB )
-		glActiveTextureARB = (PFNGLACTIVETEXTUREARBPROC)context->getProcAddress( "glActiveTextureARB" );
+	if ( !glActiveTexture )
+		glActiveTexture = (PFNGLACTIVETEXTUREPROC)context->getProcAddress( "glActiveTexture" );
 
-	if ( !glClientActiveTextureARB )
-		glClientActiveTextureARB = (PFNGLCLIENTACTIVETEXTUREARBPROC)context->getProcAddress( "glClientActiveTextureARB" );
+	if ( !glClientActiveTexture )
+		glClientActiveTexture = (PFNGLCLIENTACTIVETEXTUREPROC)context->getProcAddress( "glClientActiveTexture" );
 #endif
 
 	initializeTextureLoaders( context );
@@ -111,14 +111,14 @@ void initializeTextureUnits( const QOpenGLContext * context )
 
 bool activateTextureUnit( int stage, bool noClient )
 {
-	if ( num_texture_units <= 1 )
+	if ( TexCache::num_texture_units <= 1 )
 		return ( stage == 0 );
 
-	if ( stage < num_texture_units ) {
+	if ( stage < TexCache::num_texture_units ) {
 
-		glActiveTextureARB( GL_TEXTURE0 + stage );
-		if ( stage < num_txtunits_client && !noClient )
-			glClientActiveTextureARB( GL_TEXTURE0 + stage );
+		glActiveTexture( GL_TEXTURE0 + stage );
+		if ( stage < TexCache::num_txtunits_client && !noClient )
+			glClientActiveTexture( GL_TEXTURE0 + stage );
 		return true;
 	}
 
@@ -127,19 +127,19 @@ bool activateTextureUnit( int stage, bool noClient )
 
 void resetTextureUnits( int numTex )
 {
-	if ( num_texture_units <= 1 ) {
+	if ( TexCache::num_texture_units <= 1 ) {
 		glDisable( GL_TEXTURE_2D );
 		return;
 	}
 
-	for ( int x = std::min( numTex, int(num_texture_units) ); --x >= 0; ) {
-		glActiveTextureARB( GL_TEXTURE0 + x );
+	for ( int x = std::min( numTex, TexCache::num_texture_units ); --x >= 0; ) {
+		glActiveTexture( GL_TEXTURE0 + x );
 		glDisable( GL_TEXTURE_2D );
 		glMatrixMode( GL_TEXTURE );
 		glLoadIdentity();
 		glMatrixMode( GL_MODELVIEW );
-		if ( x < num_txtunits_client ) {
-			glClientActiveTextureARB( GL_TEXTURE0 + x );
+		if ( x < TexCache::num_txtunits_client ) {
+			glClientActiveTexture( GL_TEXTURE0 + x );
 			glDisableClientState( GL_TEXTURE_COORD_ARRAY );
 		}
 	}
@@ -166,6 +166,9 @@ QString TexCache::find( const QString & file, const QString & nifdir, Game::Game
 
 QString TexCache::find( const QString & file, const QString & nifdir, QByteArray & data, Game::GameMode game )
 {
+	(void) nifdir;
+	(void) data;
+
 	if ( file.isEmpty() )
 		return QString();
 	if ( file.startsWith("#") && (file.length() == 9 || file.length() == 10) )
