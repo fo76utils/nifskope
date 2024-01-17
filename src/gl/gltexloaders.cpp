@@ -37,6 +37,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "dds.h"
 #include "libfo76utils/src/sfcube.hpp"
+#include "libfo76utils/src/pbr_lut.hpp"
 
 #include <QBuffer>
 #include <QByteArray>
@@ -635,7 +636,7 @@ GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, QString 
 		// normalize and filter Starfield cube maps
 		size_t	dataSize = size_t(data.size());
 		size_t	spaceRequired = 256 * 256 * 8 * 4 + 148;
-		if ( data.size() < spaceRequired )
+		if ( data.size() < qsizetype(spaceRequired) )
 			data.resize( spaceRequired );
 		size_t	newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(data.data()), dataSize, true, spaceRequired );
 		data.resize( newSize );
@@ -1147,19 +1148,31 @@ bool texLoad( const Game::GameMode game, const QString & filepath, QString & for
 	return texLoad( game, filepath, format, target, width, height, mipmaps, *(new QByteArray()), id );
 }
 
+static std::vector< unsigned char >	sfLUTTextureData;
+
 bool texLoad( const Game::GameMode game, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint & id )
 {
 	width = height = mipmaps = 0;
 
 	std::string	filepathStr = filepath.toStdString();
-	if ( data.isEmpty() ) {
-		if (filepathStr.starts_with('#') && (filepathStr.length() == 9 || filepathStr.length() == 10)) {
-			// generate 1x1 texture from an RGBA color in "#AABBGGRR" format
-			std::uint32_t	c = 0;
-			for (size_t i = 1; i < 9; i++) {
-				std::uint32_t	b = std::uint32_t(filepathStr[i]);
-				c = (c << 4) | (((b & 0x10) ? b : (b + 9)) & 0x0F);
+	while ( data.isEmpty() ) {
+		if ( filepathStr.starts_with('#') && (filepathStr.length() == 9 || filepathStr.length() == 10) ) {
+			std::uint64_t	tmp = FileBuffer::readUInt64Fast( filepathStr.c_str() + 1 );
+			std::uint64_t	tmp2 = (tmp >> 1) & 0x2020202020202020ULL;
+			if ( (tmp | tmp2) == 0x64642E7262706673ULL ) {	// "sfpbr.dd"
+				if ( sfLUTTextureData.size() < 1 ) {
+					SF_PBR_Tables	t(512);
+					sfLUTTextureData = t.getImageData();
+				}
+				data.resize( qsizetype(sfLUTTextureData.size()) );
+				std::memcpy( data.data(), sfLUTTextureData.data(), sfLUTTextureData.size() );
+				break;
 			}
+			// generate 1x1 texture from an RGBA color in "#AABBGGRR" format
+			tmp = tmp - ( (tmp2 >> 5) * 7U );
+			std::uint32_t	c = 0;
+			for ( ; tmp; tmp = tmp >> 8 )
+				c = ( c << 4 ) | std::uint32_t( tmp & 0x0FU );
 			width = 1;
 			height = 1;
 			mipmaps = 1;
@@ -1187,12 +1200,14 @@ bool texLoad( const Game::GameMode game, const QString & filepath, QString & for
 			glPixelStorei( GL_UNPACK_ALIGNMENT, savedUnpackAlignment );
 			glPixelStorei( GL_UNPACK_SWAP_BYTES, savedUnpackSwapBytes );
 			return true;
-		} else if (!Game::GameManager::get_file(data, game, filepath, "textures", "")) {
+		}
+		if ( !Game::GameManager::get_file(data, game, filepath, "textures", "") ) {
 			throw QString( "could not open file" );
 		}
 
 		if ( data.isEmpty() )
 			return false;
+		break;
 	}
 
 	QBuffer f( &data );

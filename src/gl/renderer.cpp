@@ -752,6 +752,7 @@ static QString default_n = "#FFFF8080";
 static QString default_ns = "#FFFF8080n";
 static QString cube_sk = "textures/cubemaps/bleakfallscube_e.dds";
 static QString cube_fo4 = "textures/shared/cubemaps/mipblur_defaultoutside1.dds";
+static QString pbr_lut_sf = "#sfpbr.dds";
 
 static const std::uint32_t defaultSFTextureSet[21] = {
 	0xFFFF00FFU, 0xFFFF8080U, 0xFFFFFFFFU, 0xFFC0C0C0U, 0xFF000000U, 0xFFFFFFFFU,
@@ -817,10 +818,10 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 
 		fn->glUniform1i( uniCubeMap, texunit++ );
 	}
-	// TODO: texture unit 1 is reserved
+	// texture unit 1 is reserved for the LUT texture
 	if ( !activateTextureUnit( texunit, true ) )
 		return false;
-	if ( !bsprop->bind( -1, black, TexClampMode::CLAMP_S_CLAMP_T ) )
+	if ( !bsprop->bind( -1, pbr_lut_sf, TexClampMode::CLAMP_S_CLAMP_T ) )
 		return false;
 	prog->uni1i_l( prog->uniLocation("textureUnits[%d]", texunit - 1), texunit );
 	texunit++;
