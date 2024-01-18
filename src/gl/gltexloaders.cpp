@@ -632,7 +632,7 @@ GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, QString 
 	(void) format;
 	(void) width;
 	(void) height;
-	if ( game == Game::STARFIELD && filepath.contains( "/cubemaps/" ) ) {
+	if ( game == Game::STARFIELD && data.size() >= 148 && (data[113] & 0x02) ) {	// DDSCAPS2_CUBEMAP
 		// normalize and filter Starfield cube maps
 		size_t	dataSize = size_t(data.size());
 		size_t	spaceRequired = 256 * 256 * 8 * 4 + 148;
@@ -1216,9 +1216,7 @@ bool texLoad( const Game::GameMode game, const QString & filepath, QString & for
 
 	bool isSupported = true;
 	if ( filepath.endsWith( ".dds", Qt::CaseInsensitive ) ) {
-		if ( filepathStr.find("/cubemaps/") != std::string::npos && data.size() >= 148 ) {
-			data[108] = data[108] | 0x08;	// DDSCAPS_COMPLEX
-			data[113] = data[113] | 0xFE;	// DDSCAPS2_CUBEMAP*
+		if ( data.size() >= 148 && (data[113] & 0x02) ) {	// DDSCAPS2_CUBEMAP
 			if ( game == Game::FALLOUT_76 && data[84] == 'D' && data[85] == 'X' && data[86] == '1' && data[87] == '0' && data[128] == 'W' )
 				data[128] = 0x5B;	// DXGI_FORMAT_B8G8R8A8_UNORM -> DXGI_FORMAT_B8G8R8A8_UNORM_SRGB
 		}
