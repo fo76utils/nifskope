@@ -7,6 +7,7 @@ uniform sampler2D GlowMap;
 uniform sampler2D ReflMap;
 uniform sampler2D LightingMap;
 uniform sampler2D GreyscaleMap;
+uniform sampler2D EnvironmentMap;
 uniform samplerCube CubeMap;
 
 uniform vec4 solidColor;
@@ -102,21 +103,6 @@ float fresnel_w(float NdotV)
 	vec4	a = vec4(-1.30214688, 3.32294874, -2.87825095, 1.0);
 	float	f = ((a.r * NdotV + a.g) * NdotV + a.b) * NdotV + a.a;
 	return f * f;
-}
-
-vec3 fresnel_r(float NdotV, vec3 f0, float r)
-{
-	vec4	a7 = vec4(-36.86082892, 56.89686549, -22.98377259, 2.81411820);
-	vec4	a6 = vec4(178.16930235, -277.12321903, 111.07929576, -11.70956117);
-	vec4	a5 = vec4(-349.77072650, 551.07233810, -221.97439313, 20.29954802);
-	vec4	a4 = vec4(351.42490382, -565.51251454, 233.58040120, -19.53778199);
-	vec4	a3 = vec4(-183.56335374, 306.09790616, -134.37164019, 12.00737843);
-	vec4	a2 = vec4(41.36210311, -73.56228236, 36.80732168, -4.61221961);
-	vec4	a1 = vec4(0.25378228, -0.43450334, 0.18969042, -0.00880438);
-	vec4	a0 = vec4(-1.11050116, 2.79595384, -2.68545268, 1.00000000);
-	vec4	a = ((((((a7 * r + a6) * r + a5) * r + a4) * r + a3) * r + a2) * r + a1) * r + a0;
-	float	f = ((a.r * NdotV + a.g) * NdotV + a.b) * NdotV + a.a;
-	return f0 + ((vec3(1.0) - f0) * f * f);
 }
 
 vec3 LightingFuncGGX_REF(float NdotL, float NdotH, float NdotV, float LdotH, float roughness, vec3 F0)
@@ -218,16 +204,6 @@ float OrenNayarFull(vec3 L, vec3 V, vec3 N, float roughness, float NdotL0)
 	return L1 + L2;
 }
 
-float OrenNayarAmbient(float NdotV, float roughness)
-{
-	vec4	a4 = vec4(-0.61319173, 1.67989635, -1.74469001, 0.39303551);
-	vec4	a3 = vec4(1.26009045, -3.45214521, 3.58530224, -0.41831188);
-	vec4	a2 = vec4(-0.63577225, 1.74177294, -1.80896352, -0.30123290);
-	vec4	a1 = vec4(-0.15710246, 0.43038707, -0.44698386, 0.26241189);
-	vec4	a = (((a4 * roughness + a3) * roughness + a2) * roughness + a1) * roughness;
-	return ((a.r * NdotV + a.g) * NdotV + a.b) * NdotV + a.a + 1.0;
-}
-
 vec3 fresnelSchlickRoughness(float NdotV, vec3 F0, float roughness)
 {
 	return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - NdotV, 5.0);
@@ -326,7 +302,8 @@ void main(void)
 	vec3	refl = vec3(0.0);
 	vec3	ambient = A.rgb;
 	if ( hasCubeMap ) {
-		refl = textureLod(CubeMap, reflectedWS, 7.0 - smoothness * 7.0).rgb;
+		float	m = (1.0 - smoothness) * ((1.0 - smoothness) * -4.0 + 10.0);
+		refl = textureLod(CubeMap, reflectedWS, max(m, 0.0)).rgb;
 		refl *= envReflection * specStrength;
 		refl *= ambient;
 		ambient *= textureLod(CubeMap, normalWS, 6.0).rgb;
@@ -334,18 +311,18 @@ void main(void)
 		ambient /= 15.0;
 		refl = ambient;
 	}
-	vec3	f = fresnel_r(NdotV, f0, roughness);
+	vec4	envLUT = textureLod(EnvironmentMap, vec2(NdotV, 1.0 - smoothness), 0.0);
+	vec3	f = mix(f0, vec3(1.0), envLUT.r);
 	if (!hasSpecular) {
 		albedo = max(albedo, reflMap.rgb);
 		spec = vec3(0.0);
 		f = vec3(0.0);
 	}
-	float	g = roughness * roughness * 0.5;
-	g = NdotV / (NdotV + g - (NdotV * g));
+	float	g = envLUT.g;
 	float	ao = lightingMap.g;
 	refl *= f * g * ao;
 	albedo *= (vec3(1.0) - f);
-	ao *= OrenNayarAmbient(NdotV, 1.0 - smoothness);
+	ao *= (envLUT.b * 0.5 + 0.625);
 
 	//vec3 soft = vec3(0.0);
 	//float wrap = NdotL;

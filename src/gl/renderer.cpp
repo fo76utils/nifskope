@@ -1397,10 +1397,12 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 
 			fn->glUniform1i( uniCubeMap, texunit++ );
 		}
-		// Always bind mask regardless of shader settings
-		prog->uniSampler( bsprop, SAMP_ENV_MASK, 5, texunit, white, clamp );
 
-		if ( nifVersion >= 151 ) {
+		if ( nifVersion < 151 ) {
+			// Always bind mask regardless of shader settings
+			prog->uniSampler( bsprop, SAMP_ENV_MASK, 5, texunit, white, clamp );
+		} else {
+			prog->uniSampler( bsprop, SAMP_ENV_MASK, -1, texunit, pbr_lut_sf, TexClampMode::CLAMP_S_CLAMP_T, pbr_lut_sf );
 			prog->uniSampler( bsprop, SAMP_REFLECTIVITY, 8, texunit, reflectivity, clamp );
 			prog->uniSampler( bsprop, SAMP_LIGHTING, 9, texunit, lighting, clamp );
 		}
@@ -1483,10 +1485,13 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 
 				fn->glUniform1i( uniCubeMap, texunit++ );
 			}
-			prog->uniSampler( bsprop, SAMP_SPECULAR, 4, texunit, white, clamp );
-			if ( nifVersion >= 151 ) {
+			if ( nifVersion < 151 ) {
+				prog->uniSampler( bsprop, SAMP_SPECULAR, 4, texunit, white, clamp );
+			} else {
+				prog->uniSampler( bsprop, SAMP_ENV_MASK, 4, texunit, white, clamp );
 				prog->uniSampler( bsprop, SAMP_REFLECTIVITY, 6, texunit, reflectivity, clamp );
 				prog->uniSampler( bsprop, SAMP_LIGHTING, 7, texunit, lighting, clamp );
+				prog->uni1i( HAS_MAP_SPEC, int(!bsprop->fileName( 7 ).isEmpty()) );
 			}
 
 			prog->uni1f( LUM_EMIT, esp->lumEmittance );

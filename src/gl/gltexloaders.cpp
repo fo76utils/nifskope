@@ -631,14 +631,16 @@ GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, QString 
 	(void) format;
 	(void) width;
 	(void) height;
-	if ( game == Game::STARFIELD && data.size() >= 148 && (data[113] & 0x02) ) {	// DDSCAPS2_CUBEMAP
-		// normalize and filter Starfield cube maps
-		size_t	dataSize = size_t(data.size());
-		size_t	spaceRequired = 256 * 256 * 8 * 4 + 148;
-		if ( data.size() < qsizetype(spaceRequired) )
-			data.resize( spaceRequired );
-		size_t	newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(data.data()), dataSize, true, spaceRequired );
-		data.resize( newSize );
+	if ( data.size() >= 148 && (data[113] & 0x02) ) {	// DDSCAPS2_CUBEMAP
+		if ( game == Game::STARFIELD || game == Game::FALLOUT_76 ) {
+			// normalize and filter Fallout 76 and Starfield cube maps
+			size_t	dataSize = size_t(data.size());
+			size_t	spaceRequired = 256 * 256 * 8 * 4 + 148;
+			if ( data.size() < qsizetype(spaceRequired) )
+				data.resize( spaceRequired );
+			size_t	newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(data.data()), dataSize, true, spaceRequired );
+			data.resize( newSize );
+		}
 	}
 
 	GLuint result = 0;
