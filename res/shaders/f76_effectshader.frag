@@ -4,7 +4,7 @@ uniform sampler2D BaseMap;
 uniform sampler2D GreyscaleMap;
 uniform samplerCube CubeMap;
 uniform sampler2D NormalMap;
-uniform sampler2D envMaskMap;
+uniform sampler2D EnvironmentMap;
 uniform sampler2D ReflMap;
 uniform sampler2D LightingMap;
 
@@ -19,7 +19,6 @@ uniform bool hasCubeMap;
 uniform bool hasNormalMap;
 uniform bool hasEnvMask;
 uniform bool hasSpecularMap;
-uniform bool usePBRSpecular;
 
 uniform bool greyscaleAlpha;
 uniform bool greyscaleColor;
@@ -52,12 +51,11 @@ in vec4 A;
 in vec4 C;
 in vec4 D;
 
-in vec3 N;
-in vec3 t;
-in vec3 b;
-in vec3 v;
-
+in mat3 btnMatrix;
 in mat4 reflMatrix;
+
+vec3 ViewDir_norm = normalize( ViewDir );
+mat3 btnMatrix_norm = mat3( normalize( btnMatrix[0] ), normalize( btnMatrix[1] ), normalize( btnMatrix[2] ) );
 
 vec4 colorLookup( float x, float y ) {
 
@@ -83,26 +81,24 @@ void main( void )
 
 	vec3 normal = normalMap.rgb;
 	// Calculate missing blue channel
-	normal.b = sqrt(1.0 - dot(normal.rg, normal.rg));
-	if ( !gl_FrontFacing && doubleSided ) {
+	normal.b = sqrt(max(1.0 - dot(normal.rg, normal.rg), 0.0));
+	normal = normalize( btnMatrix_norm * normal );
+	if ( !gl_FrontFacing && doubleSided )
 		normal *= -1.0;
-	}
 
 	vec3 f0 = reflMap.rgb;
 	vec3 L = normalize(LightDir);
-	vec3 V = normalize(ViewDir);
-	vec3 R = reflect(-L, normal);
+	vec3 V = ViewDir_norm;
+	vec3 R = reflect(V, normal);
 	vec3 H = normalize( L + V );
 
 	float NdotL = max( dot(normal, L), 0.000001 );
 	float NdotH = max( dot(normal, H), 0.000001 );
-	float NdotV = max( dot(normal, V), 0.000001 );
+	float NdotV = max( abs(dot(normal, V)), 0.000001 );
 	float LdotH = max( dot(L, H), 0.000001 );
 	float NdotNegL = max( dot(normal, -L), 0.000001 );
 
-	vec3 reflected = reflect( V, normal );
-	vec3 reflectedVS = b * reflected.x + t * reflected.y + N * reflected.z;
-	vec3 reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4( reflectedVS, 0.0 )));
+	vec3 reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4( R, 0.0 )));
 
 	if ( greyscaleAlpha )
 		baseMap.a = 1.0;
@@ -114,8 +110,13 @@ void main( void )
 	// Falloff
 	float falloff = 1.0;
 	if ( useFalloff || hasRGBFalloff ) {
-		falloff = smoothstep( falloffParams.x, falloffParams.y, abs(dot(normal, V)) );
-		falloff = mix( max(falloffParams.z, 0.0), min(falloffParams.w, 1.0), falloff );
+		if ( falloffParams.y > (falloffParams.x + 0.000001) )
+			falloff = smoothstep(falloffParams.x, falloffParams.y, NdotV);
+		else if ( falloffParams.x > (falloffParams.y + 0.000001) )
+			falloff = 1.0 - smoothstep(falloffParams.y, falloffParams.x, NdotV);
+		else
+			falloff = 0.5;
+		falloff = clamp(mix(falloffParams.z, falloffParams.w, falloff), 0.0, 1.0);
 
 		if ( useFalloff )
 			baseMap.a *= falloff;
@@ -148,7 +149,7 @@ void main( void )
 	// Specular
 	float g = 1.0;
 	float s = 1.0;
-	if ( usePBRSpecular && hasSpecularMap ) {
+	if ( hasSpecularMap ) {
 		vec4 lightingMap = texture2D(LightingMap, offset);
 		s = lightingMap.r;
 		g = lightingMap.g;
@@ -157,11 +158,13 @@ void main( void )
 
 	// Environment
 	if ( hasCubeMap ) {
-		vec3 cube = textureCube( CubeMap, reflectedWS, roughness * 6.0 ).rgb;
+		float	m = roughness * (roughness * -4.0 + 10.0);
+		vec3	cube = textureLod( CubeMap, reflectedWS, max(m, 0.0) ).rgb;
 		cube.rgb *= envReflection * g;
 		cube.rgb = mix( cube.rgb, cube.rgb * D.rgb, lightingInfluence );
-
-		color.rgb += cube.rgb * falloff * fresnelSchlickRoughness(NdotV, f0, roughness);
+		if ( hasEnvMask )
+			cube.rgb *= texture( EnvironmentMap, offset ).rgb;
+		color.rgb += cube.rgb * falloff;
 	}
 
 	gl_FragColor.rgb = color.rgb;
