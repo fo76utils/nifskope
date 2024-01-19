@@ -53,11 +53,11 @@ in vec4 A;
 in vec4 C;
 in vec4 D;
 
-in vec3 N;
-in vec3 t;
-in vec3 b;
-
+in mat3 btnMatrix;
 in mat4 reflMatrix;
+
+vec3 ViewDir_norm = normalize( ViewDir );
+mat3 btnMatrix_norm = mat3( normalize( btnMatrix[0] ), normalize( btnMatrix[1] ), normalize( btnMatrix[2] ) );
 
 #ifndef M_PI
 	#define M_PI 3.1415926535897932384626433832795
@@ -268,15 +268,13 @@ void main(void)
 
 	vec3 normal = normalMap.rgb;
 	// Calculate missing blue channel
-	normal.b = sqrt(1.0 - dot(normal.rg, normal.rg));
-	if ( !gl_FrontFacing && doubleSided ) {
+	normal.b = sqrt(max(1.0 - dot(normal.rg, normal.rg), 0.0));
+	normal = normalize( btnMatrix_norm * normal );
+	if ( !gl_FrontFacing && doubleSided )
 		normal *= -1.0;
-	}
-	// For _msn (Test with FSF1_Face)
-	//normal.z = sqrt(1.0 - dot(normal.xy, normal.xy));
 
 	vec3 L = normalize(LightDir);
-	vec3 V = normalize(ViewDir);
+	vec3 V = ViewDir_norm;
 	vec3 R = reflect(-L, normal);
 	vec3 H = normalize(L + V);
 
@@ -288,9 +286,8 @@ void main(void)
 	float LdotH = max(dot(L, H), FLT_EPSILON);
 	float NdotNegL = max(dot(normal, -L), FLT_EPSILON);
 
-	mat3	btn = transpose(mat3(b, t, N));
-	vec3	reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(vec3(reflect(V, normal) * btn), 0.0)));
-	vec3	normalWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(vec3(-normal * btn), 0.0)));
+	vec3	reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(reflect(V, normal), 0.0)));
+	vec3	normalWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(-normal, 0.0)));
 
 	vec4 color;
 	vec3 albedo = baseMap.rgb * C.rgb;

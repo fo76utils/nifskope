@@ -3,10 +3,7 @@
 out vec3 LightDir;
 out vec3 ViewDir;
 
-out vec3 N;
-out vec3 t;
-out vec3 b;
-out vec3 v;
+out mat3 btnMatrix;
 
 out vec4 A;
 out vec4 C;
@@ -64,11 +61,12 @@ void main( void )
 {
 	gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
 	gl_TexCoord[0] = gl_MultiTexCoord0;
-	
+
+	vec3 v;
 	if ( !isGPUSkinned ) {
-		N = normalize(gl_NormalMatrix * gl_Normal);
-		t = normalize(gl_NormalMatrix * gl_MultiTexCoord1.xyz);
-		b = normalize(gl_NormalMatrix * gl_MultiTexCoord2.xyz);
+		btnMatrix[2] = normalize(gl_NormalMatrix * gl_Normal);
+		btnMatrix[1] = normalize(gl_NormalMatrix * gl_MultiTexCoord1.xyz);
+		btnMatrix[0] = normalize(gl_NormalMatrix * gl_MultiTexCoord2.xyz);
 		v = vec3(gl_ModelViewMatrix * gl_Vertex);
 		reflMatrix = worldMatrix;
 		if ( isSkinned ) {
@@ -90,26 +88,22 @@ void main( void )
 		vec3 bit = vec3(bt * vec4(gl_MultiTexCoord2.xyz, 0.0));
 
 		gl_Position = gl_ModelViewProjectionMatrix * V;
-		N = normalize(gl_NormalMatrix * normal);
-		t = normalize(gl_NormalMatrix * tan);
-		b = normalize(gl_NormalMatrix * bit);
+		btnMatrix[2] = normalize(gl_NormalMatrix * normal);
+		btnMatrix[1] = normalize(gl_NormalMatrix * tan);
+		btnMatrix[0] = normalize(gl_NormalMatrix * bit);
 		v = vec3(gl_ModelViewMatrix * V);
 
 		reflMatrix = inverse(bt);
 	} else {
-		N = normalize(gl_NormalMatrix * gl_Normal);
-		t = normalize(gl_NormalMatrix * gl_MultiTexCoord1.xyz);
-		b = normalize(gl_NormalMatrix * gl_MultiTexCoord2.xyz);
+		btnMatrix[2] = normalize(gl_NormalMatrix * gl_Normal);
+		btnMatrix[1] = normalize(gl_NormalMatrix * gl_MultiTexCoord1.xyz);
+		btnMatrix[0] = normalize(gl_NormalMatrix * gl_MultiTexCoord2.xyz);
 		v = vec3(gl_ModelViewMatrix * gl_Vertex);
 		reflMatrix = worldMatrix;
 	}
 
-	mat3 tbnMatrix = mat3(b.x, t.x, N.x,
-                          b.y, t.y, N.y,
-                          b.z, t.z, N.z);
-
-	ViewDir = tbnMatrix * -v.xyz;
-	LightDir = tbnMatrix * gl_LightSource[0].position.xyz;
+	ViewDir = -v.xyz;
+	LightDir = gl_LightSource[0].position.xyz;
 
 	A = gl_LightSource[0].ambient;
 	C = gl_Color;

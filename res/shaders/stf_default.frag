@@ -232,11 +232,11 @@ in vec4 A;
 in vec4 C;
 in vec4 D;
 
-in vec3 N;
-in vec3 t;
-in vec3 b;
-
+in mat3 btnMatrix;
 in mat4 reflMatrix;
+
+vec3 ViewDir_norm = normalize( ViewDir );
+mat3 btnMatrix_norm = mat3( normalize( btnMatrix[0] ), normalize( btnMatrix[1] ), normalize( btnMatrix[2] ) );
 
 #ifndef M_PI
 	#define M_PI 3.1415926535897932384626433832795
@@ -433,7 +433,7 @@ void getLayer(int n, inout vec4 baseMap, inout vec3 normalMap, inout vec3 pbrMap
 	vec2	offset = getTexCoord(lm.layers[n].uvStream);
 	// _height.dds
 	if ( lm.layers[n].material.textureSet.textures[6] >= 1 )
-		offset = parallaxMapping( lm.layers[n].material.textureSet.textures[6], normalize(ViewDir), offset, 0.05, 80.0 );
+		offset = parallaxMapping( lm.layers[n].material.textureSet.textures[6], normalize( ViewDir_norm * btnMatrix_norm ), offset, 0.06, 80.0 );
 	// _color.dds
 	if ( lm.layers[n].material.textureSet.textures[0] != 0 )
 		baseMap.rgb = getLayerTexture(n, 0, offset).rgb;
@@ -442,10 +442,7 @@ void getLayer(int n, inout vec4 baseMap, inout vec3 normalMap, inout vec3 pbrMap
 	if ( lm.layers[n].material.textureSet.textures[1] != 0 ) {
 		normalMap.rg = getLayerTexture(n, 1, offset).rg;
 		// Calculate missing blue channel
-		float	tmp = dot(normalMap.rg, normalMap.rg);
-		normalMap.b = sqrt(max(1.0 - tmp, 0.0));
-		if (tmp > 1.0)
-			normalMap.rg /= sqrt(tmp);
+		normalMap.b = sqrt(max(1.0 - dot(normalMap.rg, normalMap.rg), 0.0));
 	}
 	// _rough.dds
 	if ( lm.layers[n].material.textureSet.textures[3] != 0 )
@@ -497,12 +494,12 @@ void main(void)
 		}
 	}
 
-	if ( !gl_FrontFacing && lm.isTwoSided ) {
+	normal = normalize( btnMatrix_norm * normal );
+	if ( !gl_FrontFacing && lm.isTwoSided )
 		normal *= -1.0;
-	}
 
 	vec3	L = normalize(LightDir);
-	vec3	V = normalize(ViewDir);
+	vec3	V = ViewDir_norm;
 	vec3	R = reflect(-V, normal);
 	vec3	H = normalize(L + V);
 
@@ -512,9 +509,8 @@ void main(void)
 	float	NdotV = max(abs(dot(normal, V)), FLT_EPSILON);
 	float	LdotH = max(dot(L, H), FLT_EPSILON);
 
-	mat3	btn = transpose(mat3(b, t, N));
-	vec3	reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(vec3(R * btn), 0.0)));
-	vec3	normalWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(vec3(normal * btn), 0.0)));
+	vec3	reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(R, 0.0)));
+	vec3	normalWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(normal, 0.0)));
 
 	if ( lm.alphaSettings.hasOpacity && lm.alphaSettings.opacitySourceLayer < 4 && lm.layersEnabled[lm.alphaSettings.opacitySourceLayer] ) {
 		int	n = lm.alphaSettings.opacitySourceLayer;
