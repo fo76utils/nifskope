@@ -37,7 +37,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "dds.h"
 #include "libfo76utils/src/sfcube.hpp"
-#include "libfo76utils/src/pbr_lut.hpp"
 
 #include <QBuffer>
 #include <QByteArray>
@@ -1148,7 +1147,7 @@ bool texLoad( const Game::GameMode game, const QString & filepath, QString & for
 	return texLoad( game, filepath, format, target, width, height, mipmaps, *(new QByteArray()), id );
 }
 
-static std::vector< unsigned char >	sfLUTTextureData;
+extern void extract_pbr_lut_data( QByteArray& data );
 
 bool texLoad( const Game::GameMode game, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint & id )
 {
@@ -1160,12 +1159,7 @@ bool texLoad( const Game::GameMode game, const QString & filepath, QString & for
 			std::uint64_t	tmp = FileBuffer::readUInt64Fast( filepathStr.c_str() + 1 );
 			std::uint64_t	tmp2 = (tmp >> 1) & 0x2020202020202020ULL;
 			if ( (tmp | tmp2) == 0x64642E7262706673ULL ) {	// "sfpbr.dd"
-				if ( sfLUTTextureData.size() < 1 ) {
-					SF_PBR_Tables	t(512);
-					sfLUTTextureData = t.getImageData();
-				}
-				data.resize( qsizetype(sfLUTTextureData.size()) );
-				std::memcpy( data.data(), sfLUTTextureData.data(), sfLUTTextureData.size() );
+				extract_pbr_lut_data( data );
 				break;
 			}
 			// generate 1x1 texture from an RGBA color in "#AABBGGRR" format

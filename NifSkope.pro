@@ -234,6 +234,7 @@ SOURCES += \
 	src/gl/gltex.cpp \
 	src/gl/gltexloaders.cpp \
 	src/gl/gltools.cpp \
+	src/gl/pbr_lut_data.cpp \
 	src/gl/renderer.cpp \
 	src/io/materialfile.cpp \
 	src/io/MeshFile.cpp \
@@ -407,7 +408,7 @@ libfo76utils {
     SOURCES += $$PWD/lib/libfo76utils/src/matcomps.cpp
     SOURCES += $$PWD/lib/libfo76utils/src/mat_dump.cpp
     SOURCES += $$PWD/lib/libfo76utils/src/material.cpp
-    SOURCES += $$PWD/lib/libfo76utils/src/pbr_lut.cpp
+    # SOURCES += $$PWD/lib/libfo76utils/src/pbr_lut.cpp
     # SOURCES += $$PWD/lib/libfo76utils/src/sdlvideo.cpp
     SOURCES += $$PWD/lib/libfo76utils/src/sfcube.cpp
     # SOURCES += $$PWD/lib/libfo76utils/src/stringdb.cpp
