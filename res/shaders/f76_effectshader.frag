@@ -89,7 +89,7 @@ void main( void )
 	vec3 f0 = reflMap.rgb;
 	vec3 L = normalize(LightDir);
 	vec3 V = ViewDir_norm;
-	vec3 R = reflect(V, normal);
+	vec3 R = reflect(-V, normal);
 	vec3 H = normalize( L + V );
 
 	float NdotL = max( dot(normal, L), 0.000001 );
@@ -98,7 +98,7 @@ void main( void )
 	float LdotH = max( dot(L, H), 0.000001 );
 	float NdotNegL = max( dot(normal, -L), 0.000001 );
 
-	vec3 reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4( R, 0.0 )));
+	vec3 reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4( R, 0.0 ))) * vec3(1.0, 1.0, -1.0);
 
 	if ( greyscaleAlpha )
 		baseMap.a = 1.0;
