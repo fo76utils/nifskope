@@ -251,7 +251,7 @@ void main(void)
 
 	vec3 L = normalize(LightDir);
 	vec3 V = ViewDir_norm;
-	vec3 R = reflect(-L, normal);
+	vec3 R = reflect(-V, normal);
 	vec3 H = normalize(L + V);
 
 	float NdotL = dot(normal, L);
@@ -262,7 +262,7 @@ void main(void)
 	float LdotH = max(dot(L, H), FLT_EPSILON);
 	float NdotNegL = max(dot(normal, -L), FLT_EPSILON);
 
-	vec3	reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(reflect(-V, normal), 0.0))) * vec3(1.0, 1.0, -1.0);
+	vec3	reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(R, 0.0))) * vec3(1.0, 1.0, -1.0);
 	vec3	normalWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(normal, 0.0))) * vec3(1.0, 1.0, -1.0);
 
 	vec4 color;

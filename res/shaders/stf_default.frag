@@ -588,7 +588,7 @@ void main(void)
 		refl *= ambient;
 		ambient *= textureLod(CubeMap, normalWS, 6.0).rgb;
 	} else {
-		ambient /= 15.0;
+		ambient /= 12.5;
 		refl = ambient;
 	}
 	vec4	envLUT = textureLod(textureUnits[0], vec2(NdotV, 1.0 - smoothness), 0.0);
