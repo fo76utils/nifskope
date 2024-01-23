@@ -183,6 +183,9 @@ public slots:
 	//! Close all resource folders and files.
 	void on_aCloseArchives_triggered();
 
+	//! Flush texture cache and update view.
+	void on_aUpdateView_triggered();
+
 	//! Reparse the nif.xml and kfm.xml files.
 	void on_aLoadXML_triggered();
 

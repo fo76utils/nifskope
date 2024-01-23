@@ -1384,6 +1384,14 @@ void NifSkope::on_aCloseArchives_triggered()
 	Game::GameManager::close_archives( true );
 }
 
+void NifSkope::on_aUpdateView_triggered()
+{
+	ogl->flush();
+	ogl->updateShaders();
+	emit ogl->getScene()->sceneUpdated();
+	ogl->updateScene();
+}
+
 void NifSkope::on_aLoadXML_triggered()
 {
 	NifModel::loadXML();
