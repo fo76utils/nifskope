@@ -626,19 +626,17 @@ GLuint texLoadBMP( QIODevice & f, QString & texformat, GLenum & target, GLuint &
 
 static SFCubeMapCache	sfCubeMapCache;
 
-GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint & id )
+GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, GLenum & target, GLuint & mipmaps, QByteArray & data, GLuint & id )
 {
-	(void) format;
-	(void) width;
-	(void) height;
-	if ( data.size() >= 148 && (data[113] & 0x02) ) {	// DDSCAPS2_CUBEMAP
-		if ( game == Game::STARFIELD || game == Game::FALLOUT_76 ) {
+	if ( data.size() >= 148 && (data[113] & 0x02) &&	// DDSCAPS2_CUBEMAP
+		 ( game == Game::STARFIELD || game == Game::FALLOUT_76 ) ) {
+		if ( data[128] != char(0x43) ) {	// DXGI_FORMAT_R9G9B9E5_SHAREDEXP
 			// normalize and filter Fallout 76 and Starfield cube maps
 			size_t	dataSize = size_t(data.size());
 			size_t	spaceRequired = 256 * 256 * 8 * 4 + 148;
 			if ( data.size() < qsizetype(spaceRequired) )
 				data.resize( spaceRequired );
-			size_t	newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(data.data()), dataSize, true, spaceRequired );
+			size_t	newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(data.data()), dataSize, true, spaceRequired, 256 );
 			data.resize( newSize );
 		}
 	}
@@ -825,7 +823,7 @@ bool texLoad( const Game::GameMode game, const QModelIndex & iData, QString & te
 			buf.buffer().prepend( QByteArray::fromStdString( "DDS " ) );
 
 			mipmaps = texLoadDDS( game, QString( "[%1] NiPixelData" ).arg( nif->getBlockNumber( iData ) ),
-									texformat, target, width, height, mipmaps, buf.buffer(), id );
+									target, mipmaps, buf.buffer(), id );
 
 			ok = (mipmaps > 0);
 		}
@@ -1216,7 +1214,7 @@ bool texLoad( const Game::GameMode game, const QString & filepath, QString & for
 			if ( game == Game::FALLOUT_76 && data[84] == 'D' && data[85] == 'X' && data[86] == '1' && data[87] == '0' && data[128] == 'W' )
 				data[128] = 0x5B;	// DXGI_FORMAT_B8G8R8A8_UNORM -> DXGI_FORMAT_B8G8R8A8_UNORM_SRGB
 		}
-		mipmaps = texLoadDDS( game, filepath, format, target, width, height, mipmaps, data, id );
+		mipmaps = texLoadDDS( game, filepath, target, mipmaps, data, id );
 	} else if ( filepath.endsWith( ".tga", Qt::CaseInsensitive ) )
 		mipmaps = texLoadTGA( f, format, target, width, height, id );
 	else if ( filepath.endsWith( ".bmp", Qt::CaseInsensitive ) )
