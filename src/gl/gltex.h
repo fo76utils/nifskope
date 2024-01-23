@@ -77,8 +77,6 @@ class TexCache final : public QObject
 		GLuint height = 0;
 		//! Number of mipmaps present
 		GLuint mipmaps = 0;
-		//! Determine whether the texture needs reloading
-		bool reload = false;
 		//! Format of the texture
 		QString format;
 		//! Status messages
@@ -124,6 +122,7 @@ public:
 	//! Number of texture units
 	static int	num_texture_units;	// for glActiveTexture()
 	static int	num_txtunits_client;	// for glClientActiveTexture()
+	static int	pbrCubeMapResolution;
 
 signals:
 	void sigRefresh();

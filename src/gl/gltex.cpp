@@ -60,6 +60,7 @@ static PFNGLCLIENTACTIVETEXTUREPROC glClientActiveTexture = nullptr;
 
 int TexCache::num_texture_units = 0;
 int TexCache::num_txtunits_client = 0;
+int TexCache::pbrCubeMapResolution = 256;
 
 //! Maximum anisotropy
 float max_anisotropy = 1.0f;
@@ -256,7 +257,6 @@ int TexCache::bind( const QString & fname, Game::GameMode game )
 		tx->id = 0;
 		tx->data = QByteArray();
 		tx->mipmaps = 0;
-		tx->reload  = false;
 		tx->game = game;
 
 		textures.insert( tx->filename, tx );
@@ -270,14 +270,14 @@ int TexCache::bind( const QString & fname, Game::GameMode game )
 
 	QByteArray outData;
 
-	if ( tx->filepath.isEmpty() || tx->reload )
+	if ( tx->filepath.isEmpty() )
 		tx->filepath = find( tx->filename, nifFolder, outData, game );
 
-	if ( !outData.isEmpty() || tx->reload ) {
+	if ( !outData.isEmpty() ) {
 		tx->data = outData;
 	}
 
-	if ( !tx->id || tx->reload ) {
+	if ( !tx->id ) {
 		tx->load();
 	} else {
 		if ( !tx->target )
@@ -302,7 +302,6 @@ int TexCache::bind( const QModelIndex & iSource, Game::GameMode game )
 				if ( !tx ) {
 					tx = new Tex();
 					tx->id = 0;
-					tx->reload = false;
 					tx->game = game;
 					try
 					{
@@ -425,7 +424,6 @@ void TexCache::Tex::load()
 		glGenTextures( 1, &id );
 
 	width  = height = mipmaps = 0;
-	reload = false;
 	status = QString();
 
 	if ( target )

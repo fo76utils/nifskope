@@ -31,6 +31,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***** END LICENCE BLOCK *****/
 
 #include "gltexloaders.h"
+#include "gltex.h"
 
 #include "message.h"
 #include "model/nifmodel.h"
@@ -629,14 +630,17 @@ static SFCubeMapCache	sfCubeMapCache;
 GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, GLenum & target, GLuint & mipmaps, QByteArray & data, GLuint & id )
 {
 	if ( data.size() >= 148 && (data[113] & 0x02) &&	// DDSCAPS2_CUBEMAP
-		 ( game == Game::STARFIELD || game == Game::FALLOUT_76 ) ) {
-		if ( data[128] != char(0x43) ) {	// DXGI_FORMAT_R9G9B9E5_SHAREDEXP
+		( game == Game::STARFIELD || game == Game::FALLOUT_76 ) ) {
+		const unsigned char *	dataPtr = reinterpret_cast< unsigned char * >( data.data() );
+		if ( dataPtr[128] != 0x43 || dataPtr[28] < 2 ) {	// DXGI_FORMAT_R9G9B9E5_SHAREDEXP
 			// normalize and filter Fallout 76 and Starfield cube maps
+			std::uint32_t	width = std::uint32_t(TexCache::pbrCubeMapResolution);
 			size_t	dataSize = size_t(data.size());
-			size_t	spaceRequired = 256 * 256 * 8 * 4 + 148;
+			size_t	spaceRequired = width * width * 8 * 4 + 148;
 			if ( data.size() < qsizetype(spaceRequired) )
 				data.resize( spaceRequired );
-			size_t	newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(data.data()), dataSize, true, spaceRequired, 256 );
+			FileBuffer::writeUInt32Fast( data.data() + 40, width );
+			size_t	newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(data.data()), dataSize, true, spaceRequired, width );
 			data.resize( newSize );
 		}
 	}

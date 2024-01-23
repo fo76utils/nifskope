@@ -10,6 +10,7 @@
 #include "ui/settingsdialog.h"
 
 #include "nifskope.h"
+#include "gl/gltex.h"
 
 #include <fsengine/fsengine.h>
 
@@ -455,6 +456,13 @@ void SettingsRender::write()
 	settings.endGroup();
 
 	setModified( false );
+
+	int	tmp = settings.value( "Settings/Render/General/Pbr Cube Map Resolution", 1 ).toInt();
+	tmp = 64 << ( ( tmp + 1 ) & 3 );
+	if ( tmp != TexCache::pbrCubeMapResolution ) {
+		TexCache::pbrCubeMapResolution = tmp;
+		emit dlg->flush3D();
+	}
 }
 
 SettingsRender::~SettingsRender()
