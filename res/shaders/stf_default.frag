@@ -396,7 +396,7 @@ vec2 parallaxMapping(int n, vec3 V, vec2 offset, float parallaxScale, float maxL
 	// current height of the layer
 	float	curLayerHeight = 1.0;
 	// shift of texture coordinates for each layer
-	vec2	dtex = parallaxScale * V.xy * layerHeight / max( abs(V.z), 0.05 );
+	vec2	dtex = parallaxScale * V.xy * layerHeight / max( abs(V.z), 0.025 );
 
 	// current texture coordinates
 	vec2	currentTextureCoords = offset;
@@ -433,7 +433,7 @@ void getLayer(int n, inout vec4 baseMap, inout vec3 normalMap, inout vec3 pbrMap
 	vec2	offset = getTexCoord(lm.layers[n].uvStream);
 	// _height.dds
 	if ( lm.layers[n].material.textureSet.textures[6] >= 1 )
-		offset = parallaxMapping( lm.layers[n].material.textureSet.textures[6], normalize( ViewDir_norm * btnMatrix_norm ), offset, 0.06, 80.0 );
+		offset = parallaxMapping( lm.layers[n].material.textureSet.textures[6], normalize( ViewDir_norm * btnMatrix_norm ), offset, 0.04, 120.0 );
 	// _color.dds
 	if ( lm.layers[n].material.textureSet.textures[0] != 0 )
 		baseMap.rgb = getLayerTexture(n, 0, offset).rgb;
