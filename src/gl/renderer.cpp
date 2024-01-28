@@ -620,19 +620,25 @@ int Renderer::Program::uniLocation( const char * fmt, ... )
 	std::va_list	ap;
 	va_start(ap, fmt);
 	char	*sp = varNameBuf;
-	char	*endp = sp + 255;
+	char	*endp = sp + 254;
 	std::uint32_t	h = 0;
-	for ( ; *fmt && sp < endp; fmt++, sp++ ) {
-		char	c = *fmt;
-		if ( c == '%' ) {
-			fmt++;
-			c = *fmt;
+	while ( sp < endp ) [[likely]] {
+		char	c = *(fmt++);
+		if ( (unsigned char) c > (unsigned char) '%' ) [[likely]] {
+			*(sp++) = c;
+			hashFunctionCRC32C< unsigned char >( h, (unsigned char) c );
+			continue;
+		}
+		if ( !c )
+			break;
+		if ( c == '%' ) [[likely]] {
+			c = *(fmt++);
 			if ( c == 'd' ) {
 				int	n = va_arg(ap, int);
-				if ( n >= 10 && (sp + 1) < endp ) {
-					*sp = char((n / 10) & 15) | '0';
-					hashFunctionCRC32C< unsigned char >(h, (unsigned char) *sp);
-					sp++;
+				if ( n >= 10 ) {
+					c = char((n / 10) & 15) | '0';
+					*(sp++) = c;
+					hashFunctionCRC32C< unsigned char >( h, (unsigned char) c );
 					n = n % 10;
 				}
 				c = char(n & 15) | '0';
@@ -640,8 +646,8 @@ int Renderer::Program::uniLocation( const char * fmt, ... )
 				break;
 			}
 		}
-		*sp = c;
-		hashFunctionCRC32C< unsigned char >(h, (unsigned char) *sp);
+		*(sp++) = c;
+		hashFunctionCRC32C< unsigned char >( h, (unsigned char) c );
 	}
 	va_end(ap);
 	*sp = '\0';
