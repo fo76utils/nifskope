@@ -348,7 +348,7 @@ void main(void)
 	// Emissive
 	color.rgb += emissive;
 
-	color.rgb = tonemap(color.rgb) / tonemap(vec3(1.0));
+	color.rgb = tonemap(color.rgb * D.a) / tonemap(vec3(1.0));
 	color.a = C.a * baseMap.a;
 
 	gl_FragColor = color;

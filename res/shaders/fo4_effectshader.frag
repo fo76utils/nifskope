@@ -139,6 +139,6 @@ void main( void )
 		color.rgb += cube.rgb * falloff;
 	}
 
-	gl_FragColor.rgb = color.rgb;
+	gl_FragColor.rgb = color.rgb * D.a;
 	gl_FragColor.a = color.a;
 }
