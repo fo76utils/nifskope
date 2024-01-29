@@ -246,6 +246,7 @@ public:
 	static void close_materials();
 	//! Open a folder or archive without adding it to the list of data paths.
 	static bool set_temp_path(const GameMode game, const char* pathName, bool ignoreErrors);
+	static void list_files(QStringList& fileList, const GameMode game, const char* archiveFolder = nullptr, const char* extension = nullptr, const char* includePattern = nullptr, const char* excludePattern = nullptr);
 
 	//! Find applicable data folders at the game installation path
 	static QStringList find_folders(const GameMode game);

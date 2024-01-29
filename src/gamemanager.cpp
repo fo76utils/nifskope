@@ -493,6 +493,36 @@ bool GameManager::set_temp_path(const GameMode game, const char* pathName, bool 
 	return ba2Files.set_temp_folder( game, pathName, ignoreErrors );
 }
 
+void GameManager::list_files(QStringList& fileList, const GameMode game, const char* archiveFolder, const char* extension, const char* includePattern, const char* excludePattern)
+{
+	if ( !(game >= OTHER && game <= FALLOUT_3NV) )
+		return;
+	// make sure that archives are loaded
+	(void) ba2Files.get_file( game, std::string(".") );
+	std::set< std::string >	filesFound;
+	std::vector< std::string >	tmpFileList;
+	for ( int i = 0; i < 2; i++ ) {
+		const BA2File *	ba2File = ( !i ? ba2Files.archives[game].first : ba2Files.archives[game].second );
+		if ( !ba2File )
+			continue;
+		ba2File->getFileList( tmpFileList, true );
+		for ( size_t j = 0; j < tmpFileList.size(); j++ ) {
+			const std::string &	s = tmpFileList[j];
+			if ( archiveFolder && *archiveFolder && !s.starts_with(archiveFolder) )
+				continue;
+			if ( extension && *extension && !s.ends_with(extension) )
+				continue;
+			if ( includePattern && *includePattern && s.find(includePattern) == std::string::npos )
+				continue;
+			if ( excludePattern && *excludePattern && s.find(excludePattern) != std::string::npos )
+				continue;
+			filesFound.insert( s );
+		}
+	}
+	for ( std::set< std::string >::const_iterator i = filesFound.begin(); i != filesFound.end(); i++ )
+		fileList << QString::fromStdString( *i );
+}
+
 QStringList GameManager::find_folders(const GameMode game)
 {
 	return existing_folders(game, get()->game_paths.value(game, {}));
