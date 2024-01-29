@@ -10,16 +10,16 @@
 auto sld = []( QSlider * slider, int min, int max, int val ) {
 	slider->setSizePolicy( QSizePolicy::MinimumExpanding, QSizePolicy::Maximum );
 	slider->setRange( min, max );
-	slider->setSingleStep( max / 4 );
+	slider->setSingleStep( max / 8 );
 	slider->setTickInterval( max / 2 );
 	slider->setTickPosition( QSlider::TicksBelow );
 	slider->setValue( val );
 };
 
 LightingWidget::LightingWidget( GLView * ogl, QWidget * parent ) : QWidget(parent),
-    ui(new Ui::LightingWidget)
+	ui(new Ui::LightingWidget)
 {
-    ui->setupUi(this);
+	ui->setupUi(this);
 
 	setDefaults();
 
@@ -42,10 +42,14 @@ LightingWidget::LightingWidget( GLView * ogl, QWidget * parent ) : QWidget(paren
 
 	// Inform ogl of changes
 	connect( ui->sldDirectional, &QSlider::valueChanged, ogl, &GLView::setBrightness );
+	connect( ui->sldLightLevel, &QSlider::valueChanged, ogl, &GLView::setLightLevel );
+	connect( ui->sldLightHue, &QSlider::valueChanged, ogl, &GLView::setLightHue );
+	connect( ui->sldLightSaturation, &QSlider::valueChanged, ogl, &GLView::setLightSaturation );
 	connect( ui->sldAmbient, &QSlider::valueChanged, ogl, &GLView::setAmbient );
 	connect( ui->sldDeclination, &QSlider::valueChanged, ogl, &GLView::setDeclination );
 	connect( ui->sldPlanarAngle, &QSlider::valueChanged, ogl, &GLView::setPlanarAngle );
 	connect( ui->btnFrontal, &QToolButton::toggled, ogl, &GLView::setFrontalLight );
+	connect( ui->btnLoadCubeMap, &QPushButton::clicked, ogl, &GLView::selectPBRCubeMap );
 }
 
 LightingWidget::~LightingWidget()
@@ -58,6 +62,11 @@ void LightingWidget::setDefaults()
 	sld( ui->sldAmbient, AmbientMin, AmbientMax, AmbientDefault );
 	sld( ui->sldDeclination, DeclinationMin, DeclinationMax, DeclinationDefault );
 	sld( ui->sldPlanarAngle, PlanarAngleMin, PlanarAngleMax, PlanarAngleDefault );
+	sld( ui->sldLightLevel, LightLevelMin, LightLevelMax, LightLevelDefault );
+	sld( ui->sldLightHue, LightHueMin, LightHueMax, LightHueDefault );
+	ui->sldLightHue->setSingleStep( LightHueMax / 12 );
+	ui->sldLightHue->setTickInterval( LightHueMax / 3 );
+	sld( ui->sldLightSaturation, LightSaturationMin, LightSaturationMax, LightSaturationDefault );
 }
 
 void LightingWidget::setActions( QVector<QAction *> atns )

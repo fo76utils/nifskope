@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>240</width>
-    <height>320</height>
+    <height>404</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -130,6 +130,27 @@
         </property>
        </widget>
       </item>
+      <item row="4" column="1">
+       <widget class="QSlider" name="sldLightLevel">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="1">
+       <widget class="QSlider" name="sldLightHue">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="1">
+       <widget class="QSlider" name="sldLightSaturation">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
       <item row="2" column="0">
        <widget class="QPushButton" name="btnDeclination">
         <property name="maximumSize">
@@ -222,6 +243,84 @@
         <property name="icon">
          <iconset resource="../../../res/nifskope.qrc">
           <normaloff>:/btn/cloud</normaloff>:/btn/cloud</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>18</width>
+          <height>18</height>
+         </size>
+        </property>
+        <property name="flat">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QPushButton" name="btnLightLevel">
+        <property name="maximumSize">
+         <size>
+          <width>24</width>
+          <height>24</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../../res/nifskope.qrc">
+          <normaloff>:/btn/light</normaloff>:/btn/light</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>18</width>
+          <height>18</height>
+         </size>
+        </property>
+        <property name="flat">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QPushButton" name="btnLightHue">
+        <property name="maximumSize">
+         <size>
+          <width>24</width>
+          <height>24</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../../res/nifskope.qrc">
+          <normaloff>:/btn/hue</normaloff>:/btn/hue</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>18</width>
+          <height>18</height>
+         </size>
+        </property>
+        <property name="flat">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="0">
+       <widget class="QPushButton" name="btnLightSaturation">
+        <property name="maximumSize">
+         <size>
+          <width>24</width>
+          <height>24</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../../res/nifskope.qrc">
+          <normaloff>:/btn/saturation</normaloff>:/btn/saturation</iconset>
         </property>
         <property name="iconSize">
          <size>
@@ -346,6 +445,23 @@
        <widget class="QToolButton" name="btnGlow">
         <property name="text">
          <string>...</string>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>36</width>
+          <height>36</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="3">
+       <widget class="QPushButton" name="btnLoadCubeMap">
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../../res/nifskope.qrc">
+          <normaloff>:/btn/load</normaloff>:/btn/load</iconset>
         </property>
         <property name="iconSize">
          <size>

@@ -43,7 +43,17 @@ private:
 		DirDefault = DirMax / 2,
 		AmbientDefault = AmbientMax / 2,
 		DeclinationDefault = (DeclinationMax + DeclinationMin),
-		PlanarAngleDefault = (PlanarAngleMax + PlanarAngleMin)
+		PlanarAngleDefault = (PlanarAngleMax + PlanarAngleMin),
+
+		LightLevelMin = 0,
+		LightLevelMax = BRIGHT,
+		LightLevelDefault = POS,
+		LightHueMin = 0,
+		LightHueMax = BRIGHT,
+		LightHueDefault = 0,
+		LightSaturationMin = 0,
+		LightSaturationMax = BRIGHT,
+		LightSaturationDefault = 0
 	};
 };
 

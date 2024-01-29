@@ -74,11 +74,14 @@ public:
 	QOpenGLContext * glContext;
 	QOpenGLFunctions * glFuncs;
 
-	float brightness = 1.0;
-	float ambient = 1.0;
-	float declination = 0;
-	float planarAngle = 0;
-	bool frontalLight = true;
+	float	brightnessScale = 1.0f;		// overall brightness
+	float	ambient = 1.0f;				// environment map / ambient light level
+	float	brightnessL = 1.0f;			// directional light intensity,
+	float	brightnessH = 0.0f;			// hue (0.0 to 1.0) and saturation
+	float	brightnessS = 0.0f;
+	float	declination = 0.0f;
+	float	planarAngle = 0.0f;
+	bool	frontalLight = true;
 
 	enum AnimationStates
 	{
@@ -163,6 +166,9 @@ public slots:
 	void saveUserView();
 	void loadUserView();
 	void setBrightness( int );
+	void setLightLevel( int );
+	void setLightHue( int );
+	void setLightSaturation( int );
 	void setAmbient( int );
 	void setDeclination( int );
 	void setPlanarAngle( int );
@@ -171,6 +177,7 @@ public slots:
 	void updateAnimationState( bool checked );
 	void setVisMode( Scene::VisMode, bool checked = true );
 	void updateSettings();
+	void selectPBRCubeMap();
 
 signals:
 	void clicked( const QModelIndex & );
@@ -238,7 +245,7 @@ private:
 	Transform viewTrans;
 
 	GLdouble aspect;
-	
+
 	QHash<int, bool> kbd;
 	QPoint lastPos;
 	QPoint pressPos;

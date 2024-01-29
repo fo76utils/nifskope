@@ -40,6 +40,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "model/nifmodel.h"
 #include "ui/settingsdialog.h"
 #include "ui/widgets/fileselect.h"
+#include "gamemanager.h"
 
 #include <QApplication>
 #include <QActionGroup>
@@ -51,8 +52,9 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QDir>
 #include <QGroupBox>
 #include <QImageWriter>
-#include <QLabel>
 #include <QKeyEvent>
+#include <QLabel>
+#include <QListWidget>
 #include <QMenu>
 #include <QMimeData>
 #include <QMouseEvent>
@@ -80,7 +82,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // NOTE: The FPS define is a frame limiter,
 //	NOT the guaranteed FPS in the viewport.
-//	Also the QTimer is integer milliseconds 
+//	Also the QTimer is integer milliseconds
 //	so 60 will give you 1000/60 = 16, not 16.666
 //	therefore it's really 62.5FPS
 #define FPS 144
@@ -89,7 +91,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ZOOM_MAX 1000.0
 #define ZOOM_PAGE_KEY_MULT 1.025
 
-#define ZOOM_QE_KEY_MULT 1.025 
+#define ZOOM_QE_KEY_MULT 1.025
 #define ZOOM_MOUSE_WHEEL_MULT 0.95
 
 
@@ -101,7 +103,7 @@ GLGraphicsView::GLGraphicsView( QWidget * parent ) : QGraphicsView()
 	setContextMenuPolicy( Qt::CustomContextMenu );
 	setFocusPolicy( Qt::ClickFocus );
 	setAcceptDrops( true );
-	
+
 	installEventFilter( parent );
 }
 
@@ -248,13 +250,46 @@ void GLView::updateSettings()
 	settings.endGroup();
 }
 
+void GLView::selectPBRCubeMap()
+{
+	if ( !(model && model->getBSVersion() >= 151) )
+		return;
+	bool	isStarfield = ( model->getBSVersion() >= 170 );
+
+	QDialog	dlg;
+	QGridLayout *	layout = new QGridLayout( &dlg );
+	layout->setColumnMinimumWidth( 0, 640 );
+	layout->setRowMinimumHeight( 1, 480 );
+	QLabel *	title = new QLabel( &dlg );
+	title->setText( "Select default environment map" );
+	layout->addWidget( title, 0, 0 );
+	QListWidget *	listWidget = new QListWidget( &dlg );
+	layout->addWidget( listWidget, 1, 0 );
+	QStringList	fileList;
+	Game::GameManager::list_files( fileList, (!isStarfield ? Game::FALLOUT_76 : Game::STARFIELD), "textures/", ".dds", "/cubemaps/" );
+	listWidget->addItems( fileList );
+	QObject::connect( listWidget, &QListWidget::itemActivated, &dlg, &QDialog::accept );
+	if ( dlg.exec() == QDialog::Accepted ) {
+		QSettings settings;
+		if ( !isStarfield ) {
+			settings.setValue( "Settings/Render/General/Cube Map Path FO 76", listWidget->currentItem()->text() );
+		} else {
+			settings.setValue( "Settings/Render/General/Cube Map Path STF", listWidget->currentItem()->text() );
+		}
+		if ( scene && scene->renderer ) {
+			scene->renderer->updateSettings();
+			updateScene();
+		}
+	}
+}
+
 QColor GLView::clearColor() const
 {
 	return cfg.background;
 }
 
 
-/* 
+/*
  * Scene
  */
 
@@ -295,7 +330,7 @@ void GLView::updateAnimationState( bool checked )
 void GLView::initializeGL()
 {
 	GLenum err;
-	
+
 	if ( scene->hasOption(Scene::DoMultisampling) ) {
 		if ( !glContext->hasExtension( "GL_EXT_framebuffer_multisample" ) ) {
 			scene->options &= ~Scene::DoMultisampling;
@@ -400,7 +435,7 @@ void GLView::paintEvent( QPaintEvent * event )
 void GLView::paintGL()
 {
 #endif
-	
+
 	// Save GL state
 	glPushAttrib( GL_ALL_ATTRIB_BITS );
 	glMatrixMode( GL_PROJECTION );
@@ -415,8 +450,8 @@ void GLView::paintGL()
 
 	glDisable(GL_FRAMEBUFFER_SRGB);
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
-	
-	
+
+
 	// Compile the model
 	if ( doCompile ) {
 		textures->setNifFolder( model->getFolder() );
@@ -557,10 +592,16 @@ void GLView::paintGL()
 		if ( scene->hasVisMode(Scene::VisNormalsOnly) && scene->hasOption(Scene::DoTexturing) && !scene->hasOption(Scene::DisableShaders) ) {
 			amb = 0.1f;
 		}
-		
+
 		GLfloat mat_amb[] = { amb, amb, amb, 1.0f };
-		GLfloat mat_diff[] = { brightness, brightness, brightness, 1.0f };
-		
+		float	brightnessR = float( std::cos((brightnessH < 0.5f ? brightnessH : brightnessH - 1.0f) * 4.71238898f) );
+		float	brightnessG = float( std::cos((brightnessH - 0.33333333f) * 4.71238898f) );
+		float	brightnessB = float( std::cos((brightnessH - 0.66666667f) * 4.71238898f) );
+		brightnessR = ( (std::max(brightnessR, 0.0f) * brightnessR - 1.0f) * brightnessS + 1.0f ) * brightnessL;
+		brightnessG = ( (std::max(brightnessG, 0.0f) * brightnessG - 1.0f) * brightnessS + 1.0f ) * brightnessL;
+		brightnessB = ( (std::max(brightnessB, 0.0f) * brightnessB - 1.0f) * brightnessS + 1.0f ) * brightnessL;
+		GLfloat mat_diff[] = { brightnessR, brightnessG, brightnessB, brightnessScale };
+
 
 		glShadeModel( GL_SMOOTH );
 		//glEnable( GL_LIGHTING );
@@ -574,7 +615,7 @@ void GLView::paintGL()
 
 		GLfloat mat_amb[] = { amb, amb, amb, 1.0f };
 		GLfloat mat_diff[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-		
+
 
 		glShadeModel( GL_SMOOTH );
 		//glEnable( GL_LIGHTING );
@@ -744,7 +785,27 @@ static float convertBrightnessValue( int value )
 
 void GLView::setBrightness( int value )
 {
-	brightness = convertBrightnessValue( value );
+	brightnessScale = convertBrightnessValue( value );
+	update();
+}
+
+void GLView::setLightLevel( int value )
+{
+	brightnessL = convertBrightnessValue( value );
+	update();
+}
+
+void GLView::setLightHue( int value )
+{
+	brightnessH = float( value ) / 1440.0f;
+	brightnessH = brightnessH - float( std::floor(brightnessH) );
+	update();
+}
+
+void GLView::setLightSaturation( int value )
+{
+	brightnessS = std::min( std::max(float(value / 1440.0f), 0.0f), 1.0f );
+	brightnessS = brightnessS * ( 2.0f - brightnessS );
 	update();
 }
 
@@ -929,7 +990,7 @@ QModelIndex GLView::indexAt( const QPoint & pos, int cycle )
 		if ( furn != -1 ) {
 			// Furniture Row @ Block Index
 			chooseIndex = model->index( furn, 0, model->index( 3, 0, chooseIndex ) );
-		}			
+		}
 	}
 
 	return chooseIndex;
@@ -1244,7 +1305,7 @@ void GLView::setSceneSequence( const QString & seqname )
 		// Called from self and not UI
 		emit sequenceChanged( seqname );
 	}
-	
+
 	scene->setSequence( seqname );
 	time = scene->timeMin();
 	emit sceneTimeChanged( time, scene->timeMin(), scene->timeMax() );
@@ -1299,10 +1360,10 @@ void GLView::advanceGears()
 		if ( time > scene->timeMax() ) {
 			if ( ( animState & AnimSwitch ) && !scene->animGroups.isEmpty() ) {
 				int ix = scene->animGroups.indexOf( scene->animGroup );
-	
+
 				if ( ++ix >= scene->animGroups.count() )
 					ix -= scene->animGroups.count();
-	
+
 				setSceneSequence( scene->animGroups.value( ix ) );
 			} else if ( animState & AnimLoop ) {
 				time = scene->timeMin();
@@ -1575,8 +1636,8 @@ void GLView::saveImage()
 }
 
 
-/* 
- * QWidget Event Handlers 
+/*
+ * QWidget Event Handlers
  */
 
 void GLView::dragEnterEvent( QDragEnterEvent * e )
@@ -1733,7 +1794,7 @@ void GLView::mouseMoveEvent( QMouseEvent * event )
 
 	if ( event->buttons() & Qt::LeftButton && !kbd[Qt::Key_Space] ) {
 		mouseRot += Vector3( dy * .5, 0, dx * .5 );
-	} else if ( (event->buttons() & Qt::MidButton) || (event->buttons() & Qt::LeftButton && kbd[Qt::Key_Space]) ) {
+	} else if ( (event->buttons() & Qt::MiddleButton) || (event->buttons() & Qt::LeftButton && kbd[Qt::Key_Space]) ) {
 		float d = axis / (qMax( width(), height() ) + 1);
 		mouseMov += Vector3( dx * d, -dy * d, 0 );
 	} else if ( event->buttons() & Qt::RightButton ) {
