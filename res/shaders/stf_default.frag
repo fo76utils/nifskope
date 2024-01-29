@@ -235,6 +235,8 @@ in vec4 D;
 in mat3 btnMatrix;
 in mat4 reflMatrix;
 
+out vec4 fragColor;
+
 vec3 ViewDir_norm = normalize( ViewDir );
 mat3 btnMatrix_norm = mat3( normalize( btnMatrix[0] ), normalize( btnMatrix[1] ), normalize( btnMatrix[2] ) );
 
@@ -458,7 +460,7 @@ void getLayer(int n, inout vec4 baseMap, inout vec3 normalMap, inout vec3 pbrMap
 void main(void)
 {
 	if ( isWireframe ) {
-		gl_FragColor = solidColor;
+		fragColor = solidColor;
 		return;
 	}
 
@@ -624,8 +626,8 @@ void main(void)
 	// Emissive
 	color.rgb += emissive;
 
-	color.rgb = tonemap(color.rgb) / tonemap(vec3(1.0));
+	color.rgb = tonemap(color.rgb * D.a) / tonemap(vec3(1.0));
 	color.a = baseMap.a * alpha;
 
-	gl_FragColor = color;
+	fragColor = color;
 }
