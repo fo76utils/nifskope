@@ -177,7 +177,9 @@ public slots:
 	void updateAnimationState( bool checked );
 	void setVisMode( Scene::VisMode, bool checked = true );
 	void updateSettings();
-	void selectPBRCubeMap();
+	void selectPBRCubeMap( quint32 bsVersion = 0 );
+	void selectF76CubeMap();
+	void selectSTFCubeMap();
 
 signals:
 	void clicked( const QModelIndex & );

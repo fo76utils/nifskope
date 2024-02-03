@@ -257,6 +257,7 @@ NifSkope::NifSkope()
 	ogl->setObjectName( "OGL1" );
 	ogl->setNif( nif );
 	ogl->installEventFilter( this );
+	options->setGLView( ogl );
 
 	// Create InspectView
 	/* ********************** */

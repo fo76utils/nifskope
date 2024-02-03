@@ -13,6 +13,7 @@ class QListWidget;
 class QListWidgetItem;
 class QPushButton;
 class QStackedWidget;
+class GLView;
 
 namespace Ui {
 class SettingsDialog;
@@ -21,14 +22,15 @@ class SettingsDialog;
 
 class SettingsDialog : public QDialog
 {
-    Q_OBJECT
-    
+	Q_OBJECT
+
 public:
-    explicit SettingsDialog( QWidget * parent = nullptr );
-    ~SettingsDialog();
+	explicit SettingsDialog( QWidget * parent = nullptr );
+	~SettingsDialog();
 
 
 	static void registerPage( QWidget *, const QString & );
+	void setGLView( GLView * ogl );
 
 	QStackedWidget * content;
 	QListWidget * categories;
@@ -49,7 +51,7 @@ signals:
 	void localeChanged();
 	void update3D();
 	void flush3D();
-    
+
 private:
 	std::unique_ptr<Ui::SettingsDialog> ui;
 

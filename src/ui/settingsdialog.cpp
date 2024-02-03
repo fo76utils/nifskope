@@ -12,10 +12,10 @@
 //! @file settingsdialog.cpp SettingsDialog
 
 SettingsDialog::SettingsDialog( QWidget * parent ) :
-    QDialog( parent ),
-    ui( new Ui::SettingsDialog )
+	QDialog( parent ),
+	ui( new Ui::SettingsDialog )
 {
-    ui->setupUi( this );
+	ui->setupUi( this );
 
 	content = ui->content;
 	categories = ui->categoryList;
@@ -70,6 +70,16 @@ void SettingsDialog::registerPage( QWidget * parent, const QString & text )
 	auto p = qobject_cast<SettingsDialog *>(parent);
 	if ( p )
 		p->categories->addItem( text );
+}
+
+void SettingsDialog::setGLView( GLView * ogl )
+{
+	int	n = content->count();
+	for ( int i = 0; i < n; i++ ) {
+		QWidget *	w = content->widget( i );
+		if ( typeid(*w) == typeid(SettingsRender) )
+			static_cast< SettingsRender * >( w )->setGLView( ogl );
+	}
 }
 
 void SettingsDialog::apply()

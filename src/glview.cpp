@@ -250,11 +250,17 @@ void GLView::updateSettings()
 	settings.endGroup();
 }
 
-void GLView::selectPBRCubeMap()
+void GLView::selectPBRCubeMap( quint32 bsVersion )
 {
-	if ( !(model && model->getBSVersion() >= 151) )
+	if ( !bsVersion ) {
+		if ( !model )
+			return;
+		bsVersion = model->getBSVersion();
+	}
+	if ( bsVersion < 151 )
 		return;
-	bool	isStarfield = ( model->getBSVersion() >= 170 );
+	bool	isStarfield = ( bsVersion >= 170 );
+	QString	cfgPath( !isStarfield ? "Settings/Render/General/Cube Map Path FO 76" : "Settings/Render/General/Cube Map Path STF" );
 
 	QDialog	dlg;
 	QGridLayout *	layout = new QGridLayout( &dlg );
@@ -268,19 +274,34 @@ void GLView::selectPBRCubeMap()
 	QStringList	fileList;
 	Game::GameManager::list_files( fileList, (!isStarfield ? Game::FALLOUT_76 : Game::STARFIELD), "textures/", ".dds", "/cubemaps/" );
 	listWidget->addItems( fileList );
+	QSettings	settings;
+	QList< QListWidgetItem * >	curValue( listWidget->findItems( settings.value( cfgPath ).toString(), Qt::MatchExactly ) );
+	if ( curValue.size() == 1 )
+		listWidget->setCurrentItem( curValue[0] );
 	QObject::connect( listWidget, &QListWidget::itemActivated, &dlg, &QDialog::accept );
-	if ( dlg.exec() == QDialog::Accepted ) {
-		QSettings settings;
-		if ( !isStarfield ) {
-			settings.setValue( "Settings/Render/General/Cube Map Path FO 76", listWidget->currentItem()->text() );
-		} else {
-			settings.setValue( "Settings/Render/General/Cube Map Path STF", listWidget->currentItem()->text() );
-		}
-		if ( scene && scene->renderer ) {
-			scene->renderer->updateSettings();
-			updateScene();
-		}
+
+	if ( dlg.exec() != QDialog::Accepted )
+		return;
+
+	if ( NifSkope::getOptions() )
+		NifSkope::getOptions()->apply();
+	settings.setValue( cfgPath, listWidget->currentItem()->text() );
+	if ( NifSkope::getOptions() )
+		emit NifSkope::getOptions()->loadSettings();
+	if ( scene && scene->renderer ) {
+		scene->renderer->updateSettings();
+		updateScene();
 	}
+}
+
+void GLView::selectF76CubeMap()
+{
+	selectPBRCubeMap( 155 );
+}
+
+void GLView::selectSTFCubeMap()
+{
+	selectPBRCubeMap( 172 );
 }
 
 QColor GLView::clearColor() const

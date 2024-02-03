@@ -10,6 +10,7 @@
 #include "ui/settingsdialog.h"
 
 #include "nifskope.h"
+#include "glview.h"
 #include "gl/gltex.h"
 
 #include <fsengine/fsengine.h>
@@ -472,6 +473,12 @@ SettingsRender::~SettingsRender()
 void SettingsRender::setDefault()
 {
 	read();
+}
+
+void SettingsRender::setGLView( GLView * ogl )
+{
+	connect( ui->btnLoadF76CubeMap, &QPushButton::clicked, ogl, &GLView::selectF76CubeMap );
+	connect( ui->btnLoadSTFCubeMap, &QPushButton::clicked, ogl, &GLView::selectSTFCubeMap );
 }
 
 /*
