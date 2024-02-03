@@ -100,7 +100,7 @@ void Mesh::updateData( const NifModel * nif )
 			// Ignore weights listed in NiSkinData if NiSkinPartition exists
 			int vcnt = ( nif->get<unsigned char>( iSkinData, "Has Vertex Weights" ) && !iSkinPart.isValid() ) ? numVerts : 0;
 			for ( int b = 0; b < nBoneList && b < nTotalBones; b++ )
-				weights.append( BoneWeights( nif, idxBones.child( b, 0 ), bones[b], vcnt ) );
+				weights.append( BoneWeights( nif, QModelIndex_child( idxBones, b ), bones[b], vcnt ) );
 		}
 
 		if ( iSkinPart.isValid() ) {
@@ -109,7 +109,7 @@ void Mesh::updateData( const NifModel * nif )
 			uint numTris = 0;
 			uint numStrips = 0;
 			for ( int i = 0; i < nif->rowCount( idx ) && idx.isValid(); i++ ) {
-				partitions.append( SkinPartition( nif, idx.child( i, 0 ) ) );
+				partitions.append( SkinPartition( nif, QModelIndex_child( idx, i ) ) );
 				numTris += partitions[i].triangles.size();
 				numStrips += partitions[i].tristrips.size();
 			}
@@ -134,7 +134,7 @@ void Mesh::updateData_NiMesh( const NifModel * nif )
 	if ( !iData.isValid() )
 		return;
 	int nTotalStreams = nif->rowCount( iData );
-			
+
 	// All the semantics used by this mesh
 	NiMesh::SemanticFlags semFlags = NiMesh::HAS_NONE;
 
@@ -143,7 +143,7 @@ void Mesh::updateData_NiMesh( const NifModel * nif )
 	using CompSemIdxMap = QVector<QPair<NiMesh::Semantic, uint>>;
 	QVector<CompSemIdxMap> compSemanticIndexMaps;
 	for ( int i = 0; i < nTotalStreams; i++ ) {
-		auto iStreamEntry = iData.child( i, 0 );
+		auto iStreamEntry = QModelIndex_child( iData, i );
 
 		auto stream = nif->getLink( iStreamEntry, "Stream" );
 		auto iDataStream = nif->getBlockIndex( stream );
@@ -160,7 +160,7 @@ void Mesh::updateData_NiMesh( const NifModel * nif )
 		uint numComponents = nif->get<uint>( iStreamEntry, "Num Components" );
 		CompSemIdxMap compSemanticIndexMap;
 		for ( uint j = 0; j < numComponents; j++ ) {
-			auto iComponentEntry = iComponentSemantics.child( j, 0 );
+			auto iComponentEntry = QModelIndex_child( iComponentSemantics, j );
 
 			auto name = nif->get<QString>( iComponentEntry, "Name" );
 			auto sem = NiMesh::semanticStrings.value( name );
@@ -203,16 +203,16 @@ void Mesh::updateData_NiMesh( const NifModel * nif )
 	// The Nth component after ignoring DataStreamUsage > 1
 	int compIdx = 0;
 	for ( int i = 0; i < nTotalStreams; i++ ) {
-		// TODO: For now, submeshes are not actually used and the regions are 
+		// TODO: For now, submeshes are not actually used and the regions are
 		// filled in order for each data stream.
 		// Submeshes may be required if total index values exceed USHRT_MAX
-		auto iStreamEntry = iData.child( i, 0 );
+		auto iStreamEntry = QModelIndex_child( iData, i );
 
 		QMap<ushort, ushort> submeshMap;
 		ushort numSubmeshes = nif->get<ushort>( iStreamEntry, "Num Submeshes" );
 		auto iSubmeshMap = nif->getIndex( iStreamEntry, "Submesh To Region Map" );
 		for ( ushort j = 0; j < numSubmeshes; j++ )
-			submeshMap.insert( j, nif->get<ushort>( iSubmeshMap.child( j, 0 ) ) );
+			submeshMap.insert( j, nif->get<ushort>( QModelIndex_child( iSubmeshMap, j ) ) );
 
 		// Get the datastream
 		quint32 stream = nif->getLink( iStreamEntry, "Stream" );
@@ -231,7 +231,7 @@ void Mesh::updateData_NiMesh( const NifModel * nif )
 		if ( iRegions.isValid() ) {
 			quint32 numRegions = nif->get<quint32>( iDataStream, "Num Regions" );
 			for ( quint32 j = 0; j < numRegions; j++ ) {
-				auto iRegionEntry = iRegions.child( j, 0 );
+				auto iRegionEntry = QModelIndex_child( iRegions, j );
 				regions.append( { nif->get<quint32>( iRegionEntry, "Start Index" ), nif->get<quint32>( iRegionEntry, "Num Indices" ) } );
 
 				numIndices += regions[j].second;
@@ -244,7 +244,7 @@ void Mesh::updateData_NiMesh( const NifModel * nif )
 			indices.reserve( totalIndices );
 		} else if ( compIdx == 1 ) {
 			// Indices should be built already
-			if ( indices.size() != totalIndices )
+			if ( indices.size() != qsizetype( totalIndices ) )
 				return;
 
 			quint32 maxSize = maxIndex + 1;
@@ -267,7 +267,7 @@ void Mesh::updateData_NiMesh( const NifModel * nif )
 		uint numStreamComponents = nif->get<uint>( iDataStream, "Num Components" );
 		auto iComponentFormats = nif->getIndex( iDataStream, "Component Formats" );
 		for ( uint j = 0; j < numStreamComponents; j++ ) {
-			auto format = nif->get<uint>( iComponentFormats.child( j, 0 ) );
+			auto format = nif->get<uint>( QModelIndex_child( iComponentFormats, j ) );
 			datastreamFormats.append( NiMesh::DataStreamFormat(format) );
 		}
 
@@ -275,7 +275,7 @@ void Mesh::updateData_NiMesh( const NifModel * nif )
 
 		auto tempMdl = std::make_unique<NifModel>( this );
 
-		QByteArray streamData = nif->get<QByteArray>( nif->getIndex( iDataStream, "Data" ).child( 0, 0 ) );
+		QByteArray streamData = nif->get<QByteArray>( QModelIndex_child( nif->getIndex( iDataStream, "Data" ), 0 ) );
 		QBuffer streamBuffer( &streamData );
 		streamBuffer.open( QIODevice::ReadOnly );
 
@@ -504,7 +504,7 @@ void Mesh::updateData_NiTriShape( const NifModel * nif )
 	norms = nif->getArray<Vector3>( iData, "Normals" );
 	if ( norms.count() < numVerts )
 		norms.clear();
-	
+
 	colors = nif->getArray<Color4>( iData, "Vertex Colors" );
 	if ( colors.count() < numVerts )
 		colors.clear();
@@ -519,7 +519,7 @@ void Mesh::updateData_NiTriShape( const NifModel * nif )
 	if ( iExtraData.isValid() ) {
 		int nExtra = nif->rowCount( iExtraData );
 		for ( int e = 0; e < nExtra; e++ ) {
-			QModelIndex iExtra = nif->getBlockIndex( nif->getLink( iExtraData.child( e, 0 ) ), "NiBinaryExtraData" );
+			QModelIndex iExtra = nif->getBlockIndex( nif->getLink( QModelIndex_child( iExtraData, e ) ), "NiBinaryExtraData" );
 			if ( nif->get<QString>( iExtra, "Name" ) == "Tangent space (binormal & tangent vectors)" ) {
 				iTangentData = iExtra;
 				QByteArray data = nif->get<QByteArray>( iExtra, "Binary Data" );
@@ -543,7 +543,7 @@ void Mesh::updateData_NiTriShape( const NifModel * nif )
 	if ( iUVSets.isValid() ) {
 		int nSets = nif->rowCount( iUVSets );
 		for ( int r = 0; r < nSets; r++ ) {
-			TexCoords tc = nif->getArray<Vector2>( iUVSets.child( r, 0 ) );
+			TexCoords tc = nif->getArray<Vector2>( QModelIndex_child( iUVSets, r ) );
 			if ( tc.count() < numVerts )
 				tc.clear();
 			coords.append( tc );
@@ -577,7 +577,7 @@ void Mesh::updateData_NiTriShape( const NifModel * nif )
 		if ( points.isValid() ) {
 			int nStrips = nif->rowCount( points );
 			for ( int r = 0; r < nStrips; r++ )
-				tristrips.append( nif->getArray<quint16>( points.child( r, 0 ) ) );
+				tristrips.append( nif->getArray<quint16>( QModelIndex_child( points, r ) ) );
 		} else {
 			Message::append( tr( "Warnings were generated while rendering mesh." ),
 				tr( "Block %1: Invalid 'Points' array in %2" )
@@ -595,7 +595,7 @@ QModelIndex Mesh::vertexAt( int idx ) const
 		return QModelIndex();
 
 	auto iVertexData = nif->getIndex( iData, "Vertices" );
-	auto iVertex = iVertexData.child( idx, 0 );
+	auto iVertex = QModelIndex_child( iVertexData, idx );
 
 	return iVertex;
 }
@@ -770,7 +770,7 @@ void Mesh::drawShapes( NodeList * secondPass, bool presort )
 	}
 
 	auto nif = NifModel::fromIndex( iBlock );
-	
+
 	if ( Node::SELECTING ) {
 		if ( scene->isSelModeObject() ) {
 			int s_nodeId = ID2COLORKEY( nodeId );
@@ -860,9 +860,11 @@ void Mesh::drawShapes( NodeList * secondPass, bool presort )
 		case Scene::Level0:
 			if ( lod2tris.count() )
 				glDrawElements( GL_TRIANGLES, lod2tris.count() * 3, GL_UNSIGNED_SHORT, lod2tris.constData() );
+			[[fallthrough]];
 		case Scene::Level1:
 			if ( lod1tris.count() )
 				glDrawElements( GL_TRIANGLES, lod1tris.count() * 3, GL_UNSIGNED_SHORT, lod1tris.constData() );
+			[[fallthrough]];
 		case Scene::Level2:
 		default:
 			if ( lod0tris.count() )
@@ -940,7 +942,7 @@ void Mesh::drawSelection() const
 		return;
 
 	if ( blk != iBlock && blk != iData && blk != iSkinPart && blk != iSkinData
-	     && ( !iTangentData.isValid() || blk != iTangentData ) )
+		&& ( !iTangentData.isValid() || blk != iTangentData ) )
 	{
 		return;
 	}
@@ -993,7 +995,7 @@ void Mesh::drawSelection() const
 	glPolygonMode( GL_FRONT_AND_BACK, GL_POINT );
 
 	if ( n == "Vertices" || n == "Normals" || n == "Vertex Colors"
-	     || n == "UV Sets" || n == "Tangents" || n == "Bitangents" )
+		|| n == "UV Sets" || n == "Tangents" || n == "Bitangents" )
 	{
 		glBegin( GL_POINTS );
 
@@ -1018,10 +1020,10 @@ void Mesh::drawSelection() const
 
 		if ( points.isValid() ) {
 			for ( int j = 0; j < nif->rowCount( points ); j++ ) {
-				QModelIndex iPoints = points.child( j, 0 );
+				QModelIndex iPoints = QModelIndex_child( points, j );
 
 				for ( int k = 0; k < nif->rowCount( iPoints ); k++ ) {
-					glVertex( transVerts.value( nif->get<quint16>( iPoints.child( k, 0 ) ) ) );
+					glVertex( transVerts.value( nif->get<quint16>( QModelIndex_child( iPoints, k ) ) ) );
 				}
 			}
 		}
@@ -1032,15 +1034,15 @@ void Mesh::drawSelection() const
 			glDepthFunc( GL_ALWAYS );
 			glHighlightColor();
 			glBegin( GL_POINTS );
-			QModelIndex iPoints = points.child( i, 0 );
+			QModelIndex iPoints = QModelIndex_child( points, i );
 
 			if ( nif->isArray( idx ) ) {
 				for ( int j = 0; j < nif->rowCount( iPoints ); j++ ) {
-					glVertex( transVerts.value( nif->get<quint16>( iPoints.child( j, 0 ) ) ) );
+					glVertex( transVerts.value( nif->get<quint16>( QModelIndex_child( iPoints, j ) ) ) );
 				}
 			} else {
 				iPoints = idx.parent();
-				glVertex( transVerts.value( nif->get<quint16>( iPoints.child( i, 0 ) ) ) );
+				glVertex( transVerts.value( nif->get<quint16>( QModelIndex_child( iPoints, i ) ) ) );
 			}
 
 			glEnd();
@@ -1268,7 +1270,7 @@ void Mesh::drawSelection() const
 	if ( n == "Bone List" ) {
 		if ( nif->isArray( idx ) ) {
 			for ( int i = 0; i < nif->rowCount( idx ); i++ )
-				boneSphere( nif, idx.child( i, 0 ) );
+				boneSphere( nif, QModelIndex_child( idx, i ) );
 		} else {
 			boneSphere( nif, idx );
 		}
