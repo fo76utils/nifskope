@@ -43,6 +43,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ui/settingsdialog.h"
 #include "gamemanager.h"
 #include "gl/BSMesh.h"
+#include "libfo76utils/src/ddstxt16.hpp"
 
 #include <QCoreApplication>
 #include <QDebug>
@@ -701,13 +702,9 @@ void Renderer::Program::uni4f_l( int l, FloatVector4 x, bool isSRGB )
 void Renderer::Program::uni4c_l( int l, std::uint32_t c, bool isSRGB)
 {
 	FloatVector4	x(c);
-	if ( !isSRGB ) {
-		x *= 1.0f / 255.0f;
-	} else {
-		float	a = x[3] * (1.0f / 255.0f);
-		x.srgbExpand();
-		x[3] = a;
-	}
+	x *= 1.0f / 255.0f;
+	if ( isSRGB )
+		x = DDSTexture16::srgbExpand( x );
 	f->glUniform4f( l, x[0], x[1], x[2], x[3] );
 }
 
@@ -716,12 +713,13 @@ bool Renderer::Program::uniSampler_l( BSShaderLightingProperty * bsprop, int & t
 	if ( l1 < 0 )
 		return false;
 	FloatVector4	c(textureReplacement);
-	if ( textureReplacementMode < 2 )
-		c *= 1.0f / 255.0f;	// UNORM
-	else if ( textureReplacementMode == 2 )
-		c.srgbExpand();	// SRGB
-	else
-		c = c * (1.0f / 127.5f) - 1.0f;	// SNORM
+	c *= 1.0f / 255.0f;
+	if ( textureReplacementMode >= 2 ) {
+		if ( textureReplacementMode == 2 )
+			c = DDSTexture16::srgbExpand( c );	// SRGB
+		else
+			c = c + c - 1.0f;					// SNORM
+	}
 	if ( texturePath && !texturePath->empty() && texunit >= 2 && texunit < TexCache::num_texture_units && activateTextureUnit(texunit, true) ) {
 		TexClampMode	clampMode = TexClampMode::WRAP_S_WRAP_T;
 		if ( uvStream && uvStream->textureAddressMode ) {
