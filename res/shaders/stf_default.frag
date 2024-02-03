@@ -222,6 +222,7 @@ uniform vec4 solidColor;
 uniform bool isWireframe;
 uniform bool isSkinned;
 uniform mat4 worldMatrix;
+uniform vec2 parallaxOcclusionSettings;	// max. steps, height scale
 
 uniform	LayeredMaterial	lm;
 
@@ -247,22 +248,22 @@ mat3 btnMatrix_norm = mat3( normalize( btnMatrix[0] ), normalize( btnMatrix[1] )
 #define FLT_EPSILON 1.192092896e-07F // smallest such that 1.0 + FLT_EPSILON != 1.0
 
 // approximates Fresnel function for n = 1.5, mapped to f0 to 1.0
-vec3 fresnel_n(float NdotV, vec3 f0)
+vec3 fresnel_n(float LdotH, vec3 f0)
 {
 	vec4	a = vec4(-1.11050116, 2.79595384, -2.68545268, 1.0);
-	float	f = ((a.r * NdotV + a.g) * NdotV + a.b) * NdotV + a.a;
-	return f0 + ((vec3(1.0) - f0) * f * f);
+	float	f = ((a.r * LdotH + a.g) * LdotH + a.b) * LdotH + a.a;
+	return mix(f0, vec3(1.0), f * f);
 }
 
 // Fresnel function for water (n = 1.3325)
-float fresnel_w(float NdotV)
+float fresnel_w(float LdotH)
 {
 	vec4	a = vec4(-1.30214688, 3.32294874, -2.87825095, 1.0);
-	float	f = ((a.r * NdotV + a.g) * NdotV + a.b) * NdotV + a.a;
+	float	f = ((a.r * LdotH + a.g) * LdotH + a.b) * LdotH + a.a;
 	return f * f;
 }
 
-vec3 LightingFuncGGX_REF(float NdotL, float LdotR, float NdotV, float LdotH, float roughness, vec3 F0)
+vec3 LightingFuncGGX_REF(float NdotL, float LdotR, float NdotV, float LdotV, float roughness, vec3 F0)
 {
 	float alpha = roughness * roughness;
 	// D (GGX normal distribution)
@@ -273,7 +274,7 @@ vec3 LightingFuncGGX_REF(float NdotL, float LdotR, float NdotV, float LdotH, flo
 	float D = alphaSqr / (denom * denom);
 	// no pi because BRDF -> lighting
 	// F (Fresnel term)
-	vec3 F = fresnel_n(LdotH, F0);
+	vec3 F = fresnel_n(sqrt(max(LdotV * 0.5 + 0.5, 0.0)), F0);
 	// G (remapped hotness, see Unreal Shading)
 	float	k = (alpha + 2 * roughness + 1) / 8.0;
 	float	G = NdotL / (mix(NdotL, 1, k) * mix(NdotV, 1, k));
@@ -398,7 +399,7 @@ vec2 parallaxMapping(int n, vec3 V, vec2 offset, float parallaxScale, float maxL
 	// current height of the layer
 	float	curLayerHeight = 1.0;
 	// shift of texture coordinates for each layer
-	vec2	dtex = parallaxScale * V.xy * layerHeight / max( abs(V.z), 0.025 );
+	vec2	dtex = parallaxScale * V.xy * layerHeight / max( abs(V.z), 0.02 );
 
 	// current texture coordinates
 	vec2	currentTextureCoords = offset;
@@ -435,7 +436,7 @@ void getLayer(int n, inout vec4 baseMap, inout vec3 normalMap, inout vec3 pbrMap
 	vec2	offset = getTexCoord(lm.layers[n].uvStream);
 	// _height.dds
 	if ( lm.layers[n].material.textureSet.textures[6] >= 1 )
-		offset = parallaxMapping( lm.layers[n].material.textureSet.textures[6], normalize( ViewDir_norm * btnMatrix_norm ), offset, 0.04, 120.0 );
+		offset = parallaxMapping( lm.layers[n].material.textureSet.textures[6], normalize( ViewDir_norm * btnMatrix_norm ), offset, parallaxOcclusionSettings.y, parallaxOcclusionSettings.x );
 	// _color.dds
 	if ( lm.layers[n].material.textureSet.textures[0] != 0 )
 		baseMap.rgb = getLayerTexture(n, 0, offset).rgb;
@@ -503,13 +504,12 @@ void main(void)
 	vec3	L = normalize(LightDir);
 	vec3	V = ViewDir_norm;
 	vec3	R = reflect(-V, normal);
-	vec3	H = normalize(L + V);
 
 	float	NdotL = dot(normal, L);
 	float	NdotL0 = max(NdotL, FLT_EPSILON);
 	float	LdotR = dot(L, R);
 	float	NdotV = max(abs(dot(normal, V)), FLT_EPSILON);
-	float	LdotH = max(dot(L, H), FLT_EPSILON);
+	float	LdotV = dot(L, V);
 
 	vec3	reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(R, 0.0)));
 	vec3	normalWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(normal, 0.0)));
@@ -575,7 +575,7 @@ void main(void)
 	// Specular
 	float	smoothness = 1.0 - pbrMap.r;
 	float	roughness = max(pbrMap.r, 0.02);
-	vec3	spec = LightingFuncGGX_REF(NdotL0, LdotR, NdotV, LdotH, roughness, f0) * D.rgb;
+	vec3	spec = LightingFuncGGX_REF(NdotL0, LdotR, NdotV, LdotV, roughness, f0) * D.rgb;
 
 	// Diffuse
 	float	diff = OrenNayarFull(L, V, normal, 1.0 - smoothness, NdotL0);

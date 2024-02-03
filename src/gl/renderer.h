@@ -390,6 +390,8 @@ public:
 	struct Settings
 	{
 		bool	useShaders = true;
+		short	sfParallaxMaxSteps = 120;
+		float	sfParallaxScale = 0.04f;
 		QString	cubeMapPathFO76;
 		QString	cubeMapPathSTF;
 	} cfg;
