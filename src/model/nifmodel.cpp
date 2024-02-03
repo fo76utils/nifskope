@@ -2925,12 +2925,10 @@ bool NifModel::assignString( NifItem * item, const QString & string, bool replac
 void NifModel::convertNiBlock( const QString & identifier, const QModelIndex & index )
 {
 	NifItem * branch = getItem( index );
-	if ( !branch )
+	if ( !branch || branch->name() == identifier )
 		return;
 
-	const QString & btype = branch->name();
-	if ( btype == identifier )
-		return;
+	QString	btype( branch->name() );
 
 	if ( !inherits( btype, identifier ) && !inherits( identifier, btype ) ) {
 		logMessage(tr("Cannot convert NiBlock."), tr("Block type %1 and %2 are not related").arg(btype, identifier), QMessageBox::Critical);
