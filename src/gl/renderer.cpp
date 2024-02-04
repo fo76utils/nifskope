@@ -1310,7 +1310,7 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 		prog->uni4m( MAT_WORLD, mesh->worldTrans().toMatrix4() );
 
 		prog->uni1i( G2P_COLOR, lsp->greyscaleColor );
-		prog->uniSampler( bsprop, SAMP_GRAYSCALE, 3, texunit, "", TexClampMode::MIRRORED_S_MIRRORED_T );
+		prog->uniSampler( bsprop, SAMP_GRAYSCALE, 3, texunit, "", TexClampMode::CLAMP_S_CLAMP_T );
 
 		prog->uni1i( HAS_TINT_COLOR, lsp->hasTintColor );
 		if ( lsp->hasTintColor ) {
@@ -1462,7 +1462,7 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 		prog->uni1f( FALL_DEPTH, esp->falloff.softDepth );
 
 		// BSEffectShader textures
-		prog->uniSampler( bsprop, SAMP_GRAYSCALE, 1, texunit, "", TexClampMode::MIRRORED_S_MIRRORED_T );
+		prog->uniSampler( bsprop, SAMP_GRAYSCALE, 1, texunit, "", TexClampMode::CLAMP_S_CLAMP_T );
 
 		if ( nifVersion >= 130 ) {
 
