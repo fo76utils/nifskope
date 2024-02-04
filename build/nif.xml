@@ -7567,7 +7567,7 @@
         <field name="Regions" type="Region" length="Num Regions">The regions in the mesh. Regions can be used to mark off submeshes which are independent draw calls.</field>
         <field name="Num Components" type="uint">Number of components of the data (matches corresponding field in MeshData).</field>
         <field name="Component Formats" type="ComponentFormat" length="Num Components">The format of each component in this data stream.</field>
-        <field name="Data" type="DataStreamData" arg1="Num Bytes" arg2="Component Formats" />
+        <field name="Data" type="byte" binary="true" length="Num Bytes" />
         <field name="Streamable" type="bool" default="true" />
     </niobject>
 
