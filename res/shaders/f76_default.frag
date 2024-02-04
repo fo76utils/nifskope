@@ -7,8 +7,8 @@ uniform sampler2D GlowMap;
 uniform sampler2D ReflMap;
 uniform sampler2D LightingMap;
 uniform sampler2D GreyscaleMap;
-uniform sampler2D EnvironmentMap;
-uniform samplerCube CubeMap;
+uniform sampler2D EnvironmentMap;	// environment BRDF LUT
+uniform samplerCube CubeMap;	// pre-filtered cube map
 
 uniform vec4 solidColor;
 uniform vec3 specColor;
@@ -66,82 +66,37 @@ mat3 btnMatrix_norm = mat3( normalize( btnMatrix[0] ), normalize( btnMatrix[1] )
 
 #define FLT_EPSILON 1.192092896e-07F // smallest such that 1.0 + FLT_EPSILON != 1.0
 
-float G1V(float NdotV, float k)
-{
-	return 1.0 / (NdotV * (1.0 - k) + k);
-}
-
-float LightingFuncGGX_REF0(float NdotL, float NdotH, float NdotV, float LdotH, float roughness, float F0)
-{
-	float alpha = roughness * roughness;
-	float F, D, vis;
-	// D
-	float alphaSqr = alpha * alpha;
-	float denom = NdotH * NdotH * (alphaSqr - 1.0) + 1.0;
-	D = alphaSqr / (M_PI * denom * denom);
-	// F
-	float LdotH5 = pow(1.0 - LdotH, 5);
-	F = F0 + (1.0 - F0) * LdotH5;
-
-	// V
-	float k = alpha/2.0;
-	vis = G1V(NdotL, k) * G1V(NdotV, k);
-
-	float specular = NdotL * D * F * vis;
-	return specular;
-}
-
-vec3 fresnel_n(float NdotV, vec3 f0)
+vec3 fresnel_n(float LdotH, vec3 f0)
 {
 	vec4	a = vec4(-1.11050116, 2.79595384, -2.68545268, 1.0);
-	float	f = ((a.r * NdotV + a.g) * NdotV + a.b) * NdotV + a.a;
-	return f0 + ((vec3(1.0) - f0) * f * f);
+	float	f = ((a.r * LdotH + a.g) * LdotH + a.b) * LdotH + a.a;
+	return mix(f0, vec3(1.0), f * f);
 }
 
-float fresnel_w(float NdotV)
+float fresnel_w(float LdotH)
 {
 	vec4	a = vec4(-1.30214688, 3.32294874, -2.87825095, 1.0);
-	float	f = ((a.r * NdotV + a.g) * NdotV + a.b) * NdotV + a.a;
+	float	f = ((a.r * LdotH + a.g) * LdotH + a.b) * LdotH + a.a;
 	return f * f;
 }
 
-vec3 LightingFuncGGX_REF(float NdotL, float NdotH, float NdotV, float LdotH, float roughness, vec3 F0)
+vec3 LightingFuncGGX_REF(float NdotL, float LdotR, float NdotV, float LdotV, float roughness, vec3 F0)
 {
 	float alpha = roughness * roughness;
 	// D (GGX normal distribution)
 	float alphaSqr = alpha * alpha;
-	float denom = NdotH * NdotH * (alphaSqr - 1.0) + 1.0;
+	// denom = NdotH * NdotH * (alphaSqr - 1.0) + 1.0,
+	// LdotR = NdotH * NdotH * 2.0 - 1.0
+	float denom = LdotR * alphaSqr + alphaSqr + (1.0 - LdotR);
 	float D = alphaSqr / (denom * denom);
 	// no pi because BRDF -> lighting
 	// F (Fresnel term)
-	vec3 F = fresnel_n(LdotH, F0);
+	vec3 F = fresnel_n(sqrt(max(LdotV * 0.5 + 0.5, 0.0)), F0);
 	// G (remapped hotness, see Unreal Shading)
 	float	k = (alpha + 2 * roughness + 1) / 8.0;
 	float	G = NdotL / (mix(NdotL, 1, k) * mix(NdotV, 1, k));
 
-	return D * F * G / 4.0;
-}
-
-float OrenNayar(vec3 L, vec3 V, vec3 N, float roughness, float NdotL)
-{
-	//float NdotL = dot(N, L);
-	float NdotV = dot(N, V);
-	float LdotV = dot(L, V);
-
-	float rough2 = roughness * roughness;
-
-	float A = 1.0 - 0.5 * (rough2 / (rough2 + 0.57));
-	float B = 0.45 * (rough2 / (rough2 + 0.09));
-
-	float a = min( NdotV, NdotL );
-	float b = max( NdotV, NdotL );
-	b = (sign(b) == 0.0) ? FLT_EPSILON : sign(b) * max( 0.01, abs(b) ); // For fudging the smoothness of C
-	float C = sqrt( (1.0 - a * a) * (1.0 - b * b) ) / b;
-
-	float gamma = LdotV - NdotL * NdotV;
-	float L1 = A + B * max( gamma, FLT_EPSILON ) * C;
-
-	return L1 * max( NdotL, FLT_EPSILON );
+	return D * F * G;
 }
 
 float OrenNayarFull(vec3 L, vec3 V, vec3 N, float roughness, float NdotL0)
@@ -204,11 +159,6 @@ float OrenNayarFull(vec3 L, vec3 V, vec3 N, float roughness, float NdotL0)
 	return L1 + L2;
 }
 
-vec3 fresnelSchlickRoughness(float NdotV, vec3 F0, float roughness)
-{
-	return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - NdotV, 5.0);
-}
-
 vec3 tonemap(vec3 x)
 {
 	float _A = 0.15;
@@ -221,9 +171,10 @@ vec3 tonemap(vec3 x)
 	return ((x*(_A*x+_C*_B)+_D*_E)/(x*(_A*x+_B)+_D*_F))-_E/_F;
 }
 
-vec4 colorLookup(float x, float y)
+float srgbCompress(float x)
 {
-	return texture2D(GreyscaleMap, vec2(clamp(x, 0.0, 1.0), clamp(y, 0.0, 1.0)));
+	float	y = sqrt(max(x, 0.0) + 0.000858025);
+	return (((y * -0.18732371 + 0.59302883) * y - 0.79095451) * y + 1.42598062) * y - 0.04110602;
 }
 
 void main(void)
@@ -252,15 +203,12 @@ void main(void)
 	vec3 L = normalize(LightDir);
 	vec3 V = ViewDir_norm;
 	vec3 R = reflect(-V, normal);
-	vec3 H = normalize(L + V);
 
 	float NdotL = dot(normal, L);
 	float NdotL0 = max(NdotL, FLT_EPSILON);
-	float NdotH = max(dot(normal, H), FLT_EPSILON);
+	float LdotR = dot(L, R);
 	float NdotV = max(abs(dot(normal, V)), FLT_EPSILON);
-	float VdotH = max(dot(V, H), FLT_EPSILON);
-	float LdotH = max(dot(L, H), FLT_EPSILON);
-	float NdotNegL = max(dot(normal, -L), FLT_EPSILON);
+	float LdotV = dot(L, V);
 
 	vec3	reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(R, 0.0))) * vec3(1.0, 1.0, -1.0);
 	vec3	normalWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(normal, 0.0))) * vec3(1.0, 1.0, -1.0);
@@ -269,10 +217,7 @@ void main(void)
 	vec3 albedo = baseMap.rgb * C.rgb;
 	if ( greyscaleColor ) {
 		// work around incorrect format used by Fallout 76 grayscale textures
-		float	g = sqrt(baseMap.g);
-		vec4	luG = colorLookup(g * 1.13942692 - baseMap.g * 0.13942692, paletteScale * C.r);
-
-		albedo = luG.rgb;
+		albedo = textureLod(GreyscaleMap, vec2(srgbCompress(baseMap.g), paletteScale * C.r), 0.0).rgb;
 	}
 
 	// Emissive
@@ -292,7 +237,7 @@ void main(void)
 	// Specular
 	float	smoothness = lightingMap.r;
 	float	roughness = max(1.0 - smoothness, 0.02);
-	vec3	spec = LightingFuncGGX_REF(NdotL0, NdotH, NdotV, LdotH, roughness, f0) * D.rgb;
+	vec3	spec = LightingFuncGGX_REF(NdotL0, LdotR, NdotV, LdotV, roughness, f0) * D.rgb;
 
 	// Diffuse
 	float	diff = OrenNayarFull(L, V, normal, 1.0 - smoothness, NdotL0);
