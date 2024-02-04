@@ -44,9 +44,7 @@ varying vec4 A;
 varying vec4 C;
 varying vec4 D;
 
-varying vec3 N;
-varying vec3 t;
-varying vec3 b;
+varying mat3 tbnMatrix;
 
 
 vec3 tonemap(vec3 x)
@@ -66,8 +64,8 @@ vec3 toGrayscale(vec3 color)
 	return vec3(dot(vec3(0.3, 0.59, 0.11), color));
 }
 
-// Compute inner layer’s texture coordinate and transmission depth
-// vTexCoord: Outer layer’s texture coordinate
+// Compute inner layer's texture coordinate and transmission depth
+// vTexCoord: Outer layer's texture coordinate
 // vInnerScale: Tiling of inner texture
 // vViewTS: View vector in tangent space
 // vNormalTS: Normal in tangent space (sampled normal map)
@@ -78,19 +76,19 @@ vec3 ParallaxOffsetAndDepth( vec2 vTexCoord, vec2 vInnerScale, vec3 vViewTS, vec
 	vec3 vReflectionTS = reflect( -vViewTS, vNormalTS );
 	// Tangent space transmission vector (reflect about surface plane)
 	vec3 vTransTS = vec3( vReflectionTS.xy, -vReflectionTS.z );
-	
+
 	// Distance along transmission vector to intersect inner layer
 	float fTransDist = fLayerThickness / abs(vTransTS.z);
-	
+
 	// Texel size
 	// 	Bethesda's version does indeed seem to assume 1024, which is why they
 	//	introduced the additional parameter.
 	vec2 vTexelSize = vec2( 1.0/(1024.0 * vInnerScale.x), 1.0/(1024.0 * vInnerScale.y) );
-	
-	// Inner layer’s texture coordinate due to parallax
+
+	// Inner layer's texture coordinate due to parallax
 	vec2 vOffset = vTexelSize * fTransDist * vTransTS.xy;
 	vec2 vOffsetTexCoord = vTexCoord + vOffset;
-	
+
 	// Return offset texture coordinate in xy and transmission dist in z
 	return vec3( vOffsetTexCoord, fTransDist );
 }
@@ -101,35 +99,35 @@ void main( void )
 
 	vec4 baseMap = texture2D( BaseMap, offset );
 	vec4 normalMap = texture2D( NormalMap, offset );
-	
-	vec3 normal = normalize(normalMap.rgb * 2.0 - 1.0);
+
+	vec3 normalTS = normalize(normalMap.rgb * 2.0 - 1.0);
+	vec3 normal = normalize(tbnMatrix * normalTS);
 
 	// Sample the non-parallax offset alpha channel of the inner map
 	//	Used to modulate the innerThickness
 	float innerMapAlpha = texture2D( InnerMap, offset ).a;
-	
-	
+
+
 	vec3 L = normalize(LightDir);
 	vec3 E = normalize(ViewDir);
 	vec3 R = reflect(-L, normal);
 	vec3 H = normalize( L + E );
-	
+
 	float NdotL = max( dot(normal, L), 0.0 );
 	float NdotH = max( dot(normal, H), 0.0 );
 	float EdotN = max( dot(normal, E), 0.0 );
 	float NdotNegL = max( dot(normal, -L), 0.0 );
-	
-	
+
+
 	// Mix between the face normal and the normal map based on the refraction scale
-	vec3 mixedNormal = mix( vec3(0.0, 0.0, 1.0), normal, clamp( outerRefraction, 0.0, 1.0 ) );
-	vec3 parallax = ParallaxOffsetAndDepth( offset, innerScale, E, mixedNormal, innerThickness * innerMapAlpha );
-	
+	vec3 mixedNormal = mix( vec3(0.0, 0.0, 1.0), normalTS, clamp( outerRefraction, 0.0, 1.0 ) );
+	vec3 parallax = ParallaxOffsetAndDepth( offset, innerScale, normalize(E * tbnMatrix), mixedNormal, innerThickness * innerMapAlpha );
+
 	// Sample the inner map at the offset coords
 	vec4 innerMap = texture2D( InnerMap, parallax.xy * innerScale );
 
 	vec3 reflected = reflect( -E, normal );
-	vec3 reflectedVS = b * reflected.x + t * reflected.y + N * reflected.z;
-	vec3 reflectedWS = vec3( worldMatrix * (gl_ModelViewMatrixInverse * vec4( reflectedVS, 0.0 )) );
+	vec3 reflectedWS = vec3( worldMatrix * (gl_ModelViewMatrixInverse * vec4( reflected, 0.0 )) );
 
 
 	vec4 color;
@@ -148,7 +146,7 @@ void main( void )
 	if ( hasCubeMap ) {
 		vec4 cube = textureCube( CubeMap, reflectedWS );
 		cube.rgb *= outerReflection;
-		
+
 		if ( hasEnvMask ) {
 			vec4 env = texture2D( EnvironmentMap, offset );
 			cube.rgb *= env.r;
@@ -176,7 +174,7 @@ void main( void )
 	if ( hasBacklight ) {
 		backlight = texture2D( BacklightMap, offset ).rgb;
 		backlight *= NdotNegL;
-		
+
 		emissive += backlight * D.rgb;
 	}
 
@@ -191,7 +189,7 @@ void main( void )
 	if ( hasRimlight ) {
 		rim = mask.rgb * pow(vec3((1.0 - EdotN)), vec3(lightingEffect2));
 		rim *= smoothstep( -0.2, 1.0, dot(-L, E) );
-		
+
 		emissive += rim * D.rgb;
 	}
 
@@ -201,14 +199,14 @@ void main( void )
 
 		soft = max( wrap, 0.0 ) * mask.rgb * smoothstep( 1.0, 0.0, NdotL );
 		soft *= sqrt( clamp( lightingEffect1, 0.0, 1.0 ) );
-		
+
 		emissive += soft * D.rgb;
 	}
 
 	color.rgb = albedo * (diffuse + emissive) + spec;
 	color.rgb = tonemap( color.rgb * D.a ) / tonemap( vec3(1.0) );
 	color.a = C.a * baseMap.a;
-	
+
 	gl_FragColor = color;
 	gl_FragColor.a *= alpha;
 }
