@@ -43,8 +43,8 @@ LightingWidget::LightingWidget( GLView * ogl, QWidget * parent ) : QWidget(paren
 	// Inform ogl of changes
 	connect( ui->sldDirectional, &QSlider::valueChanged, ogl, &GLView::setBrightness );
 	connect( ui->sldLightLevel, &QSlider::valueChanged, ogl, &GLView::setLightLevel );
-	connect( ui->sldLightHue, &QSlider::valueChanged, ogl, &GLView::setLightHue );
-	connect( ui->sldLightSaturation, &QSlider::valueChanged, ogl, &GLView::setLightSaturation );
+	connect( ui->sldLightColor, &QSlider::valueChanged, ogl, &GLView::setLightColor );
+	connect( ui->sldToneMapping, &QSlider::valueChanged, ogl, &GLView::setToneMapping );
 	connect( ui->sldAmbient, &QSlider::valueChanged, ogl, &GLView::setAmbient );
 	connect( ui->sldDeclination, &QSlider::valueChanged, ogl, &GLView::setDeclination );
 	connect( ui->sldPlanarAngle, &QSlider::valueChanged, ogl, &GLView::setPlanarAngle );
@@ -63,10 +63,10 @@ void LightingWidget::setDefaults()
 	sld( ui->sldDeclination, DeclinationMin, DeclinationMax, DeclinationDefault );
 	sld( ui->sldPlanarAngle, PlanarAngleMin, PlanarAngleMax, PlanarAngleDefault );
 	sld( ui->sldLightLevel, LightLevelMin, LightLevelMax, LightLevelDefault );
-	sld( ui->sldLightHue, LightHueMin, LightHueMax, LightHueDefault );
-	ui->sldLightHue->setSingleStep( LightHueMax / 12 );
-	ui->sldLightHue->setTickInterval( LightHueMax / 3 );
-	sld( ui->sldLightSaturation, LightSaturationMin, LightSaturationMax, LightSaturationDefault );
+	sld( ui->sldLightColor, LightColorMin, LightColorMax, LightColorDefault );
+	ui->sldLightColor->setSingleStep( LightColorMax / 16 );
+	ui->sldLightColor->setTickInterval( LightColorMax / 8 );
+	sld( ui->sldToneMapping, ToneMappingMin, ToneMappingMax, ToneMappingDefault );
 }
 
 void LightingWidget::setActions( QVector<QAction *> atns )

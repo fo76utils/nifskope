@@ -55,8 +55,8 @@
         <file alias="sun">icon/sun.png</file>
         <file alias="cloud">icon/cloud.png</file>
         <file alias="light">icon/light.png</file>
-        <file alias="hue">icon/hue.png</file>
-        <file alias="saturation">icon/saturation.png</file>
+        <file alias="lightcolor">icon/lightcolor.png</file>
+        <file alias="tonemap">icon/tonemap.png</file>
         <file alias="cubemap">icon/cubemap.png</file>
         <file alias="hidden">icon/hidden.png</file>
         <file alias="hiddenDisabled">icon/hidden-disabled.png</file>

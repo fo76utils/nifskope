@@ -138,14 +138,14 @@
        </widget>
       </item>
       <item row="5" column="1">
-       <widget class="QSlider" name="sldLightHue">
+       <widget class="QSlider" name="sldLightColor">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
        </widget>
       </item>
       <item row="6" column="1">
-       <widget class="QSlider" name="sldLightSaturation">
+       <widget class="QSlider" name="sldToneMapping">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
@@ -282,7 +282,7 @@
        </widget>
       </item>
       <item row="5" column="0">
-       <widget class="QPushButton" name="btnLightHue">
+       <widget class="QPushButton" name="btnLightColor">
         <property name="maximumSize">
          <size>
           <width>24</width>
@@ -294,7 +294,7 @@
         </property>
         <property name="icon">
          <iconset resource="../../../res/nifskope.qrc">
-          <normaloff>:/btn/hue</normaloff>:/btn/hue</iconset>
+          <normaloff>:/btn/lightcolor</normaloff>:/btn/lightcolor</iconset>
         </property>
         <property name="iconSize">
          <size>
@@ -308,7 +308,7 @@
        </widget>
       </item>
       <item row="6" column="0">
-       <widget class="QPushButton" name="btnLightSaturation">
+       <widget class="QPushButton" name="btnToneMapping">
         <property name="maximumSize">
          <size>
           <width>24</width>
@@ -320,7 +320,7 @@
         </property>
         <property name="icon">
          <iconset resource="../../../res/nifskope.qrc">
-          <normaloff>:/btn/saturation</normaloff>:/btn/saturation</iconset>
+          <normaloff>:/btn/tonemap</normaloff>:/btn/tonemap</iconset>
         </property>
         <property name="iconSize">
          <size>

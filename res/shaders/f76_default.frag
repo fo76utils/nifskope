@@ -159,16 +159,18 @@ float OrenNayarFull(vec3 L, vec3 V, vec3 N, float roughness, float NdotL0)
 	return L1 + L2;
 }
 
-vec3 tonemap(vec3 x)
+vec3 tonemap(vec3 x, float y)
 {
-	float _A = 0.15;
-	float _B = 0.50;
-	float _C = 0.10;
-	float _D = 0.20;
-	float _E = 0.02;
-	float _F = 0.30;
+	float a = 0.15;
+	float b = 0.50;
+	float c = 0.10;
+	float d = 0.20;
+	float e = 0.02;
+	float f = 0.30;
 
-	return ((x*(_A*x+_C*_B)+_D*_E)/(x*(_A*x+_B)+_D*_F))-_E/_F;
+	vec3 z = x * (y * 4.22978723);
+	z = (z * (a * z + b * c) + d * e) / (z * (a * z + b) + d * f) - e / f;
+	return z / (y * 0.93333333);
 }
 
 float srgbCompress(float x)
@@ -293,7 +295,7 @@ void main(void)
 	// Emissive
 	color.rgb += emissive;
 
-	color.rgb = tonemap(color.rgb * D.a) / tonemap(vec3(1.0));
+	color.rgb = tonemap(color.rgb * D.a, A.a);
 	color.a = C.a * baseMap.a;
 
 	gl_FragColor = color;

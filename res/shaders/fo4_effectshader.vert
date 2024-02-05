@@ -50,7 +50,7 @@ void main( void )
 	ViewDir = tbnMatrix * -v.xyz;
 	LightDir = tbnMatrix * gl_LightSource[0].position.xyz;
 	
-	A = sqrt(gl_LightSource[0].ambient) * 0.375;
+	A = vec4(sqrt(gl_LightSource[0].ambient.rgb) * 0.375, gl_LightSource[0].ambient.a);
 	C = gl_Color;
 	D = sqrt(gl_LightSource[0].diffuse);
 }

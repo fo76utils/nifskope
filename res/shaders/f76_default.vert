@@ -105,8 +105,7 @@ void main( void )
 	ViewDir = -v.xyz;
 	LightDir = gl_LightSource[0].position.xyz;
 
-	A = gl_LightSource[0].ambient;
-	A.rgb *= 1.2;
+	A = vec4(gl_LightSource[0].ambient.rgb * 1.2, gl_LightSource[0].ambient.a);
 	C = gl_Color;
 	D = gl_LightSource[0].diffuse;
 }

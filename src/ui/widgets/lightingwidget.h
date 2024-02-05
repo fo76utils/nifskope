@@ -48,12 +48,12 @@ private:
 		LightLevelMin = 0,
 		LightLevelMax = BRIGHT,
 		LightLevelDefault = POS,
-		LightHueMin = 0,
-		LightHueMax = BRIGHT,
-		LightHueDefault = 0,
-		LightSaturationMin = 0,
-		LightSaturationMax = BRIGHT,
-		LightSaturationDefault = 0
+		LightColorMin = 0,
+		LightColorMax = BRIGHT,
+		LightColorDefault = POS,
+		ToneMappingMin = 0,
+		ToneMappingMax = BRIGHT,
+		ToneMappingDefault = POS
 	};
 };
 

@@ -41,6 +41,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ui/settingsdialog.h"
 #include "ui/widgets/fileselect.h"
 #include "gamemanager.h"
+#include "libfo76utils/src/fp32vec4.hpp"
 
 #include <QApplication>
 #include <QActionGroup>
@@ -613,15 +614,21 @@ void GLView::paintGL()
 		if ( scene->hasVisMode(Scene::VisNormalsOnly) && scene->hasOption(Scene::DoTexturing) && !scene->hasOption(Scene::DisableShaders) ) {
 			amb = 0.1f;
 		}
+		GLfloat mat_amb[] = { amb, amb, amb, toneMapping };
 
-		GLfloat mat_amb[] = { amb, amb, amb, 1.0f };
-		float	brightnessR = float( std::cos((brightnessH < 0.5f ? brightnessH : brightnessH - 1.0f) * 4.71238898f) );
-		float	brightnessG = float( std::cos((brightnessH - 0.33333333f) * 4.71238898f) );
-		float	brightnessB = float( std::cos((brightnessH - 0.66666667f) * 4.71238898f) );
-		brightnessR = ( (std::max(brightnessR, 0.0f) * brightnessR - 1.0f) * brightnessS + 1.0f ) * brightnessL;
-		brightnessG = ( (std::max(brightnessG, 0.0f) * brightnessG - 1.0f) * brightnessS + 1.0f ) * brightnessL;
-		brightnessB = ( (std::max(brightnessB, 0.0f) * brightnessB - 1.0f) * brightnessS + 1.0f ) * brightnessL;
-		GLfloat mat_diff[] = { brightnessR, brightnessG, brightnessB, brightnessScale };
+		const FloatVector4	a6( 0.02760699f, -0.02760716f, -0.89546080f, 0.0f );
+		const FloatVector4	a5( 0.17419180f, -0.17419179f, 1.39674540f, 0.0f );
+		const FloatVector4	a4( -0.31251446f, 0.31251526f, 0.88845913f, 0.0f );
+		const FloatVector4	a3( -0.19438881f, 0.19438865f, -2.36482405f, 0.0f );
+		const FloatVector4	a2( 0.68779535f, -0.68779591f, -0.04841438f, 0.0f );
+		const FloatVector4	a1( -0.57691451f, 0.57691471f, 2.42385767f, 0.0f );
+		const FloatVector4	a0( 1.0f );
+		FloatVector4	c( lightColor );
+		c = ( ( ( ( (c * a6 + a5) * c + a4 ) * c + a3 ) * c + a2 ) * c + a1 ) * c + a0;
+		c = c / std::max( c[0], std::max(c[1], c[2]) );
+		c.maxValues( FloatVector4(0.0f) ).minValues( FloatVector4(1.0f) );
+		c *= brightnessL;
+		GLfloat mat_diff[] = { c[0], c[1], c[2], brightnessScale };
 
 
 		glShadeModel( GL_SMOOTH );
@@ -816,17 +823,16 @@ void GLView::setLightLevel( int value )
 	update();
 }
 
-void GLView::setLightHue( int value )
+void GLView::setLightColor( int value )
 {
-	brightnessH = float( value ) / 1440.0f;
-	brightnessH = brightnessH - float( std::floor(brightnessH) );
+	// color temperature on a logarithmic scale
+	lightColor = float( value ) / 720.0f - 1.0f;
 	update();
 }
 
-void GLView::setLightSaturation( int value )
+void GLView::setToneMapping( int value )
 {
-	brightnessS = std::min( std::max(float(value / 1440.0f), 0.0f), 1.0f );
-	brightnessS = brightnessS * ( 2.0f - brightnessS );
+	toneMapping = float( std::pow( 4.22978723f, float( value - 1440 ) / 720.0f ) );
 	update();
 }
 
