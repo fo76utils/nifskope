@@ -826,7 +826,7 @@ void GLView::setLightLevel( int value )
 void GLView::setLightColor( int value )
 {
 	lightColor = float( value ) / 720.0f - 1.0f;
-	lightColor = lightColor * float( std::fabs(lightColor) );
+	lightColor = lightColor * float( std::sqrt(std::fabs(lightColor)) );
 	// color temperature = 6548.04 * exp(lightColor * 2.0401036)
 	update();
 }
