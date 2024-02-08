@@ -45,9 +45,11 @@ void main( void )
 	}
 
 	tbnMatrix = mat3(b.x, b.y, b.z,
-                     t.x, t.y, t.z,
-                     n.x, n.y, n.z);
-	
+					 t.x, t.y, t.z,
+					 n.x, n.y, n.z);
+
+	if (gl_ProjectionMatrix[3][3] == 1.0)
+		v = vec3(0.0, 0.0, -1.0);	// orthographic view
 	ViewDir = -v.xyz;
 	LightDir = gl_LightSource[0].position.xyz;
 

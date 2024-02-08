@@ -102,6 +102,8 @@ void main( void )
 		reflMatrix = worldMatrix;
 	}
 
+	if (gl_ProjectionMatrix[3][3] == 1.0)
+		v = vec3(0.0, 0.0, -1.0);	// orthographic view
 	ViewDir = -v.xyz;
 	LightDir = gl_LightSource[0].position.xyz;
 
