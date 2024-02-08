@@ -42,13 +42,11 @@ void main( void )
 		b = normalize(gl_NormalMatrix * bit);
 		v = vec3(gl_ModelViewMatrix * V);
 	}
-	
-	mat3 tbnMatrix = mat3(b.x, t.x, N.x,
-                          b.y, t.y, N.y,
-                          b.z, t.z, N.z);
-	
-	ViewDir = tbnMatrix * -v.xyz;
-	LightDir = tbnMatrix * gl_LightSource[0].position.xyz;
+
+	if (gl_ProjectionMatrix[3][3] == 1.0)
+		v = vec3(0.0, 0.0, -1.0);	// orthographic view
+	ViewDir = -v.xyz;
+	LightDir = gl_LightSource[0].position.xyz;
 	
 	A = vec4(sqrt(gl_LightSource[0].ambient.rgb) * 0.375, gl_LightSource[0].ambient.a);
 	C = gl_Color;
