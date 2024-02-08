@@ -99,19 +99,15 @@ vec3 LightingFuncGGX_REF(float NdotL, float LdotR, float NdotV, float LdotV, flo
 	return D * F * G;
 }
 
-float OrenNayarFull(vec3 L, vec3 V, vec3 N, float roughness, float NdotL0)
+float OrenNayarFull(float NdotL, float NdotV, float LdotV, float roughness)
 {
-	float	NdotV = max(dot(N, V), FLT_EPSILON);
-
-	float	angleVN = acos(NdotV);
+	float	NdotL0 = clamp(NdotL, FLT_EPSILON, 1.0);
+	float	angleVN = acos(clamp(abs(NdotV), FLT_EPSILON, 1.0));
 	float	angleLN = acos(NdotL0);
 
 	float	alpha = max(angleVN, angleLN);
 	float	beta = min(angleVN, angleLN);
-	float	gamma = 0.0;
-	//gamma = dot(L, V) - NdotL0 * NdotV;
-	if ( beta > 0.005 )
-		gamma = dot(normalize(cross(L, N)), normalize(cross(V, N)));
+	float	gamma = (LdotV - NdotL * NdotV) / sqrt(max((1.0 - NdotL * NdotL) * (1.0 - NdotV * NdotV), 0.000025));
 
 	float roughnessSquared = roughness * roughness;
 	float roughnessSquared9 = (roughnessSquared / (roughnessSquared + 0.09));
@@ -207,9 +203,9 @@ void main(void)
 	vec3 R = reflect(-V, normal);
 
 	float NdotL = dot(normal, L);
-	float NdotL0 = max(NdotL, FLT_EPSILON);
+	float NdotL0 = max(NdotL, 0.0);
 	float LdotR = dot(L, R);
-	float NdotV = max(abs(dot(normal, V)), FLT_EPSILON);
+	float NdotV = abs(dot(normal, V));
 	float LdotV = dot(L, V);
 
 	vec3	reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(R, 0.0))) * vec3(1.0, 1.0, -1.0);
@@ -237,19 +233,18 @@ void main(void)
 	vec3	f0 = max(reflMap.rgb, vec3(0.02));
 
 	// Specular
-	float	smoothness = lightingMap.r;
-	float	roughness = max(1.0 - smoothness, 0.02);
-	vec3	spec = LightingFuncGGX_REF(NdotL0, LdotR, NdotV, LdotV, roughness, f0) * D.rgb;
+	float	roughness = 1.0 - lightingMap.r;
+	vec3	spec = LightingFuncGGX_REF(NdotL0, LdotR, NdotV, LdotV, max(roughness, 0.02), f0) * D.rgb;
 
 	// Diffuse
-	float	diff = OrenNayarFull(L, V, normal, 1.0 - smoothness, NdotL0);
+	float	diff = OrenNayarFull(NdotL, dot(normal, V), LdotV, roughness);
 	vec3	diffuse = vec3(diff);
 
 	// Environment
 	vec3	refl = vec3(0.0);
 	vec3	ambient = A.rgb;
 	if ( hasCubeMap ) {
-		float	m = (1.0 - smoothness) * ((1.0 - smoothness) * -4.0 + 10.0);
+		float	m = roughness * (roughness * -4.0 + 10.0);
 		refl = textureLod(CubeMap, reflectedWS, max(m, 0.0)).rgb;
 		refl *= envReflection * specStrength;
 		refl *= ambient;
@@ -258,7 +253,7 @@ void main(void)
 		ambient /= 15.0;
 		refl = ambient;
 	}
-	vec4	envLUT = textureLod(EnvironmentMap, vec2(NdotV, 1.0 - smoothness), 0.0);
+	vec4	envLUT = textureLod(EnvironmentMap, vec2(NdotV, roughness), 0.0);
 	vec3	f = mix(f0, vec3(1.0), envLUT.r);
 	if (!hasSpecular) {
 		albedo = max(albedo, reflMap.rgb);

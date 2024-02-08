@@ -87,19 +87,15 @@ float OrenNayar( vec3 L, vec3 V, vec3 N, float roughness, float NdotL )
 	return L1 * max( NdotL, FLT_EPSILON );
 }
 
-float OrenNayarFull(vec3 L, vec3 V, vec3 N, float roughness, float NdotL0)
+float OrenNayarFull(float NdotL, float NdotV, float LdotV, float roughness)
 {
-	float	NdotV = max(dot(N, V), FLT_EPSILON);
-
-	float	angleVN = acos(NdotV);
+	float	NdotL0 = clamp(NdotL, FLT_EPSILON, 1.0);
+	float	angleVN = acos(clamp(abs(NdotV), FLT_EPSILON, 1.0));
 	float	angleLN = acos(NdotL0);
 
 	float	alpha = max(angleVN, angleLN);
 	float	beta = min(angleVN, angleLN);
-	float	gamma = 0.0;
-	//gamma = dot(L, V) - NdotL0 * NdotV;
-	if ( beta > 0.005 )
-		gamma = dot(normalize(cross(L, N)), normalize(cross(V, N)));
+	float	gamma = (LdotV - NdotL * NdotV) / sqrt(max((1.0 - NdotL * NdotL) * (1.0 - NdotV * NdotV), 0.000025));
 
 	float roughnessSquared = roughness * roughness;
 	float roughnessSquared9 = (roughnessSquared / (roughnessSquared + 0.09));
@@ -304,7 +300,7 @@ void main( void )
 	}
 
 	// Diffuse
-	float diff = OrenNayarFull( L, V, normal, 1.0 - smoothness, NdotL0 );
+	float diff = OrenNayarFull( NdotL, dot(normal, V), dot(L, V), 1.0 - smoothness );
 	diffuse = vec3(diff);
 
 	vec3 soft = vec3(0.0);
