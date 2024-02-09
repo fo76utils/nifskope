@@ -1803,7 +1803,13 @@ static void setTempDataPath( const Game::GameMode game, const char * pathName )
 				n1 = 0;
 			if ( n2 == std::string::npos )
 				n2 = 0;
-			tmpPath.resize( std::max( n1, n2 ) );
+			n1 = std::max( n1, n2 );
+#if defined(_WIN32) || defined(_WIN64)
+			// do not remove slash from after drive letter and :
+			if ( n1 == 2 && tmpPath[1] == ':' && ( (unsigned int) std::uint8_t(tmpPath[0] | 0x20) - 0x61U ) < 0x1AU )
+				n1++;
+#endif
+			tmpPath.resize( n1 );
 			continue;
 		}
 		if ( FileBuffer::checkType( extStr, ".ba2" ) || FileBuffer::checkType( extStr, ".bsa" ) )
