@@ -616,19 +616,21 @@ void GLView::paintGL()
 		}
 		GLfloat mat_amb[] = { amb, amb, amb, toneMapping };
 
-		const FloatVector4	a6( 0.02729229f, -0.03349948f, -0.93821366f, 0.0f );
-		const FloatVector4	a5( 0.18128491f, -0.17835246f, 1.44559421f, 0.0f );
-		const FloatVector4	a4( -0.31201837f, 0.31944694f, 0.89768547f, 0.0f );
-		const FloatVector4	a3( -0.20153606f, 0.19871284f, -2.38263144f, 0.0f );
-		const FloatVector4	a2( 0.68761390f, -0.68953811f, -0.04866647f, 0.0f );
-		const FloatVector4	a1( -0.57557474f, 0.57604823f, 2.42515729f, 0.0f );
+		const FloatVector4	a6( 0.02729229f, -0.03349948f, -0.93633725f, 0.0f );
+		const FloatVector4	a5( 0.18128491f, -0.17835246f, 1.44207620f, 0.0f );
+		const FloatVector4	a4( -0.31201837f, 0.31944694f, 0.89911656f, 0.0f );
+		const FloatVector4	a3( -0.20153606f, 0.19871284f, -2.38214739f, 0.0f );
+		const FloatVector4	a2( 0.68761390f, -0.68953811f, -0.04892082f, 0.0f );
+		const FloatVector4	a1( -0.57557474f, 0.57604823f, 2.42514495f, 0.0f );
 		const FloatVector4	a0( 1.0f );
 		FloatVector4	c( lightColor );
 		c = ( ( ( ( (c * a6 + a5) * c + a4 ) * c + a3 ) * c + a2 ) * c + a1 ) * c + a0;
-		c = c / std::max( c[0], std::max(c[1], c[2]) );
+		float	d1 = std::max( c[0], std::max(c[1], c[2]) );
+		float	d0 = std::min( std::max(c[2], -0.039339175f), 0.0f );
+		c = ( c - d0 ) / ( d1 - d0 );
 		c.maxValues( FloatVector4(0.0f) ).minValues( FloatVector4(1.0f) );
 		c *= brightnessL;
-		GLfloat mat_diff[] = { c[0], c[1], c[2], brightnessScale };
+		GLfloat	mat_diff[] = { c[0], c[1], c[2], brightnessScale };
 
 
 		glShadeModel( GL_SMOOTH );
