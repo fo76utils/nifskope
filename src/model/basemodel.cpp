@@ -31,6 +31,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***** END LICENCE BLOCK *****/
 
 #include "basemodel.h"
+#include "nifmodel.h"
 
 #include "xml/xmlconfig.h"
 
@@ -419,7 +420,7 @@ QVariant BaseModel::data( const QModelIndex & index, int role ) const
 			}
 		}
 		return QVariant();
-	case Qt::BackgroundColorRole:
+	case Qt::BackgroundRole:
 		{
 			if ( column == ValueCol && item->isColor() ) {
 				return item->getColorValue();
@@ -909,6 +910,9 @@ QVariant BaseModelEval::operator()( const QVariant & v ) const
 
 		// Resolve "ARG"
 		QString left = v.toString();
+		if ( left.startsWith( QChar('$') ) && model && typeid( *model ) == typeid( NifModel ) ) {
+			return QVariant::fromValue( static_cast< const NifModel * >( model )->resolveString( model->getItem( item->parent(), left.mid(1) ) ) );
+		}
 		const NifItem * exprItem = item;
 		bool isArgExpr = false;
 		while ( left == XMLARG ) {

@@ -1401,7 +1401,7 @@
         <option value="12000" name="BP_TORSOSECTION_RIGHTLEG3">Torso Section | Right Leg 3</option>
         <option value="13000" name="BP_TORSOSECTION_BRAIN">Torso Section | Brain</option>       
     </enum>
-	
+
     <enum name="BSLightingShaderType" storage="uint" prefix="ST" versions="#SKY_AND_LATER#">
         Values for configuring the shader type in a BSLightingShaderProperty
         <option value="0" name="Default" />
@@ -6940,35 +6940,20 @@
         <field name="Translucency Settings" type="BSTranslucencySettingsComponent" cond="Is Translucent" />
     </struct>
 
-    <niobject name="BSLightingShaderProperty" inherit="BSShaderProperty" stopcond="#BSVER# #GTE# 155 #AND# Name" module="BSMain" versions="#SKY_AND_LATER#">
-        Bethesda shader property for Skyrim and later.
-        <field name="Material" type="BSLayeredMaterial" abstract="true" vercond="#BS_GTE_STF#">Starfield material (.mat).</field>
+    <struct name="BSLightingShaderPropertyDataLTFO76" module="BSMain" versions="#NI_BS_LTE_FO4#">
+        Bethesda shader property for Skyrim and Fallout 4.
         <field name="Shader Flags 1" suffix="SK" type="SkyrimShaderPropertyFlags1" vercond="#NI_BS_LT_FO4#" default="0x82400301">Skyrim Shader Flags for setting render/shader options.</field>
         <field name="Shader Flags 2" suffix="SK" type="SkyrimShaderPropertyFlags2" vercond="#NI_BS_LT_FO4#" default="0x8021">Skyrim Shader Flags for setting render/shader options.</field>
         <field name="Shader Flags 1" suffix="FO4" type="Fallout4ShaderPropertyFlags1" vercond="#BS_FO4#" default="0x80400201">Fallout 4 Shader Flags. Mostly overridden if "Name" is a path to a BGSM/BGEM file.</field>
         <field name="Shader Flags 2" suffix="FO4" type="Fallout4ShaderPropertyFlags2" vercond="#BS_FO4#" default="1">Fallout 4 Shader Flags. Mostly overridden if "Name" is a path to a BGSM/BGEM file.</field>
-        <field name="Shader Type" type="BSShaderType155" vercond="#BS_GTE_F76#" />
         <field name="Num SF1" type="uint" vercond="#BS_GTE_132#" />
-        <field name="Num SF2" type="uint" vercond="#BS_GTE_152#" />
         <field name="SF1" type="BSShaderCRC32" length="Num SF1" vercond="#BS_GTE_132#" />
-        <field name="SF2" type="BSShaderCRC32" length="Num SF2" vercond="#BS_GTE_152#" />
         <field name="UV Offset" type="TexCoord">Offset UVs</field>
         <field name="UV Scale" type="TexCoord" default="#VEC2_ONE#">Offset UV Scale to repeat tiling textures, see above.</field>
         <field name="Texture Set" type="Ref" template="BSShaderTextureSet">Texture Set, can have override in an esm/esp</field>
-        <field name="Texture 0" type="SizedString" abstract="true" vercond="#BS_F76#" cond="Name" />
-        <field name="Texture 1" type="SizedString" abstract="true" vercond="#BS_F76#" cond="Name" />
-        <field name="Texture 2" type="SizedString" abstract="true" vercond="#BS_F76#" cond="Name" />
-        <field name="Texture 3" type="SizedString" abstract="true" vercond="#BS_F76#" cond="Name" />
-        <field name="Texture 4" type="SizedString" abstract="true" vercond="#BS_F76#" cond="Name" />
-        <field name="Texture 5" type="SizedString" abstract="true" vercond="#BS_F76#" cond="Name" />
-        <field name="Texture 6" type="SizedString" abstract="true" vercond="#BS_F76#" cond="Name" />
-        <field name="Texture 7" type="SizedString" abstract="true" vercond="#BS_F76#" cond="Name" />
-        <field name="Texture 8" type="SizedString" abstract="true" vercond="#BS_F76#" cond="Name" />
-        <field name="Texture 9" type="SizedString" abstract="true" vercond="#BS_F76#" cond="Name" />
         <field name="Emissive Color" type="Color3" default="#VEC3_ZERO#">Glow color and alpha</field>
         <field name="Emissive Multiple" type="float" default="1.0" range="#F0_10#">Multiplied emissive colors</field>
         <field name="Root Material" type="NiFixedString" vercond="#BS_GTE_130#" />
-        <field name="Unk Float" type="float" vercond="#BS_GTE_STF#" />
         <field name="Texture Clamp Mode" type="TexClampMode" default="WRAP_S_WRAP_T">How to handle texture borders.</field>
         <field name="Alpha" type="float" default="1.0" range="0.0:128.0">The material opacity (1=opaque). Greater than 1.0 is used to affect alpha falloff i.e. staying opaque longer based on vertex alpha and alpha mask.</field>
         <field name="Refraction Strength" type="float" range="#F0_1#">The amount of distortion. **Not based on physically accurate refractive index** (0=none)</field>
@@ -6984,7 +6969,48 @@
         <field name="Grayscale to Palette Scale" type="float" default="1.0" range="#F0_1#" vercond="#BS_GTE_130#" />
         <field name="Fresnel Power" type="float" default="5.0" range="#F_PNZ#" vercond="#BS_GTE_130#" />
         <field name="Wetness" type="BSSPWetnessParams" vercond="#BS_GTE_130#" />
-        <field name="Luminance" type="BSSPLuminanceParams" vercond="#BS_GTE_F76#" />
+        <field name="Environment Map Scale" type="float" default="1.0" range="#F0_10#" cond="#ARG# == 1">Scales the intensity of the environment/cube map.</field>
+        <field name="Use Screen Space Reflections" type="bool" cond="#ARG# == 1" vercond="#BS_FO4_2#" />
+        <field name="Wetness Control: Use SSR" type="bool" cond="#ARG# == 1" vercond="#BS_FO4_2#" />
+        <field name="Skin Tint Color" type="Color3" default="#VEC3_ONE#" cond="#ARG# == 5">Tints the base texture. Overridden by game settings.</field>
+        <field name="Skin Tint Alpha" type="float" default="1.0" vercond="#BS_FO4_2#" cond="#ARG# == 5" />
+        <field name="Hair Tint Color" type="Color3" default="#VEC3_ONE#" cond="#ARG# == 6">Tints the base texture. Overridden by game settings.</field>
+        <field name="Max Passes" type="float" default="4.0" range="1.0:320.0" cond="#ARG# == 7" />
+        <field name="Scale" type="float" default="1.0" range="#F0_10#" cond="#ARG# == 7" />
+        <field name="Parallax Inner Layer Thickness" type="float" default="5.0" range="5.0:500.0" cond="#ARG# == 11">How far from the surface the inner layer appears to be.</field>
+        <field name="Parallax Refraction Scale" type="float" default="0.25" range="#F0_1#" cond="#ARG# == 11">Depth of inner parallax layer effect.</field>
+        <field name="Parallax Inner Layer Texture Scale" type="TexCoord" cond="#ARG# == 11">Scales the inner parallax layer texture.</field>
+        <field name="Parallax Envmap Strength" type="float" default="1.0" range="#F0_10#" cond="#ARG# == 11">How strong the environment/cube map is.</field>
+        <field name="Sparkle Parameters" type="Vector4" cond="#ARG# == 14">CK lists "snow material" when used.</field>
+        <field name="Eye Cubemap Scale" type="float" default="1.3" range="#F0_10#" cond="#ARG# == 16">Eye cubemap scale</field>
+        <field name="Left Eye Reflection Center" type="Vector3" cond="#ARG# == 16">Offset to set center for left eye cubemap</field>
+        <field name="Right Eye Reflection Center" type="Vector3" cond="#ARG# == 16">Offset to set center for right eye cubemap</field>
+    </struct>
+
+    <struct name="BSLightingShaderPropertyDataGTEFO76" module="BSMain" versions="#BS_GTE_F76#">
+        Bethesda shader property for Fallout 76 and later.
+        <field name="Shader Type" type="BSShaderType155" />
+        <field name="Num SF1" type="uint" />
+        <field name="Num SF2" type="uint" />
+        <field name="SF1" type="BSShaderCRC32" length="Num SF1" />
+        <field name="SF2" type="BSShaderCRC32" length="Num SF2" />
+        <field name="UV Offset" type="TexCoord">Offset UVs</field>
+        <field name="UV Scale" type="TexCoord" default="#VEC2_ONE#">Offset UV Scale to repeat tiling textures, see above.</field>
+        <field name="Texture Set" type="Ref" template="BSShaderTextureSet">Texture Set, can have override in an esm/esp</field>
+        <field name="Emissive Color" type="Color3" default="#VEC3_ZERO#">Glow color and alpha</field>
+        <field name="Emissive Multiple" type="float" default="1.0" range="#F0_10#">Multiplied emissive colors</field>
+        <field name="Root Material" type="NiFixedString" />
+        <field name="Unk Float" type="float" vercond="#BS_GTE_STF#" />
+        <field name="Texture Clamp Mode" type="TexClampMode" default="WRAP_S_WRAP_T">How to handle texture borders.</field>
+        <field name="Alpha" type="float" default="1.0" range="0.0:128.0">The material opacity (1=opaque). Greater than 1.0 is used to affect alpha falloff i.e. staying opaque longer based on vertex alpha and alpha mask.</field>
+        <field name="Refraction Strength" type="float" range="#F0_1#">The amount of distortion. **Not based on physically accurate refractive index** (0=none)</field>
+        <field name="Smoothness" type="float" default="1.0" range="#F0_1#">The base roughness, multiplied by the smoothness map.</field>
+        <field name="Specular Color" type="Color3" default="#VEC3_ONE#">Adds a colored highlight.</field>
+        <field name="Specular Strength" type="float" default="1.0" range="#F0_10#">Brightness of specular highlight. (0=not visible)</field>
+        <field name="Grayscale to Palette Scale" type="float" default="1.0" range="#F0_1#" />
+        <field name="Fresnel Power" type="float" default="5.0" range="#F_PNZ#" />
+        <field name="Wetness" type="BSSPWetnessParams" />
+        <field name="Luminance" type="BSSPLuminanceParams" />
         <field name="Do Translucency" type="bool" vercond="#BS_F76#" />
         <field name="Translucency" type="BSSPTranslucencyParams" vercond="#BS_F76#" cond="Do Translucency" />
         <field name="Has Texture Arrays" type="byte" vercond="#BS_F76#" />
@@ -6993,14 +7019,8 @@
         <field name="Unk Float 1" type="float" vercond="#BS_GTE_STF#"/>
         <field name="Unk Float 2" type="float" vercond="#BS_GTE_STF#"/>
         <field name="Unk Short 1" type="ushort" vercond="#BS_GTE_STF#"/>
-        <field name="Environment Map Scale" type="float" default="1.0" range="#F0_10#" cond="Shader Type == 1" vercond="#NI_BS_LTE_FO4#">Scales the intensity of the environment/cube map.</field>
-        <field name="Use Screen Space Reflections" type="bool" cond="Shader Type == 1" vercond="#BS_FO4_2#" />
-        <field name="Wetness Control: Use SSR" type="bool" cond="Shader Type == 1" vercond="#BS_FO4_2#" />
-        <field name="Skin Tint Color" type="Color4" vercond="#BS_GTE_F76#" cond="Shader Type == 4" />
-        <field name="Hair Tint Color" type="Color3" vercond="#BS_GTE_F76#" cond="Shader Type == 5" />
-        <field name="Skin Tint Color" type="Color3" default="#VEC3_ONE#" vercond="#NI_BS_LTE_FO4#" cond="Shader Type == 5">Tints the base texture. Overridden by game settings.</field>
-        <field name="Skin Tint Alpha" type="float" default="1.0" vercond="#BS_FO4_2#" cond="Shader Type == 5" />
-        <field name="Hair Tint Color" type="Color3" default="#VEC3_ONE#" vercond="#NI_BS_LTE_FO4#" cond="Shader Type == 6">Tints the base texture. Overridden by game settings.</field>
+        <field name="Skin Tint Color" type="Color4" cond="Shader Type == 4" />
+        <field name="Hair Tint Color" type="Color3" cond="Shader Type == 5" />
         <field name="Max Passes" type="float" default="4.0" range="1.0:320.0" cond="Shader Type == 7" />
         <field name="Scale" type="float" default="1.0" range="#F0_10#" cond="Shader Type == 7" />
         <field name="Parallax Inner Layer Thickness" type="float" default="5.0" range="5.0:500.0" cond="Shader Type == 11">How far from the surface the inner layer appears to be.</field>
@@ -7011,19 +7031,105 @@
         <field name="Eye Cubemap Scale" type="float" default="1.3" range="#F0_10#" cond="Shader Type == 16">Eye cubemap scale</field>
         <field name="Left Eye Reflection Center" type="Vector3" cond="Shader Type == 16">Offset to set center for left eye cubemap</field>
         <field name="Right Eye Reflection Center" type="Vector3" cond="Shader Type == 16">Offset to set center for right eye cubemap</field>
+    </struct>
+
+    <struct name="BSShaderMaterialDataFO76" abstract="true" module="BSMain" versions="#BS_F76#">
+        Bethesda material file (.bgsm) for Fallout 76.
+        <field name="Shader Type" type="BSShaderType155" />
+        <field name="Num SF1" type="uint" />
+        <field name="Num SF2" type="uint" />
+        <field name="SF1" type="BSShaderCRC32" length="Num SF1" />
+        <field name="SF2" type="BSShaderCRC32" length="Num SF2" />
+        <field name="UV Offset" type="TexCoord">Offset UVs</field>
+        <field name="UV Scale" type="TexCoord" default="#VEC2_ONE#">Offset UV Scale to repeat tiling textures, see above.</field>
+        <field name="Texture Set" type="Ref" template="BSShaderTextureSet">Texture Set, can have override in an esm/esp</field>
+        <field name="Texture 0" type="SizedString" />
+        <field name="Texture 1" type="SizedString" />
+        <field name="Texture 2" type="SizedString" />
+        <field name="Texture 3" type="SizedString" />
+        <field name="Texture 4" type="SizedString" />
+        <field name="Texture 5" type="SizedString" />
+        <field name="Texture 6" type="SizedString" />
+        <field name="Texture 7" type="SizedString" />
+        <field name="Texture 8" type="SizedString" />
+        <field name="Texture 9" type="SizedString" />
+        <field name="Emissive Color" type="Color3" default="#VEC3_ZERO#">Glow color and alpha</field>
+        <field name="Emissive Multiple" type="float" default="1.0" range="#F0_10#">Multiplied emissive colors</field>
+        <field name="Root Material" type="NiFixedString" />
+        <field name="Texture Clamp Mode" type="TexClampMode" default="WRAP_S_WRAP_T">How to handle texture borders.</field>
+        <field name="Alpha" type="float" default="1.0" range="0.0:128.0">The material opacity (1=opaque). Greater than 1.0 is used to affect alpha falloff i.e. staying opaque longer based on vertex alpha and alpha mask.</field>
+        <field name="Refraction Strength" type="float" range="#F0_1#">The amount of distortion. **Not based on physically accurate refractive index** (0=none)</field>
+        <field name="Smoothness" type="float" default="1.0" range="#F0_1#">The base roughness, multiplied by the smoothness map.</field>
+        <field name="Specular Color" type="Color3" default="#VEC3_ONE#">Adds a colored highlight.</field>
+        <field name="Specular Strength" type="float" default="1.0" range="#F0_10#">Brightness of specular highlight. (0=not visible)</field>
+        <field name="Grayscale to Palette Scale" type="float" default="1.0" range="#F0_1#" />
+        <field name="Fresnel Power" type="float" default="5.0" range="#F_PNZ#" />
+        <field name="Wetness" type="BSSPWetnessParams" />
+        <field name="Luminance" type="BSSPLuminanceParams" />
+        <field name="Do Translucency" type="bool" />
+        <field name="Translucency" type="BSSPTranslucencyParams" cond="Do Translucency" />
+        <field name="Has Texture Arrays" type="byte" />
+        <field name="Num Texture Arrays" type="uint" cond="Has Texture Arrays" />
+        <field name="Texture Arrays" type="BSTextureArray" length="Num Texture Arrays" cond="Has Texture Arrays" />
+        <field name="Skin Tint Color" type="Color4" cond="Shader Type == 4" />
+        <field name="Hair Tint Color" type="Color3" cond="Shader Type == 5" />
+        <field name="Max Passes" type="float" default="4.0" range="1.0:320.0" cond="Shader Type == 7" />
+        <field name="Scale" type="float" default="1.0" range="#F0_10#" cond="Shader Type == 7" />
+        <field name="Parallax Inner Layer Thickness" type="float" default="5.0" range="5.0:500.0" cond="Shader Type == 11">How far from the surface the inner layer appears to be.</field>
+        <field name="Parallax Refraction Scale" type="float" default="0.25" range="#F0_1#" cond="Shader Type == 11">Depth of inner parallax layer effect.</field>
+        <field name="Parallax Inner Layer Texture Scale" type="TexCoord" cond="Shader Type == 11">Scales the inner parallax layer texture.</field>
+        <field name="Parallax Envmap Strength" type="float" default="1.0" range="#F0_10#" cond="Shader Type == 11">How strong the environment/cube map is.</field>
+        <field name="Sparkle Parameters" type="Vector4" cond="Shader Type == 14">CK lists "snow material" when used.</field>
+        <field name="Eye Cubemap Scale" type="float" default="1.3" range="#F0_10#" cond="Shader Type == 16">Eye cubemap scale</field>
+        <field name="Left Eye Reflection Center" type="Vector3" cond="Shader Type == 16">Offset to set center for left eye cubemap</field>
+        <field name="Right Eye Reflection Center" type="Vector3" cond="Shader Type == 16">Offset to set center for right eye cubemap</field>
+    </struct>
+
+    <niobject name="BSLightingShaderProperty" inherit="BSShaderProperty" module="BSMain" versions="#SKY_AND_LATER#">
+        Bethesda shader property for Skyrim and later.
+        <field name="Material" type="BSLayeredMaterial" abstract="true" vercond="#BS_GTE_STF#">Starfield material (.mat).</field>
+        <field name="Shader Property Data" type="BSLightingShaderPropertyDataLTFO76" arg="Shader Type" vercond="#NI_BS_LTE_FO4#" />
+        <field name="Shader Property Data" type="BSLightingShaderPropertyDataGTEFO76" vercond="#BS_F76#" cond="!$Name" />
+        <field name="Material" type="BSShaderMaterialDataFO76" abstract="true" vercond="#BS_F76#" cond="$Name" />
+        <field name="Shader Property Data (Deprecated)" type="BSLightingShaderPropertyDataGTEFO76" vercond="#BS_GTE_STF#" cond="!$Name" />
     </niobject>
 
-    <niobject name="BSEffectShaderProperty" inherit="BSShaderProperty" stopcond="#BSVER# #GTE# 155 #AND# Name" module="BSMain" versions="#SKY_AND_LATER#">
-        Bethesda effect shader property for Skyrim and later.
-        <field name="Material" type="BSLayeredMaterial" abstract="true" vercond="#BS_GTE_STF#">Starfield material (.mat).</field>
+    <struct name="BSEffectShaderPropertyDataLTFO76" module="BSMain" versions="#NI_BS_LTE_FO4#">
+        Bethesda effect shader property for Skyrim and Fallout 4.
         <field name="Shader Flags 1" suffix="SK" type="SkyrimShaderPropertyFlags1" default="0x80000000" vercond="#NI_BS_LT_FO4#" />
         <field name="Shader Flags 2" suffix="SK" type="SkyrimShaderPropertyFlags2" default="0x20" vercond="#NI_BS_LT_FO4#" />
         <field name="Shader Flags 1" suffix="FO4" type="Fallout4ShaderPropertyFlags1" default="0x80000000" vercond="#BS_FO4#" />
         <field name="Shader Flags 2" suffix="FO4" type="Fallout4ShaderPropertyFlags2" default="0x20" vercond="#BS_FO4#" />
         <field name="Num SF1" type="uint" vercond="#BS_GTE_132#" />
-        <field name="Num SF2" type="uint" vercond="#BS_GTE_152#" />
         <field name="SF1" type="BSShaderCRC32" length="Num SF1" vercond="#BS_GTE_132#" />
-        <field name="SF2" type="BSShaderCRC32" length="Num SF2" vercond="#BS_GTE_152#" />
+        <field name="UV Offset" type="TexCoord">Offset UVs</field>
+        <field name="UV Scale" type="TexCoord" default="#VEC2_ONE#">Offset UV Scale to repeat tiling textures</field>
+        <field name="Source Texture"  type="SizedString">points to an external texture.</field>
+        <!-- TODO: Next 4 bytes requires bitfield, read as single int -->
+        <field name="Texture Clamp Mode" type="byte" default="3">How to handle texture borders.</field>
+        <field name="Lighting Influence" type="byte" default="255" />
+        <field name="Env Map Min LOD" type="byte" range="0:16" />
+        <field name="Unused Byte" type="byte" />
+        <field name="Falloff Start Angle" type="float" default="1.0" range="#F_NRM#">At this cosine of angle falloff will be equal to Falloff Start Opacity</field>
+        <field name="Falloff Stop Angle" type="float" default="1.0" range="#F_NRM#">At this cosine of angle falloff will be equal to Falloff Stop Opacity</field>
+        <field name="Falloff Start Opacity" type="float" range="#F0_1#">Alpha falloff multiplier at start angle</field>
+        <field name="Falloff Stop Opacity" type="float" range="#F0_1#">Alpha falloff multiplier at end angle</field>
+        <field name="Base Color" type="Color4" default="#VEC4_ONE#">Base color</field>
+        <field name="Base Color Scale" type="float" default="1.0" range="0.0:360.0">Multiplier for Base Color (RGB part)</field>
+        <field name="Soft Falloff Depth" type="float" default="100.0" range="0.0:9999.0" />
+        <field name="Greyscale Texture"  type="SizedString">Points to an external texture, used as palette for SLSF1_Greyscale_To_PaletteColor/SLSF1_Greyscale_To_PaletteAlpha.</field>
+        <field name="Env Map Texture" type="SizedString" vercond="#BS_GTE_130#" />
+        <field name="Normal Texture" type="SizedString" vercond="#BS_GTE_130#" />
+        <field name="Env Mask Texture" type="SizedString" vercond="#BS_GTE_130#" />
+        <field name="Environment Map Scale" type="float" default="1.0" range="0.01:20.0" vercond="#BS_GTE_130#" />
+    </struct>
+
+    <struct name="BSEffectShaderPropertyDataGTEFO76" module="BSMain" versions="#BS_GTE_F76#">
+        Bethesda effect shader property for Fallout 76 and later.
+        <field name="Num SF1" type="uint" />
+        <field name="Num SF2" type="uint" />
+        <field name="SF1" type="BSShaderCRC32" length="Num SF1" />
+        <field name="SF2" type="BSShaderCRC32" length="Num SF2" />
         <field name="UV Offset" type="TexCoord">Offset UVs</field>
         <field name="UV Scale" type="TexCoord" default="#VEC2_ONE#">Offset UV Scale to repeat tiling textures</field>
         <field name="Source Texture"  type="SizedString">points to an external texture.</field>
@@ -7042,20 +7148,63 @@
         <field name="Base Color Scale" type="float" default="1.0" range="0.0:360.0">Multiplier for Base Color (RGB part)</field>
         <field name="Soft Falloff Depth" type="float" default="100.0" range="0.0:9999.0" />
         <field name="Greyscale Texture"  type="SizedString">Points to an external texture, used as palette for SLSF1_Greyscale_To_PaletteColor/SLSF1_Greyscale_To_PaletteAlpha.</field>
-        <field name="Env Map Texture" type="SizedString" vercond="#BS_GTE_130#" />
-        <field name="Normal Texture" type="SizedString" vercond="#BS_GTE_130#" />
-        <field name="Env Mask Texture" type="SizedString" vercond="#BS_GTE_130#" />
-        <field name="Environment Map Scale" type="float" default="1.0" range="0.01:20.0" vercond="#BS_GTE_130#" />
-        <field name="Reflectance Texture" type="SizedString" vercond="#BS_GTE_F76#" />
-        <field name="Lighting Texture" type="SizedString" vercond="#BS_GTE_F76#" />
-        <field name="Emittance Color" type="Color3" vercond="#BS_GTE_F76#" />
-        <field name="Emit Gradient Texture" type="SizedString" vercond="#BS_GTE_F76#" />
-        <field name="Luminance" type="BSSPLuminanceParams" vercond="#BS_GTE_F76#" />
+        <field name="Env Map Texture" type="SizedString" />
+        <field name="Normal Texture" type="SizedString" />
+        <field name="Env Mask Texture" type="SizedString" />
+        <field name="Environment Map Scale" type="float" default="1.0" range="0.01:20.0" />
+        <field name="Reflectance Texture" type="SizedString" />
+        <field name="Lighting Texture" type="SizedString" />
+        <field name="Emittance Color" type="Color3" />
+        <field name="Emit Gradient Texture" type="SizedString" />
+        <field name="Luminance" type="BSSPLuminanceParams" />
         <field name="Unknown Bytes" type="byte" length="7" vercond="#BS_GTE_STF#" />
         <field name="Unknown Floats" type="float" length="6" vercond="#BS_GTE_STF#" />
         <field name="Unknown Byte" type="byte" vercond="#BS_GTE_STF#" />
+    </struct>
+
+    <struct name="BSEffectMaterialDataFO76" abstract="true" module="BSMain" versions="#BS_F76#">
+        Bethesda material file (.bgem) for Fallout 76.
+        <field name="Num SF1" type="uint" />
+        <field name="Num SF2" type="uint" />
+        <field name="SF1" type="BSShaderCRC32" length="Num SF1" />
+        <field name="SF2" type="BSShaderCRC32" length="Num SF2" />
+        <field name="UV Offset" type="TexCoord">Offset UVs</field>
+        <field name="UV Scale" type="TexCoord" default="#VEC2_ONE#">Offset UV Scale to repeat tiling textures</field>
+        <field name="Source Texture"  type="SizedString">points to an external texture.</field>
+        <!-- TODO: Next 4 bytes requires bitfield, read as single int -->
+        <field name="Texture Clamp Mode" type="byte" default="3">How to handle texture borders.</field>
+        <field name="Lighting Influence" type="byte" default="255" />
+        <field name="Env Map Min LOD" type="byte" range="0:16" />
+        <field name="Unused Byte" type="byte" />
+        <field name="Falloff Start Angle" type="float" default="1.0" range="#F_NRM#">At this cosine of angle falloff will be equal to Falloff Start Opacity</field>
+        <field name="Falloff Stop Angle" type="float" default="1.0" range="#F_NRM#">At this cosine of angle falloff will be equal to Falloff Stop Opacity</field>
+        <field name="Falloff Start Opacity" type="float" range="#F0_1#">Alpha falloff multiplier at start angle</field>
+        <field name="Falloff Stop Opacity" type="float" range="#F0_1#">Alpha falloff multiplier at end angle</field>
+        <field name="Refraction Power" type="float" />
+        <field name="Base Color" type="Color4" default="#VEC4_ONE#">Base color</field>
+        <field name="Base Color Scale" type="float" default="1.0" range="0.0:360.0">Multiplier for Base Color (RGB part)</field>
+        <field name="Soft Falloff Depth" type="float" default="100.0" range="0.0:9999.0" />
+        <field name="Greyscale Texture"  type="SizedString">Points to an external texture, used as palette for SLSF1_Greyscale_To_PaletteColor/SLSF1_Greyscale_To_PaletteAlpha.</field>
+        <field name="Env Map Texture" type="SizedString" />
+        <field name="Normal Texture" type="SizedString" />
+        <field name="Env Mask Texture" type="SizedString" />
+        <field name="Environment Map Scale" type="float" default="1.0" range="0.01:20.0" />
+        <field name="Reflectance Texture" type="SizedString" />
+        <field name="Lighting Texture" type="SizedString" />
+        <field name="Emittance Color" type="Color3" />
+        <field name="Emit Gradient Texture" type="SizedString" />
+        <field name="Luminance" type="BSSPLuminanceParams" />
+    </struct>
+
+    <niobject name="BSEffectShaderProperty" inherit="BSShaderProperty" module="BSMain" versions="#SKY_AND_LATER#">
+        Bethesda effect shader property for Skyrim and later.
+        <field name="Material" type="BSLayeredMaterial" abstract="true" vercond="#BS_GTE_STF#">Starfield material (.mat).</field>
+        <field name="Shader Property Data" type="BSEffectShaderPropertyDataLTFO76" vercond="#NI_BS_LTE_FO4#" />
+        <field name="Shader Property Data" type="BSEffectShaderPropertyDataGTEFO76" vercond="#BS_F76#" cond="!$Name" />
+        <field name="Material" type="BSEffectMaterialDataFO76" abstract="true" vercond="#BS_F76#" cond="$Name" />
+        <field name="Shader Property Data (Deprecated)" type="BSEffectShaderPropertyDataGTEFO76" vercond="#BS_GTE_STF#" cond="!$Name" />
     </niobject>
-    
+
     <bitflags name="WaterShaderPropertyFlags" storage="uint" prefix="BSWSP" versions="#SKY_AND_LATER#">
         Skyrim water shader property flags
         <option bit="0" name="DISPLACEMENT" />
@@ -7073,7 +7222,7 @@
         <option bit="12" name="UPDATE_CONSTANTS" />
         <option bit="13" name="CUBEMAP" />
     </bitflags>
-    
+
     <niobject name="BSWaterShaderProperty" inherit="BSShaderProperty" module="BSMain" versions="#SKY_AND_LATER#">
         Skyrim water shader property, different from "WaterShaderProperty" seen in Fallout.
         <field name="Shader Flags 1" type="SkyrimShaderPropertyFlags1" default="0x80000008" vercond="!#BS_GTE_132#" />
@@ -7086,7 +7235,7 @@
         <field name="UV Scale" type="TexCoord" default="#VEC2_ONE#">Offset UV Scale to repeat tiling textures, see above.</field>
         <field name="Water Shader Flags" type="WaterShaderPropertyFlags" default="0xC4" />
     </niobject>
-    
+
     <niobject name="BSSkyShaderProperty" inherit="BSShaderProperty" module="BSMain" versions="#SKY_AND_LATER#">
         Skyrim Sky shader block.
         <field name="Shader Flags 1" type="SkyrimShaderPropertyFlags1" default="0x80000000" vercond="!#BS_GTE_132#" />

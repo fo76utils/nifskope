@@ -849,10 +849,11 @@ void BSShaderLightingProperty::updateImpl( const NifModel * nif, const QModelInd
 
 	if ( index == iBlock ) {
 		iMaterialFile = nif->getIndex( iBlock, "Name" );
-		iTextureSet = nif->getBlockIndex( nif->getLink( iBlock, "Texture Set" ), "BSShaderTextureSet" );
 		if ( nif->getBSVersion() >= 160 ) {
 			setSFMaterial( name );
 			const_cast< NifModel * >(nif)->loadSFMaterial( index );
+		} else {
+			iTextureSet = nif->getBlockIndex( nif->getLink( nif->getIndex( iBlock, "Shader Property Data" ), "Texture Set" ), "BSShaderTextureSet" );
 		}
 	}
 }
@@ -1332,43 +1333,44 @@ void BSLightingShaderProperty::updateParams( const NifModel * nif )
 
 	} else { // m == nullptr
 
-		auto textures = nif->getArray<QString>(iTextureSet, "Textures");
+		auto textures = nif->getArray<QString>( iTextureSet, "Textures" );
+		auto lsp = nif->getIndex( iBlock, "Shader Property Data" );
 
 		isDoubleSided = hasSF2( ShaderFlags::SLSF2_Double_Sided );
 		depthTest = hasSF1( ShaderFlags::SLSF1_ZBuffer_Test );
 		depthWrite = hasSF2( ShaderFlags::SLSF2_ZBuffer_Write );
 
-		alpha = nif->get<float>( iBlock, "Alpha" );
+		alpha = nif->get<float>( lsp, "Alpha" );
 
-		uvScale.set( nif->get<Vector2>(iBlock, "UV Scale") );
-		uvOffset.set( nif->get<Vector2>(iBlock, "UV Offset") );
-		clampMode = TexClampMode( nif->get<uint>( iBlock, "Texture Clamp Mode" ) );
+		uvScale.set( nif->get<Vector2>(lsp, "UV Scale") );
+		uvOffset.set( nif->get<Vector2>(lsp, "UV Offset") );
+		clampMode = TexClampMode( nif->get<uint>( lsp, "Texture Clamp Mode" ) );
 
 		// Specular
 		if ( hasSF1( ShaderFlags::SLSF1_Specular ) ) {
-			specularColor = nif->get<Color3>(iBlock, "Specular Color");
-			specularGloss = nif->get<float>( iBlock, "Glossiness" );
+			specularColor = nif->get<Color3>( lsp, "Specular Color" );
+			specularGloss = nif->get<float>( lsp, "Glossiness" );
 			if ( specularGloss == 0.0f ) // FO4
-				specularGloss = nif->get<float>( iBlock, "Smoothness" );
-			specularStrength = nif->get<float>(iBlock, "Specular Strength");
+				specularGloss = nif->get<float>( lsp, "Smoothness" );
+			specularStrength = nif->get<float>( lsp, "Specular Strength" );
 		}
 
 		// Emissive
-		emissiveColor = nif->get<Color3>( iBlock, "Emissive Color" );
-		emissiveMult = nif->get<float>( iBlock, "Emissive Multiple" );
+		emissiveColor = nif->get<Color3>( lsp, "Emissive Color" );
+		emissiveMult = nif->get<float>( lsp, "Emissive Multiple" );
 
 		hasEmittance = hasSF1( ShaderFlags::SLSF1_Own_Emit );
 		hasGlowMap = isST(ShaderFlags::ST_GlowShader) && hasSF2( ShaderFlags::SLSF2_Glow_Map ) && !textures.value( 2, "" ).isEmpty();
 
 		// Version Dependent settings
 		if ( nif->getBSVersion() < 130 ) {
-			lightingEffect1 = nif->get<float>( iBlock, "Lighting Effect 1" );
-			lightingEffect2 = nif->get<float>( iBlock, "Lighting Effect 2" );
+			lightingEffect1 = nif->get<float>( lsp, "Lighting Effect 1" );
+			lightingEffect2 = nif->get<float>( lsp, "Lighting Effect 2" );
 
-			innerThickness = nif->get<float>( iBlock, "Parallax Inner Layer Thickness" );
-			outerRefractionStrength = nif->get<float>( iBlock, "Parallax Refraction Scale" );
-			outerReflectionStrength = nif->get<float>( iBlock, "Parallax Envmap Strength" );
-			innerTextureScale.set( nif->get<Vector2>(iBlock, "Parallax Inner Layer Texture Scale") );
+			innerThickness = nif->get<float>( lsp, "Parallax Inner Layer Thickness" );
+			outerRefractionStrength = nif->get<float>( lsp, "Parallax Refraction Scale" );
+			outerReflectionStrength = nif->get<float>( lsp, "Parallax Envmap Strength" );
+			innerTextureScale.set( nif->get<Vector2>(lsp, "Parallax Inner Layer Texture Scale") );
 
 			hasSpecularMap = hasSF1( ShaderFlags::SLSF1_Specular ) && !textures.value( 7, "" ).isEmpty();
 			hasHeightMap = isST( ShaderFlags::ST_Heightmap ) && hasSF1( ShaderFlags::SLSF1_Parallax ) && !textures.value( 3, "" ).isEmpty();
@@ -1388,10 +1390,10 @@ void BSLightingShaderProperty::updateParams( const NifModel * nif )
 		} else {
 			hasSpecularMap = hasSF1( ShaderFlags::SLSF1_Specular );
 			greyscaleColor = hasSF1( ShaderFlags::SLSF1_Greyscale_To_PaletteColor );
-			paletteScale = nif->get<float>( iBlock, "Grayscale to Palette Scale" );
-			lightingEffect1 = nif->get<float>( iBlock, "Subsurface Rolloff" );
-			backlightPower = nif->get<float>( iBlock, "Backlight Power" );
-			fresnelPower = nif->get<float>( iBlock, "Fresnel Power" );
+			paletteScale = nif->get<float>( lsp, "Grayscale to Palette Scale" );
+			lightingEffect1 = nif->get<float>( lsp, "Subsurface Rolloff" );
+			backlightPower = nif->get<float>( lsp, "Backlight Power" );
+			fresnelPower = nif->get<float>( lsp, "Fresnel Power" );
 		}
 
 		// Environment Map, Mask and Reflection Scale
@@ -1403,9 +1405,9 @@ void BSLightingShaderProperty::updateParams( const NifModel * nif )
 		useEnvironmentMask = hasEnvironmentMap && !textures.value( 5, "" ).isEmpty();
 
 		if ( isST( ShaderFlags::ST_EnvironmentMap ) )
-			environmentReflection = nif->get<float>( iBlock, "Environment Map Scale" );
+			environmentReflection = nif->get<float>( lsp, "Environment Map Scale" );
 		else if ( isST( ShaderFlags::ST_EyeEnvmap ) )
-			environmentReflection = nif->get<float>( iBlock, "Eye Cubemap Scale" );
+			environmentReflection = nif->get<float>( lsp, "Eye Cubemap Scale" );
 	}
 }
 
@@ -1539,8 +1541,10 @@ void BSEffectShaderProperty::updateParams( const NifModel * nif )
 
 	} else { // m == nullptr
 
-		hasSourceTexture = !nif->get<QString>( iBlock, "Source Texture" ).isEmpty();
-		hasGreyscaleMap = !nif->get<QString>( iBlock, "Greyscale Texture" ).isEmpty();
+		auto esp = nif->getIndex( iBlock, "Shader Property Data" );
+
+		hasSourceTexture = !nif->get<QString>( esp, "Source Texture" ).isEmpty();
+		hasGreyscaleMap = !nif->get<QString>( esp, "Greyscale Texture" ).isEmpty();
 
 		greyscaleAlpha = hasSF1( ShaderFlags::SLSF1_Greyscale_To_PaletteAlpha );
 		greyscaleColor = hasSF1( ShaderFlags::SLSF1_Greyscale_To_PaletteColor );
@@ -1553,31 +1557,31 @@ void BSEffectShaderProperty::updateParams( const NifModel * nif )
 		if ( nif->getBSVersion() < 130 ) {
 			hasWeaponBlood = hasSF2( ShaderFlags::SLSF2_Weapon_Blood );
 		} else {
-			hasEnvironmentMap = !nif->get<QString>( iBlock, "Env Map Texture" ).isEmpty();
-			hasEnvironmentMask = !nif->get<QString>(iBlock, "Env Mask Texture").isEmpty();
-			hasNormalMap = !nif->get<QString>( iBlock, "Normal Texture" ).isEmpty();
+			hasEnvironmentMap = !nif->get<QString>( esp, "Env Map Texture" ).isEmpty();
+			hasEnvironmentMask = !nif->get<QString>( esp, "Env Mask Texture" ).isEmpty();
+			hasNormalMap = !nif->get<QString>( esp, "Normal Texture" ).isEmpty();
 
-			environmentReflection = nif->get<float>( iBlock, "Environment Map Scale" );
+			environmentReflection = nif->get<float>( esp, "Environment Map Scale" );
 
 			// Receive Shadows -> RGB Falloff for FO4
 			hasRGBFalloff = hasSF1( ShaderFlags::SF1( 1 << 8 ) );
 		}
 
-		uvScale.set( nif->get<Vector2>(iBlock, "UV Scale") );
-		uvOffset.set( nif->get<Vector2>(iBlock, "UV Offset") );
-		clampMode = TexClampMode( nif->get<quint8>( iBlock, "Texture Clamp Mode" ) );
+		uvScale.set( nif->get<Vector2>(esp, "UV Scale") );
+		uvOffset.set( nif->get<Vector2>(esp, "UV Offset") );
+		clampMode = TexClampMode( nif->get<quint8>( esp, "Texture Clamp Mode" ) );
 
-		emissiveColor = nif->get<Color4>(iBlock, "Base Color");
-		emissiveMult = nif->get<float>(iBlock, "Base Color Scale");
+		emissiveColor = nif->get<Color4>( esp, "Base Color" );
+		emissiveMult = nif->get<float>( esp, "Base Color Scale" );
 
 		if ( hasSF2( ShaderFlags::SLSF2_Effect_Lighting ) )
-			lightingInfluence = (float)nif->get<quint8>( iBlock, "Lighting Influence" ) / 255.0;
+			lightingInfluence = (float)nif->get<quint8>( esp, "Lighting Influence" ) / 255.0;
 
-		falloff.startAngle = nif->get<float>( iBlock, "Falloff Start Angle" );
-		falloff.stopAngle = nif->get<float>( iBlock, "Falloff Stop Angle" );
-		falloff.startOpacity = nif->get<float>( iBlock, "Falloff Start Opacity" );
-		falloff.stopOpacity = nif->get<float>( iBlock, "Falloff Stop Opacity" );
-		falloff.softDepth = nif->get<float>( iBlock, "Soft Falloff Depth" );
+		falloff.startAngle = nif->get<float>( esp, "Falloff Start Angle" );
+		falloff.stopAngle = nif->get<float>( esp, "Falloff Stop Angle" );
+		falloff.startOpacity = nif->get<float>( esp, "Falloff Start Opacity" );
+		falloff.stopOpacity = nif->get<float>( esp, "Falloff Stop Opacity" );
+		falloff.softDepth = nif->get<float>( esp, "Soft Falloff Depth" );
 	}
 }
 
