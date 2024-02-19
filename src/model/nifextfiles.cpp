@@ -474,113 +474,75 @@ void NifModel::loadFO76Material( const QModelIndex & parent, const void * materi
 	if ( typeid( mat ) == typeid( EffectMaterial ) )
 		bgem = static_cast< const EffectMaterial * >( material );
 
-	quint32	shaderType = 0;
-	if ( bgsm ) {
-		if ( bgsm->bTerrain )
-			shaderType = 17;
-		else if ( bgsm->bEnvironmentMappingEye )
-			shaderType = 12;
-		else if ( bgsm->bHair )
-			shaderType = 5;
-		else if ( bgsm->bSkinTint )
-			shaderType = 4;
-		else if ( bgsm->bFacegen )
-			shaderType = 3;
-		else if ( bgsm->bEmitEnabled )
-			shaderType = 2;
-		setValue<quint32>( p, "Shader Type", shaderType );
-	}
+	setValue<quint32>( p, "Version", mat.version );
+	quint16	shaderFlags1 = quint16( mat.bTileU ) | ( quint16(mat.bTileV) << 1 );
+	shaderFlags1 |= ( quint16(bool(mat.bAlphaBlend)) << 2 ) | ( quint16(bool(mat.bAlphaTest)) << 3 );
+	shaderFlags1 |= ( quint16(bool(mat.bZBufferWrite)) << 4 ) | ( quint16(bool(mat.bZBufferTest)) << 5 );
+	shaderFlags1 |= ( quint16(bool(mat.bScreenSpaceReflections)) << 6 ) | ( quint16(bool(mat.bWetnessControl_ScreenSpaceReflections)) << 7 );
+	shaderFlags1 |= ( quint16(bool(mat.bDecal)) << 8 ) | ( quint16(bool(mat.bTwoSided)) << 9 );
+	shaderFlags1 |= ( quint16(bool(mat.bDecalNoFade)) << 10 ) | ( quint16(bool(mat.bNonOccluder)) << 11 );
+	shaderFlags1 |= ( quint16(bool(mat.bRefraction)) << 12 ) | ( quint16(bool(mat.bRefractionFalloff)) << 13 );
+	shaderFlags1 |= ( quint16(bool(mat.bEnvironmentMapping)) << 14 ) | ( quint16(bool(mat.bGrayscaleToPaletteColor)) << 15 );
+	setValue<quint16>( p, "Shader Flags 1", shaderFlags1 );
 
-	QVector< quint32 >	sf1;
-	QVector< quint32 >	sf2;
-	if ( mat.bZBufferWrite )
-		sf1.append( 3166356979U );
-	if ( mat.bZBufferTest )
-		sf1.append( 1740048692U );
-	if ( mat.bDecal )
-		sf1.append( 3849131744U );
-	if ( mat.bTwoSided )
-		sf1.append( 759557230U );
-	if ( mat.bDecalNoFade )
-		sf1.append( 2994043788U );
-	if ( mat.bRefraction )
-		sf1.append( 1957349758U );
-	if ( mat.bRefractionFalloff )
-		sf1.append( 902349195U );
-	if ( mat.bEnvironmentMapping )
-		sf1.append( 2893749418U );
-	if ( mat.bGrayscaleToPaletteColor )
-		sf1.append( 442246519U );
-	if ( mat.bGlowmap )
-		sf1.append( 2399422528U );
+	quint32	shaderFlags2 = 0;
+	quint16	shaderFlags3 = 0;
+	qsizetype	textureCnt = 0;
 	if ( bgsm ) {
-		if ( bgsm->bEmitEnabled )
-			sf2.append( 2262553490U );
-		if ( bgsm->bModelSpaceNormals )
-			sf2.append( 2548465567U );
-		if ( bgsm->bExternalEmittance )
-			sf2.append( 2150459555U );
-		if ( bgsm->bCastShadows )
-			sf2.append( 1563274220U );
-		if ( bgsm->bHair )
-			sf2.append( 1264105798U );
-		if ( bgsm->bFacegen )
-			sf2.append( 314919375U );
-		if ( bgsm->bSkinTint )
-			sf2.append( 1483897208U );
-		if ( bgsm->bPBR )
-			sf2.append( 731263983U );
+		shaderFlags2 = quint32( bool(bgsm->bEnableEditorAlphaRef) ) | ( quint32(bool(bgsm->bTranslucency)) << 1 );
+		shaderFlags2 |= ( quint32(bool(bgsm->bTranslucencyThickObject)) << 2 ) | ( quint32(bool(bgsm->bTranslucencyMixAlbedoWithSubsurfaceCol)) << 3 );
+		shaderFlags2 |= ( quint32(bool(bgsm->bSpecularEnabled)) << 4 ) | ( quint32(bool(bgsm->bPBR)) << 5 );
+		shaderFlags2 |= ( quint32(bool(bgsm->bCustomPorosity)) << 6 ) | ( quint32(bool(bgsm->bAnisoLighting)) << 7 );
+		shaderFlags2 |= ( quint32(bool(bgsm->bEmitEnabled)) << 8 ) | ( quint32(bool(bgsm->bModelSpaceNormals)) << 9 );
+		shaderFlags2 |= ( quint32(bool(bgsm->bExternalEmittance)) << 10 ) | ( quint32(bool(bgsm->bUseAdaptativeEmissive)) << 11 );
+		shaderFlags2 |= ( quint32(bool(bgsm->bReceiveShadows)) << 12 ) | ( quint32(bool(bgsm->bHideSecret)) << 13 );
+		shaderFlags2 |= ( quint32(bool(bgsm->bCastShadows)) << 14 ) | ( quint32(bool(bgsm->bDissolveFade)) << 15 );
+		shaderFlags2 |= ( quint32(bool(bgsm->bAssumeShadowmask)) << 16 ) | ( quint32(bool(bgsm->bGlowmap)) << 17 );
+		shaderFlags2 |= ( quint32(bool(bgsm->bHair)) << 18 ) | ( quint32(bool(bgsm->bTree)) << 19 );
+		shaderFlags2 |= ( quint32(bool(bgsm->bFacegen)) << 20 ) | ( quint32(bool(bgsm->bSkinTint)) << 21 );
+		shaderFlags2 |= ( quint32(bool(bgsm->bTessellate)) << 22 ) | ( quint32(bool(bgsm->bSkewSpecularAlpha)) << 23 );
+		shaderFlags2 |= ( quint32(bool(bgsm->bTerrain)) << 24 );
+		setValue<quint32>( p, "Shader Flags 2", shaderFlags2 );
+		textureCnt = 10;
 	}
 	if ( bgem ) {
-		if ( bgem->bBloodEnabled )
-			sf2.append( 2078326675U );
-		if ( bgem->bEffectLightingEnabled )
-			sf2.append( 3473438218U );
-		if ( bgem->bFalloffEnabled )
-			sf2.append( 3980660124U );
-		if ( bgem->bFalloffColorEnabled )
-			sf2.append( 3448946507U );
-		if ( bgem->bGrayscaleToPaletteAlpha )
-			sf2.append( 2901038324U );
-		if ( bgem->bSoftEnabled )
-			sf2.append( 3503164976U );
-		if ( bgem->bEffectPbrSpecular )
-			sf2.append( 731263983U );
-	}
-	setValue<quint32>( p, "Num SF1", quint32( sf1.size() ) );
-	NifItem *	o = getItem( itemToIndex(p), "SF1" );
-	if ( o ) {
-		updateArraySize( o );
-		o->setArray<quint32>( sf1 );
-	}
-	setValue<quint32>( p, "Num SF2", quint32( sf2.size() ) );
-	o = getItem( itemToIndex(p), "SF2" );
-	if ( o ) {
-		updateArraySize( o );
-		o->setArray<quint32>( sf2 );
+		shaderFlags3 = quint16( bool(bgem->bEnvironmentMapping) ) | ( quint16(bool(bgem->bBloodEnabled)) << 1 );
+		shaderFlags3 |= ( quint16(bool(bgem->bEffectLightingEnabled)) << 2 ) | ( quint16(bool(bgem->bFalloffEnabled)) << 3 );
+		shaderFlags3 |= ( quint16(bool(bgem->bFalloffColorEnabled)) << 4 ) | ( quint16(bool(bgem->bGrayscaleToPaletteAlpha)) << 5 );
+		shaderFlags3 |= ( quint16(bool(bgem->bSoftEnabled)) << 6 ) | ( quint16(bool(bgem->bGlowmap)) << 7 );
+		shaderFlags3 |= ( quint16(bool(bgem->bEffectPbrSpecular)) << 8 );
+		setValue<quint16>( p, "Shader Flags 2", shaderFlags3 );
+		textureCnt = 8;
 	}
 
+	// common material properties
 	setValue<Vector2>( p, "UV Offset", Vector2( mat.fUOffset, mat.fVOffset ) );
 	setValue<Vector2>( p, "UV Scale", Vector2( mat.fUScale, mat.fVScale ) );
-	setValue<quint32>( p, "Texture Clamp Mode", quint32( mat.bTileU ) | ( quint32( mat.bTileV ) << 1 ) );
+	setValue<float>( p, "Alpha", mat.fAlpha );
+	setValue<quint16>( p, "Alpha Source Blend Mode", quint16(mat.iAlphaSrc & 0x0F) );
+	setValue<quint16>( p, "Alpha Destination Blend Mode", quint16(mat.iAlphaDst & 0x0F) );
+	setValue<quint8>( p, "Alpha Test Threshold", mat.iAlphaTestRef );
+	setValue<float>( p, "Refraction Power", mat.fRefractionPower );
+	setValue<quint8>( p, "Write Mask", mat.ucMaskWrites );
 
+	// texture set
+	for ( qsizetype i = 0; i < textureCnt; i++ ) {
+		if ( mat.textureList.size() > i )
+			setValue<QString>( p, QString("Texture %1").arg(i), mat.textureList[i] );
+		else
+			setValue<QString>( p, QString("Texture %1").arg(i), "" );
+	}
+
+	// shader material properties
 	if ( bgsm ) {
-		setValue<float>( p, "Alpha", mat.fAlpha );
-		for ( qsizetype i = 0; i < 10; i++ ) {
-			if ( mat.textureList.size() > i )
-				setValue<QString>( p, QString("Texture %1").arg(i), mat.textureList[i] );
-			else
-				setValue<QString>( p, QString("Texture %1").arg(i), "" );
-		}
-		setValue<Color3>( p, "Emissive Color", mat.cEmittanceColor );
-		setValue<float>( p, "Emissive Multiple", bgsm->fEmittanceMult );
-		setValue<float>( p, "Refraction Strength", mat.fRefractionPower );
-		setValue<float>( p, "Smoothness", bgsm->fSmoothness );
+		setValue<Color3>( p, "Translucency Subsurface Color", bgsm->cTranslucencySubsurfaceColor );
+		setValue<float>( p, "Translucency Transmissive Scale", bgsm->fTranslucencyTransmissiveScale );
+		setValue<float>( p, "Translucency Turbulence", bgsm->fTranslucencyTurbulence );
 		setValue<Color3>( p, "Specular Color", bgsm->cSpecularColor );
 		setValue<float>( p, "Specular Strength", bgsm->fSpecularMult );
-		setValue<float>( p, "Grayscale to Palette Scale", bgsm->fGrayscaleToPaletteScale );
+		setValue<float>( p, "Smoothness", bgsm->fSmoothness );
 		setValue<float>( p, "Fresnel Power", bgsm->fFresnelPower );
-		o = getItem( itemToIndex(p), "Wetness" );
+		NifItem *	o = getItem( itemToIndex(p), "Wetness" );
 		if ( o ) {
 			setValue<float>( o, "Spec Scale", bgsm->fWetnessControl_SpecScale );
 			setValue<float>( o, "Spec Power", bgsm->fWetnessControl_SpecPowerScale );
@@ -588,65 +550,42 @@ void NifModel::loadFO76Material( const QModelIndex & parent, const void * materi
 			setValue<float>( o, "Fresnel Power", bgsm->fWetnessControl_FresnelPower );
 			setValue<float>( o, "Metalness", bgsm->fWetnessControl_Metalness );
 		}
-		setValue<bool>( p, "Do Translucency", bgsm->bTranslucency );
-		if ( bgsm->bTranslucency && ( o = getItem( itemToIndex(p), "Translucency" ) ) != nullptr ) {
-			setValue<Color3>( o, "Subsurface Color", bgsm->cTranslucencySubsurfaceColor );
-			setValue<float>( o, "Transmissive Scale", bgsm->fTranslucencyTransmissiveScale );
-			setValue<float>( o, "Turbulence", bgsm->fTranslucencyTurbulence );
-			setValue<bool>( o, "Thick Object", bgsm->bTranslucencyThickObject );
-			setValue<bool>( o, "Mix Albedo", bgsm->bTranslucencyMixAlbedoWithSubsurfaceCol );
+		setValue<float>( p, "Porosity Value", bgsm->fPorosityValue );
+		setValue<QString>( p, "Root Material", bgsm->sRootMaterialPath );
+		if ( shaderFlags2 & 0x00000100 )
+			setValue<Color3>( p, "Emissive Color", bgsm->cEmittanceColor );
+		setValue<float>( p, "Emissive Multiple", bgsm->fEmittanceMult );
+		o = getItem( itemToIndex(p), "Luminance" );
+		if ( o ) {
+			setValue<float>( o, "Lum Emittance", mat.fLumEmittance );
+			setValue<float>( o, "Exposure Offset", mat.fAdaptativeEmissive_ExposureOffset );
+			setValue<float>( o, "Final Exposure Min", mat.fAdaptativeEmissive_FinalExposureMin );
+			setValue<float>( o, "Final Exposure Max", mat.fAdaptativeEmissive_FinalExposureMax );
 		}
-		if ( shaderType == 5 )
-			setValue<Color3>( p, "Hair Tint Color", bgsm->cHairTintColor );
-	} else if ( bgem ) {
-		if ( mat.textureList.size() > 0 )
-			setValue<QString>( p, "Source Texture", mat.textureList[0] );
-		else
-			setValue<QString>( p, "Source Texture", "" );
-		setValue<quint8>( p, "Lighting Influence", quint8( int( std::min( std::max( bgem->fLightingInfluence, 0.0f ), 1.0f ) * 255.0f ) ) );
-		setValue<quint8>( p, "Env Map Min LOD", bgem->iEnvmapMinLOD );
+		setValue<Color3>( p, "Hair Tint Color", bgsm->cHairTintColor );
+		setValue<float>( p, "Grayscale to Palette Scale", bgsm->fGrayscaleToPaletteScale );
+		if ( shaderFlags2 & 0x01000000 ) {
+			setValue<float>( p, "Terrain Threshold Falloff", bgsm->fTerrainThresholdFalloff );
+			setValue<float>( p, "Terrain Tiling Distance", bgsm->fTerrainTilingDistance );
+			setValue<float>( p, "Terrain Rotation Angle", bgsm->fTerrainRotationAngle );
+		}
+	}
+
+	// effect material properties
+	if ( bgem ) {
+		setValue<float>( p, "Environment Map Scale", bgem->fEnvironmentMappingMaskScale );
+		setValue<Color3>( p, "Base Color", bgem->cBaseColor );
+		setValue<float>( p, "Base Color Scale", bgem->fBaseColorScale );
 		setValue<float>( p, "Falloff Start Angle", bgem->fFalloffStartAngle );
 		setValue<float>( p, "Falloff Stop Angle", bgem->fFalloffStopAngle );
 		setValue<float>( p, "Falloff Start Opacity", bgem->fFalloffStartOpacity );
 		setValue<float>( p, "Falloff Stop Opacity", bgem->fFalloffStopOpacity );
-		setValue<float>( p, "Refraction Power", mat.fRefractionPower );
-		setValue<Color4>( p, "Base Color", Color4( bgem->cBaseColor[0], bgem->cBaseColor[1], bgem->cBaseColor[2], mat.fAlpha ) );
-		setValue<float>( p, "Base Color Scale", bgem->fBaseColorScale );
+		setValue<float>( p, "Lighting Influence", bgem->fLightingInfluence );
+		setValue<quint8>( p, "Env Map Min LOD", bgem->iEnvmapMinLOD );
 		setValue<float>( p, "Soft Falloff Depth", bgem->fSoftDepth );
-		if ( mat.textureList.size() > 1 )
-			setValue<QString>( p, "Greyscale Texture", mat.textureList[1] );
-		else
-			setValue<QString>( p, "Greyscale Texture", "" );
-		if ( mat.textureList.size() > 2 )
-			setValue<QString>( p, "Env Map Texture", mat.textureList[2] );
-		else
-			setValue<QString>( p, "Env Map Texture", "" );
-		if ( mat.textureList.size() > 3 )
-			setValue<QString>( p, "Normal Texture", mat.textureList[3] );
-		else
-			setValue<QString>( p, "Normal Texture", "" );
-		if ( mat.textureList.size() > 4 )
-			setValue<QString>( p, "Env Mask Texture", mat.textureList[4] );
-		else
-			setValue<QString>( p, "Env Mask Texture", "" );
-		if ( mat.textureList.size() > 5 )
-			setValue<QString>( p, "Reflectance Texture", mat.textureList[5] );
-		else
-			setValue<QString>( p, "Reflectance Texture", "" );
-		if ( mat.textureList.size() > 6 )
-			setValue<QString>( p, "Lighting Texture", mat.textureList[6] );
-		else
-			setValue<QString>( p, "Lighting Texture", "" );
-		if ( mat.textureList.size() > 7 )
-			setValue<QString>( p, "Emit Gradient Texture", mat.textureList[7] );
-		else
-			setValue<QString>( p, "Emit Gradient Texture", "" );
-	}
-	o = getItem( itemToIndex(p), "Luminance" );
-	if ( o ) {
-		setValue<float>( o, "Lum Emittance", mat.fLumEmittance );
-		setValue<float>( o, "Exposure Offset", mat.fAdaptativeEmissive_ExposureOffset );
-		setValue<float>( o, "Final Exposure Min", mat.fAdaptativeEmissive_FinalExposureMin );
-		setValue<float>( o, "Final Exposure Max", mat.fAdaptativeEmissive_FinalExposureMax );
+		setValue<Color3>( p, "Emittance Color", bgem->cEmittanceColor );
+		setValue<float>( p, "Adaptive Emissive Exposure Offset", bgem->fAdaptativeEmissive_ExposureOffset );
+		setValue<float>( p, "Adaptive Emissive Exposure Min", bgem->fAdaptativeEmissive_FinalExposureMin );
+		setValue<float>( p, "Adaptive Emissive Exposure Max", bgem->fAdaptativeEmissive_FinalExposureMax );
 	}
 }
