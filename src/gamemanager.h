@@ -44,19 +44,15 @@ enum GameMode : int
 	OTHER,
 	MORROWIND,
 	OBLIVION,
-	FALLOUT_3,
-	FALLOUT_NV,
+	// Fallout 3 and Fallout NV cannot be differentiated by version
+	FALLOUT_3NV,
 	SKYRIM,
 	SKYRIM_SE,
 	FALLOUT_4,
 	FALLOUT_76,
 	STARFIELD,
 
-	NUM_GAMES,
-
-	// Not a physical game, exclude from NUM_GAMES count
-	// Fallout 3 and Fallout NV cannot be differentiated by version
-	FALLOUT_3NV,
+	NUM_GAMES
 };
 
 using GameMap = QMap<GameMode, QString>;
@@ -72,8 +68,7 @@ static const auto msft = QString("HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windo
 static const GameMap STRING = {
 	{MORROWIND, "Morrowind"},
 	{OBLIVION, "Oblivion"},
-	{FALLOUT_3, "Fallout 3"},
-	{FALLOUT_NV, "Fallout: New Vegas"},
+	{FALLOUT_3NV, "Fallout 3 / New Vegas"},
 	{SKYRIM, "Skyrim"},
 	{SKYRIM_SE, "Skyrim SE"},
 	{FALLOUT_4, "Fallout 4"},
@@ -85,8 +80,7 @@ static const GameMap STRING = {
 static const GameMap KEY = {
 	{MORROWIND, beth.arg("Morrowind")},
 	{OBLIVION, beth.arg("Oblivion")},
-	{FALLOUT_3, beth.arg("Fallout3")},
-	{FALLOUT_NV, beth.arg("FalloutNV")},
+	{FALLOUT_3NV, beth.arg("FalloutNV")},
 	{SKYRIM, beth.arg("Skyrim")},
 	{SKYRIM_SE, beth.arg("Skyrim Special Edition")},
 	{FALLOUT_4, beth.arg("Fallout4")},
@@ -97,8 +91,7 @@ static const GameMap KEY = {
 static const GameMap DATA = {
 	{MORROWIND, "Data Files"},
 	{OBLIVION, "Data"},
-	{FALLOUT_3, "Data"},
-	{FALLOUT_NV, "Data"},
+	{FALLOUT_3NV, "Data"},
 	{SKYRIM, "Data"},
 	{SKYRIM_SE, "Data"},
 	{FALLOUT_4, "Data"},
@@ -110,8 +103,7 @@ static const GameMap DATA = {
 static const ResourceListMap FOLDERS = {
 	{MORROWIND, {"."}},
 	{OBLIVION, {"."}},
-	{FALLOUT_3, {"."}},
-	{FALLOUT_NV, {"."}},
+	{FALLOUT_3NV, {"."}},
 	{SKYRIM, {"."}},
 	{SKYRIM_SE, {"."}},
 	{FALLOUT_4, {".", "Textures"}},

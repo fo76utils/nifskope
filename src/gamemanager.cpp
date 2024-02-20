@@ -24,7 +24,7 @@ struct BA2Files {
 };
 
 BA2Files::BA2Files()
-  : archives(size_t(FALLOUT_3NV) + 1, std::pair< BA2File*, BA2File* >(nullptr, nullptr))
+  : archives(size_t(NUM_GAMES), std::pair< BA2File*, BA2File* >(nullptr, nullptr))
 {
 }
 
@@ -35,7 +35,7 @@ BA2Files::~BA2Files()
 
 void BA2Files::open_folders(GameMode game, const QStringList& folders)
 {
-	if (!(game >= OTHER && game <= FALLOUT_3NV))
+	if (!(game >= OTHER && game < NUM_GAMES))
 		return;
 	if (archives[game].first) {
 		delete archives[game].first;
@@ -83,7 +83,7 @@ void BA2Files::close_all(bool tempPathsFirst)
 
 bool BA2Files::set_temp_folder(GameMode game, const char* pathName, bool ignoreErrors)
 {
-	if (!(game >= OTHER && game <= FALLOUT_3NV))
+	if (!(game >= OTHER && game < NUM_GAMES))
 		return false;
 	if (archives[game].second) {
 		delete archives[game].second;
@@ -110,7 +110,7 @@ bool BA2Files::get_file(GameMode game, const std::string& pathName, std::vector<
 {
 	if (outBuf)
 		outBuf->clear();
-	if (!(game >= OTHER && game <= FALLOUT_3NV && !pathName.empty())) [[unlikely]]
+	if (!(game >= OTHER && game < NUM_GAMES && !pathName.empty())) [[unlikely]]
 		return false;
 	if (archives[game].second && archives[game].second->findFile(pathName)) {
 		if (outBuf) {
@@ -202,6 +202,8 @@ GameManager::GameInfo get_game_info(GameMode game)
 	info.id = game;
 	info.name = StringForMode(game);
 	info.path = registry_game_path(KEY.value(game, {}));
+	if ( info.path.isEmpty() && game == FALLOUT_3NV )
+		info.path = registry_game_path(beth.arg("Fallout3"));
 	return info;
 }
 
@@ -370,8 +372,6 @@ QString GameManager::data( const GameMode game )
 
 QStringList GameManager::folders( const GameMode game )
 {
-	if ( game == FALLOUT_3NV )
-		return folders(FALLOUT_NV) + folders(FALLOUT_3);
 	if ( status(game) )
 		return get()->game_folders.value(game, {});
 	return {};
@@ -379,8 +379,6 @@ QStringList GameManager::folders( const GameMode game )
 
 bool GameManager::status(const GameMode game)
 {
-	if ( game == FALLOUT_3NV )
-		return status(FALLOUT_3) || status(FALLOUT_NV);
 	return get()->game_status.value(game, false);
 }
 
@@ -495,7 +493,7 @@ bool GameManager::set_temp_path(const GameMode game, const char* pathName, bool 
 
 void GameManager::list_files(QStringList& fileList, const GameMode game, const char* archiveFolder, const char* extension, const char* includePattern, const char* excludePattern)
 {
-	if ( !(game >= OTHER && game <= FALLOUT_3NV) )
+	if ( !(game >= OTHER && game < NUM_GAMES) )
 		return;
 	// make sure that archives are loaded
 	(void) ba2Files.get_file( game, std::string(".") );
