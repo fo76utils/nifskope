@@ -687,8 +687,8 @@ public:
 	bool hasVertexColors = false;
 	bool hasVertexAlpha = false; // TODO Gavrant: it's unused
 
-	bool depthTest = false;
-	bool depthWrite = false;
+	bool depthTest = true;
+	bool depthWrite = true;
 	bool isDoubleSided = false;
 	bool isVertexAlphaAnimation = false;
 

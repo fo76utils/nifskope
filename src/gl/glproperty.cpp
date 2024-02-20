@@ -874,8 +874,8 @@ void BSShaderLightingProperty::resetParams()
 	hasVertexColors = false;
 	hasVertexAlpha = false;
 
-	depthTest = false;
-	depthWrite = false;
+	depthTest = true;
+	depthWrite = true;
 	isDoubleSided = false;
 	isVertexAlphaAnimation = false;
 }
