@@ -852,10 +852,12 @@ void BSShaderLightingProperty::updateImpl( const NifModel * nif, const QModelInd
 		if ( nif->getBSVersion() >= 160 ) {
 			setSFMaterial( name );
 			const_cast< NifModel * >(nif)->loadSFMaterial( index );
-		} else if ( nif->getBSVersion() >= 83 ) {
-			iTextureSet = nif->getBlockIndex( nif->getLink( nif->getIndex( iBlock, "Shader Property Data" ), "Texture Set" ), "BSShaderTextureSet" );
 		} else {
-			iTextureSet = nif->getBlockIndex( nif->getLink( iBlock, "Texture Set" ), "BSShaderTextureSet" );
+			if ( nif->getBSVersion() < 83 )
+				iSPData = iBlock;
+			else
+				iSPData = nif->getIndex( iBlock, "Shader Property Data" );
+			iTextureSet = nif->getBlockIndex( nif->getLink( iSPData, "Texture Set" ), "BSShaderTextureSet" );
 		}
 	}
 }
@@ -1121,19 +1123,19 @@ QString BSShaderLightingProperty::fileName( int id ) const
 	if ( nif ) {
 		switch ( id ) {
 		case 0:
-			return nif->get<QString>( iBlock, "Source Texture" );
+			return nif->get<QString>( iSPData, "Source Texture" );
 		case 1:
-			return nif->get<QString>( iBlock, "Greyscale Texture" );
+			return nif->get<QString>( iSPData, "Greyscale Texture" );
 		case 2:
-			return nif->get<QString>( iBlock, "Env Map Texture" );
+			return nif->get<QString>( iSPData, "Env Map Texture" );
 		case 3:
-			return nif->get<QString>( iBlock, "Normal Texture" );
+			return nif->get<QString>( iSPData, "Normal Texture" );
 		case 4:
-			return nif->get<QString>( iBlock, "Env Mask Texture" );
+			return nif->get<QString>( iSPData, "Env Mask Texture" );
 		case 6:
-			return nif->get<QString>( iBlock, "Reflectance Texture" );
+			return nif->get<QString>( iSPData, "Reflectance Texture" );
 		case 7:
-			return nif->get<QString>( iBlock, "Lighting Texture" );
+			return nif->get<QString>( iSPData, "Lighting Texture" );
 		}
 	}
 
@@ -1159,8 +1161,8 @@ int BSShaderLightingProperty::getId( const QString & id )
 void BSShaderLightingProperty::setFlags1( const NifModel * nif )
 {
 	if ( nif->getBSVersion() >= 151 ) {
-		auto sf1 = nif->getArray<quint32>( iBlock, "SF1" );
-		auto sf2 = nif->getArray<quint32>( iBlock, "SF2" );
+		auto sf1 = nif->getArray<quint32>( iSPData, "SF1" );
+		auto sf2 = nif->getArray<quint32>( iSPData, "SF2" );
 		sf1.append( sf2 );
 
 		uint64_t flags = 0;
@@ -1169,15 +1171,15 @@ void BSShaderLightingProperty::setFlags1( const NifModel * nif )
 		}
 		flags1 = ShaderFlags::SF1( (uint32_t)flags );
 	} else {
-		flags1 = ShaderFlags::SF1( nif->get<unsigned int>(iBlock, "Shader Flags 1") );
+		flags1 = ShaderFlags::SF1( nif->get<unsigned int>(iSPData, "Shader Flags 1") );
 	}
 }
 
 void BSShaderLightingProperty::setFlags2( const NifModel * nif )
 {
 	if ( nif->getBSVersion() >= 151 ) {
-		auto sf1 = nif->getArray<quint32>( iBlock, "SF1" );
-		auto sf2 = nif->getArray<quint32>( iBlock, "SF2" );
+		auto sf1 = nif->getArray<quint32>( iSPData, "SF1" );
+		auto sf2 = nif->getArray<quint32>( iSPData, "SF2" );
 		sf1.append( sf2 );
 
 		uint64_t flags = 0;
@@ -1186,7 +1188,7 @@ void BSShaderLightingProperty::setFlags2( const NifModel * nif )
 		}
 		flags2 = ShaderFlags::SF2( (uint32_t)(flags >> 32) );
 	} else {
-		flags2 = ShaderFlags::SF2( nif->get<unsigned int>(iBlock, "Shader Flags 2") );
+		flags2 = ShaderFlags::SF2( nif->get<unsigned int>(iSPData, "Shader Flags 2") );
 	}
 }
 
@@ -1336,7 +1338,7 @@ void BSLightingShaderProperty::updateParams( const NifModel * nif )
 	} else { // m == nullptr
 
 		auto textures = nif->getArray<QString>( iTextureSet, "Textures" );
-		auto lsp = nif->getIndex( iBlock, "Shader Property Data" );
+		auto lsp = iSPData;
 
 		isDoubleSided = hasSF2( ShaderFlags::SLSF2_Double_Sided );
 		depthTest = hasSF1( ShaderFlags::SLSF1_ZBuffer_Test );
@@ -1428,7 +1430,7 @@ void BSLightingShaderProperty::setController( const NifModel * nif, const QModel
 void BSLightingShaderProperty::setTintColor( const NifModel* nif, const QString & itemName )
 {
 	hasTintColor = true;
-	tintColor = nif->get<Color3>(iBlock, itemName);
+	tintColor = nif->get<Color3>(iSPData, itemName);
 }
 
 /*
@@ -1543,7 +1545,7 @@ void BSEffectShaderProperty::updateParams( const NifModel * nif )
 
 	} else { // m == nullptr
 
-		auto esp = nif->getIndex( iBlock, "Shader Property Data" );
+		auto esp = iSPData;
 
 		hasSourceTexture = !nif->get<QString>( esp, "Source Texture" ).isEmpty();
 		hasGreyscaleMap = !nif->get<QString>( esp, "Greyscale Texture" ).isEmpty();

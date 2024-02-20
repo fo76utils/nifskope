@@ -706,6 +706,7 @@ protected:
 	//QVector<QString> textures;
 	QPersistentModelIndex	iMaterialFile;	// .mat, .bgsm or .bgem
 	QPersistentModelIndex	iTextureSet;
+	QPersistentModelIndex	iSPData;
 
 	Material * material = nullptr;
 	const CE2Material * sf_material = nullptr;
