@@ -1576,41 +1576,41 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 
 	// setup blending
 
-	glProperty( mesh->alphaProperty );
-
-	if ( mat && scene->hasOption(Scene::DoBlending) ) {
+	if ( mat ) {
 		static const GLenum blendMap[11] = {
 			GL_ONE, GL_ZERO, GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR,
 			GL_DST_COLOR, GL_ONE_MINUS_DST_COLOR, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
 			GL_DST_ALPHA, GL_ONE_MINUS_DST_ALPHA, GL_SRC_ALPHA_SATURATE
 		};
 
-		if ( mat->hasAlphaBlend() ) {
+		if ( mat->hasAlphaBlend() && scene->hasOption(Scene::DoBlending) ) {
 			glEnable( GL_BLEND );
 			glBlendFunc( blendMap[mat->iAlphaSrc], blendMap[mat->iAlphaDst] );
 		} else {
 			glDisable( GL_BLEND );
 		}
 
-		if ( mat->hasAlphaTest() ) {
+		if ( mat->hasAlphaTest() && scene->hasOption(Scene::DoBlending) ) {
 			glEnable( GL_ALPHA_TEST );
 			glAlphaFunc( GL_GREATER, float( mat->iAlphaTestRef ) / 255.0 );
 		} else {
 			glDisable( GL_ALPHA_TEST );
 		}
 
-		if ( mat && mat->bDecal ) {
+		if ( mat->bDecal ) {
 			glEnable( GL_POLYGON_OFFSET_FILL );
 			glPolygonOffset( -1.0f, -1.0f );
 		}
-	}
 
-	// BSESP/BSLSP do not always need an NiAlphaProperty, and appear to override it at times
-	if ( !mat && mesh->translucent ) {
-		glEnable( GL_BLEND );
-		glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-		// If mesh is alpha tested, override threshold
-		glAlphaFunc( GL_GREATER, 0.1f );
+	} else {
+		glProperty( mesh->alphaProperty );
+		// BSESP/BSLSP do not always need an NiAlphaProperty, and appear to override it at times
+		if ( mesh->translucent ) {
+			glEnable( GL_BLEND );
+			glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+			// If mesh is alpha tested, override threshold
+			glAlphaFunc( GL_GREATER, 0.1f );
+		}
 	}
 
 	glDisable( GL_COLOR_MATERIAL );
@@ -1642,14 +1642,11 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 		glEnable( GL_CULL_FACE );
 		glCullFace( GL_BACK );
 		glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-	}
 
-	if ( !mesh->depthTest ) {
-		glDisable( GL_DEPTH_TEST );
-	}
-
-	if ( !mesh->depthWrite || mesh->translucent ) {
-		glDepthMask( GL_FALSE );
+		if ( !mesh->depthTest )
+			glDisable( GL_DEPTH_TEST );
+		if ( !mesh->depthWrite || mesh->translucent )
+			glDepthMask( GL_FALSE );
 	}
 
 	return true;
