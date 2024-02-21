@@ -200,7 +200,7 @@ void Scene::updateSelectMode( QAction * action )
 void Scene::updateLodLevel( int level )
 {
 	if ( game != Game::STARFIELD )
-		level = std::max(level, 2);
+		level = std::min( level, 2 );
 	lodLevel = LodLevel( level );
 }
 

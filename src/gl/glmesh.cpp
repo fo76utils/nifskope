@@ -854,8 +854,8 @@ void Mesh::drawShapes( NodeList * secondPass, bool presort )
 		auto lod1tris = sortedTriangles.mid( lod0, lod1 );
 		auto lod2tris = sortedTriangles.mid( lod0 + lod1, lod2 );
 
-		// If Level2, render all
-		// If Level1, also render Level0
+		// If Level0, render all
+		// If Level1, also render Level2
 		switch ( scene->lodLevel ) {
 		case Scene::Level0:
 			if ( lod2tris.count() )
