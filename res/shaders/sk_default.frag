@@ -49,6 +49,8 @@ in vec4 D;
 
 in mat3 tbnMatrix;
 
+mat3 tbnMatrix_norm = mat3(normalize(tbnMatrix[0]), normalize(tbnMatrix[1]), normalize(tbnMatrix[2]));
+
 
 vec3 tonemap(vec3 x, float y)
 {
@@ -77,14 +79,14 @@ void main( void )
 	
 	if ( hasHeightMap ) {
 		float height = texture2D( HeightMap, offset ).r;
-		offset += E.xy * (height * 0.08 - 0.04); 
+		offset += normalize(ViewDir * tbnMatrix_norm).xy * (height * 0.08 - 0.04); 
 	}
 
 	vec4 baseMap = texture2D( BaseMap, offset );
 	vec4 normalMap = texture2D( NormalMap, offset );
 	vec4 glowMap = texture2D( GlowMap, offset );
 	
-	vec3 normal = normalize(tbnMatrix * (normalMap.rgb * 2.0 - 1.0));
+	vec3 normal = normalize(tbnMatrix_norm * (normalMap.rgb * 2.0 - 1.0));
 	
 	vec3 L = normalize(LightDir);
 	vec3 R = reflect(-L, normal);

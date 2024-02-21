@@ -44,9 +44,7 @@ void main( void )
 		v = vec3(gl_ModelViewMatrix * V);
 	}
 
-	tbnMatrix = mat3(b.x, b.y, b.z,
-					 t.x, t.y, t.z,
-					 n.x, n.y, n.z);
+	tbnMatrix = mat3(b, t, n);
 
 	if (gl_ProjectionMatrix[3][3] == 1.0)
 		v = vec3(0.0, 0.0, -1.0);	// orthographic view
