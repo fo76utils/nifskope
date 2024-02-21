@@ -1570,6 +1570,15 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 		}
 	}
 
+#if 0
+	// This path seems to be unused, because nifVersion < 83 already falls back
+	// to setupFixedFunction(). TODO: implement shading for TES4/FO3/FNV.
+	if ( nifVersion < 83 ) {
+		setupFixedFunction( mesh, props );
+		return true;
+	}
+#endif
+
 	// setup lighting
 
 	//glEnable( GL_LIGHTING );
@@ -1615,39 +1624,20 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 
 	glDisable( GL_COLOR_MATERIAL );
 
-	if ( nifVersion < 83 ) {
-		// setup vertex colors
-
-		//glProperty( props.get< VertexColorProperty >(), glIsEnabled( GL_COLOR_ARRAY ) );
-
-		// setup material
-
-		glProperty( props.get<MaterialProperty>(), props.get<SpecularProperty>() );
-
-		// setup z buffer
-
-		glProperty( props.get<ZBufferProperty>() );
-
-		// setup stencil
-
-		glProperty( props.get<StencilProperty>() );
-
-		// wireframe ?
-
-		glProperty( props.get<WireframeProperty>() );
+	if ( !mesh->depthTest ) {
+		glDisable( GL_DEPTH_TEST );
 	} else {
 		glEnable( GL_DEPTH_TEST );
-		glDepthMask( GL_TRUE );
 		glDepthFunc( GL_LEQUAL );
+	}
+	glDepthMask( !mesh->depthWrite || mesh->translucent ? GL_FALSE : GL_TRUE );
+	if ( mesh->isDoubleSided ) {
+		glDisable( GL_CULL_FACE );
+	} else {
 		glEnable( GL_CULL_FACE );
 		glCullFace( GL_BACK );
-		glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-
-		if ( !mesh->depthTest )
-			glDisable( GL_DEPTH_TEST );
-		if ( !mesh->depthWrite || mesh->translucent )
-			glDepthMask( GL_FALSE );
 	}
+	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 
 	return true;
 }
