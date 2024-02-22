@@ -33,6 +33,12 @@ BA2Files::~BA2Files()
 	close_all();
 }
 
+static bool archiveFilterFunction( void * p, const std::string & s )
+{
+	(void) p;
+	return !s.ends_with( ".nif" );
+}
+
 void BA2Files::open_folders(GameMode game, const QStringList& folders)
 {
 	if (!(game >= OTHER && game < NUM_GAMES))
@@ -49,12 +55,10 @@ void BA2Files::open_folders(GameMode game, const QStringList& folders)
 	if (tmp.size() < 1)
 		return;
 	archives[game].first = new BA2File();
-	std::vector< std::string >	excludePatterns;
-	excludePatterns.emplace_back(".nif");
 	size_t	archivesLoaded = 0;
 	for (size_t i = tmp.size(); i-- > 0; ) {
 		try {
-			archives[game].first->loadArchivePath(tmp[i].c_str(), nullptr, &excludePatterns);
+			archives[game].first->loadArchivePath(tmp[i].c_str(), &archiveFilterFunction);
 			archivesLoaded++;
 		} catch (FO76UtilsError& e) {
 			QMessageBox::critical(nullptr, "NifSkope error", QString("Error opening archive path '%1': %2").arg(tmp[i].c_str()).arg(e.what()));
@@ -92,10 +96,8 @@ bool BA2Files::set_temp_folder(GameMode game, const char* pathName, bool ignoreE
 	if (!(pathName && *pathName))
 		return true;
 	archives[game].second = new BA2File();
-	std::vector< std::string >	excludePatterns;
-	excludePatterns.emplace_back(".nif");
 	try {
-		archives[game].second->loadArchivePath(pathName, nullptr, &excludePatterns);
+		archives[game].second->loadArchivePath(pathName, &archiveFilterFunction);
 	} catch (FO76UtilsError& e) {
 		delete archives[game].second;
 		archives[game].second = nullptr;
@@ -491,7 +493,7 @@ bool GameManager::set_temp_path(const GameMode game, const char* pathName, bool 
 	return ba2Files.set_temp_folder( game, pathName, ignoreErrors );
 }
 
-void GameManager::list_files(QStringList& fileList, const GameMode game, const char* archiveFolder, const char* extension, const char* includePattern, const char* excludePattern)
+void GameManager::list_files(QStringList& fileList, const GameMode game, bool (*fileListFilterFunc)(void* p, const std::string& fileName), void* fileListFilterFuncData)
 {
 	if ( !(game >= OTHER && game < NUM_GAMES) )
 		return;
@@ -503,19 +505,9 @@ void GameManager::list_files(QStringList& fileList, const GameMode game, const c
 		const BA2File *	ba2File = ( !i ? ba2Files.archives[game].first : ba2Files.archives[game].second );
 		if ( !ba2File )
 			continue;
-		ba2File->getFileList( tmpFileList, true );
-		for ( size_t j = 0; j < tmpFileList.size(); j++ ) {
-			const std::string &	s = tmpFileList[j];
-			if ( archiveFolder && *archiveFolder && !s.starts_with(archiveFolder) )
-				continue;
-			if ( extension && *extension && !s.ends_with(extension) )
-				continue;
-			if ( includePattern && *includePattern && s.find(includePattern) == std::string::npos )
-				continue;
-			if ( excludePattern && *excludePattern && s.find(excludePattern) != std::string::npos )
-				continue;
-			filesFound.insert( s );
-		}
+		ba2File->getFileList( tmpFileList, true, fileListFilterFunc, fileListFilterFuncData );
+		for ( size_t j = 0; j < tmpFileList.size(); j++ )
+			filesFound.insert( tmpFileList[j] );
 	}
 	for ( std::set< std::string >::const_iterator i = filesFound.begin(); i != filesFound.end(); i++ )
 		fileList << QString::fromStdString( *i );

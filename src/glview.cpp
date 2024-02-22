@@ -251,6 +251,16 @@ void GLView::updateSettings()
 	settings.endGroup();
 }
 
+static bool envMapFileListFilterFunction( void * p, const std::string & s )
+{
+	(void) p;
+	if ( !s.starts_with("textures/") )
+		return false;
+	if ( !(s.ends_with(".dds") || s.ends_with(".hdr")) )
+		return false;
+	return ( s.find("/cubemaps/") != std::string::npos );
+}
+
 void GLView::selectPBRCubeMap( quint32 bsVersion )
 {
 	if ( !bsVersion ) {
@@ -273,7 +283,7 @@ void GLView::selectPBRCubeMap( quint32 bsVersion )
 	QListWidget *	listWidget = new QListWidget( &dlg );
 	layout->addWidget( listWidget, 1, 0 );
 	QStringList	fileList;
-	Game::GameManager::list_files( fileList, (!isStarfield ? Game::FALLOUT_76 : Game::STARFIELD), "textures/", ".dds", "/cubemaps/" );
+	Game::GameManager::list_files( fileList, (!isStarfield ? Game::FALLOUT_76 : Game::STARFIELD), &envMapFileListFilterFunction );
 	listWidget->addItems( fileList );
 	QSettings	settings;
 	QList< QListWidgetItem * >	curValue( listWidget->findItems( settings.value( cfgPath ).toString(), Qt::MatchExactly ) );

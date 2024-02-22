@@ -238,7 +238,8 @@ public:
 	static void close_materials();
 	//! Open a folder or archive without adding it to the list of data paths.
 	static bool set_temp_path(const GameMode game, const char* pathName, bool ignoreErrors);
-	static void list_files(QStringList& fileList, const GameMode game, const char* archiveFolder = nullptr, const char* extension = nullptr, const char* includePattern = nullptr, const char* excludePattern = nullptr);
+	//! List resource files available for 'game' on the archive filesystem, optionally filtered by a function that returns false if the file should be excluded.
+	static void list_files(QStringList& fileList, const GameMode game, bool (*fileListFilterFunc)(void* p, const std::string& fileName) = nullptr, void* fileListFilterFuncData = nullptr);
 
 	//! Find applicable data folders at the game installation path
 	static QStringList find_folders(const GameMode game);
