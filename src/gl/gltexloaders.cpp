@@ -629,20 +629,43 @@ static SFCubeMapCache	sfCubeMapCache;
 
 GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, GLenum & target, GLuint & mipmaps, QByteArray & data, GLuint & id )
 {
-	if ( data.size() >= 148 && (data[113] & 0x02) &&	// DDSCAPS2_CUBEMAP
-		( game == Game::STARFIELD || game == Game::FALLOUT_76 ) ) {
-		const unsigned char *	dataPtr = reinterpret_cast< unsigned char * >( data.data() );
-		if ( dataPtr[128] != 0x43 || dataPtr[28] < 2 ) {	// DXGI_FORMAT_R9G9B9E5_SHAREDEXP
-			// normalize and filter Fallout 76 and Starfield cube maps
-			std::uint32_t	width = std::uint32_t(TexCache::pbrCubeMapResolution);
-			size_t	dataSize = size_t(data.size());
-			size_t	spaceRequired = width * width * 8 * 4 + 148;
-			if ( data.size() < qsizetype(spaceRequired) )
-				data.resize( spaceRequired );
-			FileBuffer::writeUInt32Fast( data.data() + 40, width );
-			size_t	newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(data.data()), dataSize, true, spaceRequired, width );
-			data.resize( newSize );
+	if ( data.size() < 128 )
+		return 0;
+	const unsigned char *	dataPtr = reinterpret_cast< unsigned char * >( data.data() );
+	bool	convertEnvMapFlag = false;
+	if ( FileBuffer::readUInt32Fast( dataPtr ) != 0x20534444 ) {	// "DDS "
+		if ( FileBuffer::readUInt64Fast( dataPtr ) != 0x4E41494441523F23ULL )	// "#?RADIAN"
+			return 0;
+		if ( game != Game::STARFIELD && game != Game::FALLOUT_76 )
+			return 0;
+		convertEnvMapFlag = true;
+		if ( game == Game::FALLOUT_76 ) {
+			for ( size_t i = 0; i <= 124; i++ ) {
+				std::uint32_t	tmp = FileBuffer::readUInt32Fast( dataPtr + i );
+				if ( tmp == 0x20592B0A || tmp == 0x20592D0A ) {	// "\n+Y " or "\n-Y "
+					// invert Y axis
+					data.data()[i + 1] = char( ((tmp >> 8) & 0xFF) ^ 6 );
+					break;
+				}
+			}
 		}
+		data += char( std::bit_width( std::uint32_t(TexCache::pbrCubeMapResolution) ) );
+	} else if ( (dataPtr[113] & 0x02) &&	// DDSCAPS2_CUBEMAP
+				( game == Game::STARFIELD || game == Game::FALLOUT_76 ) &&
+				FileBuffer::readUInt32Fast( dataPtr + 84 ) == 0x30315844 ) {	// "DX10"
+		convertEnvMapFlag = ( dataPtr[128] != 0x43 || dataPtr[28] < 2 );	// DXGI_FORMAT_R9G9B9E5_SHAREDEXP
+		if ( convertEnvMapFlag )
+			FileBuffer::writeUInt32Fast( data.data() + 40, std::uint32_t(TexCache::pbrCubeMapResolution) );
+	}
+	if ( convertEnvMapFlag ) {
+		// normalize and filter Fallout 76 and Starfield cube maps
+		std::uint32_t	width = std::uint32_t(TexCache::pbrCubeMapResolution);
+		size_t	dataSize = size_t(data.size());
+		size_t	spaceRequired = width * width * 8 * 4 + 148;
+		if ( data.size() < qsizetype(spaceRequired) )
+			data.resize( spaceRequired );
+		size_t	newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(data.data()), dataSize, true, spaceRequired, width );
+		data.resize( newSize );
 	}
 
 	GLuint result = 0;
@@ -1225,6 +1248,8 @@ bool texLoad( const Game::GameMode game, const QString & filepath, QString & for
 		mipmaps = texLoadBMP( f, format, target, width, height, id );
 	else if ( filepath.endsWith( ".nif", Qt::CaseInsensitive ) || filepath.endsWith( ".texcache", Qt::CaseInsensitive ) )
 		mipmaps = texLoadNIF( game, f, format, target, width, height, id );
+	else if ( filepath.endsWith( ".hdr", Qt::CaseInsensitive ) && ( game == Game::FALLOUT_76 || game == Game::STARFIELD ) )
+		mipmaps = texLoadDDS( game, filepath, target, mipmaps, data, id );
 	else
 		isSupported = false;
 
@@ -1267,6 +1292,7 @@ bool texIsSupported( const QString & filepath )
 					|| filepath.endsWith( ".bmp", Qt::CaseInsensitive )
 					|| filepath.endsWith( ".nif", Qt::CaseInsensitive )
 					|| filepath.endsWith( ".texcache", Qt::CaseInsensitive )
+					|| filepath.endsWith( ".hdr", Qt::CaseInsensitive )
 	);
 }
 

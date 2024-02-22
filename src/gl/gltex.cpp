@@ -175,22 +175,22 @@ QString TexCache::find( const QString & file, const QString & nifdir, QByteArray
 	if ( file.startsWith("#") && (file.length() == 9 || file.length() == 10) )
 		return file;
 
-	QSettings settings;
-
 	QString filename( file );
 
-	QStringList extensions;
-	extensions << ".dds";
-
-	bool textureAlternatives = settings.value( "Settings/Resources/Alternate Extensions", false ).toBool();
-	if ( textureAlternatives )
-		extensions << ".tga" << ".png" << ".bmp" << ".nif" << ".texcache";
+	static const char *	extensions[6] = {
+		".dds", ".tga", ".png", ".bmp", ".nif", ".texcache"
+	};
 
 	// attempt to find the texture with one of the extensions
-	for ( const QString& ext : extensions ) {
-		QString	fullPath(Game::GameManager::find_file(game, filename, "textures", ext.toStdString().c_str()));
-		if (!fullPath.isEmpty())
+	for ( size_t i = 0; i < 6; i++ ) {
+		QString	fullPath( Game::GameManager::find_file(game, filename, "textures", extensions[i]) );
+		if ( !fullPath.isEmpty() )
 			return fullPath;
+		if ( i == 0 ) {
+			QSettings settings;
+			if ( !settings.value( "Settings/Resources/Alternate Extensions", false ).toBool() )
+				break;
+		}
 	}
 
 	return filename;
