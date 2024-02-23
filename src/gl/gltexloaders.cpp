@@ -649,13 +649,10 @@ GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, GLenum &
 				}
 			}
 		}
-		data += char( std::bit_width( std::uint32_t(TexCache::pbrCubeMapResolution) ) );
 	} else if ( (dataPtr[113] & 0x02) &&	// DDSCAPS2_CUBEMAP
 				( game == Game::STARFIELD || game == Game::FALLOUT_76 ) &&
 				FileBuffer::readUInt32Fast( dataPtr + 84 ) == 0x30315844 ) {	// "DX10"
 		convertEnvMapFlag = ( dataPtr[128] != 0x43 || dataPtr[28] < 2 );	// DXGI_FORMAT_R9G9B9E5_SHAREDEXP
-		if ( convertEnvMapFlag )
-			FileBuffer::writeUInt32Fast( data.data() + 40, std::uint32_t(TexCache::pbrCubeMapResolution) );
 	}
 	if ( convertEnvMapFlag ) {
 		// normalize and filter Fallout 76 and Starfield cube maps
