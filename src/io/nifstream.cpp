@@ -141,7 +141,7 @@ bool NifIStream::read( NifValue & val )
 			val.val.u64 = 0;
 			uint16_t half;
 			*dataStream >> half;
-#if ENABLE_X86_64_AVX2 || (ENABLE_X86_64_AVX && defined(__F16C__))
+#if ENABLE_X86_64_SIMD >= 3
 			val.val.f32 = FloatVector4::convertFloat16( half )[0];
 #else
 			val.val.u32 = half_to_float( half );
@@ -198,7 +198,7 @@ bool NifIStream::read( NifValue & val )
 	case NifValue::tHalfVector3:
 		{
 			Vector3 *	v = static_cast<Vector3 *>(val.val.data);
-#if ENABLE_X86_64_AVX2 || (ENABLE_X86_64_AVX && defined(__F16C__))
+#if ENABLE_X86_64_SIMD >= 3
 			uint32_t	xy;
 			uint16_t	z;
 
@@ -229,7 +229,7 @@ bool NifIStream::read( NifValue & val )
 	case NifValue::tHalfVector2:
 		{
 			Vector2 *	v = static_cast<Vector2 *>(val.val.data);
-#if ENABLE_X86_64_AVX2 || (ENABLE_X86_64_AVX && defined(__F16C__))
+#if ENABLE_X86_64_SIMD >= 3
 			uint32_t	xy;
 
 			*dataStream >> xy;
@@ -639,7 +639,7 @@ bool NifOStream::write( const NifValue & val )
 		return device->write( (char *)&val.val.f32, 4 ) == 4;
 	case NifValue::tHfloat:
 		{
-#if ENABLE_X86_64_AVX2 || (ENABLE_X86_64_AVX && defined(__F16C__))
+#if ENABLE_X86_64_SIMD >= 3
 			uint16_t	half = uint16_t( FloatVector4( val.val.f32 ).convertToFloat16() );
 #else
 			uint16_t	half = half_from_float( val.val.u32 );
@@ -684,7 +684,7 @@ bool NifOStream::write( const NifValue & val )
 			if ( !vec )
 				return false;
 
-#if ENABLE_X86_64_AVX2 || (ENABLE_X86_64_AVX && defined(__F16C__))
+#if ENABLE_X86_64_SIMD >= 3
 			uint64_t	xyz = FloatVector4( vec->xyz[0], vec->xyz[1], vec->xyz[2], 0.0f ).convertToFloat16();
 			return device->write( (char*) &xyz, 6 ) == 6;
 #else
@@ -707,7 +707,7 @@ bool NifOStream::write( const NifValue & val )
 			if ( !vec )
 				return false;
 
-#if ENABLE_X86_64_AVX2 || (ENABLE_X86_64_AVX && defined(__F16C__))
+#if ENABLE_X86_64_SIMD >= 3
 			uint64_t	xy = FloatVector4( vec->xy[0], vec->xy[1], 0.0f, 0.0f ).convertToFloat16();
 			return device->write( (char*) &xy, 4 ) == 4;
 #else
