@@ -92,6 +92,8 @@ public:
 		return false;
 	}
 
+	void browseStarfieldMaterial( QLineEdit * le );
+
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
 	{
 		int offset = nif->get<int>( index );
@@ -130,9 +132,20 @@ public:
 		QPushButton * bc = new QPushButton( Spell::tr( "Cancel" ), &dlg );
 		QObject::connect( bc, &QPushButton::clicked, &dlg, &QDialog::reject );
 
+		QPushButton * bm = nullptr;
+		if ( nif->getBSVersion() >= 172 ) {
+			bm = new QPushButton( Spell::tr( "Browse Materials" ), &dlg );
+			QObject::connect( bm, &QPushButton::clicked, le, [this, le]() { browseStarfieldMaterial( le ); } );
+		}
+
 		QGridLayout * grid = new QGridLayout;
 		dlg.setLayout( grid );
-		grid->addWidget( lb, 0, 0, 1, 2 );
+		if ( !bm ) {
+			grid->addWidget( lb, 0, 0, 1, 2 );
+		} else {
+			grid->addWidget( lb, 0, 0, 1, 1 );
+			grid->addWidget( bm, 0, 1, 1, 1 );
+		}
 		grid->addWidget( lw, 1, 0, 1, 2 );
 		grid->addWidget( le, 2, 0, 1, 2 );
 		grid->addWidget( bo, 3, 0, 1, 1 );
@@ -147,6 +160,69 @@ public:
 		return index;
 	}
 };
+
+#include "gamemanager.h"
+#include "libfo76utils/src/common.hpp"
+#include "libfo76utils/src/material.hpp"
+#include "libfo76utils/src/mat_dirs.cpp"
+
+static void getCE2MaterialList( QStringList& paths, Game::GameMode game )
+{
+	std::map< std::uint32_t, std::string > dirNameMap;
+	getStarfieldMaterialDirMap( dirNameMap );
+
+	std::vector< const CE2Material * > materials;
+	{
+		const CE2MaterialDB * matDB = Game::GameManager::materials( game );
+		if ( !matDB )
+			return;
+		matDB->listMaterials( materials );
+	}
+
+	std::string tmp;
+	for ( size_t i = 0; i < materials.size(); i++ ) {
+		if ( materials[i]->parent )
+			continue;	// exclude LOD materials
+		std::uint32_t h = std::uint32_t( materials[i]->h >> 32 );
+		std::map< std::uint32_t, std::string >::const_iterator d = dirNameMap.find( h );
+		if ( d == dirNameMap.end() || d->second.starts_with( "materials/lod/generated/" ) )
+			continue;
+		tmp = d->second;
+		tmp += *(materials[i]->name);
+		paths << QString::fromStdString( Game::GameManager::get_full_path( QString::fromStdString( tmp ), "materials", ".mat" ) );
+	}
+	paths.sort();
+}
+
+void spEditStringIndex::browseStarfieldMaterial( QLineEdit * le )
+{
+	QStringList matPaths;
+	getCE2MaterialList( matPaths, Game::STARFIELD );
+
+	QString prvPath = le->text();
+	int n = -1;
+	if ( !prvPath.isEmpty() ) {
+		prvPath = QString::fromStdString( Game::GameManager::get_full_path( prvPath, "materials", ".mat" ) );
+		n = matPaths.indexOf( QStringView( prvPath ) );
+	}
+
+	QDialog	dlg;
+	QGridLayout * layout = new QGridLayout( &dlg );
+	layout->setColumnMinimumWidth( 0, 800 );
+	layout->setRowMinimumHeight( 1, 600 );
+	QLabel * title = new QLabel( &dlg );
+	title->setText( "Select material" );
+	layout->addWidget( title, 0, 0 );
+	QListWidget * listWidget = new QListWidget( &dlg );
+	layout->addWidget( listWidget, 1, 0 );
+	listWidget->addItems( matPaths );
+	if ( n >= 0 )
+		listWidget->setCurrentItem( listWidget->item( n ) );
+	QObject::connect( listWidget, &QListWidget::itemActivated, &dlg, &QDialog::accept );
+
+	if ( dlg.exec() == QDialog::Accepted )
+		le->setText( listWidget->currentItem()->text() );
+}
 
 REGISTER_SPELL( spEditStringIndex )
 
