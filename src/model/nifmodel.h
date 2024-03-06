@@ -495,7 +495,7 @@ protected:
 	void loadSFTextureSet( NifItem * parent, const void * o );
 	void loadSFUVStream( NifItem * parent, const void * o, const void * p = nullptr );
 public:
-	void loadSFMaterial( const QModelIndex & parent, int lodLevel = 0 );
+	void loadSFMaterial( const QModelIndex & parent, const void * matPtr, int lodLevel = 0 );
 	void loadFO76Material( const QModelIndex & parent, const void * material );
 
 	// String resolving ("get ex")

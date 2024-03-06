@@ -208,7 +208,8 @@ void Shape::updateShader()
 		Material * mat = bssp->getMaterial();
 		if ( mat && (mat->hasAlphaBlend() || mat->hasDecal()) )
 			drawInSecondPass = true;
-		const CE2Material *	sfMat = bssp->getSFMaterial();
+		const CE2Material *	sfMat = nullptr;
+		bssp->getSFMaterial( sfMat );
 		if ( sfMat && ( sfMat->shaderRoute != 0 || (sfMat->flags & CE2Material::Flag_IsDecal) ) )
 			drawInSecondPass = true;
 	}

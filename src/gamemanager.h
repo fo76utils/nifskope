@@ -231,7 +231,9 @@ public:
 	static bool get_file(std::vector< unsigned char >& data, const GameMode game, const QString& path, const char* archiveFolder, const char* extension);
 	static bool get_file(QByteArray& data, const GameMode game, const QString& path, const char* archiveFolder, const char* extension);
 	//! Return pointer to Starfield material database, loading it first if necessary. On error, nullptr is returned.
-	static const CE2MaterialDB* materials(const GameMode game);
+	static CE2MaterialDB* materials(const GameMode game);
+	//! Returns a non-zero ID unique to the currently loaded material database. Previously returned material pointers become invalid when this value changes.
+	static std::uintptr_t get_material_db_id();
 	//! Close all currently opened resource archives and files.
 	static void close_archives(bool tempPathsFirst = false);
 	//! Deallocate Starfield material database if it is currently loaded.

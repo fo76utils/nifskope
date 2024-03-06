@@ -697,7 +697,7 @@ public:
 	TexClampMode clampMode = CLAMP_S_CLAMP_T;
 
 	Material * getMaterial() const { return material; }
-	const CE2Material * getSFMaterial() const { return sf_material; }
+	bool getSFMaterial( const CE2Material*& m );
 
 protected:
 	ShaderFlags::SF1 flags1 = ShaderFlags::SLSF1_ZBuffer_Test;
@@ -709,7 +709,9 @@ protected:
 	QPersistentModelIndex	iSPData;
 
 	Material * material = nullptr;
-	const CE2Material * sf_material = nullptr;
+	const CE2Material *	sf_material = nullptr;
+	std::uintptr_t	sfMaterialDB_ID = 0;
+	std::string	sfMaterialPath;
 	void setMaterial( Material * newMaterial );
 	void setSFMaterial( const QString & mat_name );
 

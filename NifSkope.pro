@@ -405,9 +405,12 @@ libfo76utils {
     # SOURCES += $$PWD/lib/libfo76utils/src/esmfile.cpp
     SOURCES += $$PWD/lib/libfo76utils/src/filebuf.cpp
     # SOURCES += $$PWD/lib/libfo76utils/src/frtable.cpp
+    SOURCES += $$PWD/lib/libfo76utils/src/jsonread.cpp
     SOURCES += $$PWD/lib/libfo76utils/src/matcomps.cpp
-    SOURCES += $$PWD/lib/libfo76utils/src/mat_dump.cpp
     SOURCES += $$PWD/lib/libfo76utils/src/material.cpp
+    SOURCES += $$PWD/lib/libfo76utils/src/mat_dump.cpp
+    SOURCES += $$PWD/lib/libfo76utils/src/mat_json.cpp
+    SOURCES += $$PWD/lib/libfo76utils/src/mat_list.cpp
     # SOURCES += $$PWD/lib/libfo76utils/src/pbr_lut.cpp
     # SOURCES += $$PWD/lib/libfo76utils/src/sdlvideo.cpp
     SOURCES += $$PWD/lib/libfo76utils/src/sfcube.cpp

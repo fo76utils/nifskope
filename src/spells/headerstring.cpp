@@ -164,34 +164,19 @@ public:
 #include "gamemanager.h"
 #include "libfo76utils/src/common.hpp"
 #include "libfo76utils/src/material.hpp"
-#include "libfo76utils/src/mat_dirs.cpp"
 
 static void getCE2MaterialList( QStringList& paths, Game::GameMode game )
 {
-	std::map< std::uint32_t, std::string > dirNameMap;
-	getStarfieldMaterialDirMap( dirNameMap );
-
-	std::vector< const CE2Material * > materials;
+	std::set< std::string >	materials;
 	{
 		const CE2MaterialDB * matDB = Game::GameManager::materials( game );
 		if ( !matDB )
 			return;
-		matDB->listMaterials( materials );
+		matDB->getMaterialList( materials );
 	}
 
-	std::string tmp;
-	for ( size_t i = 0; i < materials.size(); i++ ) {
-		if ( materials[i]->parent )
-			continue;	// exclude LOD materials
-		std::uint32_t h = std::uint32_t( materials[i]->h >> 32 );
-		std::map< std::uint32_t, std::string >::const_iterator d = dirNameMap.find( h );
-		if ( d == dirNameMap.end() || d->second.starts_with( "materials/lod/generated/" ) )
-			continue;
-		tmp = d->second;
-		tmp += *(materials[i]->name);
-		paths << QString::fromStdString( Game::GameManager::get_full_path( QString::fromStdString( tmp ), "materials", ".mat" ) );
-	}
-	paths.sort();
+	for ( std::set< std::string >::const_iterator i = materials.begin(); i != materials.end(); i++ )
+		paths << QString::fromStdString( *i );
 }
 
 void spEditStringIndex::browseStarfieldMaterial( QLineEdit * le )

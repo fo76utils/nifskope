@@ -1525,7 +1525,7 @@ QVariant NifModel::data( const QModelIndex & index, int role ) const
 			}
 		}
 		return QVariant();
-	case Qt::BackgroundColorRole:
+	case Qt::BackgroundRole:
 		{
 			// "notify" about an invalid index in "Triangles"
 			// TODO: checkbox, "show invalid only"

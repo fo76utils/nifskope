@@ -65,7 +65,7 @@ void NifModel::loadSFBlender( NifItem * parent, const void * o, const void * lay
 		boolParams[i] = false;
 	if ( o ) {
 		const CE2Material::Blender *	blender = reinterpret_cast< const CE2Material::Blender * >(o);
-		name = blender->name->c_str();
+		name = blender->name;
 		maskTexture = blender->texturePath->c_str();
 		maskTextureReplacementEnabled = blender->textureReplacementEnabled;
 		maskTextureReplacement = blender->textureReplacement;
@@ -98,7 +98,7 @@ void NifModel::loadSFLayer( NifItem * parent, const void * o )
 	const CE2Material::Material *	material = nullptr;
 	if ( o ) {
 		const CE2Material::Layer *	layer = reinterpret_cast< const CE2Material::Layer * >(o);
-		name = layer->name->c_str();
+		name = layer->name;
 		uvStream = layer->uvStream;
 		material = layer->material;
 	}
@@ -118,7 +118,7 @@ void NifModel::loadSFMaterial( NifItem * parent, const void * o )
 	const CE2Material::TextureSet *	textureSet = nullptr;
 	const CE2Material::Material * material = reinterpret_cast< const CE2Material::Material * >(o);
 	if ( o ) {
-		name = material->name->c_str();
+		name = material->name;
 		color = material->color;
 		colorMode = material->colorMode;
 		isFlipbook = bool(material->flipbookFlags & 1);
@@ -163,7 +163,7 @@ void NifModel::loadSFTextureSet( NifItem * parent, const void * o )
 	std::uint32_t	textureReplacementMask = 0;
 	const CE2Material::TextureSet *	textureSet = reinterpret_cast< const CE2Material::TextureSet * >(o);
 	if ( o ) {
-		name = textureSet->name->c_str();
+		name = textureSet->name;
 		floatParam = textureSet->floatParam;
 		resolutionHint = textureSet->resolutionHint;
 		texturePathMask = textureSet->texturePathMask;
@@ -199,7 +199,7 @@ void NifModel::loadSFUVStream( NifItem * parent, const void * o, const void * p 
 		o = p;
 	if ( o ) {
 		const CE2Material::UVStream *	uvStream = reinterpret_cast< const CE2Material::UVStream * >(o);
-		name = uvStream->name->c_str();
+		name = uvStream->name;
 		scaleAndOffset = uvStream->scaleAndOffset;
 		textureAddressMode = uvStream->textureAddressMode;
 		channel = uvStream->channel;
@@ -215,7 +215,7 @@ void NifModel::loadSFUVStream( NifItem * parent, const void * o, const void * p 
 	}
 }
 
-void NifModel::loadSFMaterial( const QModelIndex & parent, int lodLevel )
+void NifModel::loadSFMaterial( const QModelIndex & parent, const void *matPtr, int lodLevel )
 {
 	NifItem *	p = getItem( parent, false );
 	if ( !p )
@@ -248,12 +248,7 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, int lodLevel )
 			c->invalidateCondition();
 	}
 
-	const CE2MaterialDB *	materials = Game::GameManager::materials( Game::STARFIELD );
-	const CE2Material *	material = nullptr;
-	if ( materials ) {
-		if ( !path.empty() )
-			material = materials->findMaterial( path );
-	}
+	const CE2Material *	material = reinterpret_cast< const CE2Material * >( matPtr );
 
 	if ( lodLevel > 0 && material ) {
 		for ( int i = lodLevel - 1; i >= 0; i-- ) {
@@ -264,7 +259,7 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, int lodLevel )
 		}
 	}
 
-	setValue<QString>( m, "Name", ( material ? material->name->c_str() : "" ) );
+	setValue<QString>( m, "Name", ( material ? material->name : "" ) );
 	const CE2Material::UVStream *	alphaLayerUVStream = nullptr;
 	for ( int l = 0; l < 6; l++ ) {
 		bool	layerEnabled = false;

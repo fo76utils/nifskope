@@ -851,7 +851,6 @@ void BSShaderLightingProperty::updateImpl( const NifModel * nif, const QModelInd
 		iMaterialFile = nif->getIndex( iBlock, "Name" );
 		if ( nif->getBSVersion() >= 160 ) {
 			setSFMaterial( name );
-			const_cast< NifModel * >(nif)->loadSFMaterial( index );
 		} else {
 			if ( nif->getBSVersion() < 83 )
 				iSPData = iBlock;
@@ -895,6 +894,37 @@ void BSShaderLightingProperty::clear()
 	sf_material = nullptr;
 }
 
+bool BSShaderLightingProperty::getSFMaterial( const CE2Material*& m )
+{
+	if ( sfMaterialDB_ID == Game::GameManager::get_material_db_id() ) [[likely]] {
+		m = sf_material;
+		return true;
+	}
+	m = nullptr;
+	bool	r = false;
+	try {
+		CE2MaterialDB *	materials = Game::GameManager::materials( Game::STARFIELD );
+		if ( materials ) {
+			if ( sfMaterialPath.empty() ) {
+				m = materials->loadMaterial( std::string("materials/test/generic/test_generic_white.mat") );
+			} else {
+				m = materials->loadMaterial( sfMaterialPath );
+				r = bool( m );
+			}
+			sf_material = m;
+			sfMaterialDB_ID = Game::GameManager::get_material_db_id();
+		}
+	} catch (...) {
+		m = nullptr;
+		r = false;
+		sf_material = nullptr;
+		sfMaterialDB_ID = Game::GameManager::get_material_db_id();
+	}
+	const NifModel * nif = NifModel::fromValidIndex( iBlock );
+	const_cast< NifModel * >(nif)->loadSFMaterial( iBlock, ( r ? m : nullptr ) );
+	return r;
+}
+
 void BSShaderLightingProperty::setMaterial( Material * newMaterial )
 {
 	if (newMaterial && !newMaterial->isValid()) {
@@ -910,13 +940,8 @@ void BSShaderLightingProperty::setMaterial( Material * newMaterial )
 void BSShaderLightingProperty::setSFMaterial( const QString & mat_name )
 {
 	sf_material = nullptr;
-	const CE2MaterialDB *	materials = Game::GameManager::materials( Game::STARFIELD );
-	if ( !materials )
-		return;
-
-	std::string	path( Game::GameManager::get_full_path( mat_name, "materials/", ".mat" ) );
-	if ( !path.empty() )
-		sf_material = materials->findMaterial( path );
+	sfMaterialDB_ID = 0;
+	sfMaterialPath = Game::GameManager::get_full_path( mat_name, "materials/", ".mat" );
 }
 
 bool BSShaderLightingProperty::bind( int id, const QString & fname, TexClampMode mode )

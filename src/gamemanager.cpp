@@ -13,6 +13,11 @@
 namespace Game
 {
 
+static CE2MaterialDB	starfield_materials;
+static std::uintptr_t	starfield_materials_id = 1;
+static bool	have_materials_cdb = false;
+static bool	have_temp_materials = false;
+
 struct BA2Files {
 	std::vector< std::pair< BA2File*, BA2File* > >	archives;
 	BA2Files();
@@ -33,16 +38,24 @@ BA2Files::~BA2Files()
 	close_all();
 }
 
-static bool archiveFilterFunction( void * p, const std::string & s )
+static bool archiveFilterFunctionNif( void * p, const std::string & s )
 {
 	(void) p;
 	return !s.ends_with( ".nif" );
+}
+
+static bool archiveFilterFunctionMat( void * p, const std::string & s )
+{
+	(void) p;
+	return ( s.ends_with( ".mat" ) && s.starts_with( "materials/" ) );
 }
 
 void BA2Files::open_folders(GameMode game, const QStringList& folders)
 {
 	if (!(game >= OTHER && game < NUM_GAMES))
 		return;
+	if (game == STARFIELD)
+		GameManager::close_materials();
 	if (archives[game].first) {
 		delete archives[game].first;
 		archives[game].first = nullptr;
@@ -58,7 +71,7 @@ void BA2Files::open_folders(GameMode game, const QStringList& folders)
 	size_t	archivesLoaded = 0;
 	for (size_t i = tmp.size(); i-- > 0; ) {
 		try {
-			archives[game].first->loadArchivePath(tmp[i].c_str(), &archiveFilterFunction);
+			archives[game].first->loadArchivePath(tmp[i].c_str(), &archiveFilterFunctionNif);
 			archivesLoaded++;
 		} catch (FO76UtilsError& e) {
 			QMessageBox::critical(nullptr, "NifSkope error", QString("Error opening archive path '%1': %2").arg(tmp[i].c_str()).arg(e.what()));
@@ -74,13 +87,18 @@ void BA2Files::close_all(bool tempPathsFirst)
 {
 	for (std::vector< std::pair< BA2File*, BA2File* > >::iterator i = archives.begin(); i != archives.end(); i++) {
 		if (i->second) {
+			if (i == (archives.begin() + STARFIELD) && have_temp_materials)
+				GameManager::close_materials();
 			delete i->second;
 			i->second = nullptr;
 			if (tempPathsFirst)
 				continue;
 		}
-		if (i->first)
+		if (i->first) {
+			if (i == (archives.begin() + STARFIELD))
+				GameManager::close_materials();
 			delete i->first;
+		}
 		i->first = nullptr;
 	}
 }
@@ -90,6 +108,8 @@ bool BA2Files::set_temp_folder(GameMode game, const char* pathName, bool ignoreE
 	if (!(game >= OTHER && game < NUM_GAMES))
 		return false;
 	if (archives[game].second) {
+		if (game == STARFIELD && have_temp_materials)
+			GameManager::close_materials();
 		delete archives[game].second;
 		archives[game].second = nullptr;
 	}
@@ -97,7 +117,13 @@ bool BA2Files::set_temp_folder(GameMode game, const char* pathName, bool ignoreE
 		return true;
 	archives[game].second = new BA2File();
 	try {
-		archives[game].second->loadArchivePath(pathName, &archiveFilterFunction);
+		archives[game].second->loadArchivePath(pathName, &archiveFilterFunctionNif);
+		std::vector< std::string >	matPaths;
+		archives[game].second->getFileList(matPaths, true, &archiveFilterFunctionMat);
+		if (matPaths.begin() != matPaths.end()) {
+			GameManager::close_materials();
+			have_temp_materials = true;
+		}
 	} catch (FO76UtilsError& e) {
 		delete archives[game].second;
 		archives[game].second = nullptr;
@@ -155,9 +181,6 @@ static const auto GAME_PATHS = QString("Game Paths");
 static const auto GAME_FOLDERS = QString("Game Folders");
 static const auto GAME_STATUS = QString("Game Status");
 static const auto GAME_MGR_VER = QString("Game Manager Version");
-
-static CE2MaterialDB	starfield_materials;
-static bool	have_materials_cdb = false;
 
 QString registry_game_path( const QString& key )
 {
@@ -459,19 +482,25 @@ bool GameManager::get_file(QByteArray& data, const GameMode game, const QString&
 	return true;
 }
 
-const CE2MaterialDB* GameManager::materials(const GameMode game)
+CE2MaterialDB* GameManager::materials(const GameMode game)
 {
 	if ( game == STARFIELD ) {
 		if ( !have_materials_cdb ) {
-			std::vector< unsigned char >	cdb_data;
-			if (get_file(cdb_data, game, std::string(BSReflStream::getDefaultMaterialDBPath())))
-				starfield_materials.loadCDBFile(cdb_data.data(), cdb_data.size());
-			have_materials_cdb = true;
+			(void) ba2Files.get_file( STARFIELD, std::string(".") );
+			if ( ba2Files.archives[STARFIELD].first ) {
+				starfield_materials_id++;
+				starfield_materials.loadArchives( *(ba2Files.archives[STARFIELD].first), ( have_temp_materials ? ba2Files.archives[STARFIELD].second : nullptr ) );
+				have_materials_cdb = true;
+			}
 		}
-		if ( have_materials_cdb )
-			return &starfield_materials;
+		return &starfield_materials;
 	}
 	return nullptr;
+}
+
+std::uintptr_t GameManager::get_material_db_id()
+{
+	return starfield_materials_id;
 }
 
 void GameManager::close_archives(bool tempPathsFirst)
@@ -482,9 +511,10 @@ void GameManager::close_archives(bool tempPathsFirst)
 void GameManager::close_materials()
 {
 	if ( have_materials_cdb ) {
+		starfield_materials_id++;
 		have_materials_cdb = false;
-		starfield_materials.~CE2MaterialDB();
-		(void) new( &starfield_materials ) CE2MaterialDB();
+		have_temp_materials = false;
+		starfield_materials.clear();
 	}
 }
 

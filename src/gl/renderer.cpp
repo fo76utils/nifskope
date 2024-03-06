@@ -782,19 +782,10 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 	if ( !lsp )
 		return false;
 
-	const CE2Material *	mat = lsp->getSFMaterial();
+	const CE2Material *	mat = nullptr;
 	bool	useErrorColor = false;
-	if ( !mat ) {
-		const CE2MaterialDB *	matDB = Game::GameManager::materials( Game::STARFIELD );
-		if ( !matDB )
-			return false;
-		if ( lsp )
-			mat = matDB->findMaterial( nif->get<QString>( lsp->index(), "Name" ).toStdString() );
-		if ( !mat ) {
-			mat = matDB->findMaterial( std::string("materials/test/generic/test_generic_white.mat") );
-			useErrorColor = scene->hasOption(Scene::DoErrorColor);
-		}
-	}
+	if ( !lsp->getSFMaterial( mat ) )
+		useErrorColor = scene->hasOption(Scene::DoErrorColor);
 	if ( !mat )
 		return false;
 
