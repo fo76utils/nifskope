@@ -205,13 +205,16 @@ void Shape::updateShader()
 	else if ( alphaProperty && alphaProperty->hasAlphaBlend() )
 		drawInSecondPass = true;
 	else if ( bssp ) {
-		Material * mat = bssp->getMaterial();
-		if ( mat && (mat->hasAlphaBlend() || mat->hasDecal()) )
-			drawInSecondPass = true;
-		const CE2Material *	sfMat = nullptr;
-		bssp->getSFMaterial( sfMat );
-		if ( sfMat && ( sfMat->shaderRoute != 0 || (sfMat->flags & CE2Material::Flag_IsDecal) ) )
-			drawInSecondPass = true;
+		if ( bssp->bsVersion >= 160 ) {
+			const CE2Material *	sfMat = nullptr;
+			bssp->getSFMaterial( sfMat );
+			if ( sfMat && ( sfMat->shaderRoute != 0 || (sfMat->flags & CE2Material::Flag_IsDecal) ) )
+				drawInSecondPass = true;
+		} else {
+			Material * mat = bssp->getMaterial();
+			if ( mat && (mat->hasAlphaBlend() || mat->hasDecal()) )
+				drawInSecondPass = true;
+		}
 	}
 
 	if ( bssp ) {

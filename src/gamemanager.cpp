@@ -118,11 +118,13 @@ bool BA2Files::set_temp_folder(GameMode game, const char* pathName, bool ignoreE
 	archives[game].second = new BA2File();
 	try {
 		archives[game].second->loadArchivePath(pathName, &archiveFilterFunctionNif);
-		std::vector< std::string >	matPaths;
-		archives[game].second->getFileList(matPaths, true, &archiveFilterFunctionMat);
-		if (matPaths.begin() != matPaths.end()) {
-			GameManager::close_materials();
-			have_temp_materials = true;
+		if ( game == STARFIELD ) {
+			std::vector< std::string >	matPaths;
+			archives[game].second->getFileList( matPaths, true, &archiveFilterFunctionMat );
+			if ( matPaths.begin() != matPaths.end() ) {
+				GameManager::close_materials();
+				have_temp_materials = true;
+			}
 		}
 	} catch (FO76UtilsError& e) {
 		delete archives[game].second;

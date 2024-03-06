@@ -848,11 +848,12 @@ void BSShaderLightingProperty::updateImpl( const NifModel * nif, const QModelInd
 	Property::updateImpl( nif, index );
 
 	if ( index == iBlock ) {
+		bsVersion = (unsigned short) nif->getBSVersion();
 		iMaterialFile = nif->getIndex( iBlock, "Name" );
-		if ( nif->getBSVersion() >= 160 ) {
+		if ( bsVersion >= 160 ) {
 			setSFMaterial( name );
 		} else {
-			if ( nif->getBSVersion() < 83 )
+			if ( bsVersion < 83 )
 				iSPData = iBlock;
 			else
 				iSPData = nif->getIndex( iBlock, "Shader Property Data" );
@@ -1053,15 +1054,12 @@ enum
 
 QString BSShaderLightingProperty::fileName( int id ) const
 {
-	const NifModel * nif;
-
 	// Starfield (not implemented here)
-	if ( sf_material )
+	if ( bsVersion >= 160 )
 		return QString();
 
-	// Fallout 4
-	nif = NifModel::fromValidIndex(iMaterialFile);
-	if ( nif && material && typeid(*material) == typeid(ShaderMaterial) ) {
+	// Fallout 4 or 76 BGSM file
+	if ( bsVersion >= 130 && material && typeid(*material) == typeid(ShaderMaterial) ) {
 		// BSLSP
 		auto m = static_cast<ShaderMaterial *>(material);
 		if ( m->isValid() ) {
@@ -1115,12 +1113,12 @@ QString BSShaderLightingProperty::fileName( int id ) const
 			}
 		}
 
-		if ( nif->getBSVersion() < 151 )
+		if ( bsVersion < 151 )
 			return QString();
 		if ( id == 8 || id == 9 )
 			id++;
-	} else if ( nif && material && typeid(*material) == typeid(EffectMaterial) ) {
-		// From effect material
+	} else if ( bsVersion >= 130 && material && typeid(*material) == typeid(EffectMaterial) ) {
+		// From Fallout 4 or 76 effect material file
 		auto m = static_cast<EffectMaterial*>(material);
 		if ( m->isValid() ) {
 			auto tex = m->textures();
@@ -1133,7 +1131,7 @@ QString BSShaderLightingProperty::fileName( int id ) const
 	}
 
 	// From iTextureSet
-	nif = NifModel::fromValidIndex(iTextureSet);
+	const NifModel * nif = NifModel::fromValidIndex(iTextureSet);
 	if ( nif ) {
 		if ( id >= 0 && id < nif->get<int>(iTextureSet, "Num Textures") ) {
 			QModelIndex iTextures = nif->getIndex(iTextureSet, "Textures");
@@ -1185,7 +1183,7 @@ int BSShaderLightingProperty::getId( const QString & id )
 
 void BSShaderLightingProperty::setFlags1( const NifModel * nif )
 {
-	if ( nif->getBSVersion() >= 151 ) {
+	if ( bsVersion >= 151 ) {
 		auto sf1 = nif->getArray<quint32>( iSPData, "SF1" );
 		auto sf2 = nif->getArray<quint32>( iSPData, "SF2" );
 		sf1.append( sf2 );
@@ -1202,7 +1200,7 @@ void BSShaderLightingProperty::setFlags1( const NifModel * nif )
 
 void BSShaderLightingProperty::setFlags2( const NifModel * nif )
 {
-	if ( nif->getBSVersion() >= 151 ) {
+	if ( bsVersion >= 151 ) {
 		auto sf1 = nif->getArray<quint32>( iSPData, "SF1" );
 		auto sf2 = nif->getArray<quint32>( iSPData, "SF2" );
 		sf1.append( sf2 );
@@ -1228,7 +1226,7 @@ void BSLightingShaderProperty::updateImpl( const NifModel * nif, const QModelInd
 	if ( index == iBlock ) {
 		if ( name.endsWith(".bgsm", Qt::CaseInsensitive) ) {
 			setMaterial( new ShaderMaterial(name, scene->game) );
-			if ( nif->getBSVersion() >= 151 )
+			if ( bsVersion >= 151 )
 				const_cast< NifModel * >(nif)->loadFO76Material( index, material );
 		} else {
 			setMaterial( nullptr );
@@ -1292,7 +1290,7 @@ void BSLightingShaderProperty::updateParams( const NifModel * nif )
 {
 	resetParams();
 
-	if ( nif->getBSVersion() >= 172 ) {
+	if ( bsVersion >= 172 ) {
 		setSFMaterial( nif->get<QString>( iBlock, "Name" ) );
 		return;
 	}
@@ -1300,7 +1298,7 @@ void BSLightingShaderProperty::updateParams( const NifModel * nif )
 	setFlags1( nif );
 	setFlags2( nif );
 
-	if ( nif->getBSVersion() >= 151 ) {
+	if ( bsVersion >= 151 ) {
 		shaderType = ShaderFlags::ShaderType::ST_EnvironmentMap;
 		hasVertexAlpha = true;
 		hasVertexColors = true;
@@ -1339,7 +1337,7 @@ void BSLightingShaderProperty::updateParams( const NifModel * nif )
 		paletteScale = m->fGrayscaleToPaletteScale;
 
 		hasSpecularMap = m->bSpecularEnabled && (!m->textureList[2].isEmpty()
-			|| (nif->getBSVersion() >= 151 && !m->textureList[7].isEmpty()));
+						|| (bsVersion >= 151 && !m->textureList[7].isEmpty()));
 		hasGlowMap = m->bGlowmap;
 		hasEmittance = m->bEmitEnabled;
 		hasBacklight = m->bBackLighting;
@@ -1392,7 +1390,7 @@ void BSLightingShaderProperty::updateParams( const NifModel * nif )
 		hasGlowMap = isST(ShaderFlags::ST_GlowShader) && hasSF2( ShaderFlags::SLSF2_Glow_Map ) && !textures.value( 2, "" ).isEmpty();
 
 		// Version Dependent settings
-		if ( nif->getBSVersion() < 130 ) {
+		if ( bsVersion < 130 ) {
 			lightingEffect1 = nif->get<float>( lsp, "Lighting Effect 1" );
 			lightingEffect2 = nif->get<float>( lsp, "Lighting Effect 2" );
 
@@ -1429,7 +1427,7 @@ void BSLightingShaderProperty::updateParams( const NifModel * nif )
 		hasEnvironmentMap =
 			( isST(ShaderFlags::ST_EnvironmentMap) && hasSF1(ShaderFlags::SLSF1_Environment_Mapping) )
 			|| ( isST(ShaderFlags::ST_EyeEnvmap) && hasSF1(ShaderFlags::SLSF1_Eye_Environment_Mapping) )
-			|| ( nif->getBSVersion() == 100 && hasMultiLayerParallax );
+			|| ( bsVersion == 100 && hasMultiLayerParallax );
 
 		useEnvironmentMask = hasEnvironmentMap && !textures.value( 5, "" ).isEmpty();
 
@@ -1469,7 +1467,7 @@ void BSEffectShaderProperty::updateImpl( const NifModel * nif, const QModelIndex
 	if ( index == iBlock ) {
 		if ( name.endsWith(".bgem", Qt::CaseInsensitive) ) {
 			setMaterial( new EffectMaterial(name, scene->game) );
-			if ( nif->getBSVersion() >= 151 )
+			if ( bsVersion >= 151 )
 				const_cast< NifModel * >(nif)->loadFO76Material( index, material );
 		} else {
 			setMaterial( nullptr );
@@ -1583,7 +1581,7 @@ void BSEffectShaderProperty::updateParams( const NifModel * nif )
 		depthWrite = hasSF2( ShaderFlags::SLSF2_ZBuffer_Write );
 		isDoubleSided = hasSF2( ShaderFlags::SLSF2_Double_Sided );
 
-		if ( nif->getBSVersion() < 130 ) {
+		if ( bsVersion < 130 ) {
 			hasWeaponBlood = hasSF2( ShaderFlags::SLSF2_Weapon_Blood );
 		} else {
 			hasEnvironmentMap = !nif->get<QString>( esp, "Env Map Texture" ).isEmpty();

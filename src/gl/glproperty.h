@@ -691,6 +691,7 @@ public:
 	bool depthWrite = true;
 	bool isDoubleSided = false;
 	bool isVertexAlphaAnimation = false;
+	unsigned short	bsVersion = 0;
 
 	UVScale uvScale;
 	UVOffset uvOffset;
