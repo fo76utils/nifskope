@@ -639,6 +639,7 @@ GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, GLenum &
 		if ( game != Game::STARFIELD && game != Game::FALLOUT_76 )
 			return 0;
 		convertEnvMapFlag = true;
+		sfCubeMapCache.setNormalizeLevel( 0.25f );
 		if ( game == Game::FALLOUT_76 ) {
 			for ( size_t i = 0; i <= 124; i++ ) {
 				std::uint32_t	tmp = FileBuffer::readUInt32Fast( dataPtr + i );
@@ -653,6 +654,7 @@ GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, GLenum &
 				( game == Game::STARFIELD || game == Game::FALLOUT_76 ) &&
 				FileBuffer::readUInt32Fast( dataPtr + 84 ) == 0x30315844 ) {	// "DX10"
 		convertEnvMapFlag = ( dataPtr[128] != 0x43 || dataPtr[28] < 2 );	// DXGI_FORMAT_R9G9B9E5_SHAREDEXP
+		sfCubeMapCache.setNormalizeLevel( 1.0f / 12.5f );
 	}
 	if ( convertEnvMapFlag ) {
 		// normalize and filter Fallout 76 and Starfield cube maps
