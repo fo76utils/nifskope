@@ -915,11 +915,12 @@ bool BSShaderLightingProperty::getSFMaterial( const CE2Material*& m )
 			sf_material = m;
 			sfMaterialDB_ID = Game::GameManager::get_material_db_id();
 		}
-	} catch (...) {
+	} catch ( std::exception& e ) {
 		m = nullptr;
 		r = false;
 		sf_material = nullptr;
 		sfMaterialDB_ID = Game::GameManager::get_material_db_id();
+		QMessageBox::critical( nullptr, "NifSkope error", QString("Error loading material '%1': %2" ).arg( sfMaterialPath.c_str() ).arg( e.what() ) );
 	}
 	const NifModel * nif = NifModel::fromValidIndex( iBlock );
 	const_cast< NifModel * >(nif)->loadSFMaterial( iBlock, ( r ? m : nullptr ) );
