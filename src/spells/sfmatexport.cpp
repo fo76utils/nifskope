@@ -12,14 +12,20 @@ public:
 	QString page() const override final { return Spell::tr( "" ); }
 	QIcon icon() const override final
 	{
-		return nullptr;
+		return QIcon();
 	}
 	bool constant() const override final { return true; }
 	bool instant() const override final { return true; }
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
-		return ( nif && nif->getBSVersion() >= 160 );
+		if ( nif && nif->getBSVersion() >= 160 ) {
+			const NifItem * item = nif->getItem( index );
+			if ( item && item->parent() && item->name() == "Name" && item->parent()->name() == "BSLightingShaderProperty" ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
@@ -29,7 +35,7 @@ public:
 			std::string	matFilePath( materialPath.toStdString() );
 			std::string	matFileData;
 			try {
-				CE2MaterialDB *	materials = Game::GameManager::materials( STARFIELD );
+				CE2MaterialDB *	materials = Game::GameManager::materials( Game::STARFIELD );
 				if ( materials ) {
 					(void) materials->loadMaterial( matFilePath );
 					materials->getJSONMaterial( matFileData, matFilePath );
@@ -44,4 +50,6 @@ public:
 		return index;
 	}
 };
+
+REGISTER_SPELL( spStarfieldMaterialExport )
 

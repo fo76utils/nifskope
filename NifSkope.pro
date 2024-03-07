@@ -270,6 +270,7 @@ SOURCES += \
 	src/spells/normals.cpp \
 	src/spells/optimize.cpp \
 	src/spells/sanitize.cpp \
+	src/spells/sfmatexport.cpp \
 	src/spells/skeleton.cpp \
 	src/spells/stringpalette.cpp \
 	src/spells/strippify.cpp \
