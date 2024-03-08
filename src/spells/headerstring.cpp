@@ -6,7 +6,160 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QPushButton>
+#include <QTreeWidget>
 
+#include "gamemanager.h"
+#include "libfo76utils/src/common.hpp"
+#include "libfo76utils/src/material.hpp"
+
+class FileBrowserWidget
+{
+protected:
+	QDialog	dlg;
+	QGridLayout *	layout;
+	QLabel *	title;
+	QTreeWidget *	treeWidget;
+	QGridLayout *	layout2;
+	QLineEdit *	filter;
+	QLabel *	filterTitle;
+	const std::set< std::string > &	fileSet;
+	const std::string *	currentFile;
+	std::vector< const std::string * >	filesShown;
+	QTreeWidgetItem *	findDirectory( std::map< std::string, QTreeWidgetItem * > & dirMap, const std::string& d );
+	void updateTreeWidget();
+	void checkItemActivated();
+public:
+	FileBrowserWidget( int w, int h, const char * titleString, const std::set< std::string > & files, const std::string& fileSelected );
+	~FileBrowserWidget();
+	int exec()
+	{
+		return dlg.exec();
+	}
+	const std::string *	getItemSelected() const;
+};
+
+QTreeWidgetItem *	FileBrowserWidget::findDirectory( std::map< std::string, QTreeWidgetItem * > & dirMap, const std::string& d )
+{
+	std::map< std::string, QTreeWidgetItem * >::iterator	i = dirMap.find( d );
+	if ( i != dirMap.end() )
+		return i->second;
+	size_t	n = std::string::npos;
+	if ( d.length() >= 2 )
+		n = d.rfind( '/', d.length() - 2 );
+	if ( n == std::string::npos )
+		n = 0;
+	else
+		n++;
+	QTreeWidgetItem *	parent = nullptr;
+	if ( n )
+		parent = findDirectory( dirMap, std::string( d, 0, n ) );
+	QTreeWidgetItem *	tmp;
+	if ( !parent ) {
+		tmp = new QTreeWidgetItem( treeWidget, -2 );
+		treeWidget->addTopLevelItem( tmp );
+	} else {
+		tmp = new QTreeWidgetItem( parent, -2 );
+		parent->addChild( tmp );
+	}
+	dirMap.emplace( d, tmp );
+	tmp->setText( 0, QString::fromStdString( std::string( d, n, d.length() - n ) ) );
+	return tmp;
+}
+
+void FileBrowserWidget::updateTreeWidget()
+{
+	treeWidget->clear();
+	filesShown.clear();
+	std::string	filterString( filter->text().trimmed().toStdString() );
+	int	curFileIndex = -1;
+	for ( std::set< std::string >::const_iterator i = fileSet.begin(); i != fileSet.end(); i++ ) {
+		if ( currentFile && *i == *currentFile ) {
+			curFileIndex = int( filesShown.size() );
+		} else if ( !filterString.empty() && i->find( filterString ) == std::string::npos ) {
+			continue;
+		}
+		filesShown.push_back( &(*i) );
+	}
+
+	std::map< std::string, QTreeWidgetItem * >	dirMap;
+	std::string	d;
+	for ( size_t i = 0; i < filesShown.size(); i++ ) {
+		const std::string &	fullPath( *(filesShown[i]) );
+		size_t	n = std::string::npos;
+		if ( filesShown.size() > 100 )
+			n = fullPath.rfind( '/' );
+		if ( n == std::string::npos )
+			n = 0;
+		else
+			n++;
+		QTreeWidgetItem *	parent = nullptr;
+		if ( n ) {
+			d = std::string( fullPath, 0, n );
+			parent = findDirectory( dirMap, d );
+		}
+		QTreeWidgetItem *	tmp;
+		if ( !parent ) {
+			tmp = new QTreeWidgetItem( treeWidget, int(i) );
+			treeWidget->addTopLevelItem( tmp );
+		} else {
+			tmp = new QTreeWidgetItem( parent, int(i) );
+			parent->addChild( tmp );
+		}
+		tmp->setText( 0, QString::fromStdString( std::string( *(filesShown[i]), n, filesShown[i]->length() - n ) ) );
+		if ( i == size_t(curFileIndex) )
+			treeWidget->setCurrentItem( tmp );
+	}
+}
+
+void FileBrowserWidget::checkItemActivated()
+{
+	if ( getItemSelected() )
+		dlg.accept();
+}
+
+FileBrowserWidget::FileBrowserWidget( int w, int h, const char * titleString, const std::set< std::string > & files, const std::string& fileSelected )
+	: fileSet( files ), currentFile( nullptr )
+{
+	layout = new QGridLayout( &dlg );
+	layout->setColumnMinimumWidth( 0, w );
+	layout->setRowMinimumHeight( 1, h );
+	title = new QLabel( &dlg );
+	title->setText( titleString );
+	layout->addWidget( title, 0, 0 );
+	treeWidget = new QTreeWidget( &dlg );
+	treeWidget->setHeaderLabel( "Path" );
+	layout->addWidget( treeWidget, 1, 0 );
+	layout2 = new QGridLayout( &dlg);
+	layout2->setColumnMinimumWidth( 0, w - ( w >> 2 ) );
+	layout2->setColumnMinimumWidth( 1, w >> 2 );
+	filter = new QLineEdit( &dlg );
+	layout2->addWidget( filter, 0, 0 );
+	filterTitle = new QLabel( &dlg );
+	filterTitle->setText( "Path Filter" );
+	layout2->addWidget( filterTitle, 0, 1 );
+	layout->addLayout( layout2, 2, 0 );
+
+	if ( !fileSelected.empty() )
+		currentFile = &fileSelected;
+	QObject::connect( filter, &QLineEdit::returnPressed, filter, [this]() { updateTreeWidget(); } );
+	QObject::connect( treeWidget, &QTreeWidget::itemDoubleClicked, treeWidget, [this]() { checkItemActivated(); } );
+	updateTreeWidget();
+}
+
+FileBrowserWidget::~FileBrowserWidget()
+{
+}
+
+const std::string * FileBrowserWidget::getItemSelected() const
+{
+	QList< QTreeWidgetItem * >	tmp = treeWidget->selectedItems();
+	if ( tmp.size() > 0 ) {
+		int	n = tmp[0]->type();
+		if ( n >= 0 && size_t(n) < filesShown.size() )
+			return filesShown[n];
+	}
+	return nullptr;
+}
 
 // Brief description is deliberately not autolinked to class Spell
 /*! \file headerstring.cpp
@@ -161,52 +314,23 @@ public:
 	}
 };
 
-#include "gamemanager.h"
-#include "libfo76utils/src/common.hpp"
-#include "libfo76utils/src/material.hpp"
-
-static void getCE2MaterialList( QStringList& paths, Game::GameMode game )
-{
-	std::set< std::string >	materials;
-	{
-		const CE2MaterialDB * matDB = Game::GameManager::materials( game );
-		if ( !matDB )
-			return;
-		matDB->getMaterialList( materials );
-	}
-
-	for ( std::set< std::string >::const_iterator i = materials.begin(); i != materials.end(); i++ )
-		paths << QString::fromStdString( *i );
-}
-
 void spEditStringIndex::browseStarfieldMaterial( QLineEdit * le )
 {
-	QStringList matPaths;
-	getCE2MaterialList( matPaths, Game::STARFIELD );
+	std::set< std::string >	materials;
+	const CE2MaterialDB * matDB = Game::GameManager::materials( Game::STARFIELD );
+	if ( matDB )
+			matDB->getMaterialList( materials );
 
-	QString prvPath = le->text();
-	int n = -1;
-	if ( !prvPath.isEmpty() ) {
-		prvPath = QString::fromStdString( Game::GameManager::get_full_path( prvPath, "materials", ".mat" ) );
-		n = matPaths.indexOf( QStringView( prvPath ) );
+	std::string	prvPath;
+	if ( !le->text().isEmpty() )
+		prvPath = Game::GameManager::get_full_path( le->text(), "materials", ".mat" );
+
+	FileBrowserWidget	fileBrowser( 800, 600, "Select Material", materials, prvPath );
+	if ( fileBrowser.exec() == QDialog::Accepted ) {
+		const std::string *	s = fileBrowser.getItemSelected();
+		if ( s )
+			le->setText( QString::fromStdString( *s ) );
 	}
-
-	QDialog	dlg;
-	QGridLayout * layout = new QGridLayout( &dlg );
-	layout->setColumnMinimumWidth( 0, 800 );
-	layout->setRowMinimumHeight( 1, 600 );
-	QLabel * title = new QLabel( &dlg );
-	title->setText( "Select material" );
-	layout->addWidget( title, 0, 0 );
-	QListWidget * listWidget = new QListWidget( &dlg );
-	layout->addWidget( listWidget, 1, 0 );
-	listWidget->addItems( matPaths );
-	if ( n >= 0 )
-		listWidget->setCurrentItem( listWidget->item( n ) );
-	QObject::connect( listWidget, &QListWidget::itemActivated, &dlg, &QDialog::accept );
-
-	if ( dlg.exec() == QDialog::Accepted )
-		le->setText( listWidget->currentItem()->text() );
 }
 
 REGISTER_SPELL( spEditStringIndex )
