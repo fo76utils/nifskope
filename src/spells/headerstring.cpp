@@ -54,13 +54,10 @@ QTreeWidgetItem *	FileBrowserWidget::findDirectory( std::map< std::string, QTree
 	if ( n )
 		parent = findDirectory( dirMap, std::string( d, 0, n ) );
 	QTreeWidgetItem *	tmp;
-	if ( !parent ) {
+	if ( !parent )
 		tmp = new QTreeWidgetItem( treeWidget, -2 );
-		treeWidget->addTopLevelItem( tmp );
-	} else {
+	else
 		tmp = new QTreeWidgetItem( parent, -2 );
-		parent->addChild( tmp );
-	}
 	dirMap.emplace( d, tmp );
 	tmp->setText( 0, QString::fromStdString( std::string( d, n, d.length() - n ) ) );
 	return tmp;
@@ -98,13 +95,10 @@ void FileBrowserWidget::updateTreeWidget()
 			parent = findDirectory( dirMap, d );
 		}
 		QTreeWidgetItem *	tmp;
-		if ( !parent ) {
+		if ( !parent )
 			tmp = new QTreeWidgetItem( treeWidget, int(i) );
-			treeWidget->addTopLevelItem( tmp );
-		} else {
+		else
 			tmp = new QTreeWidgetItem( parent, int(i) );
-			parent->addChild( tmp );
-		}
 		tmp->setText( 0, QString::fromStdString( std::string( *(filesShown[i]), n, filesShown[i]->length() - n ) ) );
 		if ( i == size_t(curFileIndex) )
 			treeWidget->setCurrentItem( tmp );
@@ -129,7 +123,8 @@ FileBrowserWidget::FileBrowserWidget( int w, int h, const char * titleString, co
 	treeWidget = new QTreeWidget( &dlg );
 	treeWidget->setHeaderLabel( "Path" );
 	layout->addWidget( treeWidget, 1, 0 );
-	layout2 = new QGridLayout( &dlg);
+	layout2 = new QGridLayout();
+	layout->addLayout( layout2, 2, 0 );
 	layout2->setColumnMinimumWidth( 0, w - ( w >> 2 ) );
 	layout2->setColumnMinimumWidth( 1, w >> 2 );
 	filter = new QLineEdit( &dlg );
@@ -137,7 +132,6 @@ FileBrowserWidget::FileBrowserWidget( int w, int h, const char * titleString, co
 	filterTitle = new QLabel( &dlg );
 	filterTitle->setText( "Path Filter" );
 	layout2->addWidget( filterTitle, 0, 1 );
-	layout->addLayout( layout2, 2, 0 );
 
 	if ( !fileSelected.empty() )
 		currentFile = &fileSelected;
