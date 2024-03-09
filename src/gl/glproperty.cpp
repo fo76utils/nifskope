@@ -1011,12 +1011,12 @@ bool BSShaderLightingProperty::bind( int id, const QVector<QVector<Vector2> > & 
 	return false;
 }
 
-bool BSShaderLightingProperty::bindCube( const QString & fname )
+bool BSShaderLightingProperty::bindCube( const QString & fname, bool useSecondTexture )
 {
 	GLuint result = 0;
 
 	if ( !fname.isEmpty() )
-		result = scene->bindTexture( fname );
+		result = scene->bindTexture( fname, useSecondTexture );
 
 	if ( result == 0 )
 		return false;

@@ -55,9 +55,9 @@ typedef unsigned int GLenum;
 //! Initialize the GL functions necessary for texture loading
 extern void initializeTextureLoaders( const QOpenGLContext * context );
 //! Create texture with glTexStorage2D using GLI
-extern GLuint GLI_create_texture( gli::texture& texture, GLenum& target, GLuint& id );
+extern GLuint GLI_create_texture( gli::texture& texture, GLenum& target, GLuint * id );
 //! Fallback for systems that do not have glTexStorage2D
-extern GLuint GLI_create_texture_fallback( gli::texture& texture, GLenum & target, GLuint& id );
+extern GLuint GLI_create_texture_fallback( gli::texture& texture, GLenum & target, GLuint * id );
 //! Rewrite of gli::load_dds to not crash on invalid textures
 extern gli::texture load_if_valid( const char * data, unsigned int size );
 
@@ -77,8 +77,8 @@ extern gli::texture load_if_valid( const char * data, unsigned int size );
  * @param mipmaps	Contains the number of mipmaps on successful load.
  * @return			True if the load was successful, false otherwise.
  */
-extern bool texLoad( const Game::GameMode game, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint & id );
-extern bool texLoad( const Game::GameMode game, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint & id );
+extern bool texLoad( const Game::GameMode game, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint * id );
+extern bool texLoad( const Game::GameMode game, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint * id );
 
 /*! A function for loading textures.
  *
@@ -94,7 +94,7 @@ extern bool texLoad( const Game::GameMode game, const QString & filepath, QStrin
  * @param mipmaps	Contains the number of mipmaps on successful load.
  * @return			True if the load was successful, false otherwise.
  */
-extern bool texLoad( const Game::GameMode game, const QModelIndex & iData, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint & id );
+extern bool texLoad( const Game::GameMode game, const QModelIndex & iData, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint * id );
 
 /*! A function which checks whether the given file can be loaded.
  *

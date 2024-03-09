@@ -85,7 +85,7 @@ public:
 
 	QString textStats();
 
-	int bindTexture( const QString & fname );
+	int bindTexture( const QString & fname, bool useSecondTexture = false );
 	int bindTexture( const QModelIndex & index );
 
 	Node * getNode( const NifModel * nif, const QModelIndex & iNode );

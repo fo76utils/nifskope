@@ -65,10 +65,8 @@ class TexCache final : public QObject
 		QString filename;
 		//! The texture file path.
 		QString filepath;
-		//! The texture data (if not in the filesystem)
-		QByteArray data;
-		//! ID for use with GL texture functions
-		GLuint id = 0;
+		//! IDs for use with GL texture functions
+		GLuint id[2];
 		//! The format target
 		GLenum target = 0; // = 0x0DE1; // GL_TEXTURE_2D
 		//! Width of the texture
@@ -97,7 +95,7 @@ public:
 	~TexCache();
 
 	//! Bind a texture from filename
-	int bind( const QString & fname, Game::GameMode game = Game::OTHER );
+	int bind( const QString & fname, Game::GameMode game = Game::OTHER, bool useSecondTexture = false );
 	//! Bind a texture from pixel data
 	int bind( const QModelIndex & iSource, Game::GameMode game = Game::OTHER );
 
@@ -110,8 +108,7 @@ public:
 	bool importFile( NifModel * nif, const QModelIndex & iSource, QModelIndex & iData );
 
 	//! Find a texture based on its filename
-	static QString find( const QString & file, const QString & nifFolder, Game::GameMode game = Game::OTHER );
-	static QString find( const QString & file, const QString & nifFolder, QByteArray & data, Game::GameMode game = Game::OTHER );
+	static QString find( const QString & file, Game::GameMode game = Game::OTHER );
 	//! Remove the path from a filename
 	static QString stripPath( const QString & file, const QString & nifFolder );
 	//! Checks whether the given file can be loaded
@@ -140,8 +137,6 @@ public slots:
 protected:
 	QHash<QString, Tex *> textures;
 	QHash<QModelIndex, Tex *> embedTextures;
-
-	QString nifFolder;
 };
 
 void initializeTextureUnits( const QOpenGLContext * );

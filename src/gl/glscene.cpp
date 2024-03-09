@@ -466,12 +466,12 @@ QString Scene::textStats()
 	return QString();
 }
 
-int Scene::bindTexture( const QString & fname )
+int Scene::bindTexture( const QString & fname, bool useSecondTexture )
 {
 	if ( !hasOption(DoTexturing) || fname.isEmpty() )
 		return 0;
 
-	return textures->bind( fname, game );
+	return textures->bind( fname, game, useSecondTexture );
 }
 
 int Scene::bindTexture( const QModelIndex & iSource )

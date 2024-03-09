@@ -212,7 +212,7 @@ public:
 		if ( !iFile.isValid() )
 			return idx;
 
-		QString file = TexCache::find( nif->get<QString>( iFile ), nif->getFolder() );
+		QString file = TexCache::find( nif->get<QString>( iFile ) );
 
 		QSettings settings;
 		QString key = QString( "%1/%2/%3/Last Texture Path" ).arg( "Spells", page(), name() );

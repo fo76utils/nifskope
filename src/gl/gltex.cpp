@@ -160,16 +160,8 @@ TexCache::~TexCache()
 	//flush();
 }
 
-QString TexCache::find( const QString & file, const QString & nifdir, Game::GameMode game )
+QString TexCache::find( const QString & file, Game::GameMode game )
 {
-	return find( file, nifdir, *(new QByteArray()), game );
-}
-
-QString TexCache::find( const QString & file, const QString & nifdir, QByteArray & data, Game::GameMode game )
-{
-	(void) nifdir;
-	(void) data;
-
 	if ( file.isEmpty() )
 		return QString();
 	if ( file.startsWith("#") && (file.length() == 9 || file.length() == 10) )
@@ -248,42 +240,41 @@ bool TexCache::isSupported( const QString & filePath )
 	return texIsSupported( filePath );
 }
 
-int TexCache::bind( const QString & fname, Game::GameMode game )
+int TexCache::bind( const QString & fname, Game::GameMode game, bool useSecondTexture )
 {
 	Tex * tx = textures.value( fname );
 	if ( !tx ) {
 		tx = new Tex;
 		tx->filename = fname;
-		tx->id = 0;
-		tx->data = QByteArray();
+		tx->id[0] = 0;
+		tx->id[1] = 0;
 		tx->mipmaps = 0;
 		tx->game = game;
 
 		textures.insert( tx->filename, tx );
 
 		if ( !isSupported( fname ) )
-			tx->id = 0xFFFFFFFF;
+			tx->id[0] = 0xFFFFFFFF;
 	}
 
-	if ( tx->id == 0xFFFFFFFF )
+	if ( tx->id[0] == 0xFFFFFFFF )
 		return 0;
 
-	QByteArray outData;
-
 	if ( tx->filepath.isEmpty() )
-		tx->filepath = find( tx->filename, nifFolder, outData, game );
+		tx->filepath = find( tx->filename, game );
 
-	if ( !outData.isEmpty() ) {
-		tx->data = outData;
-	}
-
-	if ( !tx->id ) {
+	if ( !tx->id[0] ) {
 		tx->load();
 	} else {
 		if ( !tx->target )
 			tx->target = GL_TEXTURE_2D;
-
-		glBindTexture( tx->target, tx->id );
+		if ( useSecondTexture ) {
+			if ( !tx->id[1] )
+				return 0;
+			glBindTexture( tx->target, tx->id[1] );
+		} else {
+			glBindTexture( tx->target, tx->id[0] );
+		}
 	}
 
 	return tx->mipmaps;
@@ -301,12 +292,13 @@ int TexCache::bind( const QModelIndex & iSource, Game::GameMode game )
 
 				if ( !tx ) {
 					tx = new Tex();
-					tx->id = 0;
+					tx->id[0] = 0;
+					tx->id[1] = 0;
 					tx->game = game;
 					try
 					{
-						glGenTextures( 1, &tx->id );
-						glBindTexture( GL_TEXTURE_2D, tx->id );
+						glGenTextures( 1, tx->id );
+						glBindTexture( GL_TEXTURE_2D, tx->id[0] );
 						embedTextures.insert( iData, tx );
 						texLoad( game, iData, tx->format, tx->target, tx->width, tx->height, tx->mipmaps, tx->id );
 					}
@@ -314,7 +306,7 @@ int TexCache::bind( const QModelIndex & iSource, Game::GameMode game )
 						tx->status = e;
 					}
 				} else {
-					glBindTexture( GL_TEXTURE_2D, tx->id );
+					glBindTexture( GL_TEXTURE_2D, tx->id[0] );
 				}
 
 				return tx->mipmaps;
@@ -330,15 +322,15 @@ int TexCache::bind( const QModelIndex & iSource, Game::GameMode game )
 void TexCache::flush()
 {
 	for ( Tex * tx : textures ) {
-		if ( tx->id )
-			glDeleteTextures( 1, &tx->id );
+		if ( tx->id[0] )
+			glDeleteTextures( ( !tx->id[1] ? 1 : 2 ), tx->id );
 	}
 	qDeleteAll( textures );
 	textures.clear();
 
 	for ( Tex * tx : embedTextures ) {
-		if ( tx->id )
-			glDeleteTextures( 1, &tx->id );
+		if ( tx->id[0] )
+			glDeleteTextures( ( !tx->id[1] ? 1 : 2 ), tx->id );
 	}
 	qDeleteAll( embedTextures );
 	embedTextures.clear();
@@ -346,7 +338,7 @@ void TexCache::flush()
 
 void TexCache::setNifFolder( const QString & folder )
 {
-	nifFolder = folder;
+	(void) folder;
 	flush();
 	emit sigRefresh();
 }
@@ -392,7 +384,8 @@ bool TexCache::exportFile( const QModelIndex & iSource, QString & filepath )
 
 	if ( !tx ) {
 		tx = new Tex();
-		tx->id = 0;
+		tx->id[0] = 0;
+		tx->id[1] = 0;
 	}
 
 	return tx->saveAsFile( iSource, filepath );
@@ -420,17 +413,18 @@ bool TexCache::importFile( NifModel * nif, const QModelIndex & iSource, QModelIn
 
 void TexCache::Tex::load()
 {
-	if ( !id )
-		glGenTextures( 1, &id );
+	if ( !id[0] )
+		glGenTextures( 1, id );
 
 	width  = height = mipmaps = 0;
 	status = QString();
 
 	if ( target )
-		glBindTexture( target, id );
+		glBindTexture( target, id[0] );
 
 	try
 	{
+		QByteArray	data;
 		texLoad( game, filepath, format, target, width, height, mipmaps, data, id );
 	}
 	catch ( QString & e )

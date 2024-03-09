@@ -918,7 +918,7 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 				QModelIndex iTexSource = nif->getBlockIndex( nif->getLink( iTexProp, "Image" ) );
 
 				if ( iTexSource.isValid() ) {
-					//texfile = TexCache::find( nif->get<QString>( iTexSource, "File Name" ) , nif->getFolder() );
+					//texfile = TexCache::find( nif->get<QString>( iTexSource, "File Name" ) );
 					texsource = iTexSource;
 					return true;
 				}
@@ -939,7 +939,7 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 						QModelIndex iTextures = nif->getIndex( iTexSource, "Textures" );
 
 						if ( iTextures.isValid() ) {
-							texfile = TexCache::find( nif->get<QString>( iTextures.child( 0, 0 ) ), nif->getFolder(), game );
+							texfile = TexCache::find( nif->get<QString>( iTextures.child( 0, 0 ) ), game );
 							return true;
 						}
 					}
@@ -950,7 +950,7 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 						QString texture = nif->get<QString>( iTexProp, "Source Texture" );
 
 						if ( !texture.isEmpty() ) {
-							texfile = TexCache::find( texture, nif->getFolder(), game );
+							texfile = TexCache::find( texture, game );
 							return true;
 						}
 					}
@@ -989,7 +989,7 @@ bool UVWidget::setTexCoords()
 				tris << nif->getArray<Triangle>( nif->index( i, 0, partIdx ), "Triangles" );
 			}
 		}
-		
+
 	}
 
 	if ( tris.isEmpty() )
@@ -1032,7 +1032,7 @@ void UVWidget::updateNif()
 
 			nif->dataChanged( iShape, iShape );
 		}
-		
+
 		nif->restoreState();
 		connect( nif, &NifModel::dataChanged, this, &UVWidget::nifDataChanged );
 	}
