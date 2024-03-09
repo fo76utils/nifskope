@@ -525,13 +525,12 @@ bool GameManager::set_temp_path(const GameMode game, const char* pathName, bool 
 	return ba2Files.set_temp_folder( game, pathName, ignoreErrors );
 }
 
-void GameManager::list_files(QStringList& fileList, const GameMode game, bool (*fileListFilterFunc)(void* p, const std::string& fileName), void* fileListFilterFuncData)
+void GameManager::list_files(std::set< std::string >& fileSet, const GameMode game, bool (*fileListFilterFunc)(void* p, const std::string& fileName), void* fileListFilterFuncData)
 {
 	if ( !(game >= OTHER && game < NUM_GAMES) )
 		return;
 	// make sure that archives are loaded
 	(void) ba2Files.get_file( game, std::string(".") );
-	std::set< std::string >	filesFound;
 	std::vector< std::string >	tmpFileList;
 	for ( int i = 0; i < 2; i++ ) {
 		const BA2File *	ba2File = ( !i ? ba2Files.archives[game].first : ba2Files.archives[game].second );
@@ -539,10 +538,8 @@ void GameManager::list_files(QStringList& fileList, const GameMode game, bool (*
 			continue;
 		ba2File->getFileList( tmpFileList, true, fileListFilterFunc, fileListFilterFuncData );
 		for ( size_t j = 0; j < tmpFileList.size(); j++ )
-			filesFound.insert( tmpFileList[j] );
+			fileSet.insert( tmpFileList[j] );
 	}
-	for ( std::set< std::string >::const_iterator i = filesFound.begin(); i != filesFound.end(); i++ )
-		fileList << QString::fromStdString( *i );
 }
 
 QStringList GameManager::find_folders(const GameMode game)
