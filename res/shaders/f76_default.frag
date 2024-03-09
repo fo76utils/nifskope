@@ -8,7 +8,8 @@ uniform sampler2D ReflMap;
 uniform sampler2D LightingMap;
 uniform sampler2D GreyscaleMap;
 uniform sampler2D EnvironmentMap;	// environment BRDF LUT
-uniform samplerCube CubeMap;	// pre-filtered cube map
+uniform samplerCube CubeMap;	// pre-filtered cube maps (specular, diffuse)
+uniform samplerCube CubeMap2;
 
 uniform vec4 solidColor;
 uniform vec3 specColor;
@@ -248,7 +249,7 @@ void main(void)
 		refl = textureLod(CubeMap, reflectedWS, max(m, 0.0)).rgb;
 		refl *= envReflection * specStrength;
 		refl *= ambient;
-		ambient *= textureLod(CubeMap, normalWS, 6.0).rgb;
+		ambient *= textureLod(CubeMap2, normalWS, 0.0).rgb;
 	} else {
 		ambient /= 15.0;
 		refl = ambient;

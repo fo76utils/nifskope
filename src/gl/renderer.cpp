@@ -1396,8 +1396,14 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 			if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( fname ) )
 				if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( cube ) )
 					return false;
-
 			fn->glUniform1i( uniCubeMap, texunit++ );
+
+			if ( nifVersion >= 151 && ( uniCubeMap = prog->uniformLocations[SAMP_CUBE_2] ) >= 0 ) {
+				if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( fname, true ) )
+					if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( cube, true ) )
+						return false;
+				fn->glUniform1i( uniCubeMap, texunit++ );
+			}
 		}
 
 		if ( nifVersion < 151 ) {
