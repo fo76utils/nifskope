@@ -625,58 +625,10 @@ GLuint texLoadBMP( QIODevice & f, QString & texformat, GLenum & target, GLuint &
 	return 0;
 }
 
-static SFCubeMapCache	sfCubeMapCache;
-
 GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, GLenum & target, GLuint & mipmaps, QByteArray & data, GLuint * id )
 {
 	if ( data.size() < 128 )
 		return 0;
-	const unsigned char *	dataPtr = reinterpret_cast< unsigned char * >( data.data() );
-	bool	convertEnvMapFlag = false;
-	if ( FileBuffer::readUInt32Fast( dataPtr ) != 0x20534444 ) {	// "DDS "
-		if ( FileBuffer::readUInt64Fast( dataPtr ) != 0x4E41494441523F23ULL )	// "#?RADIAN"
-			return 0;
-		if ( game != Game::STARFIELD && game != Game::FALLOUT_76 )
-			return 0;
-		convertEnvMapFlag = true;
-		sfCubeMapCache.setNormalizeLevel( 0.25f );
-		if ( game == Game::FALLOUT_76 ) {
-			for ( size_t i = 0; i <= 124; i++ ) {
-				std::uint32_t	tmp = FileBuffer::readUInt32Fast( dataPtr + i );
-				if ( tmp == 0x20592B0A || tmp == 0x20592D0A ) {	// "\n+Y " or "\n-Y "
-					// invert Y axis
-					data.data()[i + 1] = char( ((tmp >> 8) & 0xFF) ^ 6 );
-					break;
-				}
-			}
-		}
-	} else if ( (dataPtr[113] & 0x02) &&	// DDSCAPS2_CUBEMAP
-				( game == Game::STARFIELD || game == Game::FALLOUT_76 ) &&
-				FileBuffer::readUInt32Fast( dataPtr + 84 ) == 0x30315844 ) {	// "DX10"
-		convertEnvMapFlag = ( dataPtr[128] != 0x43 || dataPtr[28] < 2 );	// DXGI_FORMAT_R9G9B9E5_SHAREDEXP
-		sfCubeMapCache.setNormalizeLevel( 1.0f / 12.5f );
-	}
-	if ( convertEnvMapFlag ) {
-		// normalize and filter Fallout 76 and Starfield cube maps
-		std::uint32_t	width = std::uint32_t(TexCache::pbrCubeMapResolution);
-		size_t	dataSize = size_t(data.size());
-		size_t	spaceRequired = width * width * 8 * 4 + 148;
-		if ( data.size() < qsizetype(spaceRequired) )
-			data.resize( spaceRequired );
-		sfCubeMapCache.setRoughnessTable( nullptr, 7 );
-		size_t	newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(data.data()), dataSize, true, spaceRequired, width );
-		data.resize( newSize );
-		QByteArray	tmpData( data );
-		spaceRequired = 32 * 32 * 8 * 4 + 148;
-		if ( tmpData.size() < qsizetype(spaceRequired) )
-			tmpData.resize( spaceRequired );
-		static const float  roughnessDiffuse = 1.0f;
-		sfCubeMapCache.setRoughnessTable( &roughnessDiffuse, 1 );
-		newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(tmpData.data()), size_t(data.size()), true, spaceRequired, 32 );
-		GLuint	tmpMipmaps = 0;
-		if ( newSize && newSize != size_t(data.size()) && newSize >= 148 && tmpData.data()[128] == 0x43 && tmpData.data()[28] == 6 )
-			texLoadDDS( game, filepath, target, tmpMipmaps, tmpData, id + 1 );
-	}
 
 	GLuint result = 0;
 	gli::texture texture;
@@ -705,6 +657,107 @@ GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, GLenum &
 		texture.clear();
 
 	return mipmaps;
+}
+
+static SFCubeMapCache	sfCubeMapCache;
+
+GLuint texLoadPBRCubeMap( const Game::GameMode game, const QString & filepath, GLenum & target, GLuint & mipmaps, QByteArray & data, GLuint * id )
+{
+	if ( data.size() < 148 )
+		return 0;
+
+	const unsigned char *	dataPtr = reinterpret_cast< unsigned char * >( data.data() );
+	bool	filterDisabled = false;
+	do {
+		if ( FileBuffer::readUInt64Fast( dataPtr ) == 0x4E41494441523F23ULL ) {	// "#?RADIAN"
+			sfCubeMapCache.setNormalizeLevel( 0.25f );
+			if ( game != Game::FALLOUT_76 )
+				break;
+			for ( size_t i = 0; i <= 124; i++ ) {
+				std::uint32_t	tmp = FileBuffer::readUInt32Fast( dataPtr + i );
+				if ( tmp == 0x20592B0A || tmp == 0x20592D0A ) {	// "\n+Y " or "\n-Y "
+					// invert Y axis
+					data.data()[i + 1] = char( ((tmp >> 8) & 0xFF) ^ 6 );
+					break;
+				}
+			}
+			break;
+		}
+		if ( FileBuffer::readUInt32Fast( dataPtr ) == 0x20534444 ) {	// "DDS "
+			// DDSCAPS2_CUBEMAP, "DX10"
+			if ( (dataPtr[113] & 0x02) && FileBuffer::readUInt32Fast( dataPtr + 84 ) == 0x30315844 ) {
+				// DXGI_FORMAT_R9G9B9E5_SHAREDEXP with mipmaps:
+				// assume the texture is already pre-filtered
+				filterDisabled = ( dataPtr[128] == 0x43 && dataPtr[28] >= 2 );
+				sfCubeMapCache.setNormalizeLevel( 1.0f / 12.5f );
+				break;
+			}
+		}
+		return 0;
+	} while ( false );
+
+	if ( !filterDisabled ) {
+		std::uint32_t	width = std::uint32_t( TexCache::pbrCubeMapResolution );
+		size_t	dataSize = size_t( data.size() );
+		size_t	spaceRequired = width * width * 8 * 4 + 148;
+		if ( data.size() < qsizetype(spaceRequired) )
+			data.resize( spaceRequired );
+		sfCubeMapCache.setRoughnessTable( nullptr, 7 );
+		size_t	newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(data.data()), dataSize, true, spaceRequired, width );
+		data.resize( newSize );
+	}
+
+	{
+		// generate and load second cube map for diffuse lighting
+		std::uint32_t	width = 32;
+		QByteArray	tmpData( data );
+		size_t	dataSize = size_t( tmpData.size() );
+		size_t	spaceRequired = width * width * 8 * 4 + 148;
+		if ( tmpData.size() < qsizetype(spaceRequired) )
+			tmpData.resize( spaceRequired );
+		static const float  roughnessDiffuse = 1.0f;
+		sfCubeMapCache.setRoughnessTable( &roughnessDiffuse, 1 );
+		size_t	newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(tmpData.data()), dataSize, true, spaceRequired, width );
+		tmpData.resize( newSize );
+		GLuint	tmpMipmaps = 0;
+		(void) texLoadDDS( game, filepath, target, tmpMipmaps, tmpData, id + 1 );
+	}
+
+	return texLoadDDS( game, filepath, target, mipmaps, data, id );
+}
+
+bool texLoadColor( const Game::GameMode game, const QString & filepath, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint * id )
+{
+	// generate 1x1 texture from an RGBA color in "#AABBGGRR" format
+	QChar	c;
+	if ( filepath.length() >= 10 )
+		c = filepath.back().toLower();
+	bool	isCubeMap = ( c == 'c' );
+	std::uint32_t	color = 0;
+	for ( int i = 1; i < 9; i++ ) {
+		color = color << 4;
+		unsigned short	tmp = filepath.at( i ).toLower().unicode();
+		color = color | ( ( tmp + ( (tmp >> 6) * 9 ) ) & 0x0F );
+	}
+	width = 1;
+	height = 1;
+	int	n = ( !isCubeMap ? 1 : 6 );
+	data.resize( n * 4 + 148 );
+	unsigned char	dxgiFmt = 0x1C;		// DXGI_FORMAT_R8G8B8A8_UNORM
+	if ( c == 's' || c == 'c' ) {
+		dxgiFmt = 0x1D;					// DXGI_FORMAT_R8G8B8A8_UNORM_SRGB
+	} else if ( c == 'n' ) {
+		dxgiFmt = 0x1F;					// DXGI_FORMAT_R8G8B8A8_SNORM
+		color = color ^ 0x80808080U;
+	}
+	unsigned char *	dataPtr = reinterpret_cast< unsigned char * >( data.data() );
+	(void) FileBuffer::writeDDSHeader( dataPtr, dxgiFmt, 1, 1, 1, isCubeMap );
+	for ( int i = 0; i < n; i++ )
+		FileBuffer::writeUInt32Fast( dataPtr + ( 148 + (i << 2) ), color );
+
+	if ( isCubeMap && ( game == Game::FALLOUT_76 || game == Game::STARFIELD ) )
+		return bool( texLoadPBRCubeMap( game, filepath, target, mipmaps, data, id ) );
+	return bool( texLoadDDS( game, filepath, target, mipmaps, data, id ) );
 }
 
 // (public function, documented in gltexloaders.h)
@@ -1190,80 +1243,55 @@ bool texLoad( const Game::GameMode game, const QString & filepath, QString & for
 {
 	width = height = mipmaps = 0;
 
-	std::string	filepathStr = filepath.toStdString();
-	while ( data.isEmpty() ) {
-		if ( filepathStr.starts_with('#') && (filepathStr.length() == 9 || filepathStr.length() == 10) ) {
-			std::uint64_t	tmp = FileBuffer::readUInt64Fast( filepathStr.c_str() + 1 );
-			std::uint64_t	tmp2 = (tmp >> 1) & 0x2020202020202020ULL;
-			if ( (tmp | tmp2) == 0x64642E7262706673ULL ) {	// "sfpbr.dd"
+	if ( data.isEmpty() ) {
+		if ( filepath.startsWith('#') && (filepath.length() == 9 || filepath.length() == 10) ) {
+			if ( filepath == "#sfpbr.dds" )
 				extract_pbr_lut_data( data );
-				break;
-			}
-			// generate 1x1 texture from an RGBA color in "#AABBGGRR" format
-			tmp = tmp - ( (tmp2 >> 5) * 7U );
-			std::uint32_t	c = 0;
-			for ( ; tmp; tmp = tmp >> 8 )
-				c = ( c << 4 ) | std::uint32_t( tmp & 0x0FU );
-			width = 1;
-			height = 1;
-			mipmaps = 1;
-			const char	*fmtName = "R8G8B8A8_UNORM";
-			GLint	fmt = GL_RGBA8;
-			char	fmtSuffix = filepathStr.c_str()[9] | 0x20;
-			if ( fmtSuffix == 's' ) {
-				fmtName = "R8G8B8A8_SRGB";
-				fmt = GL_SRGB8_ALPHA8;
-			} else if ( fmtSuffix == 'n' ) {
-				fmtName = "R8G8B8A8_SNORM";
-				fmt = GL_RGBA8_SNORM;
-				c = c ^ 0x80808080U;
-			}
-			format = fmtName;
-			target = GL_TEXTURE_2D;
-			glBindTexture( target, id[0] );
-			GLint	savedUnpackAlignment = 4;
-			GLint	savedUnpackSwapBytes = GL_TRUE;
-			glGetIntegerv( GL_UNPACK_ALIGNMENT, &savedUnpackAlignment );
-			glGetIntegerv( GL_UNPACK_SWAP_BYTES, &savedUnpackSwapBytes );
-			glPixelStorei( GL_UNPACK_ALIGNMENT, 4 );
-			glPixelStorei( GL_UNPACK_SWAP_BYTES, GL_TRUE );
-			glTexImage2D( target, 0, fmt, 1, 1, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, &c );
-			glPixelStorei( GL_UNPACK_ALIGNMENT, savedUnpackAlignment );
-			glPixelStorei( GL_UNPACK_SWAP_BYTES, savedUnpackSwapBytes );
-			return true;
-		}
-		if ( !Game::GameManager::get_file(data, game, filepath, "textures", "") ) {
+			else
+				return texLoadColor( game, filepath, target, width, height, mipmaps, data, id );
+		} else if ( !Game::GameManager::get_file(data, game, filepath, "textures", "") ) {
 			throw QString( "could not open file" );
 		}
 
 		if ( data.isEmpty() )
 			return false;
-		break;
 	}
 
-	QBuffer f( &data );
-	if ( !f.open( QIODevice::ReadWrite ) )
-		throw QString( "could not open buffer" );
-
 	bool isSupported = true;
-	if ( filepath.endsWith( ".dds", Qt::CaseInsensitive ) ) {
-		if ( data.size() >= 148 && (data[113] & 0x02) ) {	// DDSCAPS2_CUBEMAP
-			if ( game == Game::FALLOUT_76 && data[84] == 'D' && data[85] == 'X' && data[86] == '1' && data[87] == '0' && data[128] == 'W' )
-				data[128] = 0x5B;	// DXGI_FORMAT_B8G8R8A8_UNORM -> DXGI_FORMAT_B8G8R8A8_UNORM_SRGB
+	if ( filepath.endsWith( ".dds", Qt::CaseInsensitive ) || ( filepath.endsWith( ".hdr", Qt::CaseInsensitive ) && ( game == Game::FALLOUT_76 || game == Game::STARFIELD ) ) ) {
+		bool	isCubeMap = false;
+		if ( data.size() >= 148 ) {
+			if ( FileBuffer::readUInt32Fast( data.data() ) == 0x20534444 ) {	// "DDS "
+				if ( data.data()[113] & 0x02 ) {	// DDSCAPS2_CUBEMAP
+					isCubeMap = true;
+					if ( game == Game::FALLOUT_76 && FileBuffer::readUInt32Fast( data.data() + 84 ) == 0x30315844 && data.data()[128] == 0x57 )
+						data[128] = 0x5B;	// DXGI_FORMAT_B8G8R8A8_UNORM -> DXGI_FORMAT_B8G8R8A8_UNORM_SRGB
+				}
+			} else if ( FileBuffer::readUInt64Fast( data.data() ) == 0x4E41494441523F23ULL ) {	// "#?RADIAN"
+				isCubeMap = true;
+			}
 		}
-		mipmaps = texLoadDDS( game, filepath, target, mipmaps, data, id );
-	} else if ( filepath.endsWith( ".tga", Qt::CaseInsensitive ) )
-		mipmaps = texLoadTGA( f, format, target, width, height, id );
-	else if ( filepath.endsWith( ".bmp", Qt::CaseInsensitive ) )
-		mipmaps = texLoadBMP( f, format, target, width, height, id );
-	else if ( filepath.endsWith( ".nif", Qt::CaseInsensitive ) || filepath.endsWith( ".texcache", Qt::CaseInsensitive ) )
-		mipmaps = texLoadNIF( game, f, format, target, width, height, id );
-	else if ( filepath.endsWith( ".hdr", Qt::CaseInsensitive ) && ( game == Game::FALLOUT_76 || game == Game::STARFIELD ) )
-		mipmaps = texLoadDDS( game, filepath, target, mipmaps, data, id );
-	else
-		isSupported = false;
+		if ( isCubeMap && ( game == Game::FALLOUT_76 || game == Game::STARFIELD ) ) {
+			mipmaps = texLoadPBRCubeMap( game, filepath, target, mipmaps, data, id );
+		} else {
+			mipmaps = texLoadDDS( game, filepath, target, mipmaps, data, id );
+		}
+	} else {
+		QBuffer f( &data );
+		if ( !f.open( QIODevice::ReadWrite ) )
+			throw QString( "could not open buffer" );
 
-	f.close();
+		if ( filepath.endsWith( ".tga", Qt::CaseInsensitive ) )
+			mipmaps = texLoadTGA( f, format, target, width, height, id );
+		else if ( filepath.endsWith( ".bmp", Qt::CaseInsensitive ) )
+			mipmaps = texLoadBMP( f, format, target, width, height, id );
+		else if ( filepath.endsWith( ".nif", Qt::CaseInsensitive ) || filepath.endsWith( ".texcache", Qt::CaseInsensitive ) )
+			mipmaps = texLoadNIF( game, f, format, target, width, height, id );
+		else
+			isSupported = false;
+
+		f.close();
+	}
 	data.clear();
 
 	if ( mipmaps == 0 )
