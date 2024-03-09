@@ -42,6 +42,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ui/widgets/fileselect.h"
 #include "gamemanager.h"
 #include "libfo76utils/src/fp32vec4.hpp"
+#include "ui/widgets/filebrowser.h"
 
 #include <QApplication>
 #include <QActionGroup>
@@ -55,7 +56,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QImageWriter>
 #include <QKeyEvent>
 #include <QLabel>
-#include <QListWidget>
 #include <QMenu>
 #include <QMimeData>
 #include <QMouseEvent>
@@ -273,30 +273,23 @@ void GLView::selectPBRCubeMap( quint32 bsVersion )
 	bool	isStarfield = ( bsVersion >= 170 );
 	QString	cfgPath( !isStarfield ? "Settings/Render/General/Cube Map Path FO 76" : "Settings/Render/General/Cube Map Path STF" );
 
-	QDialog	dlg;
-	QGridLayout *	layout = new QGridLayout( &dlg );
-	layout->setColumnMinimumWidth( 0, 640 );
-	layout->setRowMinimumHeight( 1, 480 );
-	QLabel *	title = new QLabel( &dlg );
-	title->setText( "Select default environment map" );
-	layout->addWidget( title, 0, 0 );
-	QListWidget *	listWidget = new QListWidget( &dlg );
-	layout->addWidget( listWidget, 1, 0 );
-	QStringList	fileList;
-	Game::GameManager::list_files( fileList, (!isStarfield ? Game::FALLOUT_76 : Game::STARFIELD), &envMapFileListFilterFunction );
-	listWidget->addItems( fileList );
+	std::set< std::string >	fileSet;
+	Game::GameManager::list_files( fileSet, (!isStarfield ? Game::FALLOUT_76 : Game::STARFIELD), &envMapFileListFilterFunction );
 	QSettings	settings;
-	QList< QListWidgetItem * >	curValue( listWidget->findItems( settings.value( cfgPath ).toString(), Qt::MatchExactly ) );
-	if ( curValue.size() == 1 )
-		listWidget->setCurrentItem( curValue[0] );
-	QObject::connect( listWidget, &QListWidget::itemActivated, &dlg, &QDialog::accept );
+	std::string	prvPath( settings.value( cfgPath ).toString().toStdString() );
+	if ( !prvPath.empty() && fileSet.find( prvPath ) == fileSet.end() )
+		prvPath.clear();
 
-	if ( dlg.exec() != QDialog::Accepted )
+	FileBrowserWidget	fileBrowser( 640, 480, "Select Default Environment Map", fileSet, prvPath );
+	const std::string *	newPath = nullptr;
+	if ( fileBrowser.exec() == QDialog::Accepted )
+		newPath = fileBrowser.getItemSelected();
+	if ( !newPath || newPath->empty() )
 		return;
 
 	if ( NifSkope::getOptions() )
 		NifSkope::getOptions()->apply();
-	settings.setValue( cfgPath, listWidget->currentItem()->text() );
+	settings.setValue( cfgPath, QString::fromStdString( *newPath ) );
 	if ( NifSkope::getOptions() )
 		emit NifSkope::getOptions()->loadSettings();
 	if ( scene && scene->renderer ) {
