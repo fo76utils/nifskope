@@ -74,7 +74,7 @@ static void writeData( const NifModel * nif, const QModelIndex & iData, QTextStr
 		// copy texcoords
 
 		QModelIndex iUV = nif->getIndex( iData, "UV Sets" );
-		QVector<Vector2> texco = nif->getArray<Vector2>( iUV.child( 0, 0 ) );
+		QVector<Vector2> texco = nif->getArray<Vector2>( QModelIndex_child( iUV, 0, 0 ) );
 		foreach( Vector2 t, texco )
 		{
 			obj << "vt " << t[0] << " " << 1.0 - t[1] << "\r\n";
@@ -99,7 +99,7 @@ static void writeData( const NifModel * nif, const QModelIndex & iData, QTextStr
 			QVector<QVector<quint16> > strips;
 
 			for ( int r = 0; r < nif->rowCount( iPoints ); r++ )
-				strips.append( nif->getArray<quint16>( iPoints.child( r, 0 ) ) );
+				strips.append( nif->getArray<quint16>( QModelIndex_child( iPoints, r, 0 ) ) );
 
 			tris = triangulate( strips );
 		} else {
@@ -190,7 +190,7 @@ static void writeData( const NifModel * nif, const QModelIndex & iData, QTextStr
 		ofs[1] += coords.count();
 		ofs[2] += norms.count();
 	}
-	
+
 }
 
 static void writeShape( const NifModel * nif, const QModelIndex & iShape, QTextStream & obj, QTextStream & mtl, int ofs[], Transform t )
@@ -217,16 +217,16 @@ static void writeShape( const NifModel * nif, const QModelIndex & iShape, QTextS
 			//matn = nif->get<QString>( iProp, "Name" );
 		} else if ( nif->isNiBlock( iProp, "NiTexturingProperty" ) ) {
 			QModelIndex iBase = nif->getBlockIndex( nif->getLink( nif->getIndex( iProp, "Base Texture" ), "Source" ), "NiSourceTexture" );
-			map_Kd = TexCache::find( nif->get<QString>( iBase, "File Name" ), nif->getFolder() );
+			map_Kd = TexCache::find( nif->get<QString>( iBase, "File Name" ) );
 
 			QModelIndex iDark = nif->getBlockIndex( nif->getLink( nif->getIndex( iProp, "Decal Texture 1" ), "Source" ), "NiSourceTexture" );
-			decal = TexCache::find( nif->get<QString>( iDark, "File Name" ), nif->getFolder() );
+			decal = TexCache::find( nif->get<QString>( iDark, "File Name" ) );
 
 			QModelIndex iBump = nif->getBlockIndex( nif->getLink( nif->getIndex( iProp, "Bump Map Texture" ), "Source" ), "NiSourceTexture" );
-			bump = TexCache::find( nif->get<QString>( iBump, "File Name" ), nif->getFolder() );
+			bump = TexCache::find( nif->get<QString>( iBump, "File Name" ) );
 		} else if ( nif->isNiBlock( iProp, "NiTextureProperty" ) ) {
 			QModelIndex iSource = nif->getBlockIndex( nif->getLink( iProp, "Image" ), "NiImage" );
-			map_Kd = TexCache::find( nif->get<QString>( iSource, "File Name" ), nif->getFolder() );
+			map_Kd = TexCache::find( nif->get<QString>( iSource, "File Name" ) );
 		} else if ( nif->isNiBlock( iProp, "NiSkinInstance" ) ) {
 			QMessageBox::warning(
 				0,
@@ -236,13 +236,13 @@ static void writeShape( const NifModel * nif, const QModelIndex & iShape, QTextS
 					"exported statically in its bind pose, without skin weights." )
 			);
 		} else if ( nif->isNiBlock( iProp, { "BSShaderNoLightingProperty", "SkyShaderProperty", "TileShaderProperty" } ) ) {
-			map_Kd = TexCache::find( nif->get<QString>( iProp, "File Name" ), nif->getFolder() );
+			map_Kd = TexCache::find( nif->get<QString>( iProp, "File Name" ) );
 		} else if ( nif->isNiBlock( iProp, "BSEffectShaderProperty" ) ) {
-			map_Kd = TexCache::find( nif->get<QString>( iProp, "Source Texture" ), nif->getFolder() );
+			map_Kd = TexCache::find( nif->get<QString>( iProp, "Source Texture" ) );
 		} else if ( nif->isNiBlock( iProp, { "BSShaderPPLightingProperty", "Lighting30ShaderProperty", "BSLightingShaderProperty" } ) ) {
 			QModelIndex iArray = nif->getIndex( nif->getBlockIndex( nif->getLink( iProp, "Texture Set" ) ), "Textures" );
-			map_Kd = TexCache::find( nif->get<QString>( iArray.child( 0, 0 ) ), nif->getFolder() );
-			map_Kn = TexCache::find( nif->get<QString>( iArray.child( 1, 0 ) ), nif->getFolder() );
+			map_Kd = TexCache::find( nif->get<QString>( QModelIndex_child( iArray, 0, 0 ) ) );
+			map_Kn = TexCache::find( nif->get<QString>( QModelIndex_child( iArray, 1, 0 ) ) );
 
 			auto iSpec = nif->getIndex( iProp, "Specular Color" );
 			if ( iSpec.isValid() )
@@ -339,8 +339,8 @@ static void writeParent( const NifModel * nif, const QModelIndex & iNode, QTextS
 							QModelIndex iTris = nif->getIndex( iData, "Triangles" );
 
 							for ( int t = 0; t < nif->rowCount( iTris ); t++ ) {
-								Triangle tri = nif->get<Triangle>( iTris.child( t, 0 ), "Triangle" );
-								Vector3 n = nif->get<Vector3>( iTris.child( t, 0 ), "Normal" );
+								Triangle tri = nif->get<Triangle>( QModelIndex_child( iTris, t, 0 ), "Triangle" );
+								Vector3 n = nif->get<Vector3>( QModelIndex_child( iTris, t, 0 ), "Normal" );
 
 								Vector3 a = verts.value( tri[0] );
 								Vector3 b = verts.value( tri[1] );
@@ -367,7 +367,7 @@ static void writeParent( const NifModel * nif, const QModelIndex & iNode, QTextS
 					QModelIndex iStrips = nif->getIndex( iShape, "Strips Data" );
 
 					for ( int r = 0; r < nif->rowCount( iStrips ); r++ )
-						writeData( nif, nif->getBlockIndex( nif->getLink( iStrips.child( r, 0 ) ), "NiTriStripsData" ), obj, ofs, t * bt );
+						writeData( nif, nif->getBlockIndex( nif->getLink( QModelIndex_child( iStrips, r, 0 ) ), "NiTriStripsData" ), obj, ofs, t * bt );
 				}
 			}
 		}
@@ -376,6 +376,7 @@ static void writeParent( const NifModel * nif, const QModelIndex & iNode, QTextS
 
 void exportObj( const NifModel * nif, const Scene* scene, const QModelIndex & index )
 {
+	(void) scene;
 	//objCulling = Options::get()->exportCullEnabled();
 	//objCullRegExp = Options::get()->cullExpression();
 
@@ -516,7 +517,7 @@ static void readMtlLib( const QString & fname, QMap<QString, ObjMaterial> & omat
 	while ( !smtl.atEnd() ) {
 		QString line = smtl.readLine();
 
-		QStringList t = line.split( " ", QString::SkipEmptyParts );
+		QStringList t = line.split( " ", Qt::SkipEmptyParts );
 
 		if ( t.value( 0 ) == "newmtl" ) {
 			if ( !mtlid.isEmpty() )
@@ -560,7 +561,7 @@ static void addLink( NifModel * nif, const QModelIndex & iBlock, const QString &
 	int numIndices = nif->get<int>( iSize );
 	nif->set<int>( iSize, numIndices + 1 );
 	nif->updateArraySize( iArray );
-	nif->setLink( iArray.child( numIndices, 0 ), link );
+	nif->setLink( QModelIndex_child( iArray, numIndices, 0 ), link );
 }
 
 void importObjMain( NifModel * nif, const QModelIndex & index, bool collision )
@@ -686,7 +687,7 @@ void importObjMain( NifModel * nif, const QModelIndex & index, bool collision )
 		// parse each line of the file
 		QString line = sobj.readLine();
 
-		QStringList t = line.split( " ", QString::SkipEmptyParts );
+		QStringList t = line.split( " ", Qt::SkipEmptyParts );
 
 		if ( t.value( 0 ) == "mtllib" ) {
 			readMtlLib( fname.left( qMax( fname.lastIndexOf( "/" ), fname.lastIndexOf( "\\" ) ) + 1 ) + t.value( 1 ), omaterials );
@@ -949,8 +950,8 @@ void importObjMain( NifModel * nif, const QModelIndex & index, bool collision )
 
 			QModelIndex iTexCo = nif->getIndex( iData, "UV Sets" );
 			nif->updateArraySize( iTexCo );
-			nif->updateArraySize( iTexCo.child( 0, 0 ) );
-			nif->setArray<Vector2>( iTexCo.child( 0, 0 ), texco );
+			nif->updateArraySize( QModelIndex_child( iTexCo, 0, 0 ) );
+			nif->setArray<Vector2>( QModelIndex_child( iTexCo, 0, 0 ), texco );
 
 			nif->set<int>( iData, "Has Triangles", 1 );
 			nif->set<int>( iData, "Num Triangles", triangles.count() );
@@ -1075,8 +1076,8 @@ void importObjMain( NifModel * nif, const QModelIndex & index, bool collision )
 				int x = 0;
 				int z = 0;
 				for ( const QVector<quint16> & strip : strips ) {
-					nif->set<int>( iLengths.child( x, 0 ), strip.count() );
-					QModelIndex iStrip = iPoints.child( x, 0 );
+					nif->set<int>( QModelIndex_child( iLengths, x, 0 ), strip.count() );
+					QModelIndex iStrip = QModelIndex_child( iPoints, x, 0 );
 					nif->updateArraySize( iStrip );
 					nif->setArray<quint16>( iStrip, strip );
 					x++;
@@ -1096,7 +1097,7 @@ void importObjMain( NifModel * nif, const QModelIndex & index, bool collision )
 				QPersistentModelIndex iBody = nif->insertNiBlock( "bhkRigidBody" );
 				nif->setLink( iBody, "Shape", nif->getBlockNumber( iStripsShape ) );
 				for( int i = 0; i < nif->rowCount( iBody ); i++ ) {
-					auto iChild = iBody.child( i, 0 );
+					auto iChild = QModelIndex_child( iBody, i, 0 );
 					if ( nif->isArray( iChild ) )
 						nif->updateArraySize( iChild );
 				}
@@ -1109,7 +1110,7 @@ void importObjMain( NifModel * nif, const QModelIndex & index, bool collision )
 
 				nif->setLink( iParent, "Collision Object", nif->getBlockNumber( iObject ) );
 			}
-			
+
 			if ( shapecount >= 1 ) {
 				addLink( nif, iStripsShape, "Strips Data", nif->getBlockNumber( iData ) );
 				nif->set<int>( iStripsShape, "Num Filters", shapecount );
