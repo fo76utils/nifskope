@@ -96,7 +96,7 @@ public:
 		return false;
 	}
 
-	void browseStarfieldMaterial( QLineEdit * le );
+	void browseMaterial( QLineEdit * le, quint32 bsVersion );
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
 	{
@@ -137,9 +137,9 @@ public:
 		QObject::connect( bc, &QPushButton::clicked, &dlg, &QDialog::reject );
 
 		QPushButton * bm = nullptr;
-		if ( nif->getBSVersion() >= 172 ) {
+		if ( nif->getBSVersion() >= 130 ) {
 			bm = new QPushButton( Spell::tr( "Browse Materials" ), &dlg );
-			QObject::connect( bm, &QPushButton::clicked, le, [this, le]() { browseStarfieldMaterial( le ); } );
+			QObject::connect( bm, &QPushButton::clicked, le, [this, le, nif]() { browseMaterial( le, nif->getBSVersion() ); } );
 		}
 
 		QGridLayout * grid = new QGridLayout;
@@ -165,16 +165,26 @@ public:
 	}
 };
 
-void spEditStringIndex::browseStarfieldMaterial( QLineEdit * le )
+static bool bgsmFileNameFilterFunc( void * p, const std::string & s )
+{
+	(void) p;
+	return ( s.starts_with( "materials/" ) && ( s.ends_with( ".bgsm" ) || s.ends_with( ".bgem" ) ) );
+}
+
+void spEditStringIndex::browseMaterial( QLineEdit * le, quint32 bsVersion )
 {
 	std::set< std::string >	materials;
-	const CE2MaterialDB * matDB = Game::GameManager::materials( Game::STARFIELD );
-	if ( matDB )
-			matDB->getMaterialList( materials );
+	if ( bsVersion < 160 ) {
+		Game::GameManager::list_files( materials, ( bsVersion < 151 ? Game::FALLOUT_4 : Game::FALLOUT_76 ), &bgsmFileNameFilterFunc );
+	} else {
+		const CE2MaterialDB * matDB = Game::GameManager::materials( Game::STARFIELD );
+		if ( matDB )
+				matDB->getMaterialList( materials );
+	}
 
 	std::string	prvPath;
 	if ( !le->text().isEmpty() )
-		prvPath = Game::GameManager::get_full_path( le->text(), "materials", ".mat" );
+		prvPath = Game::GameManager::get_full_path( le->text(), "materials", ( bsVersion >= 160 ? ".mat" : nullptr ) );
 
 	FileBrowserWidget	fileBrowser( 800, 600, "Select Material", materials, prvPath );
 	if ( fileBrowser.exec() == QDialog::Accepted ) {
