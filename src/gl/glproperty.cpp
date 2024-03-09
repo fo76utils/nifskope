@@ -849,7 +849,6 @@ void BSShaderLightingProperty::updateImpl( const NifModel * nif, const QModelInd
 
 	if ( index == iBlock ) {
 		bsVersion = (unsigned short) nif->getBSVersion();
-		iMaterialFile = nif->getIndex( iBlock, "Name" );
 		if ( bsVersion >= 160 ) {
 			setSFMaterial( name );
 		} else {
@@ -892,39 +891,11 @@ void BSShaderLightingProperty::clear()
 	Property::clear();
 
 	setMaterial(nullptr);
-	sf_material = nullptr;
-}
 
-bool BSShaderLightingProperty::getSFMaterial( const CE2Material*& m )
-{
-	if ( sfMaterialDB_ID == Game::GameManager::get_material_db_id() ) [[likely]] {
-		m = sf_material;
-		return true;
-	}
-	m = nullptr;
-	bool	r = false;
-	try {
-		CE2MaterialDB *	materials = Game::GameManager::materials( Game::STARFIELD );
-		if ( materials ) {
-			if ( sfMaterialPath.empty() ) {
-				m = materials->loadMaterial( std::string("materials/test/generic/test_generic_white.mat") );
-			} else {
-				m = materials->loadMaterial( sfMaterialPath );
-				r = bool( m );
-			}
-			sf_material = m;
-			sfMaterialDB_ID = Game::GameManager::get_material_db_id();
-		}
-	} catch ( std::exception& e ) {
-		m = nullptr;
-		r = false;
-		sf_material = nullptr;
-		sfMaterialDB_ID = Game::GameManager::get_material_db_id();
-		QMessageBox::critical( nullptr, "NifSkope error", QString("Error loading material '%1': %2" ).arg( sfMaterialPath.c_str() ).arg( e.what() ) );
-	}
-	const NifModel * nif = NifModel::fromValidIndex( iBlock );
-	const_cast< NifModel * >(nif)->loadSFMaterial( iBlock, ( r ? m : nullptr ) );
-	return r;
+	sf_material = nullptr;
+	sfMaterialDB_ID = 0;
+	sf_material_valid = false;
+	sfMaterialPath.clear();
 }
 
 void BSShaderLightingProperty::setMaterial( Material * newMaterial )
@@ -944,6 +915,31 @@ void BSShaderLightingProperty::setSFMaterial( const QString & mat_name )
 	sf_material = nullptr;
 	sfMaterialDB_ID = 0;
 	sfMaterialPath = Game::GameManager::get_full_path( mat_name, "materials/", ".mat" );
+}
+
+void BSShaderLightingProperty::loadSFMaterial()
+{
+	sf_material = nullptr;
+	sf_material_valid = false;
+	try {
+		CE2MaterialDB *	materials = Game::GameManager::materials( Game::STARFIELD );
+		if ( materials ) {
+			if ( !sfMaterialPath.empty() ) {
+				sf_material = materials->loadMaterial( sfMaterialPath );
+				sf_material_valid = bool( sf_material );
+			}
+			if ( !sf_material_valid )
+				sf_material = materials->loadMaterial( std::string("materials/test/generic/test_generic_white.mat") );
+			sfMaterialDB_ID = Game::GameManager::get_material_db_id();
+		}
+	} catch ( std::exception& e ) {
+		sf_material = nullptr;
+		sf_material_valid = false;
+		sfMaterialDB_ID = Game::GameManager::get_material_db_id();
+		QMessageBox::critical( nullptr, "NifSkope error", QString("Error loading material '%1': %2" ).arg( sfMaterialPath.c_str() ).arg( e.what() ) );
+	}
+	const NifModel * nif = NifModel::fromValidIndex( iBlock );
+	const_cast< NifModel * >(nif)->loadSFMaterial( iBlock, ( sf_material_valid ? sf_material : nullptr ) );
 }
 
 bool BSShaderLightingProperty::bind( int id, const QString & fname, TexClampMode mode )
@@ -1225,7 +1221,7 @@ void BSLightingShaderProperty::updateImpl( const NifModel * nif, const QModelInd
 	BSShaderLightingProperty::updateImpl( nif, index );
 
 	if ( index == iBlock ) {
-		if ( name.endsWith(".bgsm", Qt::CaseInsensitive) ) {
+		if ( name.endsWith(".bgsm", Qt::CaseInsensitive) && bsVersion < 160 ) {
 			setMaterial( new ShaderMaterial(name, scene->game) );
 			if ( bsVersion >= 151 )
 				const_cast< NifModel * >(nif)->loadFO76Material( index, material );
@@ -1466,7 +1462,7 @@ void BSEffectShaderProperty::updateImpl( const NifModel * nif, const QModelIndex
 	BSShaderLightingProperty::updateImpl( nif, index );
 
 	if ( index == iBlock ) {
-		if ( name.endsWith(".bgem", Qt::CaseInsensitive) ) {
+		if ( name.endsWith(".bgem", Qt::CaseInsensitive) && bsVersion < 160 ) {
 			setMaterial( new EffectMaterial(name, scene->game) );
 			if ( bsVersion >= 151 )
 				const_cast< NifModel * >(nif)->loadFO76Material( index, material );

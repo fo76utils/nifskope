@@ -36,6 +36,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "icontrollable.h" // Inherited
 #include "data/niftypes.h"
 #include "material.hpp"
+#include "gamemanager.h"
 
 #include <QHash>
 #include <QPersistentModelIndex>
@@ -698,23 +699,30 @@ public:
 	TexClampMode clampMode = CLAMP_S_CLAMP_T;
 
 	Material * getMaterial() const { return material; }
-	bool getSFMaterial( const CE2Material*& m );
+	inline bool getSFMaterial( const CE2Material *& m )
+	{
+		if ( sfMaterialDB_ID != Game::GameManager::get_material_db_id() ) [[unlikely]]
+			loadSFMaterial();
+		m = sf_material;
+		return sf_material_valid;
+	}
 
 protected:
 	ShaderFlags::SF1 flags1 = ShaderFlags::SLSF1_ZBuffer_Test;
 	ShaderFlags::SF2 flags2 = ShaderFlags::SLSF2_ZBuffer_Write;
 
 	//QVector<QString> textures;
-	QPersistentModelIndex	iMaterialFile;	// .mat, .bgsm or .bgem
 	QPersistentModelIndex	iTextureSet;
 	QPersistentModelIndex	iSPData;
 
 	Material * material = nullptr;
 	const CE2Material *	sf_material = nullptr;
 	std::uintptr_t	sfMaterialDB_ID = 0;
+	bool	sf_material_valid = false;
 	std::string	sfMaterialPath;
 	void setMaterial( Material * newMaterial );
 	void setSFMaterial( const QString & mat_name );
+	void loadSFMaterial();
 
 	void updateImpl( const NifModel * nif, const QModelIndex & block ) override;
 	virtual void resetParams();
