@@ -230,7 +230,7 @@ bool Renderer::Shader::load( const QString & filepath )
 		QByteArray data = file.readAll();
 		int	n = data.indexOf( "SF_NUM_TEXTURE_UNITS" );
 		if ( n >= 0 )
-			data.replace( n, 20, QByteArray::number( TexCache::num_texture_units - 1 ) );
+			data.replace( n, 20, QByteArray::number( TexCache::num_texture_units - 2 ) );
 
 		const char * src = data.constData();
 
@@ -722,7 +722,7 @@ bool Renderer::Program::uniSampler_l( BSShaderLightingProperty * bsprop, int & t
 		else
 			c = c + c - 1.0f;					// SNORM
 	}
-	if ( texturePath && !texturePath->empty() && texunit >= 2 && texunit < TexCache::num_texture_units && activateTextureUnit(texunit, true) ) {
+	if ( texturePath && !texturePath->empty() && texunit >= 3 && texunit < TexCache::num_texture_units && activateTextureUnit(texunit, true) ) {
 		TexClampMode	clampMode = TexClampMode::WRAP_S_WRAP_T;
 		if ( uvStream && uvStream->textureAddressMode ) {
 			if ( uvStream->textureAddressMode == 3 ) {
@@ -735,8 +735,8 @@ bool Renderer::Program::uniSampler_l( BSShaderLightingProperty * bsprop, int & t
 				clampMode = TexClampMode::CLAMP_S_CLAMP_T;
 		}
 		if ( bsprop->bind( -1, QString::fromStdString(*texturePath), clampMode ) ) {
-			f->glUniform1i( uniLocation("textureUnits[%d]", texunit - 1), texunit );
-			f->glUniform1i( l1, texunit - 1 );
+			f->glUniform1i( uniLocation("textureUnits[%d]", texunit - 2), texunit );
+			f->glUniform1i( l1, texunit - 2 );
 			texunit++;
 			return true;
 		}
@@ -808,27 +808,29 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 
 	int texunit = 0;
 
-	// Always bind cube to texture unit 0, regardless of shader settings
+	// Always bind cube to texture units 0 and 1, regardless of shader settings
 	prog->uni1i( HAS_MAP_CUBE, scene->hasOption(Scene::DoCubeMapping) && scene->hasOption(Scene::DoLighting) );
 	GLint uniCubeMap = prog->uniformLocations[SAMP_CUBE];
 	if ( uniCubeMap >= 0 ) {
 		if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( cfg.cubeMapPathSTF ) )
 			return false;
-
 		fn->glUniform1i( uniCubeMap, texunit++ );
+
+		uniCubeMap = prog->uniformLocations[SAMP_CUBE_2];
+		if ( uniCubeMap >= 0 ) {
+			if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( cfg.cubeMapPathSTF, true ) )
+				return false;
+			fn->glUniform1i( uniCubeMap, texunit++ );
+		}
 	}
-	// texture unit 1 is reserved for the LUT texture
+	// texture unit 2 is reserved for the LUT texture
 	if ( !activateTextureUnit( texunit, true ) )
 		return false;
 	if ( !bsprop->bind( -1, pbr_lut_sf, TexClampMode::CLAMP_S_CLAMP_T ) )
 		return false;
-	prog->uni1i_l( prog->uniLocation("textureUnits[%d]", texunit - 1), texunit );
+	prog->uni1i_l( prog->uniLocation("textureUnits[%d]", texunit - 2), texunit );
 	texunit++;
 	prog->uni1b_l( prog->uniLocation("isWireframe"), false );
-#if 0
-	// scale for cell_cityplazacube.dds if loaded in float format
-	prog->uni1f_l( prog->uniLocation("envReflection"), 0.000104f );
-#endif
 	prog->uni1i( HAS_SPECULAR, int(scene->hasOption(Scene::DoSpecular)) );
 	prog->uni1i_l( prog->uniLocation("lm.shaderModel"), mat->shaderModel );
 	prog->uni1b_l( prog->uniLocation("lm.isEffect"), isEffect );
@@ -1039,7 +1041,7 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 			return false;
 		if ( !bsprop->bind( -1, white, TexClampMode::WRAP_S_WRAP_T ) )
 			return false;
-		prog->uni1i_l( prog->uniLocation("textureUnits[%d]", texunit - 1), texunit );
+		prog->uni1i_l( prog->uniLocation("textureUnits[%d]", texunit - 2), texunit );
 	}
 
 	prog->uni4m( MAT_VIEW, mesh->viewTrans().toMatrix4() );

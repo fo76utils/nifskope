@@ -212,6 +212,7 @@ struct LayeredMaterial {
 };
 
 uniform samplerCube	CubeMap;
+uniform samplerCube	CubeMap2;
 uniform bool	hasCubeMap;
 uniform bool	hasSpecular;
 
@@ -585,7 +586,7 @@ void main(void)
 		float	m = roughness * (roughness * -4.0 + 10.0);
 		refl = textureLod(CubeMap, reflectedWS, max(m, 0.0)).rgb;
 		refl *= ambient;
-		ambient *= textureLod(CubeMap, normalWS, 6.0).rgb;
+		ambient *= textureLod(CubeMap2, normalWS, 0.0).rgb;
 	} else {
 		ambient /= 12.5;
 		refl = ambient;

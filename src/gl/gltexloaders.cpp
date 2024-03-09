@@ -438,13 +438,13 @@ int texLoadPal( QIODevice & f, int width, int height, int num_mipmaps, int bpp, 
 #define TGA_GREY_RLE     11
 
 //! Load a TGA texture.
-GLuint texLoadTGA( QIODevice & f, QString & texformat, GLenum & target, GLuint & width, GLuint & height, GLuint & id )
+GLuint texLoadTGA( QIODevice & f, QString & texformat, GLenum & target, GLuint & width, GLuint & height, GLuint * id )
 {
 	// see http://en.wikipedia.org/wiki/Truevision_TGA for a lot of this
 	texformat = "TGA";
 	target = GL_TEXTURE_2D;
 
-	glBindTexture( target, id );
+	glBindTexture( target, id[0] );
 
 	// read in tga header
 	quint8 hdr[18];
@@ -579,7 +579,7 @@ quint16 get16( quint8 * x )
 }
 
 //! Load a BMP texture.
-GLuint texLoadBMP( QIODevice & f, QString & texformat, GLenum & target, GLuint & width, GLuint & height, GLuint & id )
+GLuint texLoadBMP( QIODevice & f, QString & texformat, GLenum & target, GLuint & width, GLuint & height, GLuint * id )
 {
 	// read in bmp header
 	quint8 hdr[54];
@@ -591,7 +591,7 @@ GLuint texLoadBMP( QIODevice & f, QString & texformat, GLenum & target, GLuint &
 	texformat = "BMP";
 	target = GL_TEXTURE_2D;
 
-	glBindTexture( target, id );
+	glBindTexture( target, id[0] );
 
 	width  = get32( &hdr[18] );
 	height = get32( &hdr[22] );
@@ -627,7 +627,7 @@ GLuint texLoadBMP( QIODevice & f, QString & texformat, GLenum & target, GLuint &
 
 static SFCubeMapCache	sfCubeMapCache;
 
-GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, GLenum & target, GLuint & mipmaps, QByteArray & data, GLuint & id )
+GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, GLenum & target, GLuint & mipmaps, QByteArray & data, GLuint * id )
 {
 	if ( data.size() < 128 )
 		return 0;
@@ -663,8 +663,19 @@ GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, GLenum &
 		size_t	spaceRequired = width * width * 8 * 4 + 148;
 		if ( data.size() < qsizetype(spaceRequired) )
 			data.resize( spaceRequired );
+		sfCubeMapCache.setRoughnessTable( nullptr, 7 );
 		size_t	newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(data.data()), dataSize, true, spaceRequired, width );
 		data.resize( newSize );
+		QByteArray	tmpData( data );
+		spaceRequired = 32 * 32 * 8 * 4 + 148;
+		if ( tmpData.size() < qsizetype(spaceRequired) )
+			tmpData.resize( spaceRequired );
+		static const float  roughnessDiffuse = 1.0f;
+		sfCubeMapCache.setRoughnessTable( &roughnessDiffuse, 1 );
+		newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(tmpData.data()), size_t(data.size()), true, spaceRequired, 32 );
+		GLuint	tmpMipmaps = 0;
+		if ( newSize && newSize != size_t(data.size()) && newSize >= 148 && tmpData.data()[128] == 0x43 && tmpData.data()[28] == 6 )
+			texLoadDDS( game, filepath, target, tmpMipmaps, tmpData, id + 1 );
 	}
 
 	GLuint result = 0;
@@ -680,7 +691,7 @@ GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, GLenum &
 	}
 
 	if ( result ) {
-		id = result;
+		id[0] = result;
 		mipmaps = (GLuint)texture.levels();
 	} else {
 		mipmaps = 0;
@@ -697,7 +708,7 @@ GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, GLenum &
 }
 
 // (public function, documented in gltexloaders.h)
-bool texLoad( const Game::GameMode game, const QModelIndex & iData, QString & texformat, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint & id )
+bool texLoad( const Game::GameMode game, const QModelIndex & iData, QString & texformat, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint * id )
 {
 	bool ok = false;
 
@@ -859,12 +870,12 @@ bool texLoad( const Game::GameMode game, const QModelIndex & iData, QString & te
 }
 
 //! Load NiPixelData or NiPersistentSrcTextureRendererData from a NifModel
-GLuint texLoadNIF( const Game::GameMode game, QIODevice & f, QString & texformat, GLenum & target, GLuint & width, GLuint & height, GLuint & id )
+GLuint texLoadNIF( const Game::GameMode game, QIODevice & f, QString & texformat, GLenum & target, GLuint & width, GLuint & height, GLuint * id )
 {
 	GLuint mipmaps = 0;
 	target = GL_TEXTURE_2D;
 
-	glBindTexture( target, id );
+	glBindTexture( target, id[0] );
 
 	NifModel pix;
 
@@ -904,7 +915,7 @@ void initializeTextureLoaders( const QOpenGLContext * context )
 }
 
 //! Create texture with glTexStorage2D using GLI
-GLuint GLI_create_texture( gli::texture& texture, GLenum& target, GLuint& id )
+GLuint GLI_create_texture( gli::texture& texture, GLenum& target, GLuint * id )
 {
 	if ( !extStorageSupported )
 		return 0;
@@ -913,9 +924,9 @@ GLuint GLI_create_texture( gli::texture& texture, GLenum& target, GLuint& id )
 	gli::gl::format const format = glProfile.translate( texture.format(), texture.swizzles() );
 	target = glProfile.translate( texture.target() );
 
-	if ( !id )
-		glGenTextures( 1, &id );
-	glBindTexture( target, id );
+	if ( !id[0] )
+		glGenTextures( 1, id );
+	glBindTexture( target, id[0] );
 	glTexParameteri( target, GL_TEXTURE_BASE_LEVEL, 0 );
 	glTexParameteri( target, GL_TEXTURE_MAX_LEVEL, static_cast<GLint>(texture.levels() - 1) );
 	if ( gli::component_count(texture.format()) == 1 ) {
@@ -974,11 +985,11 @@ GLuint GLI_create_texture( gli::texture& texture, GLenum& target, GLuint& id )
 		}
 	}
 
-	return id;
+	return id[0];
 }
 
 //! Fallback for systems that do not have glTexStorage2D
-GLuint GLI_create_texture_fallback( gli::texture& texture, GLenum & target, GLuint& id )
+GLuint GLI_create_texture_fallback( gli::texture& texture, GLenum & target, GLuint * id )
 {
 	if ( texture.empty() )
 		return 0;
@@ -987,9 +998,9 @@ GLuint GLI_create_texture_fallback( gli::texture& texture, GLenum & target, GLui
 	gli::gl::format const fmt = GL.translate( texture.format(), texture.swizzles() );
 	target = GL.translate( texture.target() );
 
-	if ( !id )
-		glGenTextures( 1, &id );
-	glBindTexture( target, id );
+	if ( !id[0] )
+		glGenTextures( 1, id );
+	glBindTexture( target, id[0] );
 	// Base and max level are not supported by OpenGL ES 2.0
 	glTexParameteri( target, GL_TEXTURE_BASE_LEVEL, 0 );
 	glTexParameteri( target, GL_TEXTURE_MAX_LEVEL, static_cast<GLint>(texture.levels() - 1) );
@@ -1038,7 +1049,7 @@ GLuint GLI_create_texture_fallback( gli::texture& texture, GLenum & target, GLui
 			return 0;
 		}
 	}
-	return id;
+	return id[0];
 }
 
 //! Rewrite of gli::load_dds to not crash on invalid textures
@@ -1168,14 +1179,14 @@ gli::texture load_if_valid( const char * data, unsigned int size )
 }
 
 
-bool texLoad( const Game::GameMode game, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint & id)
+bool texLoad( const Game::GameMode game, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint * id)
 {
 	return texLoad( game, filepath, format, target, width, height, mipmaps, *(new QByteArray()), id );
 }
 
 extern void extract_pbr_lut_data( QByteArray& data );
 
-bool texLoad( const Game::GameMode game, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint & id )
+bool texLoad( const Game::GameMode game, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint * id )
 {
 	width = height = mipmaps = 0;
 
@@ -1209,7 +1220,7 @@ bool texLoad( const Game::GameMode game, const QString & filepath, QString & for
 			}
 			format = fmtName;
 			target = GL_TEXTURE_2D;
-			glBindTexture( target, id );
+			glBindTexture( target, id[0] );
 			GLint	savedUnpackAlignment = 4;
 			GLint	savedUnpackSwapBytes = GL_TRUE;
 			glGetIntegerv( GL_UNPACK_ALIGNMENT, &savedUnpackAlignment );
@@ -1793,9 +1804,12 @@ bool texSaveNIF( const Game::GameMode game, NifModel * nif, const QString & file
 	} else if ( filepath.endsWith( ".bmp", Qt::CaseInsensitive ) || filepath.endsWith( ".tga", Qt::CaseInsensitive ) ) {
 		//qDebug() << "Copying from GL buffer";
 
-		GLuint width, height, mipmaps, id;
+		GLuint width, height, mipmaps;
 		GLuint target = GL_TEXTURE_2D;
 		QString format;
+		GLuint id[2];
+		id[0] = 0;
+		id[1] = 0;
 
 		// fastest way to get parameters and ensure texture is active
 		if ( texLoad( game, filepath, format, target, width, height, mipmaps, id ) ) {
