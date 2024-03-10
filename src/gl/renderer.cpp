@@ -614,45 +614,40 @@ bool Renderer::Program::uniSamplerBlank( UniformType var, int & texunit )
 	return true;
 }
 
-#ifdef __GNUC__
-__attribute__ ((__format__ (__printf__, 2, 3)))
-#endif
-int Renderer::Program::uniLocation( const char * fmt, ... )
+int Renderer::Program::uniLocation( const char * fmt, int arg1, int arg2 )
 {
 	char	varNameBuf[256];
-	std::va_list	ap;
-	va_start(ap, fmt);
-	char	*sp = varNameBuf;
-	char	*endp = sp + 254;
+	char *	sp = varNameBuf;
+	char *	endp = sp + 254;
 	std::uint32_t	h = 0;
 	while ( sp < endp ) [[likely]] {
-		char	c = *(fmt++);
+		char	c = *( fmt++ );
 		if ( (unsigned char) c > (unsigned char) '%' ) [[likely]] {
-			*(sp++) = c;
+			*( sp++ ) = c;
 			hashFunctionCRC32C< unsigned char >( h, (unsigned char) c );
 			continue;
 		}
 		if ( !c )
 			break;
 		if ( c == '%' ) [[likely]] {
-			c = *(fmt++);
+			c = *( fmt++ );
 			if ( c == 'd' ) {
-				int	n = va_arg(ap, int);
+				int	n = arg1;
+				arg1 = arg2;
 				if ( n >= 10 ) {
-					c = char((n / 10) & 15) | '0';
-					*(sp++) = c;
+					c = char( (n / 10) & 15 ) | '0';
+					*( sp++ ) = c;
 					hashFunctionCRC32C< unsigned char >( h, (unsigned char) c );
 					n = n % 10;
 				}
-				c = char(n & 15) | '0';
+				c = char( n & 15 ) | '0';
 			} else if ( c != '%' ) {
 				break;
 			}
 		}
-		*(sp++) = c;
+		*( sp++ ) = c;
 		hashFunctionCRC32C< unsigned char >( h, (unsigned char) c );
 	}
-	va_end(ap);
 	*sp = '\0';
 	size_t	hashMask = uniformLocationsSF.size() - 1;
 	size_t	i = h & hashMask;
@@ -808,22 +803,20 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 
 	int texunit = 0;
 
-	// Always bind cube to texture units 0 and 1, regardless of shader settings
+	// Always bind cube to texture units 0 (specular) and 1 (diffuse),
+	// regardless of shader settings
 	prog->uni1i( HAS_MAP_CUBE, scene->hasOption(Scene::DoCubeMapping) && scene->hasOption(Scene::DoLighting) );
 	GLint uniCubeMap = prog->uniformLocations[SAMP_CUBE];
-	if ( uniCubeMap >= 0 ) {
-		if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( cfg.cubeMapPathSTF ) )
-			return false;
-		fn->glUniform1i( uniCubeMap, texunit++ );
+	if ( uniCubeMap < 0 || !activateTextureUnit( texunit ) || !bsprop->bindCube( cfg.cubeMapPathSTF ) )
+		return false;
+	fn->glUniform1i( uniCubeMap, texunit++ );
 
-		uniCubeMap = prog->uniformLocations[SAMP_CUBE_2];
-		if ( uniCubeMap >= 0 ) {
-			if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( cfg.cubeMapPathSTF, true ) )
-				return false;
-			fn->glUniform1i( uniCubeMap, texunit++ );
-		}
-	}
-	// texture unit 2 is reserved for the LUT texture
+	uniCubeMap = prog->uniformLocations[SAMP_CUBE_2];
+	if ( uniCubeMap < 0 || !activateTextureUnit( texunit ) || !bsprop->bindCube( cfg.cubeMapPathSTF, true ) )
+		return false;
+	fn->glUniform1i( uniCubeMap, texunit++ );
+
+	// texture unit 2 is reserved for the environment BRDF LUT texture
 	if ( !activateTextureUnit( texunit, true ) )
 		return false;
 	if ( !bsprop->bind( -1, pbr_lut_sf, TexClampMode::CLAMP_S_CLAMP_T ) )

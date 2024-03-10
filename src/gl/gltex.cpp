@@ -243,7 +243,7 @@ bool TexCache::isSupported( const QString & filePath )
 int TexCache::bind( const QString & fname, Game::GameMode game, bool useSecondTexture )
 {
 	Tex * tx = textures.value( fname );
-	if ( !tx ) {
+	if ( !tx ) [[unlikely]] {
 		tx = new Tex;
 		tx->filename = fname;
 		tx->id[0] = 0;
@@ -253,29 +253,23 @@ int TexCache::bind( const QString & fname, Game::GameMode game, bool useSecondTe
 
 		textures.insert( tx->filename, tx );
 
-		if ( !isSupported( fname ) )
+		if ( !isSupported( fname ) ) {
 			tx->id[0] = 0xFFFFFFFF;
-	}
-
-	if ( tx->id[0] == 0xFFFFFFFF )
-		return 0;
-
-	if ( tx->filepath.isEmpty() )
-		tx->filepath = find( tx->filename, game );
-
-	if ( !tx->id[0] ) {
-		tx->load();
-	} else {
-		if ( !tx->target )
-			tx->target = GL_TEXTURE_2D;
-		if ( useSecondTexture ) {
-			if ( !tx->id[1] )
-				return 0;
-			glBindTexture( tx->target, tx->id[1] );
 		} else {
-			glBindTexture( tx->target, tx->id[0] );
+			tx->filepath = find( tx->filename, game );
+			tx->load();
+			return tx->mipmaps;
 		}
 	}
+
+	if ( tx->id[0] == 0xFFFFFFFF ) [[unlikely]]
+		return 0;
+	if ( !tx->id[size_t(useSecondTexture)] ) [[unlikely]]
+		return 0;
+
+	if ( !tx->target ) [[unlikely]]
+		tx->target = GL_TEXTURE_2D;
+	glBindTexture( tx->target, tx->id[size_t(useSecondTexture)] );
 
 	return tx->mipmaps;
 }
@@ -355,10 +349,10 @@ QString TexCache::info( const QModelIndex & iSource )
 			if ( iData.isValid() ) {
 				Tex * tx = embedTextures.value( iData );
 				temp = QString( "Embedded texture: %1\nWidth: %2\nHeight: %3\nMipmaps: %4" )
-				       .arg( tx->format )
-				       .arg( tx->width )
-				       .arg( tx->height )
-				       .arg( tx->mipmaps );
+						.arg( tx->format )
+						.arg( tx->width )
+						.arg( tx->height )
+						.arg( tx->mipmaps );
 			} else {
 				temp = QString( "Embedded texture invalid" );
 			}
@@ -366,12 +360,12 @@ QString TexCache::info( const QModelIndex & iSource )
 			QString filename = nif->get<QString>( iSource, "File Name" );
 			Tex * tx = textures.value( filename );
 			temp = QString( "External texture file: %1\nTexture path: %2\nFormat: %3\nWidth: %4\nHeight: %5\nMipmaps: %6" )
-			       .arg( tx->filename )
-			       .arg( tx->filepath )
-			       .arg( tx->format )
-			       .arg( tx->width )
-			       .arg( tx->height )
-			       .arg( tx->mipmaps );
+					.arg( tx->filename )
+					.arg( tx->filepath )
+					.arg( tx->format )
+					.arg( tx->width )
+					.arg( tx->height )
+					.arg( tx->mipmaps );
 		}
 	}
 
