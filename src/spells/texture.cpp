@@ -6,6 +6,8 @@
 #include "ui/widgets/fileselect.h"
 #include "ui/widgets/nifeditors.h"
 #include "ui/widgets/uvedit.h"
+#include "ui/widgets/filebrowser.h"
+#include "gamemanager.h"
 
 #include "lib/nvtristripwrapper.h"
 
@@ -133,7 +135,7 @@ QModelIndex getData( const NifModel * nif, const QModelIndex & index )
 {
 	if ( nif->isNiBlock( index, { "NiTriShape", "NiTriStrips", "BSLODTriShape" } ) )
 		return nif->getBlockIndex( nif->getLink( index, "Data" ) );
-	
+
 	if ( nif->isNiBlock( index, { "NiTriShapeData", "NiTriStripsData" } ) )
 		return index;
 
@@ -151,6 +153,12 @@ QModelIndex getUV( const NifModel * nif, const QModelIndex & index )
 	}
 
 	return QModelIndex();
+}
+
+static bool texturePathFilterFunc( void *p, const std::string & s )
+{
+	(void) p;
+	return ( s.starts_with( "textures/" ) && s.ends_with( ".dds" ) );
 }
 
 //! Selects a texture filename
@@ -174,7 +182,7 @@ public:
 		QModelIndex iBlock = nif->getBlockIndex( idx );
 
 		if ( nif->isNiBlock( iBlock, { "NiSourceTexture", "NiImage" } )
-		     && ( iBlock == idx.sibling( idx.row(), 0 ) || nif->itemName( idx ) == "File Name" ) )
+				&& ( iBlock == idx.sibling( idx.row(), 0 ) || nif->itemName( idx ) == "File Name" ) )
 			return true;
 		else if ( nif->isNiBlock( iBlock, "BSShaderNoLightingProperty" ) && nif->itemName( idx ) == "File Name" )
 			return true;
@@ -195,7 +203,7 @@ public:
 		bool setExternal = false;
 
 		if ( nif->isNiBlock( iBlock, { "NiSourceTexture", "NiImage" } )
-		     && ( iBlock == idx.sibling( idx.row(), 0 ) || nif->itemName( idx ) == "File Name" ) )
+				&& ( iBlock == idx.sibling( idx.row(), 0 ) || nif->itemName( idx ) == "File Name" ) )
 		{
 			iFile = nif->getIndex( iBlock, "File Name" );
 			setExternal = true;
@@ -212,40 +220,36 @@ public:
 		if ( !iFile.isValid() )
 			return idx;
 
-		QString file = TexCache::find( nif->get<QString>( iFile ) );
+		Game::GameMode	game = Game::GameManager::get_game( nif->getVersionNumber(), nif->getUserVersion(), nif->getBSVersion() );
+		QString	file = Game::GameManager::find_file( game, nif->get<QString>( iFile ), "textures", ".dds" );
 
-		QSettings settings;
-		QString key = QString( "%1/%2/%3/Last Texture Path" ).arg( "Spells", page(), name() );
+		QSettings	settings;
+		QString	key = QString( "%1/%2/%3/Last Texture Path" ).arg( "Spells", page(), name() );
+		if ( file.isEmpty() )
+			file = settings.value( key, QVariant( QDir::homePath() ) ).toString();
 
-		if ( !QFile::exists( file ) ) {
-			// if file not found in cache, use last texture path
+		std::set< std::string >	texturePaths;
+		Game::GameManager::list_files( texturePaths, game, &texturePathFilterFunc );
+		std::string	prvPath( file.toStdString() );
+		FileBrowserWidget	fileBrowser( 800, 600, "Choose Texture", texturePaths, prvPath );
+		if ( fileBrowser.exec() == QDialog::Accepted ) {
+			const std::string *	s = fileBrowser.getItemSelected();
+			if ( s && !s->empty() ) {
+				file = QString::fromStdString( *s );
+				// save path for future
+				settings.setValue( key, QVariant( file ) );
 
+				if ( setExternal ) {
+					nif->set<int>( iBlock, "Use External", 1 );
 
-			QString defaulttexpath( settings.value( key, QVariant( QDir::homePath() ) ).toString() );
-			//file = QDir(defaulttexpath).filePath(file);
-			file = defaulttexpath;
-		}
-
-
-		// to avoid shortcut resolve bug take *.* as text filter
-		file = QFileDialog::getOpenFileName( qApp->activeWindow(), "Select a texture file", file, "*.*" );
-
-		if ( !file.isEmpty() ) {
-			// save path for future
-			settings.setValue( key, QVariant( QDir( file ).absolutePath() ) );
-
-			file = TexCache::stripPath( file, nif->getFolder() );
-
-			if ( setExternal ) {
-				nif->set<int>( iBlock, "Use External", 1 );
-
-				// update the "File Name" block reference, since it changes when we set Use External
-				if ( nif->checkVersion( 0x0A010000, 0 ) && nif->isNiBlock( iBlock, "NiSourceTexture" ) ) {
-					iFile = nif->getIndex( iBlock, "File Name" );
+					// update the "File Name" block reference, since it changes when we set Use External
+					if ( nif->checkVersion( 0x0A010000, 0 ) && nif->isNiBlock( iBlock, "NiSourceTexture" ) ) {
+						iFile = nif->getIndex( iBlock, "File Name" );
+					}
 				}
-			}
 
-			nif->set<QString>( iFile, file.replace( "/", "\\" ) );
+				nif->set<QString>( iFile, file.replace( "/", "\\" ) );
+			}
 		}
 
 		return idx;
@@ -267,7 +271,7 @@ public:
 		auto iUVs = getUV( nif, index );
 		auto iTriData = nif->getIndex( index, "Num Triangles" );
 		return (iUVs.isValid() || iTriData.isValid())
-			&& (nif->blockInherits( index, "NiTriBasedGeom" ) || nif->blockInherits( index, "BSTriShape" ));
+				&& (nif->blockInherits( index, "NiTriBasedGeom" ) || nif->blockInherits( index, "BSTriShape" ));
 	}
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
@@ -623,7 +627,7 @@ class spTextureTemplate final : public Spell
 		settings.setValue( k( "Wire Color" ), colorARGB );
 
 		// get the selected coord set
-		QModelIndex iSet = iUVs.child( set->currentIndex(), 0 );
+		QModelIndex iSet = QModelIndex_child( iUVs, set->currentIndex(), 0 );
 
 		QVector<Vector2> uv;
 		QVector<Triangle> tri;
@@ -645,7 +649,7 @@ class spTextureTemplate final : public Spell
 				auto numParts = nif->get<int>( iPartBlock, "Num Partitions" );
 				auto iParts = nif->getIndex( iPartBlock, "Partitions" );
 				for ( int i = 0; i < numParts; i++ )
-					tri << nif->getArray<Triangle>( iParts.child( i, 0 ), "Triangles" );
+					tri << nif->getArray<Triangle>( QModelIndex_child( iParts, i, 0 ), "Triangles" );
 
 			} else {
 				iVertData = nif->getIndex( index, "Vertex Data" );
@@ -667,7 +671,7 @@ class spTextureTemplate final : public Spell
 			QVector<QVector<quint16> > strips;
 
 			for ( int r = 0; r < nif->rowCount( iPoints ); r++ )
-				strips.append( nif->getArray<quint16>( iPoints.child( r, 0 ) ) );
+				strips.append( nif->getArray<quint16>( QModelIndex_child( iPoints, r, 0 ) ) );
 
 			tri = triangulate( strips );
 		} else if ( nif->getBSVersion() < 100 ) {
@@ -808,7 +812,7 @@ public:
 			return;
 
 		if ( nif->blockInherits( index, "NiTexturingProperty" )
-		     && nif->get<int>( index, "Apply Mode" ) == rep )
+				&& nif->get<int>( index, "Apply Mode" ) == rep )
 			nif->set<int>( index, "Apply Mode", by );
 
 		QModelIndex iChildren = nif->getIndex( index, "Children" );
@@ -816,7 +820,7 @@ public:
 
 		if ( iChildren.isValid() ) {
 			for ( int c = 0; c < nif->rowCount( iChildren ); c++ ) {
-				qint32 link = nif->getLink( iChildren.child( c, 0 ) );
+				qint32 link = nif->getLink( QModelIndex_child( iChildren, c, 0 ) );
 
 				if ( lChildren.contains( link ) ) {
 					QModelIndex iChild = nif->getBlockIndex( link );
@@ -829,7 +833,7 @@ public:
 
 		if ( iProperties.isValid() ) {
 			for ( int p = 0; p < nif->rowCount( iProperties ); p++ ) {
-				QModelIndex iProp = nif->getBlockIndex( nif->getLink( iProperties.child( p, 0 ) ) );
+				QModelIndex iProp = nif->getBlockIndex( nif->getLink( QModelIndex_child( iProperties, p, 0 ) ) );
 				replaceApplyMode( nif, iProp, rep, by );
 			}
 		}
@@ -1091,6 +1095,7 @@ void TexFlipDialog::textureAction( int i )
 		if ( idx.isValid() ) {
 			listmodel->removeRow( idx.row(), QModelIndex() );
 		}
+		[[fallthrough]];
 
 	case 2:
 
@@ -1144,7 +1149,7 @@ void TexFlipDialog::listFromNif()
 	QStringList sourceFiles;
 
 	for ( int i = 0; i < numSources; i++ ) {
-		QModelIndex source = nif->getBlockIndex( nif->getLink( sources.child( i, 0 ) ) );
+		QModelIndex source = nif->getBlockIndex( nif->getLink( QModelIndex_child( sources, i, 0 ) ) );
 		sourceFiles << nif->get<QString>( source, "File Name" );
 	}
 
@@ -1192,9 +1197,9 @@ public:
 			int num = nif->get<int>( flipController, "Num Sources" );
 			for ( int i = size; i < num; i++ ) {
 				Message::append( tr( "Found %1 textures, have %2" ).arg( size ).arg( num ),
-					tr( "Deleting %1" ).arg( nif->getLink( sources.child( i, 0 ) ) ), QMessageBox::Information
+					tr( "Deleting %1" ).arg( nif->getLink( QModelIndex_child( sources, i, 0 ) ) ), QMessageBox::Information
 				);
-				nif->removeNiBlock( nif->getLink( sources.child( i, 0 ) ) );
+				nif->removeNiBlock( nif->getLink( QModelIndex_child( sources, i, 0 ) ) );
 			}
 		}
 
@@ -1205,11 +1210,11 @@ public:
 			QString name = TexCache::stripPath( flipNames.at( i ), nif->getFolder() );
 			QModelIndex sourceTex;
 
-			if ( nif->getLink( sources.child( i, 0 ) ) == -1 ) {
+			if ( nif->getLink( QModelIndex_child( sources, i, 0 ) ) == -1 ) {
 				sourceTex = nif->insertNiBlock( "NiSourceTexture", nif->getBlockNumber( flipController ) + i + 1 );
-				nif->setLink( sources.child( i, 0 ), nif->getBlockNumber( sourceTex ) );
+				nif->setLink( QModelIndex_child( sources, i, 0 ), nif->getBlockNumber( sourceTex ) );
 			} else {
-				sourceTex = nif->getBlockIndex( nif->getLink( sources.child( i, 0 ) ) );
+				sourceTex = nif->getBlockIndex( nif->getLink( QModelIndex_child( sources, i, 0 ) ) );
 			}
 
 			nif->set<QString>( sourceTex, "File Name", name );

@@ -56,7 +56,7 @@ class spDuplicateBranch final : public Spell
 public:
 	QString name() const override final { return Spell::tr( "Duplicate Branch" ); }
 	QString page() const override final { return Spell::tr( "Block" ); }
-	QKeySequence hotkey() const override final { return{ Qt::CTRL + Qt::Key_D }; }
+	QKeySequence hotkey() const override final { return{ QKeySequence( int( Qt::CTRL ) + int( Qt::Key_D ) ) }; }
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final;
 
@@ -69,7 +69,7 @@ class spRemoveBranch final : public Spell
 public:
 	QString name() const override final { return Spell::tr( "Remove Branch" ); }
 	QString page() const override final { return Spell::tr( "Block" ); }
-	QKeySequence hotkey() const override final { return{ Qt::CTRL + Qt::Key_Delete }; }
+	QKeySequence hotkey() const override final { return{ QKeySequence( int( Qt::CTRL ) + int( Qt::Key_Delete ) ) }; }
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final;
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final;
