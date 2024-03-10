@@ -673,7 +673,7 @@ GLuint texLoadPBRCubeMap( const Game::GameMode game, const QString & filepath, G
 			sfCubeMapCache.setNormalizeLevel( 0.25f );
 			if ( game != Game::FALLOUT_76 )
 				break;
-			for ( size_t i = 0; i <= 124; i++ ) {
+			for ( size_t i = 0; i <= 144; i++ ) {
 				std::uint32_t	tmp = FileBuffer::readUInt32Fast( dataPtr + i );
 				if ( tmp == 0x20592B0A || tmp == 0x20592D0A ) {	// "\n+Y " or "\n-Y "
 					// invert Y axis

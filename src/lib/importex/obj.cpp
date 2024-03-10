@@ -238,11 +238,29 @@ static void writeShape( const NifModel * nif, const QModelIndex & iShape, QTextS
 		} else if ( nif->isNiBlock( iProp, { "BSShaderNoLightingProperty", "SkyShaderProperty", "TileShaderProperty" } ) ) {
 			map_Kd = TexCache::find( nif->get<QString>( iProp, "File Name" ) );
 		} else if ( nif->isNiBlock( iProp, "BSEffectShaderProperty" ) ) {
+			QModelIndex	iMaterial;
+			if ( nif->getBSVersion() >= 151 )
+				iMaterial = nif->getIndex( iProp, "Material" );
+			if ( iMaterial.isValid() )
+				iProp = iMaterial;
+			else
+				iProp = nif->getIndex( iProp, "Shader Property Data" );
 			map_Kd = TexCache::find( nif->get<QString>( iProp, "Source Texture" ) );
 		} else if ( nif->isNiBlock( iProp, { "BSShaderPPLightingProperty", "Lighting30ShaderProperty", "BSLightingShaderProperty" } ) ) {
-			QModelIndex iArray = nif->getIndex( nif->getBlockIndex( nif->getLink( iProp, "Texture Set" ) ), "Textures" );
-			map_Kd = TexCache::find( nif->get<QString>( QModelIndex_child( iArray, 0, 0 ) ) );
-			map_Kn = TexCache::find( nif->get<QString>( QModelIndex_child( iArray, 1, 0 ) ) );
+			QModelIndex	iMaterial;
+			if ( nif->getBSVersion() >= 151 )
+				iMaterial = nif->getIndex( iProp, "Material" );
+			if ( iMaterial.isValid() ) {
+				iProp = iMaterial;
+				map_Kd = TexCache::find( nif->get<QString>( iProp, "Texture 0" ) );
+				map_Kn = TexCache::find( nif->get<QString>( iProp, "Texture 1" ) );
+			} else {
+				if ( nif->isNiBlock( iProp, "BSLightingShaderProperty" ) )
+					iProp = nif->getIndex( iProp, "Shader Property Data" );
+				QModelIndex iArray = nif->getIndex( nif->getBlockIndex( nif->getLink( iProp, "Texture Set" ) ), "Textures" );
+				map_Kd = TexCache::find( nif->get<QString>( QModelIndex_child( iArray, 0, 0 ) ) );
+				map_Kn = TexCache::find( nif->get<QString>( QModelIndex_child( iArray, 1, 0 ) ) );
+			}
 
 			auto iSpec = nif->getIndex( iProp, "Specular Color" );
 			if ( iSpec.isValid() )
@@ -817,9 +835,10 @@ void importObjMain( NifModel * nif, const QModelIndex & index, bool collision )
 					addLink( nif, iShape, "Properties", nif->getBlockNumber( iMaterial ) );
 			} else {
 				shaderProp = nif->insertNiBlock( "BSLightingShaderProperty" );
+				nif->setLink( iShape, "Shader Property", nif->getBlockNumber( shaderProp ) );
+				shaderProp = nif->getIndex( shaderProp, "Shader Property Data" );
 				nif->set<float>( shaderProp, "Glossiness", mtl.Ns );
 				nif->set<Color3>( shaderProp, "Specular Color", mtl.Ks );
-				nif->setLink( iShape, "Shader Property", nif->getBlockNumber( shaderProp ) );
 			}
 
 			if ( !mtl.map_Kd.isEmpty() ) {
@@ -835,9 +854,8 @@ void importObjMain( NifModel * nif, const QModelIndex & index, bool collision )
 					auto iTextures = nif->getIndex( textureSet, "Textures" );
 					nif->updateArraySize( iTextures );
 
-					QVector<QString> texturePaths { mtl.map_Kd, mtl.map_Kn };
-					nif->setArray<QString>( iTextures, texturePaths );
-					nif->updateArraySize( iTextures );
+					nif->set<QString>( QModelIndex_child( iTextures, 0 ), mtl.map_Kd );
+					nif->set<QString>( QModelIndex_child( iTextures, 1 ), mtl.map_Kn );
 				} else if ( nif->getVersionNumber() >= 0x0303000D ) {
 					//Newer versions use NiTexturingProperty and NiSourceTexture
 					if ( iTexProp.isValid() == false || first_tri_shape == false || nif->itemStrType( iTexProp ) != "NiTexturingProperty" ) {
