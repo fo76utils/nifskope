@@ -1112,8 +1112,6 @@ QString BSShaderLightingProperty::fileName( int id ) const
 
 		if ( bsVersion < 151 )
 			return QString();
-		if ( id == 8 || id == 9 )
-			id++;
 	} else if ( bsVersion >= 130 && material && typeid(*material) == typeid(EffectMaterial) ) {
 		// From Fallout 4 or 76 effect material file
 		auto m = static_cast<EffectMaterial*>(material);
@@ -1130,6 +1128,8 @@ QString BSShaderLightingProperty::fileName( int id ) const
 	// From iTextureSet
 	const NifModel * nif = NifModel::fromValidIndex(iTextureSet);
 	if ( nif ) {
+		if ( bsVersion >= 151 && ( id == 8 || id == 9 ) )
+			id++;
 		if ( id >= 0 && id < nif->get<int>(iTextureSet, "Num Textures") ) {
 			QModelIndex iTextures = nif->getIndex(iTextureSet, "Textures");
 			return nif->get<QString>( QModelIndex_child( iTextures, id ) );
