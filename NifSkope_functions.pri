@@ -180,26 +180,27 @@ defineReplace(QtBins) {
         # Copies libgcc*-*, libstdc++-*, libwinpthread-*
         #   Note: As of Qt 5.5, changed `lib*` to `lib*-*` in order to avoid unneeded libs.
 		list += \
-            $$[QT_INSTALL_BINS]/libgcc_s_seh-1.dll \
-            $$[QT_INSTALL_BINS]/libstdc++-6.dll \
-            $$[QT_INSTALL_BINS]/libwinpthread-1.dll \
-            $$[QT_INSTALL_BINS]/SDL2.dll \
-            $$[QT_INSTALL_BINS]/libdouble-conversion.dll \
-            $$[QT_INSTALL_BINS]/libicu*.dll \
-            $$[QT_INSTALL_BINS]/libpcre2-*.dll \
-            $$[QT_INSTALL_BINS]/zlib1.dll \
-            $$[QT_INSTALL_BINS]/libzstd.dll \
-            $$[QT_INSTALL_BINS]/libbz2-1.dll \
-            $$[QT_INSTALL_BINS]/libharfbuzz-0.dll \
-            $$[QT_INSTALL_BINS]/libmd4c.dll \
-            $$[QT_INSTALL_BINS]/libpng16-*.dll \
-            $$[QT_INSTALL_BINS]/libfreetype-6.dll \
-            $$[QT_INSTALL_BINS]/libglib-2.*.dll \
-            $$[QT_INSTALL_BINS]/libgraphite2.dll \
-            $$[QT_INSTALL_BINS]/libintl-8.dll \
+            # $$[QT_INSTALL_BINS]/SDL2.dll \
             $$[QT_INSTALL_BINS]/libbrotlicommon.dll \
             $$[QT_INSTALL_BINS]/libbrotlidec.dll \
-            $$[QT_INSTALL_BINS]/libiconv-2.dll
+            $$[QT_INSTALL_BINS]/libbz2-1.dll \
+            $$[QT_INSTALL_BINS]/libdouble-conversion.dll \
+            $$[QT_INSTALL_BINS]/libfreetype-6.dll \
+            $$[QT_INSTALL_BINS]/libgcc_s_seh-1.dll \
+            $$[QT_INSTALL_BINS]/libglib-2.*.dll \
+            $$[QT_INSTALL_BINS]/libgraphite2.dll \
+            $$[QT_INSTALL_BINS]/libharfbuzz-0.dll \
+            $$[QT_INSTALL_BINS]/libiconv-2.dll \
+            $$[QT_INSTALL_BINS]/libicu*.dll \
+            $$[QT_INSTALL_BINS]/libintl-8.dll \
+            $$[QT_INSTALL_BINS]/libjpeg-8.dll \
+            $$[QT_INSTALL_BINS]/libmd4c.dll \
+            $$[QT_INSTALL_BINS]/libpcre2-*.dll \
+            $$[QT_INSTALL_BINS]/libpng16-*.dll \
+            $$[QT_INSTALL_BINS]/libstdc++-6.dll \
+            $$[QT_INSTALL_BINS]/libwinpthread-1.dll \
+            $$[QT_INSTALL_BINS]/libzstd.dll \
+            $$[QT_INSTALL_BINS]/zlib1.dll
 	}
 
 	return($$list)
