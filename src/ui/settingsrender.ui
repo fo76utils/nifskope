@@ -240,7 +240,7 @@
                </item>
                <item>
                 <property name="text">
-                 <string>512x512 to 8x8 (slow)</string>
+                 <string>512x512 to 8x8</string>
                 </property>
                </item>
               </widget>
