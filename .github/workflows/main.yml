@@ -20,10 +20,10 @@ jobs:
     - name: 'Setup MSYS2'
       uses: msys2/setup-msys2@v2
       with:
-        msystem: MINGW64
+        msystem: UCRT64
         update: true
         cache: true
-        install: 'base-devel mingw-w64-x86_64-toolchain mingw64/mingw-w64-x86_64-SDL2 msys/p7zip mingw-w64-x86_64-qt5-base mingw64/mingw-w64-x86_64-qt5-3d mingw64/mingw-w64-x86_64-qt5-imageformats'
+        install: 'base-devel mingw-w64-ucrt-x86_64-gcc msys/p7zip mingw-w64-ucrt-x86_64-qt5-base mingw-w64-ucrt-x86_64-qt5-3d mingw-w64-ucrt-x86_64-qt5-imageformats'
     
     - name: 'Build with qmake'
       shell: msys2 {0}
