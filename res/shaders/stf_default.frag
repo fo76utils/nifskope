@@ -248,23 +248,7 @@ mat3 btnMatrix_norm = mat3( normalize( btnMatrix[0] ), normalize( btnMatrix[1] )
 
 #define FLT_EPSILON 1.192092896e-07F // smallest such that 1.0 + FLT_EPSILON != 1.0
 
-// approximates Fresnel function for n = 1.5, mapped to f0 to 1.0
-vec3 fresnel_n(float LdotH, vec3 f0)
-{
-	vec4	a = vec4(-1.11050116, 2.79595384, -2.68545268, 1.0);
-	float	f = ((a.r * LdotH + a.g) * LdotH + a.b) * LdotH + a.a;
-	return mix(f0, vec3(1.0), f * f);
-}
-
-// Fresnel function for water (n = 1.3325)
-float fresnel_w(float LdotH)
-{
-	vec4	a = vec4(-1.30214688, 3.32294874, -2.87825095, 1.0);
-	float	f = ((a.r * LdotH + a.g) * LdotH + a.b) * LdotH + a.a;
-	return f * f;
-}
-
-vec3 LightingFuncGGX_REF(float NdotL, float LdotR, float NdotV, float LdotV, float roughness, vec3 F0)
+vec3 LightingFuncGGX_REF(float NdotL, float LdotR, float NdotV, float roughness)
 {
 	float alpha = roughness * roughness;
 	// D (GGX normal distribution)
@@ -274,69 +258,11 @@ vec3 LightingFuncGGX_REF(float NdotL, float LdotR, float NdotV, float LdotV, flo
 	float denom = LdotR * alphaSqr + alphaSqr + (1.0 - LdotR);
 	float D = alphaSqr / (denom * denom);
 	// no pi because BRDF -> lighting
-	// F (Fresnel term)
-	vec3 F = fresnel_n(sqrt(max(LdotV * 0.5 + 0.5, 0.0)), F0);
 	// G (remapped hotness, see Unreal Shading)
 	float	k = (alpha + 2 * roughness + 1) / 8.0;
 	float	G = NdotL / (mix(NdotL, 1, k) * mix(NdotV, 1, k));
 
-	return D * F * G;
-}
-
-float OrenNayarFull(float NdotL, float NdotV, float LdotV, float roughness)
-{
-	float	NdotL0 = clamp(NdotL, FLT_EPSILON, 1.0);
-	float	angleVN = acos(clamp(abs(NdotV), FLT_EPSILON, 1.0));
-	float	angleLN = acos(NdotL0);
-
-	float	alpha = max(angleVN, angleLN);
-	float	beta = min(angleVN, angleLN);
-	float	gamma = (LdotV - NdotL * NdotV) / sqrt(max((1.0 - NdotL * NdotL) * (1.0 - NdotV * NdotV), 0.000025));
-
-	float roughnessSquared = roughness * roughness;
-	float roughnessSquared9 = (roughnessSquared / (roughnessSquared + 0.09));
-
-	// C1, C2, and C3
-	float C1 = 1.0 - 0.5 * (roughnessSquared / (roughnessSquared + 0.33));
-	float C2 = 0.45 * roughnessSquared9;
-
-	if( gamma >= 0.0 ) {
-		C2 *= sin(alpha);
-	} else {
-		C2 *= (sin(alpha) - pow((2.0 * beta) / M_PI, 3.0));
-	}
-
-	float powValue = (4.0 * alpha * beta) / (M_PI * M_PI);
-	float C3 = 0.125 * roughnessSquared9 * powValue * powValue;
-
-	// Avoid asymptote at pi/2
-	float asym = M_PI / 2.0;
-	float lim1 = asym + 0.005;
-	float lim2 = asym - 0.005;
-
-	float ab2 = (alpha + beta) / 2.0;
-
-	if ( beta >= asym && beta < lim1 )
-		beta = lim1;
-	else if ( beta < asym && beta >= lim2 )
-		beta = lim2;
-
-	if ( ab2 >= asym && ab2 < lim1 )
-		ab2 = lim1;
-	else if ( ab2 < asym && ab2 >= lim2 )
-		ab2 = lim2;
-
-	// Reflection
-	float A = gamma * C2 * tan(beta);
-	float B = (1.0 - abs(gamma)) * C3 * tan(ab2);
-
-	float L1 = NdotL0 * (C1 + A + B);
-
-	// Interreflection
-	float twoBetaPi = 2.0 * beta / M_PI;
-	float L2 = 0.17 * NdotL0 * (roughnessSquared / (roughnessSquared + 0.13)) * (1.0 - gamma * twoBetaPi * twoBetaPi);
-
-	return L1 + L2;
+	return vec3(D * G);
 }
 
 vec3 tonemap(vec3 x, float y)
@@ -464,7 +390,7 @@ void main(void)
 		return;
 	}
 
-	vec4	baseMap = vec4(0.0, 0.0, 0.0, 1.0);
+	vec4	baseMap = vec4(1.0);
 	vec3	normal = vec3(0.0, 0.0, 1.0);
 	vec3	pbrMap = vec3(0.75, 0.0, 1.0);	// roughness, metalness, AO
 	float	alpha = 1.0;
@@ -573,11 +499,18 @@ void main(void)
 
 	// Specular
 	float	roughness = pbrMap.r;
-	vec3	spec = LightingFuncGGX_REF(NdotL0, LdotR, NdotV, LdotV, max(roughness, 0.02), f0) * D.rgb;
+	vec3	spec = LightingFuncGGX_REF(NdotL0, LdotR, NdotV, max(roughness, 0.02)) * D.rgb;
 
 	// Diffuse
-	float	diff = OrenNayarFull(NdotL, dot(normal, V), LdotV, roughness);
-	vec3	diffuse = vec3(diff);
+	vec3	diffuse = vec3(NdotL0);
+	float	LdotH = sqrt(max(LdotV * 0.5 + 0.5, 0.0));
+	// Fresnel
+	vec2	fDirect = textureLod(textureUnits[0], vec2(LdotH, NdotL0), 0.0).ba;
+	spec *= mix(f0, vec3(1.0), fDirect.x);
+	vec4	envLUT = textureLod(textureUnits[0], vec2(NdotV, roughness), 0.0);
+	vec2	fDiff = vec2(fDirect.y, envLUT.b);
+	fDiff = fDiff * (LdotH * LdotH * roughness * 2.0 - 0.5) + 1.0;
+	diffuse *= (vec3(1.0) - f0) * fDiff.x * fDiff.y;
 
 	// Environment
 	vec3	refl = vec3(0.0);
@@ -591,24 +524,24 @@ void main(void)
 		ambient /= 12.5;
 		refl = ambient;
 	}
-	vec4	envLUT = textureLod(textureUnits[0], vec2(NdotV, roughness), 0.0);
 	vec3	f = mix(f0, vec3(1.0), envLUT.r);
 	if (!hasSpecular) {
 		albedo = baseMap.rgb;
+		diffuse = vec3(NdotL0);
 		spec = vec3(0.0);
 		f = vec3(0.0);
+	} else {
+		float	fDiffEnv = envLUT.b * ((NdotV + 1.0) * roughness - 0.5) + 1.0;
+		ambient *= (vec3(1.0) - f0) * fDiffEnv;
 	}
-	float	g = envLUT.g;
 	float	ao = pbrMap.b;
-	refl *= f * g * ao;
-	albedo *= (vec3(1.0) - f);
-	ao *= (envLUT.b * 0.5 + 0.625);
+	refl *= f * envLUT.g * ao;
 
 	//vec3 soft = vec3(0.0);
 	//float wrap = NdotL;
 	//if ( hasSoftlight || subsurfaceRolloff > 0.0 ) {
 	//	wrap = (wrap + subsurfaceRolloff) / (1.0 + subsurfaceRolloff);
-	//	soft = albedo * max(0.0, wrap) * smoothstep(1.0, 0.0, sqrt(diff));
+	//	soft = albedo * max(0.0, wrap) * smoothstep(1.0, 0.0, sqrt(NdotL0));
 	//
 	//	diffuse += soft;
 	//}
