@@ -10,3 +10,6 @@
 [submodule "lib/gli"]
 	path = lib/gli
 	url = https://github.com/g-truc/gli.git
+[submodule "lib/libfo76utils"]
+	path = lib/libfo76utils
+	url = https://github.com/fo76utils/libfo76utils.git
