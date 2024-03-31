@@ -94,7 +94,7 @@ extern bool texLoad( const Game::GameMode game, const QString & filepath, QStrin
  * @param mipmaps	Contains the number of mipmaps on successful load.
  * @return			True if the load was successful, false otherwise.
  */
-extern bool texLoad( const Game::GameMode game, const QModelIndex & iData, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint * id );
+extern bool texLoad( const QModelIndex & iData, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint * id );
 
 /*! A function which checks whether the given file can be loaded.
  *

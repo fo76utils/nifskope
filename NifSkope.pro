@@ -235,7 +235,6 @@ SOURCES += \
 	src/gl/gltex.cpp \
 	src/gl/gltexloaders.cpp \
 	src/gl/gltools.cpp \
-	src/gl/pbr_lut_data.cpp \
 	src/gl/renderer.cpp \
 	src/io/materialfile.cpp \
 	src/io/MeshFile.cpp \
@@ -403,7 +402,7 @@ libfo76utils {
     SOURCES += $$PWD/lib/libfo76utils/src/bsrefl.cpp
     SOURCES += $$PWD/lib/libfo76utils/src/common.cpp
     # SOURCES += $$PWD/lib/libfo76utils/src/courb24.cpp
-    SOURCES += $$PWD/lib/libfo76utils/src/ddstxt.cpp
+    SOURCES += $$PWD/lib/libfo76utils/src/ddstxt16.cpp
     # SOURCES += $$PWD/lib/libfo76utils/src/downsamp.cpp
     # SOURCES += $$PWD/lib/libfo76utils/src/esmfile.cpp
     SOURCES += $$PWD/lib/libfo76utils/src/filebuf.cpp
@@ -414,9 +413,9 @@ libfo76utils {
     SOURCES += $$PWD/lib/libfo76utils/src/mat_dump.cpp
     SOURCES += $$PWD/lib/libfo76utils/src/mat_json.cpp
     SOURCES += $$PWD/lib/libfo76utils/src/mat_list.cpp
-    # SOURCES += $$PWD/lib/libfo76utils/src/pbr_lut.cpp
+    SOURCES += $$PWD/lib/libfo76utils/src/pbr_lut.cpp
     # SOURCES += $$PWD/lib/libfo76utils/src/sdlvideo.cpp
-    SOURCES += $$PWD/lib/libfo76utils/src/sfcube.cpp
+    SOURCES += $$PWD/lib/libfo76utils/src/sfcube2.cpp
     # SOURCES += $$PWD/lib/libfo76utils/src/stringdb.cpp
     # SOURCES += $$PWD/lib/libfo76utils/src/viewrtbl.cpp
     SOURCES += $$PWD/lib/libfo76utils/src/zlib.cpp

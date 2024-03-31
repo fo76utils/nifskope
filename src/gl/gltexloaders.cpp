@@ -37,7 +37,8 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "model/nifmodel.h"
 
 #include "dds.h"
-#include "libfo76utils/src/sfcube.hpp"
+#include "libfo76utils/src/pbr_lut.hpp"
+#include "libfo76utils/src/sfcube2.hpp"
 
 #include <QBuffer>
 #include <QByteArray>
@@ -74,18 +75,19 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
-bool extInitialized = false;
-bool extSupported = true;
-bool extStorageSupported = true;
-
+static bool extInitialized = false;
 
 #ifndef __APPLE__
 // OpenGL 4.2
-PFNGLTEXSTORAGE2DPROC glTexStorage2D = nullptr;
-#ifdef _WIN32
-PFNGLCOMPRESSEDTEXSUBIMAGE2DPROC glCompressedTexSubImage2D = nullptr;
-PFNGLCOMPRESSEDTEXIMAGE2DPROC glCompressedTexImage2D = nullptr;
+static PFNGLTEXSTORAGE2DPROC glTexStorage2D = nullptr;
+static bool extStorageSupported = true;
+#else
+static bool extStorageSupported = false;
 #endif
+
+#ifdef Q_OS_WIN32
+static PFNGLCOMPRESSEDTEXSUBIMAGE2DPROC glCompressedTexSubImage2D = nullptr;
+static PFNGLCOMPRESSEDTEXIMAGE2DPROC glCompressedTexImage2D = nullptr;
 #endif
 
 #define FOURCC_DXT1 MAKEFOURCC( 'D', 'X', 'T', '1' )
@@ -625,7 +627,7 @@ GLuint texLoadBMP( QIODevice & f, QString & texformat, GLenum & target, GLuint &
 	return 0;
 }
 
-GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, GLenum & target, GLuint & mipmaps, QByteArray & data, GLuint * id )
+GLuint texLoadDDS( const QString & filepath, GLenum & target, GLuint & mipmaps, QByteArray & data, GLuint * id )
 {
 	if ( data.size() < 128 )
 		return 0;
@@ -636,7 +638,11 @@ GLuint texLoadDDS( const Game::GameMode game, const QString & filepath, GLenum &
 		texture = load_if_valid( data.constData(), data.size() );
 		if ( !texture.empty() )
 			result = GLI_create_texture( texture, target, id );
+#ifdef Q_OS_WIN32
 	} else if ( glCompressedTexImage2D ) {
+#else
+	} else {
+#endif
 		texture = load_if_valid( data.constData(), data.size() );
 		if ( !texture.empty() )
 			result = GLI_create_texture_fallback( texture, target, id );
@@ -703,6 +709,7 @@ GLuint texLoadPBRCubeMap( const Game::GameMode game, const QString & filepath, G
 		if ( data.size() < qsizetype(spaceRequired) )
 			data.resize( spaceRequired );
 		sfCubeMapCache.setRoughnessTable( nullptr, 7 );
+		sfCubeMapCache.setImportanceSamplingThreshold( 0.125f );
 		size_t	newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(data.data()), dataSize, true, spaceRequired, width );
 		data.resize( newSize );
 	}
@@ -720,10 +727,10 @@ GLuint texLoadPBRCubeMap( const Game::GameMode game, const QString & filepath, G
 		size_t	newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(tmpData.data()), dataSize, true, spaceRequired, width );
 		tmpData.resize( newSize );
 		GLuint	tmpMipmaps = 0;
-		(void) texLoadDDS( game, filepath, target, tmpMipmaps, tmpData, id + 1 );
+		(void) texLoadDDS( filepath, target, tmpMipmaps, tmpData, id + 1 );
 	}
 
-	return texLoadDDS( game, filepath, target, mipmaps, data, id );
+	return texLoadDDS( filepath, target, mipmaps, data, id );
 }
 
 bool texLoadColor( const Game::GameMode game, const QString & filepath, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint * id )
@@ -757,11 +764,11 @@ bool texLoadColor( const Game::GameMode game, const QString & filepath, GLenum &
 
 	if ( isCubeMap && ( game == Game::FALLOUT_76 || game == Game::STARFIELD ) )
 		return bool( texLoadPBRCubeMap( game, filepath, target, mipmaps, data, id ) );
-	return bool( texLoadDDS( game, filepath, target, mipmaps, data, id ) );
+	return bool( texLoadDDS( filepath, target, mipmaps, data, id ) );
 }
 
 // (public function, documented in gltexloaders.h)
-bool texLoad( const Game::GameMode game, const QModelIndex & iData, QString & texformat, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint * id )
+bool texLoad( const QModelIndex & iData, QString & texformat, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint * id )
 {
 	bool ok = false;
 
@@ -912,7 +919,7 @@ bool texLoad( const Game::GameMode game, const QModelIndex & iData, QString & te
 			buf.buffer().prepend( QByteArray::fromRawData( dds, sizeof( hdr ) ) );
 			buf.buffer().prepend( QByteArray::fromStdString( "DDS " ) );
 
-			mipmaps = texLoadDDS( game, QString( "[%1] NiPixelData" ).arg( nif->getBlockNumber( iData ) ),
+			mipmaps = texLoadDDS( QString( "[%1] NiPixelData" ).arg( nif->getBlockNumber( iData ) ),
 									target, mipmaps, buf.buffer(), id );
 
 			ok = (mipmaps > 0);
@@ -923,7 +930,7 @@ bool texLoad( const Game::GameMode game, const QModelIndex & iData, QString & te
 }
 
 //! Load NiPixelData or NiPersistentSrcTextureRendererData from a NifModel
-GLuint texLoadNIF( const Game::GameMode game, QIODevice & f, QString & texformat, GLenum & target, GLuint & width, GLuint & height, GLuint * id )
+GLuint texLoadNIF( QIODevice & f, QString & texformat, GLenum & target, GLuint & width, GLuint & height, GLuint * id )
 {
 	GLuint mipmaps = 0;
 	target = GL_TEXTURE_2D;
@@ -943,7 +950,7 @@ GLuint texLoadNIF( const Game::GameMode game, QIODevice & f, QString & texformat
 		if ( !iData.isValid() || iData == QModelIndex() )
 			throw QString( "this is not a normal .nif file; there should be only pixel data as root blocks" );
 
-		texLoad( game, iData, texformat, target, width, height, mipmaps, id );
+		texLoad( iData, texformat, target, width, height, mipmaps, id );
 	}
 
 	return mipmaps;
@@ -955,13 +962,15 @@ void initializeTextureLoaders( const QOpenGLContext * context )
 	if ( !extInitialized ) {
 #ifndef __APPLE__
 		glTexStorage2D = (PFNGLTEXSTORAGE2DPROC)context->getProcAddress( "glTexStorage2D" );
-#ifdef _WIN32
+		if ( !glTexStorage2D )
+			extStorageSupported = false;
+#endif
+#ifdef Q_OS_WIN32
 		glCompressedTexSubImage2D = (PFNGLCOMPRESSEDTEXSUBIMAGE2DPROC)context->getProcAddress( "glCompressedTexSubImage2D" );
 		glCompressedTexImage2D = (PFNGLCOMPRESSEDTEXIMAGE2DPROC)context->getProcAddress( "glCompressedTexImage2D" );
-#endif
-#endif
-		if ( !glTexStorage2D || !glCompressedTexSubImage2D )
+		if ( !glCompressedTexSubImage2D )
 			extStorageSupported = false;
+#endif
 
 		extInitialized = true;
 	}
@@ -1234,10 +1243,20 @@ gli::texture load_if_valid( const char * data, unsigned int size )
 
 bool texLoad( const Game::GameMode game, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint * id)
 {
-	return texLoad( game, filepath, format, target, width, height, mipmaps, *(new QByteArray()), id );
+	QByteArray	tmp;
+	return texLoad( game, filepath, format, target, width, height, mipmaps, tmp, id );
 }
 
-extern void extract_pbr_lut_data( QByteArray& data );
+static void extract_pbr_lut_data( QByteArray & data )
+{
+	static QByteArray	pbrLUTData;
+	if ( pbrLUTData.isEmpty() ) {
+		SF_PBR_Tables	pbrLUT( 512, 4096 );
+		pbrLUTData.resize( qsizetype( pbrLUT.getImageData().size() ) );
+		std::memcpy( pbrLUTData.data(), pbrLUT.getImageData().data(), pbrLUT.getImageData().size() );
+	}
+	data = pbrLUTData;
+}
 
 bool texLoad( const Game::GameMode game, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint * id )
 {
@@ -1274,7 +1293,7 @@ bool texLoad( const Game::GameMode game, const QString & filepath, QString & for
 		if ( isCubeMap && ( game == Game::FALLOUT_76 || game == Game::STARFIELD ) ) {
 			mipmaps = texLoadPBRCubeMap( game, filepath, target, mipmaps, data, id );
 		} else {
-			mipmaps = texLoadDDS( game, filepath, target, mipmaps, data, id );
+			mipmaps = texLoadDDS( filepath, target, mipmaps, data, id );
 		}
 	} else {
 		QBuffer f( &data );
@@ -1286,7 +1305,7 @@ bool texLoad( const Game::GameMode game, const QString & filepath, QString & for
 		else if ( filepath.endsWith( ".bmp", Qt::CaseInsensitive ) )
 			mipmaps = texLoadBMP( f, format, target, width, height, id );
 		else if ( filepath.endsWith( ".nif", Qt::CaseInsensitive ) || filepath.endsWith( ".texcache", Qt::CaseInsensitive ) )
-			mipmaps = texLoadNIF( game, f, format, target, width, height, id );
+			mipmaps = texLoadNIF( f, format, target, width, height, id );
 		else
 			isSupported = false;
 
