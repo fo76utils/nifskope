@@ -6,11 +6,26 @@ This is an experimental fork of 2.0.dev9 with partial support for Starfield mate
 
 ### Download
 
-Binary packages for Windows can be downloaded from [Releases](https://github.com/fo76utils/nifskope/releases). The most up to date builds (Windows and Linux) are automatically generated on any change to the source code, and are available as artifacts from GitHub workflows under [Actions](https://github.com/fo76utils/nifskope/actions). Note that downloading artifacts requires signing in to GitHub. Binaries have been built for CPUs with support for AVX2.
-
-Compiling the source code requires Qt 5, and [MSYS2](https://www.msys2.org/) on Windows. The complete list of dependencies, and the commands needed for building can be found in [main.yml](https://github.com/fo76utils/nifskope/blob/develop/.github/workflows/main.yml).
+Binary packages for Windows and Linux can be downloaded from [Releases](https://github.com/fo76utils/nifskope/releases). The most up to date builds are automatically generated on any change to the source code, and are available as artifacts from GitHub workflows under [Actions](https://github.com/fo76utils/nifskope/actions). Note that downloading artifacts requires signing in to GitHub. Binaries have been built for CPUs with support for AVX2.
 
 You can also download the latest official release from [niftools/nifskope](https://github.com/niftools/nifskope/releases), or development builds from [hexabits/nifskope](https://github.com/hexabits/nifskope/releases).
+
+#### Building from source code
+
+Compiling NifSkope requires Qt 5.15. On Windows, [MSYS2](https://www.msys2.org/) can be used for building. After running the MSYS2 installer, use the following commands in the MSYS2-UCRT64 shell to install required packages:
+
+    pacman -S base-devel mingw-w64-ucrt-x86_64-gcc
+    pacman -S mingw-w64-ucrt-x86_64-qt5-base mingw-w64-ucrt-x86_64-qt5-3d mingw-w64-ucrt-x86_64-qt5-imageformats
+    pacman -S git
+
+All installed MSYS2 packages can be updated anytime later by running the command '**pacman -Syu**'. To download the complete NifSkope source code, use '**git clone**' as follows:
+
+    git clone --recurse-submodules https://github.com/fo76utils/nifskope.git
+
+Finally, run '**qmake**' and then '**make**' to build the source code (the -j 8 option sets the number of processes to run in parallel). The resulting binaries and required DLL files and resources are placed under '**release**'.
+
+    qmake NifSkope.pro
+    make -j 8
 
 ### Issues
 
