@@ -32,7 +32,7 @@ public:
 	{
 		QString	materialPath( nif->resolveString( nif->getItem( index ) ) );
 		if ( !materialPath.isEmpty() ) {
-			std::string	matFilePath( materialPath.toStdString() );
+			std::string	matFilePath( Game::GameManager::get_full_path( materialPath, "materials/", ".mat" ) );
 			std::string	matFileData;
 			try {
 				CE2MaterialDB *	materials = Game::GameManager::materials( Game::STARFIELD );
