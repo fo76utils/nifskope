@@ -406,7 +406,7 @@ QStringList GameManager::folders( const GameMode game )
 
 bool GameManager::status(const GameMode game)
 {
-	return get()->game_status.value(game, false);
+	return get()->game_status.value(game, true);
 }
 
 std::string GameManager::get_full_path(const QString& name, const char* archive_folder, const char* extension)
