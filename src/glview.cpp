@@ -611,6 +611,9 @@ void GLView::paintGL()
 				glPopMatrix();
 				glDisable( GL_BLEND );
 			}
+		} else {
+			// environment map rotation around the Z axis
+			lightDir[3] = planarAngle / 180.0f;
 		}
 
 		float amb = ambient;

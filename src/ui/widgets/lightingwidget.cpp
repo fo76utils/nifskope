@@ -24,20 +24,18 @@ LightingWidget::LightingWidget( GLView * ogl, QWidget * parent ) : QWidget(paren
 	setDefaults();
 
 	ui->sldDeclination->setDisabled( ui->btnFrontal->isChecked() );
-	ui->sldPlanarAngle->setDisabled( ui->btnFrontal->isChecked() );
 
-	// Disable lighting sliders when Frontal
+	// Disable declination slider when Frontal (planar angle is still used to rotate the environment map instead)
 	connect( ui->btnFrontal, &QToolButton::toggled, ui->sldDeclination, &QSlider::setDisabled );
-	connect( ui->btnFrontal, &QToolButton::toggled, ui->sldPlanarAngle, &QSlider::setDisabled );
 
 	// Disable Frontal checkbox (and sliders) when no lighting
 	connect( ui->btnLighting, &QToolButton::toggled, ui->btnFrontal, &QToolButton::setEnabled );
 	connect( ui->btnLighting, &QToolButton::toggled, [&]( bool checked ) {
 		if ( !ui->btnFrontal->isChecked() ) {
-			// Don't enable the sliders if Frontal is checked
+			// Don't enable the slider if Frontal is checked
 			ui->sldDeclination->setEnabled( checked );
-			ui->sldPlanarAngle->setEnabled( checked );
 		}
+		ui->sldPlanarAngle->setEnabled( checked );
 	} );
 
 	// Inform ogl of changes
