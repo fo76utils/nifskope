@@ -49,7 +49,7 @@ public:
 			}
 			if ( item->parent() && item->parent()->name() == "Textures" )
 				break;
-			if ( item->name() == "Path" || item->name() == "Mesh Path" )
+			if ( item->name() == "Path" || item->name() == "Mesh Path" || item->name().startsWith( "Texture " ) )
 				break;
 			return false;
 		} while ( false );
