@@ -35,11 +35,8 @@ public:
 	bool constant() const override final { return true; }
 	bool instant() const override final { return true; }
 
-	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
+	static bool is_Applicable( const NifModel * nif, const NifItem * item )
 	{
-		const NifItem * item = nif->getItem( index );
-		if ( !item )
-			return false;
 		NifValue::Type	vt = item->valueType();
 		if ( vt != NifValue::tStringIndex && vt != NifValue::tSizedString ) {
 			if ( !( nif->checkVersion( 0x14010003, 0 ) && ( vt == NifValue::tString || vt == NifValue::tFilePath ) ) )
@@ -59,10 +56,72 @@ public:
 		return !( nif->resolveString( item ).isEmpty() );
 	}
 
+	static std::string getNifItemFilePath( NifModel * nif, const NifItem * item );
+	static std::string getOutputDirectory();
+	static void writeFileWithPath( const char * fileName, const void * buf, size_t bufSize );
+
+	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
+	{
+		const NifItem * item = nif->getItem( index );
+		return ( item && is_Applicable( nif, item ) );
+	}
+
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final;
 };
 
-static void writeFileWithPath( const char * fileName, const void * buf, size_t bufSize )
+std::string spResourceFileExtract::getNifItemFilePath( NifModel * nif, const NifItem * item )
+{
+	const char *	archiveFolder = nullptr;
+	const char *	extension = nullptr;
+
+	quint32	bsVersion = nif->getBSVersion();
+	if ( item->parent() && bsVersion >= 130 && item->name() == "Name" ) {
+		if ( item->parent()->name() == "BSLightingShaderProperty" ) {
+			archiveFolder = "materials/";
+			extension = ( bsVersion < 160 ? ".bgsm" : ".mat" );
+		} else if ( item->parent()->name() == "BSEffectShaderProperty" ) {
+			archiveFolder = "materials/";
+			extension = ( bsVersion < 160 ? ".bgem" : ".mat" );
+		}
+	} else if ( ( item->parent() && item->parent()->name() == "Textures" ) || item->name().contains( "Texture" ) || ( bsVersion >= 160 && item->name() == "Path" ) ) {
+		archiveFolder = "textures/";
+		extension = ".dds";
+	} else if ( bsVersion >= 160 && item->name() == "Mesh Path" ) {
+		archiveFolder = "geometries/";
+		extension = ".mesh";
+	}
+
+	QString	filePath( nif->resolveString( item ) );
+	if ( filePath.isEmpty() )
+		return std::string();
+	return Game::GameManager::get_full_path( filePath, archiveFolder, extension );
+}
+
+std::string spResourceFileExtract::getOutputDirectory()
+{
+	QSettings	settings;
+	QString	key = QString( "Spells//Extract File/Last File Path" );
+	QString	dstPath( settings.value( key ).toString() );
+	{
+		QFileDialog	dialog;
+		dialog.setFileMode( QFileDialog::Directory );
+		if ( !dstPath.isEmpty() )
+			dialog.selectFile( dstPath );
+		if ( !dialog.exec() )
+			return std::string();
+		dstPath = dialog.selectedFiles().at( 0 );
+	}
+	if ( dstPath.isEmpty() )
+		return std::string();
+	settings.setValue( key, QVariant(dstPath) );
+
+	std::string	fullPath( dstPath.replace( QChar('\\'), QChar('/') ).toStdString() );
+	if ( !fullPath.ends_with( '/' ) )
+		fullPath += '/';
+	return fullPath;
+}
+
+void spResourceFileExtract::writeFileWithPath( const char * fileName, const void * buf, size_t bufSize )
 {
 	OutputFile *	f = nullptr;
 	try {
@@ -106,73 +165,35 @@ QModelIndex spResourceFileExtract::cast( NifModel * nif, const QModelIndex & ind
 	if ( !item )
 		return index;
 
-	const char *	archiveFolder = nullptr;
-	const char *	extension = nullptr;
-
-	if ( item->parent() && nif->getBSVersion() >= 130 && item->name() == "Name" ) {
-		if ( item->parent()->name() == "BSLightingShaderProperty" ) {
-			archiveFolder = "materials/";
-			extension = ( nif->getBSVersion() < 160 ? ".bgsm" : ".mat" );
-		} else if ( item->parent()->name() == "BSEffectShaderProperty" ) {
-			archiveFolder = "materials/";
-			extension = ( nif->getBSVersion() < 160 ? ".bgem" : ".mat" );
-		}
-	} else if ( ( item->parent() && item->parent()->name() == "Textures" ) || item->name().contains( "Texture" ) || ( nif->getBSVersion() >= 160 && item->name() == "Path" ) ) {
-		archiveFolder = "textures/";
-		extension = ".dds";
-	} else if ( nif->getBSVersion() >= 160 && item->name() == "Mesh Path" ) {
-		archiveFolder = "geometries/";
-		extension = ".mesh";
-	}
-
-	QString	filePath( nif->resolveString( item ) );
-	if ( filePath.isEmpty() )
+	std::string	filePath( getNifItemFilePath( nif, item ) );
+	if ( filePath.empty() )
 		return index;
+
 	std::string	matFileData;
 	try {
-		if ( extension && std::string( extension ) == ".mat" ) {
-			std::string	matFilePath( Game::GameManager::get_full_path( filePath, archiveFolder, extension ) );
-			filePath = QString::fromStdString( matFilePath );
+		if ( nif->getBSVersion() >= 160 && filePath.ends_with( ".mat" ) && filePath.starts_with( "materials/" ) ) {
 			CE2MaterialDB *	materials = Game::GameManager::materials( game );
 			if ( materials ) {
-				(void) materials->loadMaterial( matFilePath );
-				materials->getJSONMaterial( matFileData, matFilePath );
+				(void) materials->loadMaterial( filePath );
+				materials->getJSONMaterial( matFileData, filePath );
 			}
 			if ( matFileData.empty() )
 				return index;
-		} else {
-			filePath = Game::GameManager::find_file( game, filePath, archiveFolder, extension );
-			if ( filePath.isEmpty() )
-				return index;
-		}
-
-		QSettings	settings;
-		QString	key = QString( "%1/%2/%3/Last File Path" ).arg( "Spells", page(), name() );
-		QString	dstPath( settings.value( key ).toString() );
-		{
-			QFileDialog	dialog;
-			dialog.setFileMode( QFileDialog::Directory );
-			if ( !dstPath.isEmpty() )
-				dialog.selectFile( dstPath );
-			if ( !dialog.exec() )
-				return index;
-			dstPath = dialog.selectedFiles().at( 0 );
-		}
-		if ( dstPath.isEmpty() )
+		} else if ( Game::GameManager::find_file( game, QString::fromStdString( filePath ), nullptr, nullptr ).isEmpty() ) {
 			return index;
-		settings.setValue( key, QVariant(dstPath) );
+		}
 
-		std::string	fullPath( dstPath.replace( QChar('\\'), QChar('/') ).toStdString() );
-		if ( !fullPath.ends_with( '/' ) )
-			fullPath += '/';
-		fullPath += filePath.toStdString();
+		std::string	fullPath( getOutputDirectory() );
+		if ( fullPath.empty() )
+			return index;
+		fullPath += filePath;
 
 		if ( !matFileData.empty() ) {
 			matFileData += '\n';
 			writeFileWithPath( fullPath.c_str(), matFileData.c_str(), matFileData.length() );
 		} else {
 			std::vector< unsigned char >	fileData;
-			if ( Game::GameManager::get_file( fileData, game, filePath, nullptr, nullptr ) )
+			if ( Game::GameManager::get_file( fileData, game, filePath ) )
 				writeFileWithPath( fullPath.c_str(), fileData.data(), fileData.size() );
 		}
 	} catch ( std::exception & e ) {
@@ -182,4 +203,94 @@ QModelIndex spResourceFileExtract::cast( NifModel * nif, const QModelIndex & ind
 }
 
 REGISTER_SPELL( spResourceFileExtract )
+
+//! Extract all resource files
+class spExtractAllResources final : public Spell
+{
+public:
+	QString name() const override final { return Spell::tr( "Extract Resource Files" ); }
+	QString page() const override final { return Spell::tr( "" ); }
+	QIcon icon() const override final
+	{
+		return QIcon();
+	}
+	bool constant() const override final { return true; }
+	bool instant() const override final { return true; }
+
+	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
+	{
+		return ( nif && !index.isValid() );
+	}
+
+	static void findPaths( std::set< std::string > & fileSet, NifModel * nif, const NifItem * item );
+	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final;
+};
+
+void spExtractAllResources::findPaths( std::set< std::string > & fileSet, NifModel * nif, const NifItem * item )
+{
+	if ( spResourceFileExtract::is_Applicable( nif, item ) ) {
+		std::string	filePath( spResourceFileExtract::getNifItemFilePath( nif, item ) );
+		if ( !filePath.empty() )
+			fileSet.insert( filePath );
+	}
+
+	for ( int i = 0; i < item->childCount(); i++ ) {
+		if ( item->child( i ) )
+			findPaths( fileSet, nif, item->child( i ) );
+	}
+}
+
+QModelIndex spExtractAllResources::cast( NifModel * nif, const QModelIndex & index )
+{
+	if ( !nif )
+		return index;
+	Game::GameMode	game = Game::GameManager::get_game( nif->getVersionNumber(), nif->getUserVersion(), nif->getBSVersion() );
+
+	std::set< std::string >	fileSet;
+	for ( int b = 0; b < nif->getBlockCount(); b++ ) {
+		const NifItem * item = nif->getBlockItem( quint32(b) );
+		if ( item )
+			findPaths( fileSet, nif, item );
+	}
+	if ( fileSet.begin() == fileSet.end() )
+		return index;
+
+	std::string	dstPath( spResourceFileExtract::getOutputDirectory() );
+	if ( dstPath.empty() )
+		return index;
+
+	std::string	matFileData;
+	std::string	fullPath;
+	std::vector< unsigned char >	fileData;
+	try {
+		for ( std::set< std::string >::const_iterator i = fileSet.begin(); i != fileSet.end(); i++ ) {
+			matFileData.clear();
+			if ( nif->getBSVersion() >= 160 && i->ends_with( ".mat" ) && i->starts_with( "materials/" ) ) {
+				CE2MaterialDB *	materials = Game::GameManager::materials( game );
+				if ( materials ) {
+					(void) materials->loadMaterial( *i );
+					materials->getJSONMaterial( matFileData, *i );
+				}
+				if ( matFileData.empty() )
+					continue;
+			} else if ( Game::GameManager::find_file( game, QString::fromStdString( *i ), nullptr, nullptr ).isEmpty() ) {
+				continue;
+			}
+
+			fullPath = dstPath;
+			fullPath += *i;
+			if ( !matFileData.empty() ) {
+				matFileData += '\n';
+				spResourceFileExtract::writeFileWithPath( fullPath.c_str(), matFileData.c_str(), matFileData.length() );
+			} else if ( Game::GameManager::get_file( fileData, game, *i ) ) {
+				spResourceFileExtract::writeFileWithPath( fullPath.c_str(), fileData.data(), fileData.size() );
+			}
+		}
+	} catch ( std::exception & e ) {
+		QMessageBox::critical( nullptr, "NifSkope error", QString("Error extracting file: %1" ).arg( e.what() ) );
+	}
+	return index;
+}
+
+REGISTER_SPELL( spExtractAllResources )
 
