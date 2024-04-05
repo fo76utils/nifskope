@@ -424,7 +424,7 @@ void Renderer::updateSettings()
 	cfg.cubeMapPathFO76 = settings.value( "Settings/Render/General/Cube Map Path FO 76", "textures/shared/cubemaps/mipblur_defaultoutside1.dds" ).toString();
 	cfg.cubeMapPathSTF = settings.value( "Settings/Render/General/Cube Map Path STF", "textures/cubemaps/cell_cityplazacube.dds" ).toString();
 	int	tmp = settings.value( "Settings/Render/General/Pbr Cube Map Resolution", 1 ).toInt();
-	TexCache::pbrCubeMapResolution = 64 << ( ( tmp + 1 ) & 3 );
+	TexCache::pbrCubeMapResolution = std::min< int >( 1 << ( tmp + 7 ), 513 );
 
 	bool prevStatus = shader_ready;
 

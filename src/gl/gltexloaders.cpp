@@ -704,12 +704,13 @@ GLuint texLoadPBRCubeMap( const Game::GameMode game, const QString & filepath, G
 
 	if ( !filterDisabled ) {
 		std::uint32_t	width = std::uint32_t( TexCache::pbrCubeMapResolution );
+		sfCubeMapCache.setRoughnessTable( nullptr, 7 );
+		sfCubeMapCache.setImportanceSamplingThreshold( !( width & 1 ) ? 0.125f : 0.0f );
+		width = width & ~1U;
 		size_t	dataSize = size_t( data.size() );
 		size_t	spaceRequired = width * width * 8 * 4 + 148;
 		if ( data.size() < qsizetype(spaceRequired) )
 			data.resize( spaceRequired );
-		sfCubeMapCache.setRoughnessTable( nullptr, 7 );
-		sfCubeMapCache.setImportanceSamplingThreshold( 0.125f );
 		size_t	newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(data.data()), dataSize, true, spaceRequired, width );
 		data.resize( newSize );
 	}

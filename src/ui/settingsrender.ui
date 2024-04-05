@@ -243,6 +243,11 @@
                  <string>512x512 to 8x8</string>
                 </property>
                </item>
+               <item>
+                <property name="text">
+                 <string>Max. quality (slow)</string>
+                </property>
+               </item>
               </widget>
              </item>
              <item row="4" column="0">
