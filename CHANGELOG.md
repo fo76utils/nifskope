@@ -1,5 +1,36 @@
  == CHANGELOG ==
 
+* New spell for exporting the resource (geometry, material and texture) files used by the currently loaded model. It is available as an option in the right click menu on file paths, this extracts a single file, and in the main Spells menu to extract all resources required by the model. Note that files are extracted in the correct sub-folders (textures/, materials/, etc.) under the selected destination directory, and Starfield materials are automatically converted to JSON .mat format.
+* Resource settings now default to all games being enabled.
+* The planar angle slider of the lighting widget can now be used in frontal light mode to rotate the environment map used by image based lighting.
+* The PBR cube map resolution setting has a new maximum quality option that disables importance sampling at 512x512 resolution per face. Note: changes between the '512x512' and 'max. quality' modes may only take effect after restarting NifSkope if the texture is already cached.
+* Fixed mip level calculation bug in importance sampled cube map filtering.
+
+#### NifSkope-2.0.dev9-20240331
+
+Changes compared to the dev9 release from Sep 29, 2023:
+
+* Support for rendering Starfield materials, with limitations: multiple layers are mostly unsupported, and translucency and many other advanced effects are not implemented. Materials can be loaded both from the compiled database (materialsbeta.cdb) and from loose .mat files, the latter is experimental.
+* Image based lighting for Starfield and Fallout 76, can use DDS cube maps or Radiance HDR format images (available for example at [Poly Haven](https://polyhaven.com/hdris), place the .hdr files in textures/cubemaps/ under a folder configured as a data path) as input. The resolution of the pre-filtered cube map and the paths to the textures can be set in the render options.
+* Starfield height maps are implemented using parallax occlusion mapping, with new render settings for the height scale and maximum number of steps.
+* Various rendering fixes for Fallout 76, and some for older games.
+* Skyrim, Fallout 4, Fallout 76 and Starfield shaders have all been modified to use view space vectors instead of tangent space, similarly to the change described [here](https://github.com/Candoran2/nifskope/commit/7e4c6e127e3f2f569d2417bd04cbb7a6bb1bd822). Skyrim parallax mapping has been updated as well to work correctly with this change.
+* Improved physically based rendering for Fallout 76 (also used for Starfield), based on the models by [Brian Karis](https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf) and [Brent Burley](https://blog.selfshadow.com/publications/s2012-shading-course/burley/s2012_pbs_disney_brdf_notes_v3.pdf).
+* Starfield and Fallout 76 material data loaded from external files is added as abstract data to the NIF model.
+* New option in the Render menu (Alt+U) to flush cached textures, reload shaders, and update the display.
+* The integer data (CRC32 of the material path) associated with Starfield materials is now recalculated on changes to the material path. Note that editing the path in the header strings may not automatically update this value and the display, use Update View (Alt+U) or toggle the grid on/off with G to force the update.
+* The Edit String Index spell has a new button for browsing Starfield, Fallout 76 and Fallout 4 materials. Note: using this to swap materials leaves the previous paths as unused strings in the header, those can be cleaned up with 'Spells/Optimize/Remove Unused Strings' and then updating the view (Alt+U).
+* The choose texture spell now browses all texture files available as resources, instead of the file system.
+* New spell to export Starfield materials, it copies the material data from the selected BSLightingShaderProperty to the clipboard in JSON format.
+* Improved lighting widget, with separate controls for the overall brightness and the intensity of directional and ambient light, and new sliders for tone mapping and the color temperature of the light source. There is also a new button for browsing the environment map (.dds or .hdr) used by Fallout 76 and Starfield image based lighting.
+* Reworked resource manager, Fallout 3 and New Vegas have been merged in the resource settings to a single game mode, and removed the Archives tab. Resource data paths can now be folders (from which all archives and supported file types are loaded), single archives and loose files, and paths listed first have higher precedence. Note that a very large number of loose files may result in long load times.
+* The location of the currently opened NIF file is automatically added as a temporary data path. Resources associated with the model can be in archives, or in loose files under the correct sub-directories (textures/, geometries/, etc.).
+* Currently mapped resources can be released with Close Archives (Alt+Q) in the file menu. If a temporary data path is in use, only that is closed first.
+* Fixed bugs in the screenshot dialog, including potential crash due to invalid memory access, and incorrect gamma on Fallout 76 and Starfield screenshots. JPEG files are also written with optimization and in progressive format, slightly reducing the file size at the same quality.
+* Various other bug fixes, including to https://github.com/hexabits/nifskope/issues/51, https://github.com/hexabits/nifskope/issues/56, https://github.com/hexabits/nifskope/issues/61, https://github.com/hexabits/nifskope/issues/62, https://github.com/hexabits/nifskope/issues/64, https://github.com/hexabits/nifskope/issues/65, https://github.com/hexabits/nifskope/issues/67#issuecomment-1858428809 and https://github.com/hexabits/nifskope/issues/74.
+
+### Official releases
+
 **NOTE: This changelog is not maintained for 2.0**
 
 You may view the 2.0 changes here: https://github.com/hexabits/nifskope/releases
