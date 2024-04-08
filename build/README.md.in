@@ -10,6 +10,10 @@ Binary packages for Windows and Linux can be downloaded from [Releases](https://
 
 You can also download the latest official release from [niftools/nifskope](https://github.com/niftools/nifskope/releases), or development builds from [hexabits/nifskope](https://github.com/hexabits/nifskope/releases).
 
+**Note:** running NifSkope under Wayland on Linux may require setting the QT\_QPA\_PLATFORM environment variable to "xcb":
+
+    QT_QPA_PLATFORM=xcb ./NifSkope
+
 #### Building from source code
 
 Compiling NifSkope requires Qt 5.15. On Windows, [MSYS2](https://www.msys2.org/) can be used for building. After running the MSYS2 installer, use the following commands in the MSYS2-UCRT64 shell to install required packages:
