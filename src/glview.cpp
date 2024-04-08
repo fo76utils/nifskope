@@ -141,7 +141,11 @@ GLView * GLView::create( NifSkope * window )
 	fmt.setSwapInterval( 1 );
 	fmt.setDoubleBuffer( true );
 
-	fmt.setSamples( std::pow( aa, 2 ) );
+#ifdef Q_OS_LINUX
+	fmt.setSamples( aa );
+#else
+	fmt.setSamples( aa * aa );
+#endif
 
 	fmt.setDirectRendering( true );
 	fmt.setRgba( true );
