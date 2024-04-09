@@ -258,6 +258,7 @@ SOURCES += \
 	src/spells/bounds.cpp \
 	src/spells/color.cpp \
 	src/spells/fileextract.cpp \
+	src/spells/filerename.cpp \
 	src/spells/flags.cpp \
 	src/spells/fo3only.cpp \
 	src/spells/havok.cpp \

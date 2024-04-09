@@ -1,6 +1,7 @@
  == CHANGELOG ==
 
 * New spell for exporting the resource (geometry, material and texture) files used by the currently loaded model. It is available as an option in the right click menu on file paths, this extracts a single file, and in the main Spells menu to extract all resources required by the model. Note that files are extracted in the correct sub-folders (textures/, materials/, etc.) under the selected destination directory, and Starfield materials are automatically converted to JSON .mat format.
+* New spell to replace all occurrences of a regular expression in resource paths that match a filter regular expression. It currently does not work on paths stored as header strings (like materials), and on abstract data loaded from external files.
 * Resource settings now default to all games being enabled.
 * The planar angle slider of the lighting widget can now be used in frontal light mode to rotate the environment map used by image based lighting.
 * The PBR cube map resolution setting has a new maximum quality option that disables importance sampling at 512x512 resolution per face. Note: changes between the '512x512' and 'max. quality' modes may only take effect after restarting NifSkope if the texture is already cached.
