@@ -20,8 +20,9 @@
 #include <QSettings>
 #include <QString>
 
-#define tr( x ) QCoreApplication::tr( "3dsImport", x )
+#include "gamemanager.h"
 
+#define tr( x ) QCoreApplication::tr( "3dsImport", x )
 
 struct objPoint
 {
@@ -106,7 +107,7 @@ static void addLink( NifModel * nif, const QModelIndex & iBlock, const QString &
 	int numIndices = nif->get<int>( iSize );
 	nif->set<int>( iSize, numIndices + 1 );
 	nif->updateArraySize( iArray );
-	nif->setLink( iArray.child( numIndices, 0 ), link );
+	nif->setLink( QModelIndex_child( iArray, numIndices ), link );
 }
 
 static Color3 GetColorFromChunk( Chunk * cnk )
@@ -244,7 +245,7 @@ void import3ds( NifModel * nif, const QModelIndex & index )
 	float ObjScale;
 	QVector<objMesh> ObjMeshes;
 	QMap<QString, objMaterial> ObjMaterials;
-	QMap<QString, objKfSequence> ObjKeyframes;
+	QMultiMap<QString, objKfSequence> ObjKeyframes;
 
 	QSettings settings;
 	settings.beginGroup( "Import-Export" );
@@ -559,7 +560,7 @@ void import3ds( NifModel * nif, const QModelIndex & index )
 				}
 			}
 
-			ObjKeyframes.insertMulti( newKfSeq.objectName, newKfSeq );
+			ObjKeyframes.insert( newKfSeq.objectName, newKfSeq );
 		}
 	}
 
@@ -712,8 +713,8 @@ void import3ds( NifModel * nif, const QModelIndex & index )
 			nif->set<int>( iData, "Data Flags", 1 );
 			QModelIndex iTexCo = nif->getIndex( iData, "UV Sets" );
 			nif->updateArraySize( iTexCo );
-			nif->updateArraySize( iTexCo.child( 0, 0 ) );
-			nif->setArray<Vector2>( iTexCo.child( 0, 0 ),  mesh->texcoords );
+			nif->updateArraySize( QModelIndex_child( iTexCo ) );
+			nif->setArray<Vector2>( QModelIndex_child( iTexCo ),  mesh->texcoords );
 
 			nif->set<int>( iData, "Has Triangles", 1 );
 			nif->set<int>( iData, "Num Triangles", triangles.count() );

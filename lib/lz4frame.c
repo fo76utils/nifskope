@@ -2383,12 +2383,12 @@ size_t LZ4F_compressFrame(void* dstBuffer, size_t dstMaxSize, const void* srcBuf
     cctxI.version = LZ4F_VERSION;
     cctxI.maxBufferSize = 5 MB;   /* mess with real buffer size to prevent allocation; works because autoflush==1 & stableSrc==1 */
 
-    if (preferencesPtr!=NULL)
-        prefs = *preferencesPtr;
-    else
-        memset(&prefs, 0, sizeof(prefs));
-    if (prefs.frameInfo.contentSize != 0)
-        prefs.frameInfo.contentSize = (U64)srcSize;   /* auto-correct content size if selected (!=0) */
+	if (preferencesPtr!=NULL)
+		prefs = *preferencesPtr;
+	else
+		memset(&prefs, 0, sizeof(prefs));
+	if (prefs.frameInfo.contentSize != 0)
+		prefs.frameInfo.contentSize = (U64)srcSize;   /* auto-correct content size if selected (!=0) */
 
 	if (prefs.compressionLevel < LZ4HC_MIN_CLEVEL) {
 		cctxI.lz4CtxPtr = &lz4ctx;
@@ -3158,6 +3158,7 @@ size_t LZ4F_decompress(LZ4F_decompressionContext_t decompressionContext,
             dctxPtr->tmpInTarget = minFHSize;   /* minimum to attempt decode */
             dctxPtr->dStage = dstage_storeHeader;
             /* pass-through */
+			[[fallthrough]];
 
         case dstage_storeHeader:
             {   size_t sizeToCopy = dctxPtr->tmpInTarget - dctxPtr->tmpInSize;
@@ -3272,6 +3273,7 @@ size_t LZ4F_decompress(LZ4F_decompressionContext_t decompressionContext,
                 dctxPtr->dStage = dstage_decodeCBlock;
                 /* pass-through */
             }
+			[[fallthrough]];
 
         case dstage_decodeCBlock:
             if ((size_t)(dstEnd-dstPtr) < dctxPtr->maxBlockSize)   /* not enough place into dst : decode into tmpOut */

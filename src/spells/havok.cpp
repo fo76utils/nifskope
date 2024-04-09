@@ -16,6 +16,7 @@
 
 #include <algorithm> // std::sort
 
+#include "gamemanager.h"
 
 // Brief description is deliberately not autolinked to class Spell
 /*! \file havok.cpp
@@ -245,8 +246,8 @@ public:
 				nif->updateArraySize( iListShape, "Unknown Ints" );
 				replace = false;
 			}
-		} 
-		
+		}
+
 		if ( replace ) {
 			// Replace link
 			nif->setLink( shapeLink, nif->getBlockNumber( iCVS ) );
@@ -258,7 +259,7 @@ public:
 		Message::info( nullptr,
 					   Spell::tr( "Created hull with %1 vertices, %2 normals" )
 						.arg( convex_verts.count() )
-						.arg( convex_norms.count() ) 
+						.arg( convex_norms.count() )
 		);
 
 		return (iCVS.isValid()) ? iCVS : rigidBody;
@@ -282,7 +283,7 @@ public:
 				  "bhkRagdollConstraint",
 				  "bhkLimitedHingeConstraint",
 				  "bhkHingeConstraint",
-				  "bhkPrismaticConstraint" 
+				  "bhkPrismaticConstraint"
 		};
 		return nif && nif->isNiBlock( nif->getBlockIndex( index ), blockNames );
 	}
@@ -451,7 +452,7 @@ public:
 				QModelIndex iPoints = nif->getIndex( iData, "Points" );
 
 				for ( int x = 0; x < nif->rowCount( iPoints ); x++ ) {
-					tris += triangulate( nif->getArray<quint16>( iPoints.child( x, 0 ) ) );
+					tris += triangulate( nif->getArray<quint16>( QModelIndex_child( iPoints, x ) ) );
 				}
 
 				QMutableVectorIterator<Triangle> it( tris );
@@ -488,9 +489,9 @@ public:
 		nif->set<int>( iPackedShape, "Num Sub Shapes", 1 );
 		QModelIndex iSubShapes = nif->getIndex( iPackedShape, "Sub Shapes" );
 		nif->updateArraySize( iSubShapes );
-		nif->set<int>( iSubShapes.child( 0, 0 ), "Layer", 1 );
-		nif->set<int>( iSubShapes.child( 0, 0 ), "Num Vertices", vertices.count() );
-		nif->set<int>( iSubShapes.child( 0, 0 ), "Material", nif->get<int>( iShape, "Material" ) );
+		nif->set<int>( QModelIndex_child( iSubShapes ), "Layer", 1 );
+		nif->set<int>( QModelIndex_child( iSubShapes ), "Num Vertices", vertices.count() );
+		nif->set<int>( QModelIndex_child( iSubShapes ), "Material", nif->get<int>( iShape, "Material" ) );
 		nif->setArray<float>( iPackedShape, "Unknown Floats", { 0.0f, 0.0f, 0.1f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.1f } );
 		nif->set<float>( iPackedShape, "Scale", 1.0f );
 		nif->setArray<float>( iPackedShape, "Unknown Floats 2", { 1.0f, 1.0f, 1.0f } );
@@ -503,8 +504,8 @@ public:
 		nif->updateArraySize( iTriangles );
 
 		for ( int t = 0; t < triangles.size(); t++ ) {
-			nif->set<Triangle>( iTriangles.child( t, 0 ), "Triangle", triangles[ t ] );
-			nif->set<Vector3>( iTriangles.child( t, 0 ), "Normal", normals.value( t ) );
+			nif->set<Triangle>( QModelIndex_child( iTriangles, t ), "Triangle", triangles[ t ] );
+			nif->set<Vector3>( QModelIndex_child( iTriangles, t ), "Normal", normals.value( t ) );
 		}
 
 		nif->set<int>( iPackedData, "Num Vertices", vertices.count() );

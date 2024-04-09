@@ -6,6 +6,7 @@
 #include "io/material.h"
 #include "model/nifmodel.h"
 
+#include "gamemanager.h"
 
 void BSShape::updateImpl( const NifModel * nif, const QModelIndex & index )
 {
@@ -156,7 +157,7 @@ void BSShape::updateData( const NifModel * nif )
 
 		auto b = nif->getIndex( iSkinData, "Bone List" );
 		for ( int i = 0; i < nTotalWeights; i++ )
-			weights[i].setTransform( nif, b.child( i, 0 ) );
+			weights[i].setTransform( nif, QModelIndex_child( b, i ) );
 	}
 }
 
@@ -170,12 +171,12 @@ QModelIndex BSShape::vertexAt( int idx ) const
 	auto blk = iBlock;
 	if ( iSkinPart.isValid() ) {
 		if ( isDynamic )
-			return nif->getIndex( blk, "Vertices" ).child( idx, 0 );
+			return QModelIndex_child( nif->getIndex( blk, "Vertices" ), idx );
 
 		blk = iSkinPart;
 	}
 
-	return nif->getIndex( nif->getIndex( blk, "Vertex Data" ).child( idx, 0 ), "Vertex" );
+	return nif->getIndex( QModelIndex_child( nif->getIndex( blk, "Vertex Data" ), idx ), "Vertex" );
 }
 
 void BSShape::transformShapes()
@@ -246,7 +247,7 @@ void BSShape::transformShapes()
 	}
 }
 
-void BSShape::drawShapes( NodeList * secondPass, bool presort )
+void BSShape::drawShapes( NodeList * secondPass, [[maybe_unused]] bool presort )
 {
 	if ( isHidden() )
 		return;
@@ -316,12 +317,12 @@ void BSShape::drawShapes( NodeList * secondPass, bool presort )
 		else
 			glDisable( GL_FRAMEBUFFER_SRGB );
 		shader = scene->renderer->setupProgram( this, shader );
-	
+
 	} else {
 		if ( nif->getBSVersion() >= 151 )
 			glDisable( GL_FRAMEBUFFER_SRGB );
 	}
-	
+
 	if ( isDoubleSided ) {
 		glCullFace( GL_FRONT );
 		glDrawElements( GL_TRIANGLES, triangles.count() * 3, GL_UNSIGNED_SHORT, triangles.constData() );
@@ -345,9 +346,11 @@ void BSShape::drawShapes( NodeList * secondPass, bool presort )
 		case Scene::Level0:
 			if ( lod2tris.count() )
 				glDrawElements( GL_TRIANGLES, lod2tris.count() * 3, GL_UNSIGNED_SHORT, lod2tris.constData() );
+			[[fallthrough]];
 		case Scene::Level1:
 			if ( lod1tris.count() )
 				glDrawElements( GL_TRIANGLES, lod1tris.count() * 3, GL_UNSIGNED_SHORT, lod1tris.constData() );
+			[[fallthrough]];
 		case Scene::Level2:
 		default:
 			if ( lod0tris.count() )
@@ -449,7 +452,7 @@ void BSShape::drawSelection() const
 	// Parent index
 	auto pBlock = nif->getBlockIndex( nif->getParent( blk ) );
 
-	auto push = [this] ( const Transform & t ) {	
+	auto push = [this] ( const Transform & t ) {
 		if ( transformRigid ) {
 			glPushMatrix();
 			glMultMatrix( t );
@@ -495,7 +498,6 @@ void BSShape::drawSelection() const
 	if ( normalScale < 0.1f )
 		normalScale = 0.1f;
 
-	
 
 	// Draw All Verts lambda
 	auto allv = [this]( float size ) {
@@ -515,7 +517,7 @@ void BSShape::drawSelection() const
 			drawSphereSimple( sph.center, sph.radius, 72 );
 		}
 	}
-	
+
 	if ( blockName.startsWith( "BSPackedCombined" ) && pBlock == iBlock ) {
 		QVector<QModelIndex> idxs;
 		if ( n == "Bounding Sphere" ) {
@@ -525,13 +527,13 @@ void BSShape::drawSelection() const
 			int dataCt = nif->rowCount( data );
 
 			for ( int i = 0; i < dataCt; i++ ) {
-				auto d = data.child( i, 0 );
+				auto d = QModelIndex_child( data, i );
 
 				auto c = nif->getIndex( d, "Combined" );
 				int cCt = nif->rowCount( c );
 
 				for ( int j = 0; j < cCt; j++ ) {
-					idxs += nif->getIndex( c.child( j, 0 ), "Bounding Sphere" );
+					idxs += nif->getIndex( QModelIndex_child( c, j ), "Bounding Sphere" );
 				}
 			}
 		}
@@ -541,10 +543,12 @@ void BSShape::drawSelection() const
 			return;
 		}
 
-		Vector3 pTrans = nif->get<Vector3>( pBlock.child( 1, 0 ), "Translation" );
+#if 0
+		Vector3 pTrans = nif->get<Vector3>( QModelIndex_child( pBlock, 1 ), "Translation" );
+#endif
 		auto iBSphere = nif->getIndex( pBlock, "Bounding Sphere" );
-		Vector3 pbvC = nif->get<Vector3>( iBSphere.child( 0, 2 ) );
-		float pbvR = nif->get<float>( iBSphere.child( 1, 2 ) );
+		Vector3 pbvC = nif->get<Vector3>( QModelIndex_child( iBSphere, 0, 2 ) );
+		float pbvR = nif->get<float>( QModelIndex_child( iBSphere, 1, 2 ) );
 
 		if ( pbvR > 0.0 ) {
 			glColor4f( 0, 1, 0, 0.33f );
@@ -555,7 +559,7 @@ void BSShape::drawSelection() const
 
 		for ( auto i : idxs ) {
 			// Transform compound
-			auto iTrans = i.parent().child( 1, 0 );
+			auto iTrans = QModelIndex_child( i.parent(), 1 );
 			Matrix mat = nif->get<Matrix>( iTrans, "Rotation" );
 			//auto trans = nif->get<Vector3>( iTrans, "Translation" );
 			float scale = nif->get<float>( iTrans, "Scale" );
@@ -602,8 +606,8 @@ void BSShape::drawSelection() const
 			glVertex( transVerts.value( s ) );
 			glEnd();
 		}
-	} 
-	
+	}
+
 	glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
 	// Draw Lines lambda
@@ -635,7 +639,7 @@ void BSShape::drawSelection() const
 			glLineWidth( lineWidth );
 		}
 	};
-	
+
 	// Draw Normals
 	if ( n.contains( "Normal" ) ) {
 		lines( transNorms );
@@ -669,7 +673,7 @@ void BSShape::drawSelection() const
 		int s;
 
 		QVector<QColor> cols = { { 255, 0, 0, 128 }, { 0, 255, 0, 128 }, { 0, 0, 255, 128 }, { 255, 255, 0, 128 },
-								{ 0, 255, 255, 128 }, { 255, 0, 255, 128 }, { 255, 255, 255, 128 } 
+								{ 0, 255, 255, 128 }, { 255, 0, 255, 128 }, { 255, 255, 255, 128 }
 		};
 
 		glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
@@ -700,9 +704,9 @@ void BSShape::drawSelection() const
 		for ( int l = 0; l < loopNum; l++ ) {
 
 			if ( n != "Num Primitives" && !isSubSegArray && !isSegmentArray ) {
-				sidx = idx.child( 1, 0 );
+				sidx = QModelIndex_child( idx, 1 );
 			} else if ( isSegmentArray ) {
-				sidx = idx.child( l, 0 ).child( 1, 0 );
+				sidx = QModelIndex_child( QModelIndex_child( idx, l ), 1 );
 			}
 			s = sidx.row() + o;
 
@@ -712,13 +716,13 @@ void BSShape::drawSelection() const
 
 			auto recs = sidx.sibling( s + 3, 0 );
 			for ( int i = 0; i < numRec; i++ ) {
-				auto subrec = recs.child( i, 0 );
+				auto subrec = QModelIndex_child( recs, i );
 				int o = 0;
 				if ( subrec.data( Qt::DisplayRole ).toString() != "Sub Segment" )
 					o = 3; // Offset 3 rows for < 130 BSGeometrySegmentData
 
-				auto suboff = subrec.child( o, 2 ).data().toInt() / 3;
-				auto subcnt = subrec.child( o + 1, 2 ).data().toInt();
+				auto suboff = QModelIndex_child( subrec, o, 2 ).data().toInt() / 3;
+				auto subcnt = QModelIndex_child( subrec, o + 1, 2 ).data().toInt();
 
 				for ( int j = suboff; j < subcnt + suboff; j++ ) {
 					if ( j >= maxTris )
@@ -741,7 +745,7 @@ void BSShape::drawSelection() const
 				for ( int i = off; i < cnt + off; i++ ) {
 					if ( i >= maxTris )
 						continue;
-			
+
 					Triangle tri = triangles[i];
 					glBegin( GL_TRIANGLES );
 					glVertex( transVerts.value( tri.v1() ) );
@@ -764,7 +768,7 @@ void BSShape::drawSelection() const
 			int ct = nif->rowCount( iBones );
 
 			for ( int i = 0; i < ct; i++ ) {
-				auto b = iBones.child( i, 0 );
+				auto b = QModelIndex_child( iBones, i );
 				boneSphere( nif, b );
 			}
 		}
@@ -776,7 +780,7 @@ void BSShape::drawSelection() const
 	if ( n == "Bone List" ) {
 		if ( nif->isArray( idx ) ) {
 			for ( int i = 0; i < nif->rowCount( idx ); i++ )
-				boneSphere( nif, idx.child( i, 0 ) );
+				boneSphere( nif, QModelIndex_child( idx, i ) );
 		} else {
 			boneSphere( nif, idx );
 		}

@@ -485,7 +485,7 @@ QList<QModelIndex> NifProxyModel::mapFrom( const QModelIndex & idx ) const
 Qt::ItemFlags NifProxyModel::flags( const QModelIndex & index ) const
 {
 	if ( !nif )
-		return 0;
+		return Qt::NoItemFlags;
 
 	return nif->flags( mapTo( index ) );
 }

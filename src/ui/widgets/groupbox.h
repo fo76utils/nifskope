@@ -47,9 +47,9 @@ public:
 	GroupBox( const QString & title, Qt::Orientation o );
 	~GroupBox();
 
-	void addWidget( QWidget * widget, int stretch = 0, Qt::Alignment alignment = 0 );
+	void addWidget( QWidget * widget, int stretch = 0, Qt::Alignment alignment = Qt::Alignment() );
 
-	QWidget * pushLayout( const QString & name, Qt::Orientation o, int stretch = 0, Qt::Alignment alignment = 0 );
+	QWidget * pushLayout( const QString & name, Qt::Orientation o, int stretch = 0, Qt::Alignment alignment = Qt::Alignment() );
 	void pushLayout( Qt::Orientation o, int stretch = 0 );
 
 	void popLayout();

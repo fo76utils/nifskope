@@ -35,6 +35,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "zlib/zlib.h"
 #include "lz4frame.h"
 #include "zlib.hpp"
+#include "gamemanager.h"
 
 #include <QByteArray>
 #include <QDateTime>
@@ -68,7 +69,7 @@ static bool BSAReadSizedString( QFile & bsa, QString & s )
 	quint8 len;
 	if ( bsa.read( (char *)&len, 1 ) != 1 )
 		return false;
-	
+
 	QByteArray b( len, char(0) );
 	if ( bsa.read( b.data(), len ) == len ) {
 		s = QString::fromLatin1( b );
@@ -111,6 +112,7 @@ QByteArray gUncompress( const char * data, const int size )
 		switch ( ret ) {
 		case Z_NEED_DICT:
 			ret = Z_DATA_ERROR;     // and fall through
+			[[fallthrough]];
 		case Z_DATA_ERROR:
 		case Z_MEM_ERROR:
 			(void)inflateEnd( &strm );
@@ -159,10 +161,10 @@ bool BSA::canOpen( const QString & fn )
 	if ( f.open( QIODevice::ReadOnly ) )
 	{
 		quint32 magic, version;
-		
+
 		if ( f.read( (char *) & magic, sizeof( magic ) ) != 4 )
 			return false;
-		
+
 		//qDebug() << "Magic:" << QString::number( magic, 16 );
 		if ( magic == F4_BSAHEADER_FILEID ) {
 			if ( f.read( (char *) & version, sizeof( version ) ) != 4 )
@@ -178,7 +180,7 @@ bool BSA::canOpen( const QString & fn )
 		}
 
 	}
-	
+
 	return false;
 }
 
@@ -186,14 +188,14 @@ bool BSA::canOpen( const QString & fn )
 bool BSA::open()
 {
 	QMutexLocker lock( & bsaMutex );
-	
+
 	try
 	{
 		if ( ! bsa.open( QIODevice::ReadOnly ) )
 			throw QString( "file open" );
-		
+
 		quint32 magic;
-		
+
 		bsa.read( (char*) &magic, sizeof( magic ) );
 
 		if ( magic == F4_BSAHEADER_FILEID ) {
@@ -285,28 +287,28 @@ bool BSA::open()
 		else if ( magic == OB_BSAHEADER_FILEID )
 		{
 			bsa.read( (char*) &version, sizeof( version ) );
-			
+
 			if ( version != OB_BSAHEADER_VERSION && version != F3_BSAHEADER_VERSION && version != SSE_BSAHEADER_VERSION )
 				throw QString( "file version" );
-			
+
 			OBBSAHeader header;
-			
+
 			if ( bsa.read( (char *) & header, sizeof( header ) ) != sizeof( header ) )
 				throw QString( "header size" );
-			
+
 			numFiles = header.FileCount;
-			
+
 			//qDebug() << bsaName << header;
-			
+
 			if ( ( header.ArchiveFlags & OB_BSAARCHIVE_PATHNAMES ) == 0 || ( header.ArchiveFlags & OB_BSAARCHIVE_FILENAMES ) == 0 )
 				throw QString( "header flags" );
-			
+
 			compressToggle = header.ArchiveFlags & OB_BSAARCHIVE_COMPRESSFILES;
-			
+
 			if (version == F3_BSAHEADER_VERSION || version == SSE_BSAHEADER_VERSION) {
 				namePrefix = header.ArchiveFlags & F3_BSAARCHIVE_PREFIXFULLFILENAMES;
 			}
-			
+
 			int folderSize = 0;
 			if ( version != SSE_BSAHEADER_VERSION )
 				folderSize = sizeof( OBBSAFolderInfo );
@@ -315,14 +317,14 @@ bool BSA::open()
 
 			if ( !bsa.seek( header.FolderRecordOffset + header.FolderNameLength + header.FolderCount * (1 + folderSize) + header.FileCount * sizeof( OBBSAFileInfo ) ) )
 				throw QString( "file name seek" );
-			
+
 			QByteArray fileNames( header.FileNameLength, char(0) );
 			if ( bsa.read( fileNames.data(), header.FileNameLength ) != header.FileNameLength )
 				throw QString( "file name read" );
 			quint32 fileNameIndex = 0;
-			
+
 			//qDebug() << bsa.pos() - header.FileNameLength << fileNames;
-			
+
 			if ( ! bsa.seek( header.FolderRecordOffset ) )
 				throw QString( "folder info seek" );
 
@@ -360,16 +362,16 @@ bool BSA::open()
 					//qDebug() << "folderName" << folderName;
 					throw QString( "folder name read" );
 				}
-				
-				
+
+
 				BSAFolder * folder = insertFolder( folderName );
-				
+
 				quint32 fcnt = folderInfo.fileCount;
 				totalFileCount += fcnt;
 				QVector<OBBSAFileInfo> fileInfos( fcnt );
-				if ( bsa.read( (char *) fileInfos.data(), fcnt * sizeof( OBBSAFileInfo ) ) != fcnt * sizeof( OBBSAFileInfo ) )
+				if ( bsa.read( (char *) fileInfos.data(), fcnt * sizeof( OBBSAFileInfo ) ) != qint64( fcnt * sizeof( OBBSAFileInfo ) ) )
 					throw QString( "file info read" );
-				
+
 				for ( const OBBSAFileInfo fileInfo : fileInfos )
 				{
 					if ( fileNameIndex >= header.FileNameLength )
@@ -377,48 +379,48 @@ bool BSA::open()
 
 					QString fileName = QString::fromLatin1( fileNames.data() + fileNameIndex );
 					fileNameIndex += fileName.length() + 1;
-					
+
 					insertFile( folder, fileName, fileInfo.sizeFlags, fileInfo.offset );
 				}
 			}
-			
+
 			if ( totalFileCount != header.FileCount )
 				throw QString( "file count" );
 		}
 		else if ( magic == MW_BSAHEADER_FILEID )
 		{
 			MWBSAHeader header;
-			
+
 			if ( bsa.read( (char *) & header, sizeof( header ) ) != sizeof( header ) )
 				throw QString( "header" );
-			
+
 			numFiles = header.FileCount;
 			compressToggle = false;
 			namePrefix = false;
-			
+
 			// header is 12 bytes, hash table is 8 bytes per entry
 			quint32 dataOffset = 12 + header.HashOffset + header.FileCount * 8;
-			
+
 			// file size/offset table
 			QVector<MWBSAFileSizeOffset> sizeOffset( header.FileCount );
-			if ( bsa.read( (char *) sizeOffset.data(), header.FileCount * sizeof( MWBSAFileSizeOffset ) ) != header.FileCount * sizeof( MWBSAFileSizeOffset ) )
+			if ( bsa.read( (char *) sizeOffset.data(), header.FileCount * sizeof( MWBSAFileSizeOffset ) ) != qint64( header.FileCount * sizeof( MWBSAFileSizeOffset ) ) )
 				throw QString( "file size/offset" );
-			
+
 			// filename offset table
 			QVector<quint32> nameOffset( header.FileCount );
-			if ( bsa.read( (char *) nameOffset.data(), header.FileCount * sizeof( quint32 ) ) != header.FileCount * sizeof( quint32 ) )
+			if ( bsa.read( (char *) nameOffset.data(), header.FileCount * sizeof( quint32 ) ) != qint64( header.FileCount * sizeof( quint32 ) ) )
 				throw QString( "file name offset" );
-			
+
 			// filenames. size is given by ( HashOffset - ( 8 * number of file/size offsets) - ( 4 * number of filenames) )
 			// i.e. ( HashOffset - ( 12 * number of files ) )
 			QByteArray fileNames;
 			fileNames.resize( header.HashOffset - 12 * header.FileCount );
-			if ( bsa.read( (char *) fileNames.data(), header.HashOffset - 12 * header.FileCount ) != header.HashOffset - 12 * header.FileCount )
+			if ( bsa.read( (char *) fileNames.data(), header.HashOffset - 12 * header.FileCount ) != qint64( header.HashOffset - 12 * header.FileCount ) )
 				throw QString( "file names" );
 
 			// table of 8 bytes of hash values follow, but we don't need to know what they are
 			// file data follows that, which is fetched by fileContents
-			
+
 			for ( quint32 c = 0; c < header.FileCount; c++ )
 			{
 				QString fname = fileNames.data() + nameOffset[ c ];
@@ -429,9 +431,9 @@ bool BSA::open()
 					dname = fname.left( x );
 					fname = fname.remove( 0, x + 1 );
 				}
-				
+
 				// qDebug() << "inserting" << dname << fname;
-				
+
 				insertFile( insertFolder( dname ), fname, sizeOffset[ c ].size, dataOffset + sizeOffset[ c ].offset );
 			}
 		}
@@ -443,9 +445,9 @@ bool BSA::open()
 		status = e;
 		return false;
 	}
-	
+
 	status = "loaded successful";
-	
+
 	return true;
 }
 
@@ -453,7 +455,7 @@ bool BSA::open()
 void BSA::close()
 {
 	QMutexLocker lock( & bsaMutex );
-	
+
 	bsa.close();
 	qDeleteAll( root->children );
 	qDeleteAll( root->files );
@@ -675,7 +677,7 @@ bool BSA::fileContents( const QString & fn, QByteArray & content )
 											std::memcpy( chunkData.data(), chunkDataTmp.data(), chunk.unpackedSize );
 									} else {
 										chunkData = gUncompress( chunkData, chunk.packedSize );
-										if ( chunkData.size() != chunk.unpackedSize )
+										if ( chunkData.size() != qsizetype( chunk.unpackedSize ) )
 											qCritical() << "Size does not match at " << chunk.offset;
 									}
 								}
@@ -714,15 +716,15 @@ BSA::BSAFolder * BSA::insertFolder( QString name )
 {
 	if ( name.isEmpty() )
 		return root;
-	
+
 	name = name.replace( "\\", "/" ).toLower();
-	
+
 	BSAFolder * folder = folders.value( name );
 	if ( !folder ) {
 		folder = new BSAFolder;
 		folder->name = name;
 		folders.insert( name, folder );
-		
+
 		int p = name.lastIndexOf( "/" );
 		if ( p >= 0 ) {
 			folder->parent = insertFolder( name.left( p ) );
@@ -732,7 +734,7 @@ BSA::BSAFolder * BSA::insertFolder( QString name )
 			root->children.insert( name, folder );
 		}
 	}
-	
+
 	return folder;
 }
 
@@ -808,7 +810,7 @@ QString BSA::owner( const QString & ) const
 // see bsa.h
 QDateTime BSA::fileTime( const QString & ) const
 {
-	return bsaInfo.created( );
+	return bsaInfo.birthTime( );
 }
 
 bool BSA::scan( const BSA::BSAFolder * folder, QStandardItem * item, QString path )
@@ -907,7 +909,7 @@ void BSAProxyModel::resetFilter()
 bool BSAProxyModel::filterAcceptsRow( int sourceRow, const QModelIndex & sourceParent ) const
 {
 	if ( !filterRegExp().isEmpty() ) {
-		
+
 		QModelIndex sourceIndex0 = sourceModel()->index( sourceRow, 0, sourceParent );
 		QModelIndex sourceIndex1 = sourceModel()->index( sourceRow, 1, sourceParent );
 		if ( sourceIndex0.isValid() ) {
@@ -920,7 +922,7 @@ bool BSAProxyModel::filterAcceptsRow( int sourceRow, const QModelIndex & sourceP
 
 			QString key0 = sourceModel()->data( sourceIndex0, filterRole() ).toString();
 			QString key1 = sourceModel()->data( sourceIndex1, filterRole() ).toString();
-			
+
 			bool typeMatch = true;
 			if ( filetypes.count() ) {
 				typeMatch = false;
@@ -943,8 +945,8 @@ bool BSAProxyModel::lessThan( const QModelIndex & left, const QModelIndex & righ
 	QString leftString = sourceModel()->data( left ).toString();
 	QString rightString = sourceModel()->data( right ).toString();
 
-	QModelIndex leftChild = left.child( 0, 0 );
-	QModelIndex rightChild = right.child( 0, 0 );
+	QModelIndex leftChild = QModelIndex_child( left );
+	QModelIndex rightChild = QModelIndex_child( right );
 
 	if ( !leftChild.isValid() && rightChild.isValid() )
 		return false;

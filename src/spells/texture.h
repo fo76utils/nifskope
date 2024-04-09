@@ -9,6 +9,7 @@ class NifFloatEdit;
 class NifModel;
 class QGridLayout;
 class QListView;
+class QAbstractButton;
 class QPushButton;
 class QStringListModel;
 
@@ -33,7 +34,7 @@ protected:
 	QPushButton * textureButtons[4];
 
 protected slots:
-	void textureAction( int i );
+	void textureAction( QAbstractButton * button );
 	void texIndex( const QModelIndex & idx );
 	void listFromNif();
 };

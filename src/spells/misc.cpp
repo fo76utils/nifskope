@@ -1,5 +1,6 @@
 #include "misc.h"
 #include "model/undocommands.h"
+#include "gamemanager.h"
 
 #include <QFileDialog>
 
@@ -161,7 +162,7 @@ public:
 	QString name() const override final { return Spell::tr( "Export Binary" ); }
 	bool constant() const override final { return true; }
 
-	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
+	bool isApplicable( [[maybe_unused]] const NifModel * nif, const QModelIndex & index ) override final
 	{
 		NifItem * item = static_cast<NifItem *>(index.internalPointer());
 
@@ -209,7 +210,7 @@ class spImportBinary final : public Spell
 public:
 	QString name() const override final { return Spell::tr( "Import Binary" ); }
 
-	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
+	bool isApplicable( [[maybe_unused]] const NifModel * nif, const QModelIndex & index ) override final
 	{
 		NifItem * item = static_cast<NifItem *>(index.internalPointer());
 
@@ -226,7 +227,7 @@ public:
 		if ( item->isArray() && item->isBinary() ) {
 			parent = item;
 			iParent = index;
-			idx = index.child( 0, 0 );
+			idx = QModelIndex_child( index );
 		}
 
 		QString filename = QFileDialog::getOpenFileName( qApp->activeWindow(), tr( "Import Binary File" ), "", "*.*" );
@@ -239,9 +240,9 @@ public:
 				nif->set<int>( iParent.parent(), parent->arr1(), data.count() );
 				nif->updateArraySize( iParent );
 			}
-			
+
 			nif->set<QByteArray>( idx, data );
-			
+
 			file.close();
 		}
 
@@ -280,7 +281,7 @@ QModelIndex spCollapseArray::numCollapser( NifModel * nif, QModelIndex & iNumEle
 		QVector<qint32> links;
 
 		for ( int r = 0; r < nif->rowCount( iArray ); r++ ) {
-			qint32 l = nif->getLink( iArray.child( r, 0 ) );
+			qint32 l = nif->getLink( QModelIndex_child( iArray, r ) );
 
 			if ( l >= 0 )
 				links.append( l );

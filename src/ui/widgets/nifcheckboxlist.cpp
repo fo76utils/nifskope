@@ -249,7 +249,7 @@ void NifCheckBoxList::parseText( const QString & text )
 	if ( !text.isEmpty() ) {
 		// Build RegEx for efficient search. Then set model to match
 		QString str;
-		QStringList list = text.split( QRegularExpression( "\\s*\\|\\s*" ), QString::SkipEmptyParts );
+		QStringList list = text.split( QRegularExpression( "\\s*\\|\\s*" ), Qt::SkipEmptyParts );
 		QStringListIterator lit( list );
 
 		while ( lit.hasNext() ) {

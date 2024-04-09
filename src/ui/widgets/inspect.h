@@ -50,7 +50,7 @@ class InspectView final : public QDialog
 	Q_OBJECT
 
 public:
-	explicit InspectView( QWidget * parent = 0, Qt::WindowFlags f = 0 );
+	explicit InspectView( QWidget * parent = 0, Qt::WindowFlags f = Qt::Widget );
 	~InspectView();
 
 	QSize minimumSizeHint() const override final { return { 50, 50 }; }

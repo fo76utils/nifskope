@@ -1,4 +1,5 @@
 #include "spellbook.h"
+#include "gamemanager.h"
 
 #include "ui/widgets/colorwheel.h"
 
@@ -35,7 +36,7 @@ public:
 			auto col = ColorWheel::choose( nif->get<ByteColor4>( index ) );
 			nif->set<ByteColor4>( index, *static_cast<ByteColor4 *>(&col) );
 		}
-			
+
 
 		return index;
 	}
@@ -54,12 +55,12 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
-		return nif->isArray( index ) && nif->getValue( index.child( 0, 0 ) ).isColor();
+		return nif->isArray( index ) && nif->getValue( QModelIndex_child( index ) ).isColor();
 	}
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
 	{
-		QModelIndex colorIdx = (nif->isArray( index )) ? index.child( 0, 0 ) : index;
+		QModelIndex colorIdx = (nif->isArray( index )) ? QModelIndex_child( index ) : index;
 
 		auto typ = nif->getValue( colorIdx ).type();
 		if ( typ == NifValue::tColor3 )

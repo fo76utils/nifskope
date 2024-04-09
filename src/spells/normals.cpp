@@ -8,6 +8,7 @@
 #include <QLayout>
 #include <QPushButton>
 
+#include "gamemanager.h"
 
 // Brief description is deliberately not autolinked to class Spell
 /*! \file normals.cpp
@@ -85,7 +86,7 @@ public:
 				QVector<QVector<quint16> > strips;
 
 				for ( int r = 0; r < nif->rowCount( iPoints ); r++ )
-					strips.append( nif->getArray<quint16>( iPoints.child( r, 0 ) ) );
+					strips.append( nif->getArray<quint16>( QModelIndex_child( iPoints, r ) ) );
 
 				triangles = triangulate( strips );
 			} else {
@@ -94,7 +95,7 @@ public:
 
 
 			QVector<Vector3> norms( verts.count() );
-			
+
 			faceNormals( verts, triangles, norms );
 
 			nif->set<int>( iData, "Has Normals", 1 );
@@ -116,7 +117,7 @@ public:
 				auto numParts = nif->get<int>( iPart, "Num Partitions" );
 				auto iParts = nif->getIndex( iPart, "Partitions" );
 				for ( int i = 0; i < numParts; i++ )
-					triangles << nif->getArray<Triangle>( iParts.child( i, 0 ), "Triangles" );
+					triangles << nif->getArray<Triangle>( QModelIndex_child( iParts, i ), "Triangles" );
 			}
 
 			QVector<Vector3> verts;
@@ -313,7 +314,6 @@ public:
 				nif->set<ByteVector3>( nif->index( i, 0, iData ), "Normal", snorms[i] );
 			nif->resetState();
 		}
-		
 
 		return index;
 	}
@@ -333,7 +333,7 @@ public:
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
 		return ( nif->getValue( index ).type() == NifValue::tVector3 )
-		       || ( nif->isArray( index ) && nif->getValue( index.child( 0, 0 ) ).type() == NifValue::tVector3 );
+		       || ( nif->isArray( index ) && nif->getValue( QModelIndex_child( index ) ).type() == NifValue::tVector3 );
 	}
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final

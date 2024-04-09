@@ -903,7 +903,7 @@ inline const NifItem * NifModel::getBlockItem( qint32 link, const QLatin1String 
 }
 inline const NifItem * NifModel::getBlockItem( qint32 link, const char * ancestor ) const
 {
-	return _getBlockItem( getBlockItem(link), QLatin1Literal(ancestor) );
+	return _getBlockItem( getBlockItem(link), QLatin1String(ancestor) );
 }
 inline const NifItem * NifModel::getBlockItem( qint32 link, const std::initializer_list<const char *> & ancestors ) const
 {

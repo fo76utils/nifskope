@@ -1,6 +1,7 @@
 #include "spellbook.h"
 #include "sanitize.h"
 #include "spells/misc.h"
+#include "gamemanager.h"
 
 #include <QInputDialog>
 
@@ -62,7 +63,7 @@ public:
 				QList<QPair<qint32, bool>> links;
 
 				for ( int r = 0; r < nif->rowCount( iChildren ); r++ ) {
-					qint32 l = nif->getLink( iChildren.child( r, 0 ) );
+					qint32 l = nif->getLink( QModelIndex_child( iChildren, r ) );
 
 					if ( l >= 0 ) {
 						links.append( QPair<qint32, bool>( l, nif->blockInherits(nif->getBlockIndex(l), {"NiTriBasedGeom", "BSTriShape"}) ) );
@@ -76,8 +77,8 @@ public:
 				std::stable_sort( links.begin(), links.end(), compareFn );
 
 				for ( int r = 0; r < links.count(); r++ ) {
-					if ( links[r].first != nif->getLink( iChildren.child( r, 0 ) ) ) {
-						nif->setLink( iChildren.child( r, 0 ), links[r].first );
+					if ( links[r].first != nif->getLink( QModelIndex_child( iChildren, r ) ) ) {
+						nif->setLink( QModelIndex_child( iChildren, r ), links[r].first );
 					}
 				}
 
@@ -307,7 +308,7 @@ public:
 	QModelIndex check( NifModel * nif, const QModelIndex & iParent )
 	{
 		for ( int r = 0; r < nif->rowCount( iParent ); r++ ) {
-			QModelIndex idx = iParent.child( r, 0 );
+			QModelIndex idx = QModelIndex_child( iParent, r );
 
 			if ( nif->isLink( idx ) ) {
 				qint32 l = nif->getLink( idx );
@@ -422,7 +423,7 @@ public:
 			int newIdx = -1;
 
 			bool isOutOfBounds = nameIdx >= numStrings;
-			bool isProp = nif->isNiBlock( iBlock, 
+			bool isProp = nif->isNiBlock( iBlock,
 										{ "BSLightingShaderProperty", "BSEffectShaderProperty", "NiAlphaProperty" } );
 			bool isNiAV = nif->blockInherits( iBlock, "NiAVObject" );
 
@@ -503,13 +504,13 @@ public:
 		nif->set<int>( iHeader, "Num Strings", strings.count() );
 		nif->updateArraySize( iHeader, "Strings" );
 		nif->setArray<QString>( iHeader, "Strings", strings );
-		
+
 		nif->updateHeader();
 
 		for ( const auto & b : modifiedBlocks.toStdMap() ) {
 			auto blockName = b.first.parent().data( Qt::DisplayRole ).toString();
 
-			Message::append( Spell::tr( "One or more blocks have had their Name sanitized." ), 
+			Message::append( Spell::tr( "One or more blocks have had their Name sanitized." ),
 							 QString( "%1 (%2) = '%3'" ).arg( blockName ).arg( b.second ).arg( nif->get<QString>( b.first ) )
 			);
 		}
@@ -542,7 +543,7 @@ public:
 
 		bool ok = true;
 		QString str = QInputDialog::getText( 0, Spell::tr( "Fill Blank NiControllerSequence Types" ),
-											   Spell::tr( "Choose the default Controller Type" ), 
+											   Spell::tr( "Choose the default Controller Type" ),
 											   QLineEdit::Normal, "NiTransformController", &ok );
 
 		if ( !ok )
@@ -564,8 +565,8 @@ public:
 			auto numBlocks = nif->rowCount( controlledBlocks );
 
 			for ( int i = 0; i < numBlocks; i++ ) {
-				auto ctrlrType =  nif->getIndex( controlledBlocks.child( i, 0 ), "Controller Type" );
-				auto nodeName = nif->getIndex( controlledBlocks.child( i, 0 ), "Node Name" );
+				auto ctrlrType =  nif->getIndex( QModelIndex_child( controlledBlocks, i ), "Controller Type" );
+				auto nodeName = nif->getIndex( QModelIndex_child( controlledBlocks, i ), "Node Name" );
 
 				auto ctrlrTypeIdx = nif->get<int>( ctrlrType );
 				if ( ctrlrTypeIdx == -1 ) {
@@ -656,7 +657,7 @@ QModelIndex spErrorInvalidPaths::cast( NifModel * nif, const QModelIndex & )
 		auto iBSSTS = nif->getBlockIndex( i, "BSShaderTextureSet" );
 		if ( iBSSTS.isValid() )
 			checkPath( nif, iBSSTS, "Textures" );
-		
+
 		auto iBSSNLP = nif->getBlockIndex( i, "BSShaderNoLightingProperty" );
 		if ( iBSSNLP.isValid() )
 			checkPath( nif, iBSSNLP, "File Name" );
@@ -718,7 +719,7 @@ bool spWarningEnvironmentMapping::isApplicable(const NifModel * nif, const QMode
 	return nif->getBSVersion() > 0 && !index.isValid();
 }
 
-QModelIndex spWarningEnvironmentMapping::cast(NifModel * nif, const QModelIndex & idx)
+QModelIndex spWarningEnvironmentMapping::cast(NifModel * nif, [[maybe_unused]] const QModelIndex & idx)
 {
 	for ( int i = 0; i < nif->getBlockCount(); i++ ) {
 		if ( nif->getBSVersion() < 83 ) {
@@ -731,7 +732,7 @@ QModelIndex spWarningEnvironmentMapping::cast(NifModel * nif, const QModelIndex 
 					nif->logMessage(message(), tr("[%1] Flags lack 'Envmap_Light_Fade' which may be a mistake.").arg(i));
 			}
 		} else {
-		
+
 		}
 	}
 	return QModelIndex();

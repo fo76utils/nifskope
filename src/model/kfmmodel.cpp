@@ -230,7 +230,7 @@ void KfmModel::insertType( NifItem * parent, const NifData & data, int at )
  *  load and save
  */
 
-bool KfmModel::setHeaderString( const QString & s, uint ver )
+bool KfmModel::setHeaderString( const QString & s, [[maybe_unused]] uint ver )
 {
 	if ( s.startsWith( ";Gamebryo KFM File Version " ) ) {
 		version = version2number( s.right( s.length() - 27 ) );

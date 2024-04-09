@@ -12,6 +12,8 @@
 
 #include <algorithm> // std::stable_sort
 
+#include "gamemanager.h"
+
 // Brief description is deliberately not autolinked to class Spell
 /*! \file blocks.cpp
  * \brief Block manipulation spells
@@ -79,7 +81,7 @@ QMultiMap<QString, QString> ctlrMappingBS = {
 	{ "BSLightingShaderProperty", "BSLightingShaderPropertyColorController" },
 	{ "BSLightingShaderProperty", "BSLightingShaderPropertyFloatController" },
 	// FO4
-	{ "NiLight", "NiLightRadiusController" }, 
+	{ "NiLight", "NiLightRadiusController" },
 };
 
 //! Blocks that are never used beyond 10.1.0.0
@@ -125,13 +127,13 @@ QStringList boolValue = {
 	"NiBlendBoolInterpolator"
 };
 //! The interpolators that return true for NiInterpolator::IsFloatValueSupported()
-QStringList floatValue = { 
+QStringList floatValue = {
 	"NiFloatInterpolator",
 	"NiBlendFloatInterpolator",
 	"NiBSplineFloatInterpolator"
 };
 //! The interpolators that return true for NiInterpolator::IsPoint3ValueSupported()
-QStringList point3Value = { 
+QStringList point3Value = {
 	"NiPoint3Interpolator",
 	"NiBlendPoint3Interpolator",
 	"NiBSplinePoint3Interpolator"
@@ -147,7 +149,7 @@ QStringList transformValue = {
 };
 
 //! The kind of interpolator values supported on each controller
-QMultiMap<QString, QStringList> interpMapping = 
+QMultiMap<QString, QStringList> interpMapping =
 {
 	{ "NiBoolInterpController", boolValue },
 	{ "NiFloatInterpController", floatValue },
@@ -199,10 +201,10 @@ QStringList getStringsArray( NifModel * nif, const QModelIndex & parent,
 
 	if ( name.isEmpty() ) {
 		for ( int i = 0; i < nif->rowCount( iArr ); i++ )
-			strings << nif->resolveString( iArr.child( i, 0 ) );
+			strings << nif->resolveString( QModelIndex_child( iArr, i ) );
 	} else {
 		for ( int i = 0; i < nif->rowCount( iArr ); i++ )
-			strings << nif->resolveString( iArr.child( i, 0 ), name );
+			strings << nif->resolveString( QModelIndex_child( iArr, i ), name );
 	}
 
 	return strings;
@@ -217,10 +219,10 @@ void setStringsArray( NifModel * nif, const QModelIndex & parent, QStringList & 
 
 	if ( name.isEmpty() ) {
 		for ( int i = 0; i < nif->rowCount( iArr ); i++ )
-			nif->set<QString>( iArr.child( i, 0 ), strings.takeFirst() );
+			nif->set<QString>( QModelIndex_child( iArr, i ), strings.takeFirst() );
 	} else {
 		for ( int i = 0; i < nif->rowCount( iArr ); i++ )
-			nif->set<QString>( iArr.child( i, 0 ), name, strings.takeFirst() );
+			nif->set<QString>( QModelIndex_child( iArr, i ), name, strings.takeFirst() );
 	}
 }
 //! Get "Name" et al. for NiObjectNET, NiExtraData, NiPSysModifier, etc.
@@ -228,7 +230,7 @@ QStringList getNiObjectRootStrings( NifModel * nif, const QModelIndex & iBlock )
 {
 	QStringList strings;
 	for ( int i = 0; i < nif->rowCount( iBlock ); i++ ) {
-		auto iString = iBlock.child( i, 0 );
+		auto iString = QModelIndex_child( iBlock, i );
 		if ( rootStringList.contains( nif->itemName( iString ) ) )
 			strings << nif->resolveString( iString );
 	}
@@ -239,7 +241,7 @@ QStringList getNiObjectRootStrings( NifModel * nif, const QModelIndex & iBlock )
 void setNiObjectRootStrings( NifModel * nif, const QModelIndex & iBlock, QStringList & strings )
 {
 	for ( int i = 0; i < nif->rowCount( iBlock ); i++ ) {
-		auto iString = iBlock.child( i, 0 );
+		auto iString = QModelIndex_child( iBlock, i );
 		if ( rootStringList.contains( nif->itemName( iString ) ) )
 			nif->set<QString>( iString, strings.takeFirst() );
 	}
@@ -254,7 +256,7 @@ QStringList getStringsNiMesh( NifModel * nif, const QModelIndex & iBlock )
 		return {};
 
 	for ( int i = 0; i < nif->rowCount( iData ); i++ )
-		strings << getStringsArray( nif, iData.child( i, 0 ), "Component Semantics", "Name" );
+		strings << getStringsArray( nif, QModelIndex_child( iData, i ), "Component Semantics", "Name" );
 
 	return strings;
 }
@@ -266,7 +268,7 @@ void setStringsNiMesh( NifModel * nif, const QModelIndex & iBlock, QStringList &
 		return;
 
 	for ( int i = 0; i < nif->rowCount( iData ); i++ )
-		setStringsArray( nif, iData.child( i, 0 ), strings, "Component Semantics", "Name" );
+		setStringsArray( nif, QModelIndex_child( iData, i ), strings, "Component Semantics", "Name" );
 }
 //! Get strings for NiSequence
 QStringList getStringsNiSequence( NifModel * nif, const QModelIndex & iBlock )
@@ -277,7 +279,7 @@ QStringList getStringsNiSequence( NifModel * nif, const QModelIndex & iBlock )
 		return {};
 
 	for ( int i = 0; i < nif->rowCount( iControlledBlocks ); i++ ) {
-		auto iChild = iControlledBlocks.child( i, 0 );
+		auto iChild = QModelIndex_child( iControlledBlocks, i );
 		strings << nif->resolveString( iChild, "Target Name" )
 				<< nif->resolveString( iChild, "Node Name" )
 				<< nif->resolveString( iChild, "Property Type" )
@@ -296,7 +298,7 @@ void setStringsNiSequence( NifModel * nif, const QModelIndex & iBlock, QStringLi
 		return;
 
 	for ( int i = 0; i < nif->rowCount( iControlledBlocks ); i++ ) {
-		auto iChild = iControlledBlocks.child( i, 0 );
+		auto iChild = QModelIndex_child( iControlledBlocks, i );
 		nif->set<QString>( iChild, "Target Name", strings.takeFirst() );
 		nif->set<QString>( iChild, "Node Name", strings.takeFirst() );
 		nif->set<QString>( iChild, "Property Type", strings.takeFirst() );
@@ -320,7 +322,7 @@ QStringList serializeStrings( NifModel * nif, const QModelIndex & iBlock, const 
 		strings << getStringsArray( nif, iBlock, "Data" );
 	else if ( type == "NiMorphWeightsController" )
 		strings << getStringsArray( nif, iBlock, "Target Names" );
-	
+
 	if ( type == "NiMesh" || nif->inherits( type, "NiGeometry" ) )
 		strings << getStringsArray( nif, nif->getIndex( iBlock, "Material Data" ), "Material Name" );;
 
@@ -364,7 +366,7 @@ bool addLink( NifModel * nif, const QModelIndex & iParent, const QString & array
 			int numlinks = nif->get<int>( iSize );
 			nif->set<int>( iSize, numlinks + 1 );
 			nif->updateArraySize( iArray );
-			nif->setLink( iArray.child( numlinks, 0 ), link );
+			nif->setLink( QModelIndex_child( iArray, numlinks ), link );
 			return true;
 		}
 
@@ -375,7 +377,7 @@ bool addLink( NifModel * nif, const QModelIndex & iParent, const QString & array
 		if ( nif->isArray( iArray ) && item ) {
 			for ( int c = 0; c < item->childCount(); c++ ) {
 				if ( item->child( c )->getLinkValue() == -1 ) {
-					nif->setLink( iArray.child( c, 0 ), link );
+					nif->setLink( QModelIndex_child( iArray, c ), link );
 					return true;
 				}
 			}
@@ -657,6 +659,14 @@ QMap<QString, QMenu *> blockMenu( NifModel * nif, const std::list<QString> & blo
 	return map;
 }
 
+static std::list< QString > qStringListToStdList( const QStringList & v )
+{
+	std::list< QString >	tmp;
+	for ( const auto & i : v )
+		tmp.push_back( i );
+	return tmp;
+}
+
 //! Insert an unattached block
 class spInsertBlock final : public Spell
 {
@@ -674,7 +684,7 @@ public:
 	{
 		QMenu menu;
 		menu.addSection( tr( "Alphabetical" ) );
-		for ( QMenu * m : blockMenu( nif, NifModel::allNiBlocks().toStdList(), true, true ) ) {
+		for ( QMenu * m : blockMenu( nif, qStringListToStdList( NifModel::allNiBlocks() ), true, true ) ) {
 			if ( m->title().isEmpty() )
 				menu.addSection( tr( "Categories" ) );
 			else if ( m->actions().size() == 1 )
@@ -827,7 +837,7 @@ public:
 		NifItem * item = static_cast<NifItem *>(index.internalPointer());
 		auto type = item->templ();
 
-		std::list<QString> allIds = nif->allNiBlocks().toStdList();
+		std::list<QString> allIds = qStringListToStdList( nif->allNiBlocks() );
 		blockFilter( nif, allIds, type );
 
 		auto iBlock = nif->getBlockIndex( index );
@@ -870,14 +880,14 @@ public:
 			if ( nif->getBSVersion() > 0 )
 				ctlrFilter( ctlrMappingBS );
 
-		} else if ( nif->blockInherits( iBlock, "NiTimeController" ) 
+		} else if ( nif->blockInherits( iBlock, "NiTimeController" )
 					&& nif->inherits( type, "NiInterpolator" ) ) {
 			// Show only applicable types for interpolator links for the given block
 			interpFilter( interpMapping );
 		} else {
 			ids = allIds;
 		}
-		
+
 		ids.sort();
 		ids.unique();
 
@@ -1012,7 +1022,7 @@ public:
 
 			addLink( nif, iParent, "Extra Data List", nif->getBlockNumber( iExtra ) );
 			return iExtra;
-		} 
+		}
 
 		return index;
 	}
@@ -1048,7 +1058,7 @@ public:
 	QString name() const override final { return Spell::tr( "Copy" ); }
 	QString page() const override final { return Spell::tr( "Block" ); }
 	bool constant() const override final { return true; }
-	QKeySequence hotkey() const override final { return{ Qt::CTRL + Qt::SHIFT + Qt::Key_C }; }
+	QKeySequence hotkey() const override final { return{ Qt::CTRL | Qt::SHIFT | Qt::Key_C }; }
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
@@ -1182,7 +1192,7 @@ class spPasteOverBlock final : public Spell
 public:
 	QString name() const override final { return Spell::tr( "Paste Over" ); }
 	QString page() const override final { return Spell::tr( "Block" ); }
-	QKeySequence hotkey() const override final { return{ Qt::CTRL + Qt::SHIFT + Qt::Key_V }; }
+	QKeySequence hotkey() const override final { return{ Qt::CTRL | Qt::SHIFT | Qt::Key_V }; }
 
 	QPair<QString, QString> acceptFormat( const QString & format, const NifModel * nif, const QModelIndex & iBlock )
 	{
@@ -1399,7 +1409,7 @@ QModelIndex spPasteBranch::cast( NifModel * nif, const QModelIndex & index )
 					        tr( "Nif versions differ!<br><br>Current File Version: %1<br>Clipboard Data Version: %2<br><br>The results will be unpredictable..." )
 					            .arg( nif->getVersion() ).arg( v ), tr( "Continue" ),
 					        tr( "Cancel" )
-						) == 0 
+						) == 0
 				    )
 				)
 			{
@@ -1615,7 +1625,7 @@ class spMoveBlockUp final : public Spell
 public:
 	QString name() const override final { return Spell::tr( "Move Up" ); }
 	QString page() const override final { return Spell::tr( "Block" ); }
-	QKeySequence hotkey() const override final { return { Qt::CTRL + Qt::Key_Up }; }
+	QKeySequence hotkey() const override final { return { Qt::ControlModifier | Qt::Key_Up }; }
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
@@ -1638,7 +1648,7 @@ class spMoveBlockDown final : public Spell
 public:
 	QString name() const override final { return Spell::tr( "Move Down" ); }
 	QString page() const override final { return Spell::tr( "Block" ); }
-	QKeySequence hotkey() const override final { return { Qt::CTRL + Qt::Key_Down }; }
+	QKeySequence hotkey() const override final { return { Qt::ControlModifier | Qt::Key_Down }; }
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
@@ -1722,7 +1732,7 @@ public:
 		// add all its children, grandchildren, ...
 		for ( const auto child : nif->getChildLinks( link ) ) {
 			// check that child is not in branch to avoid infinite recursion
-			if ( !branch.contains( child ) )
+			if ( !branch.contains( quint32(child) ) )
 				// it's not in there yet so add the child and grandchildren etc...
 				branch << getBranch( nif, child );
 		}
@@ -1741,7 +1751,7 @@ public:
 		int m = 0; // tracks the block number in the old system i.e.  as they are numbered in the branch list
 
 		while ( n < nif->getBlockCount() ) {
-			if ( !branch.contains( m ) )
+			if ( !branch.contains( quint32(m) ) )
 				nif->removeNiBlock( n );
 			else
 				n++;
@@ -1825,7 +1835,7 @@ class spDuplicateBlock final : public Spell
 public:
 	QString name() const override final { return Spell::tr( "Duplicate" ); }
 	QString page() const override final { return Spell::tr( "Block" ); }
-	QKeySequence hotkey() const override final { return{ Qt::CTRL + Qt::SHIFT + Qt::Key_D }; }
+	QKeySequence hotkey() const override final { return{ Qt::CTRL | Qt::SHIFT | Qt::Key_D }; }
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
@@ -2019,7 +2029,7 @@ public:
 				QList<QPair<QString, qint32> > links;
 
 				for ( int r = 0; r < nif->rowCount( iChildren ); r++ ) {
-					qint32 l = nif->getLink( iChildren.child( r, 0 ) );
+					qint32 l = nif->getLink( QModelIndex_child( iChildren, r ) );
 
 					if ( l >= 0 )
 						links.append( QPair<QString, qint32>( nif->get<QString>( nif->getBlockIndex( l ), "Name" ), l ) );
@@ -2028,8 +2038,8 @@ public:
 				std::stable_sort( links.begin(), links.end() );
 
 				for ( int r = 0; r < links.count(); r++ ) {
-					if ( links[r].second != nif->getLink( iChildren.child( r, 0 ) ) )
-						nif->setLink( iChildren.child( r, 0 ), links[r].second );
+					if ( links[r].second != nif->getLink( QModelIndex_child( iChildren, r ) ) )
+						nif->setLink( QModelIndex_child( iChildren, r ), links[r].second );
 
 					nif->set<int>( iNumChildren, links.count() );
 					nif->updateArraySize( iChildren );
@@ -2039,7 +2049,7 @@ public:
 
 		if ( index.isValid() ) {
 			return index;
-		} 
+		}
 
 		return QModelIndex();
 	}
@@ -2094,7 +2104,7 @@ public:
 		int attachedNodeNumber = thisBlockNumber++;
 
 		// replace this block with the attached node
-		nif->setLink( nif->getIndex( iParent, "Children" ).child( thisBlockIndex, 0 ), attachedNodeNumber );
+		nif->setLink( QModelIndex_child( nif->getIndex( iParent, "Children" ), thisBlockIndex ), attachedNodeNumber );
 
 		// attach ourselves to the attached node
 		addLink( nif, attachedNode, "Children", thisBlockNumber );

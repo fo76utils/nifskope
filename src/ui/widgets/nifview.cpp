@@ -44,6 +44,8 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <vector>
 
+#include "gamemanager.h"
+
 NifTreeView::NifTreeView( QWidget * parent, Qt::WindowFlags flags ) : QTreeView()
 {
 	Q_UNUSED( flags );
@@ -102,7 +104,7 @@ void NifTreeView::setRowHiding( bool show )
 }
 
 
-bool NifTreeView::isRowHidden( int r, const QModelIndex & index ) const
+bool NifTreeView::isRowHidden( [[maybe_unused]] int r, const QModelIndex & index ) const
 {
 	const NifItem * item = static_cast<const NifItem *>( index.internalPointer() );
 	return isRowHidden( item );
@@ -138,13 +140,6 @@ void NifTreeView::setAllExpanded( const QModelIndex & index, bool e )
 	}
 }
 
-QStyleOptionViewItem NifTreeView::viewOptions() const
-{
-	QStyleOptionViewItem opt = QTreeView::viewOptions();
-	opt.showDecorationSelected = true;
-	return opt;
-}
-
 void NifTreeView::copy()
 {
 	QModelIndex idx = selectionModel()->selectedIndexes().first();
@@ -165,7 +160,7 @@ void NifTreeView::copy()
 }
 
 void NifTreeView::pasteTo( const QModelIndex iDest, const NifValue & srcValue )
-{	
+{
 	// Only run once per row for the correct column
 	if ( iDest.column() != NifModel::ValueCol )
 		return;
@@ -268,8 +263,8 @@ void NifTreeView::pasteArray()
 
 	ChangeValueCommand::createTransaction();
 	nif->setState( BaseModel::Processing );
-	for ( int i = 0; i < cnt && i < valueClipboard->getValues().size(); i++ ) {
-		auto iDest = root.child( i, NifModel::ValueCol );
+	for ( int i = 0; i < cnt && i < int( valueClipboard->getValues().size() ); i++ ) {
+		auto iDest = QModelIndex_child( root, i, NifModel::ValueCol );
 		auto srcValue = valueClipboard->getValues().at( iDest.row() );
 
 		pasteTo( iDest, srcValue );
@@ -277,7 +272,7 @@ void NifTreeView::pasteArray()
 	nif->restoreState();
 
 	if ( cnt > 0 )
-		emit nif->dataChanged( root.child( 0, NifModel::ValueCol ), root.child( cnt - 1, NifModel::ValueCol ) );
+		emit nif->dataChanged( QModelIndex_child( root, 0, NifModel::ValueCol ), QModelIndex_child( root, cnt - 1, NifModel::ValueCol ) );
 }
 
 void NifTreeView::drawBranches( QPainter * painter, const QRect & rect, const QModelIndex & index ) const
@@ -406,7 +401,7 @@ void NifTreeView::keyPressEvent( QKeyEvent * e )
 				nif->setData( newValue, v );
 
 				// Change the selected row
-				selectionModel()->select( parent.child( row, 0 ), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows );
+				selectionModel()->select( QModelIndex_child( parent, row ), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows );
 
 				// Add row swap to undo
 				ChangeValueCommand::createTransaction();
@@ -416,13 +411,13 @@ void NifTreeView::keyPressEvent( QKeyEvent * e )
 		}
 	}
 
-	SpellPtr spell = SpellBook::lookup( QKeySequence( e->modifiers() + e->key() ) );
+	SpellPtr spell = SpellBook::lookup( QKeySequence( e->modifiers() | e->key() ) );
 
 	if ( spell ) {
 		QPersistentModelIndex oldidx;
 
 		// Clear this on any spell cast to prevent it overriding other paste behavior like block -> link row
-		// TODO: Value clipboard does not get cleared when using the context menu. 
+		// TODO: Value clipboard does not get cleared when using the context menu.
 		valueClipboard->clear();
 
 		if ( model()->inherits( "NifModel" ) ) {

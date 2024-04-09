@@ -47,7 +47,7 @@ class NifTreeView final : public QTreeView
 
 public:
 	//! Constructor
-	NifTreeView( QWidget * parent = 0, Qt::WindowFlags flags = 0 );
+	NifTreeView( QWidget * parent = 0, Qt::WindowFlags flags = Qt::Widget );
 	//! Destructor
 	~NifTreeView();
 
@@ -101,8 +101,6 @@ protected:
 	void mousePressEvent( QMouseEvent * event ) override final;
 	void mouseReleaseEvent( QMouseEvent * event ) override final;
 	void mouseMoveEvent( QMouseEvent * event ) override final;
-
-	QStyleOptionViewItem viewOptions() const override final;
 
 	void autoExpandBlock( const QModelIndex & blockIndex );
 	void autoExpandItem( const NifItem * item );

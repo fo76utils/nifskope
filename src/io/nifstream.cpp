@@ -1059,6 +1059,7 @@ int NifSStream::size( const NifValue & val )
 		return 0;
 
 	case NifValue::tNone:
+	default:
 		return 0;
 	}
 

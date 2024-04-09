@@ -1180,6 +1180,14 @@ public:
 		return (v[0] == other.v[0]) && (v[1] == other.v[1]) && (v[2] == other.v[2]);
 	}
 
+	//! For use as map key
+	bool operator<( const Triangle & other ) const
+	{
+		return ( v[0] < other.v[0]
+				|| ( v[0] == other.v[0] && v[1] < other.v[1] )
+				|| ( v[0] == other.v[0] && v[1] == other.v[1] && v[2] < other.v[2] ) );
+	}
+
 protected:
 	quint16 v[3];
 	friend class NifIStream;

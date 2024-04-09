@@ -131,7 +131,7 @@ bool ShaderMaterial::readFile()
 	Material::readFile();
 
 	size_t numTex = (version >= 17) ? 10 : 9;
-	for ( int i = 0; i < numTex; i++ ) {
+	for ( size_t i = 0; i < numTex; i++ ) {
 		char * str;
 		in >> str;
 		textureList << QString( str );
@@ -220,7 +220,7 @@ bool EffectMaterial::readFile()
 	Material::readFile();
 
 	size_t numTex = (version >= 10) ? 8 : 5;
-	for ( int i = 0; i < numTex; i++ ) {
+	for ( size_t i = 0; i < numTex; i++ ) {
 		char * str;
 		in >> str;
 		textureList << QString( str );
@@ -246,7 +246,7 @@ bool EffectMaterial::readFile()
 	if ( version >= 11 ) {
 		in >> emitR >> emitG >> emitB;
 		cEmittanceColor.setRGB( emitR, emitG, emitB );
-		
+
 		if ( version >= 15 ) {
 			in >> fAdaptativeEmissive_ExposureOffset >> fAdaptativeEmissive_FinalExposureMin >> fAdaptativeEmissive_FinalExposureMax;
 

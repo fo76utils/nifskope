@@ -26,6 +26,8 @@
 #include <QComboBox>
 #include <QQueue>
 
+#include "gamemanager.h"
+
 #define NUM_THREADS 4
 
 
@@ -77,7 +79,7 @@ TestShredder::TestShredder()
 	valueOps->setCurrentIndex(0);
 
 	QString op_tip;
-	for ( const auto t : ops_ord )
+	for ( const auto & t : ops_ord )
 		op_tip += QString("%1\t%2\r\n").arg(t).arg(ops[t].second);
 	valueOps->setToolTip(op_tip);
 
@@ -280,7 +282,7 @@ void TestShredder::threadStarted()
 
 void TestShredder::threadFinished()
 {
-	uint32_t finishedThreads = 0;
+	std::uint32_t finishedThreads = 0;
 	if ( queue.isEmpty() ) {
 		for ( TestThread * thread : threads ) {
 			if ( thread->isRunning() )
@@ -296,7 +298,7 @@ void TestShredder::threadFinished()
 			if ( thread->isFinished() )
 				finishedThreads++;
 		}
-		if ( finishedThreads == threads.count() )
+		if ( qsizetype( finishedThreads ) == threads.count() )
 			text->append(tr("Completed with %1 errors.").arg(errorCount));
 	}
 }
@@ -478,7 +480,7 @@ void TestThread::run()
 								bool isInt = value.isCount() && !value.isFloat();
 								bool isStr = value.isString() || value.type() == NifValue::tStringIndex || value.isFloat();
 
-								auto asInt = value.toCount( nullptr, nullptr);
+								qint64 asInt = qint64( value.toCount( nullptr, nullptr) );
 								auto asStr = ( value.type() == NifValue::tStringIndex ) ? nif.resolveString(nameIdx) : value.toString();
 
 								bool current_match = false;
@@ -604,7 +606,7 @@ QList<TestMessage> TestThread::checkLinks( const NifModel * nif, const QModelInd
 	QList<TestMessage> messages;
 
 	for ( int r = 0; r < nif->rowCount( iParent ); r++ ) {
-		QModelIndex idx = iParent.child( r, 0 );
+		QModelIndex idx = QModelIndex_child( iParent, r );
 
 		if ( nif->isLink( idx ) ) {
 			qint32 l = nif->getLink( idx );

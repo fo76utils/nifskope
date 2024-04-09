@@ -37,6 +37,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QtXml> // QXmlDefaultHandler Inherited
 #include <QCoreApplication>
 #include <QMessageBox>
+#include <QXmlDefaultHandler>
 
 #define err( X ) { errorStr = X; return false; }
 

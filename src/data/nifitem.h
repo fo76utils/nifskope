@@ -385,8 +385,8 @@ public:
 	{
 		ChildIterator( const QVector<NifItem *> & children ) : m_children( children ) {}
 
-		_ChildIterator<T> begin() { return _ChildIterator<T>(m_children.begin()); }
-		_ChildIterator<T> end() { return _ChildIterator<T>(m_children.end()); }
+		_ChildIterator<T> begin() { return _ChildIterator<T>(&(*(m_children.begin()))); }
+		_ChildIterator<T> end() { return _ChildIterator<T>(&(*(m_children.end()))); }
 
 	private:
 		const QVector<NifItem*> & m_children;
@@ -507,7 +507,7 @@ public:
 	void removeChildren( int row, int count )
 	{
 		int iStart = std::max( row, 0 );
-		int iEnd = std::min( row + count, childItems.count() );
+		int iEnd = std::min( row + count, int( childItems.count() ) );
 		if ( iStart < iEnd ) {
 			for ( int i = iStart; i < iEnd; i++ ) {
 				NifItem * item = childItems.at( i );

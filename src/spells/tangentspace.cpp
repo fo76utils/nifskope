@@ -1,4 +1,5 @@
 #include "tangentspace.h"
+#include "gamemanager.h"
 
 #include "lib/nvtristripwrapper.h"
 
@@ -7,7 +8,7 @@ bool spTangentSpace::isApplicable( const NifModel * nif, const QModelIndex & ind
 {
 	QModelIndex iData = nif->getBlockIndex( nif->getLink( index, "Data" ) );
 
-	if ( nif->isNiBlock( index, "BSTriShape" ) || nif->isNiBlock( index, "BSSubIndexTriShape" ) 
+	if ( nif->isNiBlock( index, "BSTriShape" ) || nif->isNiBlock( index, "BSSubIndexTriShape" )
 		|| nif->isNiBlock( index, "BSMeshLODTriShape" ) ) {
 		// TODO: Check vertex flags to verify mesh has normals and space for tangents/bitangents
 		return true;
@@ -90,7 +91,7 @@ QModelIndex spTangentSpace::cast( NifModel * nif, const QModelIndex & iBlock )
 
 	if ( nif->getBSVersion() < 100 ) {
 		QModelIndex iTexCo = nif->getIndex( iData, "UV Sets" );
-		iTexCo = iTexCo.child( 0, 0 );
+		iTexCo = QModelIndex_child( iTexCo );
 		texco = nif->getArray<Vector2>( iTexCo );
 	}
 
@@ -102,7 +103,7 @@ QModelIndex spTangentSpace::cast( NifModel * nif, const QModelIndex & iBlock )
 		QVector<QVector<quint16> > strips;
 
 		for ( int r = 0; r < nif->rowCount( iPoints ); r++ )
-			strips.append( nif->getArray<quint16>( iPoints.child( r, 0 ) ) );
+			strips.append( nif->getArray<quint16>( QModelIndex_child( iPoints, r ) ) );
 
 		triangles = triangulate( strips );
 	} else if ( nif->getBSVersion() < 100 ) {
@@ -113,7 +114,7 @@ QModelIndex spTangentSpace::cast( NifModel * nif, const QModelIndex & iBlock )
 			auto numParts = nif->get<int>( iPartBlock, "Num Partitions" );
 			auto iParts = nif->getIndex( iPartBlock, "Partitions" );
 			for ( int i = 0; i < numParts; i++ )
-				triangles << nif->getArray<Triangle>( iParts.child( i, 0 ), "Triangles" );
+				triangles << nif->getArray<Triangle>( QModelIndex_child( iParts, i ), "Triangles" );
 		} else {
 			triangles = nif->getArray<Triangle>( iShape, "Triangles" );
 		}
@@ -265,7 +266,7 @@ QModelIndex spTangentSpace::cast( NifModel * nif, const QModelIndex & iBlock )
 				int numlinks = nif->get<int>( iNumExtras );
 				nif->set<int>( iNumExtras, numlinks + 1 );
 				nif->updateArraySize( iExtras );
-				nif->setLink( iExtras.child( numlinks, 0 ), nif->getBlockNumber( iTSpace ) );
+				nif->setLink( QModelIndex_child( iExtras, numlinks ), nif->getBlockNumber( iTSpace ) );
 			}
 		}
 
@@ -337,7 +338,7 @@ public:
 				indices << idx;
 		}
 
-		for ( const QModelIndex& idx : indices ) {
+		for ( const QPersistentModelIndex& idx : indices ) {
 			TSpacer.castIfApplicable( nif, idx );
 		}
 

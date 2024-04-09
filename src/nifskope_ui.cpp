@@ -144,12 +144,15 @@ void NifSkope::initActions()
 	aSelectFont = ui->aSelectFont;
 
 	// Build all actions list
-	allActions = QSet<QAction *>::fromList(
-		ui->tFile->actions()
-		<< ui->mRender->actions()
-		<< ui->tRender->actions()
-		<< ui->tAnim->actions()
-	);
+	allActions = QSet<QAction *>();
+	for ( auto i : ui->tFile->actions() )
+		allActions.insert( i );
+	for ( auto i : ui->mRender->actions() )
+		allActions.insert( i );
+	for ( auto i : ui->tRender->actions() )
+		allActions.insert( i );
+	for ( auto i : ui->tAnim->actions() )
+		allActions.insert( i );
 
 	// Undo/Redo
 	undoAction = nif->undoStack->createUndoAction( this, tr( "&Undo" ) );
@@ -820,7 +823,7 @@ void NifSkope::onLoadComplete( bool success, QString & fname )
 
 		header->setRootIndex( nif->getHeaderIndex() );
 		// Refresh the header rows
-		header->updateConditions( nif->getHeaderIndex().child( 0, 0 ), nif->getHeaderIndex().child( 20, 0 ) );
+		header->updateConditions( QModelIndex_child( nif->getHeaderIndex() ), QModelIndex_child( nif->getHeaderIndex(), 20 ) );
 
 		ogl->setOrientation( GLView::ViewFront );
 
@@ -1025,13 +1028,13 @@ void NifSkope::setViewFont( const QFont & font )
 {
 	list->setFont( font );
 	QFontMetrics metrics( list->font() );
-	list->setIconSize( QSize( metrics.width( "000" ), metrics.lineSpacing() ) );
+	list->setIconSize( QSize( metrics.horizontalAdvance( "000" ), metrics.lineSpacing() ) );
 	tree->setFont( font );
-	tree->setIconSize( QSize( metrics.width( "000" ), metrics.lineSpacing() ) );
+	tree->setIconSize( QSize( metrics.horizontalAdvance( "000" ), metrics.lineSpacing() ) );
 	header->setFont( font );
-	header->setIconSize( QSize( metrics.width( "000" ), metrics.lineSpacing() ) );
+	header->setIconSize( QSize( metrics.horizontalAdvance( "000" ), metrics.lineSpacing() ) );
 	kfmtree->setFont( font );
-	kfmtree->setIconSize( QSize( metrics.width( "000" ), metrics.lineSpacing() ) );
+	kfmtree->setIconSize( QSize( metrics.horizontalAdvance( "000" ), metrics.lineSpacing() ) );
 	ogl->setFont( font );
 }
 

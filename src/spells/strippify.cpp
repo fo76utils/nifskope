@@ -2,6 +2,7 @@
 
 #include "blocks.h"
 #include "gl/gltools.h"
+#include "gamemanager.h"
 
 #include "lib/nvtristripwrapper.h"
 
@@ -55,7 +56,7 @@ class spStrippify final : public Spell
 		int skip = 0;
 
 		for ( int t = 0; t < nif->rowCount( iTriangles ); t++ ) {
-			Triangle tri = nif->get<Triangle>( iTriangles.child( t, 0 ) );
+			Triangle tri = nif->get<Triangle>( QModelIndex_child( iTriangles, t ) );
 
 			if ( tri[0] != tri[1] && tri[1] != tri[2] && tri[2] != tri[0] )
 				triangles.append( tri );
@@ -112,7 +113,7 @@ class spStrippify final : public Spell
 				nif->updateArraySize( iDstUV );
 
 				for ( int r = 0; r < nif->rowCount( iDstUV ); r++ ) {
-					copyArray<Vector2>( nif, iDstUV.child( r, 0 ), iSrcUV.child( r, 0 ) );
+					copyArray<Vector2>( nif, QModelIndex_child( iDstUV, r ), QModelIndex_child( iSrcUV, r ) );
 				}
 			}
 
@@ -130,8 +131,8 @@ class spStrippify final : public Spell
 				nif->updateArraySize( iPoints );
 				int x = 0;
 				for ( const QVector<quint16>& strip : strips ) {
-					nif->set<int>( iLengths.child( x, 0 ), strip.count() );
-					QModelIndex iStrip = iPoints.child( x, 0 );
+					nif->set<int>( QModelIndex_child( iLengths, x ), strip.count() );
+					QModelIndex iStrip = QModelIndex_child( iPoints, x );
 					nif->updateArraySize( iStrip );
 					nif->setArray<quint16>( iStrip, strip );
 					x++;
@@ -166,13 +167,13 @@ class spStrippify final : public Spell
 			auto stripsA = strips.at(0);
 			if ( iLengths.isValid() && iPoints.isValid() ) {
 				nif->updateArraySize( iLengths );
-				nif->set<quint16>( iLengths.child( 0, 0 ), stripsA.count() );
+				nif->set<quint16>( QModelIndex_child( iLengths ), stripsA.count() );
 				nif->updateArraySize( iPoints );
-				nif->updateArraySize( iPoints.child( 0, 0 ) );
-				nif->setArray<quint16>( iPoints.child( 0, 0 ), stripsA );
+				nif->updateArraySize( QModelIndex_child( iPoints ) );
+				nif->setArray<quint16>( QModelIndex_child( iPoints ), stripsA );
 				nif->set<quint16>( iStripData, "Num Triangles", stripsA.count() - 2 );
 			}
-			
+
 			// Update New Shape
 			nif->set<int>( iStrip2Data, "Num Strips", 1 );
 			nif->set<int>( iStrip2Data, "Has Points", 1 );
@@ -183,10 +184,10 @@ class spStrippify final : public Spell
 			auto stripsB = strips.at(1);
 			if ( iLengths.isValid() && iPoints.isValid() ) {
 				nif->updateArraySize( iLengths );
-				nif->set<quint16>( iLengths.child( 0, 0 ), stripsB.count() );
+				nif->set<quint16>( QModelIndex_child( iLengths ), stripsB.count() );
 				nif->updateArraySize( iPoints );
-				nif->updateArraySize( iPoints.child( 0, 0 ) );
-				nif->setArray<quint16>( iPoints.child( 0, 0 ), stripsB );
+				nif->updateArraySize( QModelIndex_child( iPoints ) );
+				nif->setArray<quint16>( QModelIndex_child( iPoints ), stripsB );
 				nif->set<quint16>( iStrip2Data, "Num Triangles", stripsB.count() - 2 );
 			}
 		}
@@ -222,7 +223,7 @@ public:
 
 		spStrippify Stripper;
 
-		for ( const QModelIndex& idx : iTriShapes ) {
+		for ( const QPersistentModelIndex& idx : iTriShapes ) {
 			Stripper.castIfApplicable( nif, idx );
 		}
 
@@ -260,10 +261,10 @@ class spTriangulate final : public Spell
 
 		for ( int s = 0; s < nif->rowCount( iPoints ); s++ ) {
 			QVector<quint16> strip;
-			QModelIndex iStrip = iPoints.child( s, 0 );
+			QModelIndex iStrip = QModelIndex_child( iPoints, s );
 
 			for ( int p = 0; p < nif->rowCount( iStrip ); p++ )
-				strip.append( nif->get<int>( iStrip.child( p, 0 ) ) );
+				strip.append( nif->get<int>( QModelIndex_child( iStrip, p ) ) );
 
 			strips.append( strip );
 		}
@@ -299,7 +300,7 @@ class spTriangulate final : public Spell
 				nif->updateArraySize( iDstUV );
 
 				for ( int r = 0; r < nif->rowCount( iDstUV ); r++ ) {
-					copyArray<Vector2>( nif, iDstUV.child( r, 0 ), iSrcUV.child( r, 0 ) );
+					copyArray<Vector2>( nif, QModelIndex_child( iDstUV, r ), QModelIndex_child( iSrcUV, r ) );
 				}
 			}
 
@@ -336,7 +337,7 @@ public:
 	QString name() const override final { return Spell::tr( "Triangulate All Strips" ); }
 	QString page() const override final { return Spell::tr( "Batch" ); }
 
-	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
+	bool isApplicable( [[maybe_unused]] const NifModel * nif, const QModelIndex & index ) override final
 	{
 		return !index.isValid();
 	}
@@ -352,7 +353,7 @@ public:
 		}
 
 		spTriangulate tri;
-		for ( const QModelIndex& idx : triStrips )
+		for ( const QPersistentModelIndex& idx : triStrips )
 			tri.castIfApplicable( nif, idx );
 
 		return QModelIndex();
@@ -394,7 +395,7 @@ public:
 		QList<QVector<quint16> > strips;
 
 		for ( int r = 0; r < nif->rowCount( iPoints ); r++ )
-			strips += nif->getArray<quint16>( iPoints.child( r, 0 ) );
+			strips += nif->getArray<quint16>( QModelIndex_child( iPoints, r ) );
 
 		if ( strips.isEmpty() )
 			return index;
@@ -412,10 +413,10 @@ public:
 
 		nif->set<int>( iData, "Num Strips", 1 );
 		nif->updateArraySize( iLength );
-		nif->set<int>( iLength.child( 0, 0 ), strip.size() );
+		nif->set<int>( QModelIndex_child( iLength ), strip.size() );
 		nif->updateArraySize( iPoints );
-		nif->updateArraySize( iPoints.child( 0, 0 ) );
-		nif->setArray<quint16>( iPoints.child( 0, 0 ), strip );
+		nif->updateArraySize( QModelIndex_child( iPoints ) );
+		nif->setArray<quint16>( QModelIndex_child( iPoints ), strip );
 
 		return index;
 	}
@@ -445,7 +446,7 @@ public:
 		if ( !( iLength.isValid() && iPoints.isValid() ) )
 			return index;
 
-		QVector<quint16> strip = nif->getArray<quint16>( iPoints.child( 0, 0 ) );
+		QVector<quint16> strip = nif->getArray<quint16>( QModelIndex_child( iPoints ) );
 
 		if ( strip.size() <= 3 )
 			return index;
@@ -487,9 +488,9 @@ public:
 		nif->updateArraySize( iPoints );
 
 		for ( int r = 0; r < strips.count(); r++ ) {
-			nif->set<int>( iLength.child( r, 0 ), strips[r].size() );
-			nif->updateArraySize( iPoints.child( r, 0 ) );
-			nif->setArray<quint16>( iPoints.child( r, 0 ), strips[r] );
+			nif->set<int>( QModelIndex_child( iLength, r ), strips[r].size() );
+			nif->updateArraySize( QModelIndex_child( iPoints, r ) );
+			nif->setArray<quint16>( QModelIndex_child( iPoints, r ), strips[r] );
 		}
 
 		return index;

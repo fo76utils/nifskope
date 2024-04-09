@@ -154,7 +154,7 @@ QString NifValue::typeDescription( const QString & typId )
 
 	if ( txtCache.contains( typId ) )
 		return txtCache[typId];
-	
+
 	QString txt = QString( "<p><b>%1 (%2)</b><p>%3</p>" ).arg( typId, aliasMap.value( typId ), typeTxt.value( typId ) );
 
 	txt += "<table><tr><td><table>";
@@ -252,7 +252,7 @@ QString NifValue::enumOptionName( const QString & eid, quint32 val )
 			auto it = eo.o.constBegin();
 			while ( it != eo.o.constEnd() ) {
 				if ( val & ( 1 << it.key() ) ) {
-					val2 |= ( 1 << it.key() ); 
+					val2 |= ( 1 << it.key() );
 
 					if ( !text.isEmpty() )
 						text += " | ";
@@ -305,7 +305,7 @@ quint32 NifValue::enumOptionValue( const QString & eid, const QString & oid, boo
 				*ok = true;
 
 			quint32 value = 0;
-			QStringList list = oid.split( QRegularExpression( "\\s*\\|\\s*" ), QString::SkipEmptyParts );
+			QStringList list = oid.split( QRegularExpression( "\\s*\\|\\s*" ), Qt::SkipEmptyParts );
 			QStringListIterator lit( list );
 
 			while ( lit.hasNext() ) {
@@ -883,6 +883,8 @@ bool NifValue::setFromString( const QString & s, const BaseModel * model, const 
 	case tQuatXYZW:
 		static_cast<Quat *>( val.data )->fromString( s );
 		ok = true;
+		break;
+	default:
 		break;
 	}
 

@@ -38,6 +38,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QtXml> // QXmlDefaultHandler Inherited
 #include <QCoreApplication>
 #include <QMessageBox>
+#include <QXmlDefaultHandler>
 
 
 //! \file nifxml.cpp NifXmlHandler, NifModel XML
@@ -195,10 +196,11 @@ public:
 		if ( x == tagToken )
 			tags.insert( list.value( "name" ), tagTokenTag );
 
-		if ( x == tagNone )
+		if ( x == tagNone ) {
 			x = tags.value( tagid );
 			if ( x == tagNone )
 				err( tr( "error unknown element '%1'" ).arg( tagid ) );
+		}
 
 		if ( depth == 0 ) {
 			if ( x != tagFile )
@@ -327,6 +329,7 @@ public:
 
 			if ( x != tagAdd )
 				err( tr( "only field tags allowed in struct type declaration" ) );
+			[[fallthrough]];
 
 		case tagBlock:
 			push( x );
@@ -464,6 +467,8 @@ public:
 			case tagAddDefault:
 				// Subclass defaults
 				break;
+			default:
+				break;
 			}
 			break;
 		case tagEnum:
@@ -556,6 +561,7 @@ public:
 				NifValue::setTypeDescription( blk->id, blk->text );
 			else if ( !typId.isEmpty() && !typTxt.isEmpty() )
 				NifValue::setTypeDescription( typId, typTxt );
+			[[fallthrough]];
 
 		case tagBlock:
 			if ( blk ) {

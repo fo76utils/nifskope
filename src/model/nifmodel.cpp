@@ -1325,7 +1325,7 @@ QVariant NifModel::data( const QModelIndex & index, int role ) const
 
 						auto block = root->child( link + firstBlockRow() );
 						if ( !block )
-							return tr( "%1 <???>" ).arg( link );
+							return tr( "%1 <\?\?\?>" ).arg( link );
 
 						QString blockName = get<QString>( block, "Name" );
 						if ( !blockName.isEmpty() )

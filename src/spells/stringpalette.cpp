@@ -12,6 +12,7 @@
 #include <QRegularExpression>
 #include <QStringListModel>
 
+#include "gamemanager.h"
 
 // Brief description is deliberately not autolinked to class Spell
 /*! \file stringpalette.cpp
@@ -351,7 +352,6 @@ public:
 
 		// rebuild palette
 		bytes.clear();
-		x = 0;
 
 		QMap<int, int> offsetMap;
 
@@ -362,10 +362,9 @@ public:
 				// set references to empty
 				offsetMap.insert( oldOffsets[i], -1 );
 			} else {
-				offsetMap.insert( oldOffsets[i], x );
-				bytes += s;
+				offsetMap.insert( oldOffsets[i], int(bytes.size()) );
+				bytes += s.toUtf8();
 				bytes.append( '\0' );
-				x += ( s.length() + 1 );
 			}
 		}
 
@@ -408,23 +407,23 @@ public:
 			QPersistentModelIndex blocks = nif->getIndex( nextBlock, "Controlled Blocks" );
 
 			for ( int i = 0; i < nif->rowCount( blocks ); i++ ) {
-				QPersistentModelIndex thisBlock = blocks.child( i, 0 );
+				QPersistentModelIndex thisBlock = QModelIndex_child( blocks, i );
 
 				for ( int j = 0; j < nif->rowCount( thisBlock ); j++ ) {
-					if ( nif->getValue( thisBlock.child( j, 0 ) ).type() == NifValue::tStringOffset ) {
+					if ( nif->getValue( QModelIndex_child( thisBlock, j ) ).type() == NifValue::tStringOffset ) {
 						// we shouldn't ever exceed the limit of an int, even though the type
 						// is properly a uint
-						int oldValue = nif->get<int>( thisBlock.child( j, 0 ) );
-						qDebug() << "Index " << thisBlock.child( j, 0 )
+						int oldValue = nif->get<int>( QModelIndex_child( thisBlock, j ) );
+						qDebug() << "Index " << QModelIndex_child( thisBlock, j )
 						           << " is a string offset with name "
-						           << nif->itemName( thisBlock.child( j, 0 ) )
+						           << nif->itemName( QModelIndex_child( thisBlock, j ) )
 						           << " and value "
-						           << nif->get<int>( thisBlock.child( j, 0 ) );
+						           << nif->get<int>( QModelIndex_child( thisBlock, j ) );
 
 
 						if ( oldValue != -1 ) {
 							int newValue = offsetMap.value( oldValue );
-							nif->set<int>( thisBlock.child( j, 0 ), newValue );
+							nif->set<int>( QModelIndex_child( thisBlock, j ), newValue );
 							numRefsUpdated++;
 						}
 					}

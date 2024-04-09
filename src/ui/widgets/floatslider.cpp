@@ -59,7 +59,7 @@ FloatSliderEditBox::FloatSliderEditBox( QWidget * parent )
 	setMaximumWidth( 100 );
 
 	QVBoxLayout * layout = new QVBoxLayout();
-	layout->setMargin( 4 );
+	layout->setContentsMargins( 4, 4, 4, 4 );
 	layout->setSpacing( 2 );
 	setLayout( layout );
 }
@@ -234,7 +234,7 @@ QStyleOptionSlider FloatSlider::getStyleOption() const
 	opt.activeSubControls = QStyle::SC_None;
 
 	if ( showVal ) {
-		int w = fontMetrics().width( "0.000" );
+		int w = fontMetrics().horizontalAdvance( "0.000" );
 //#pragma message("NOTICE: Qt Bugfix is needed here, see http://pastebin.mozilla.org/101393")
 		opt.rect.adjust( (6 * w) / 10, VAL_HEIGHT, (-6 * w) / 10, 0 );
 	}

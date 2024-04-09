@@ -50,6 +50,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "gamemanager.h"
 
 #include <QAction>
+#include <QActionGroup>
 #include <QApplication>
 #include <QBuffer>
 #include <QByteArray>
@@ -562,7 +563,7 @@ QString strippedName( const QString & fullFileName )
 
 int updateRecentActions( QAction * acts[], const QStringList & files )
 {
-	int numRecentFiles = std::min( files.size(), (int)NifSkope::NumRecentFiles );
+	int numRecentFiles = std::min< qsizetype >( files.size(), NifSkope::NumRecentFiles );
 
 	for ( int i = 0; i < numRecentFiles; ++i ) {
 		QString text = QString( "&%1 %2" ).arg( i + 1 ).arg( strippedName( files[i] ) );
@@ -789,7 +790,7 @@ void NifSkope::openArchive( const QString & archive )
 {
 	// Clear memory from previously opened archives
 	bsaModel->clear();
-	bsaProxyModel->clear();
+	bsaProxyModel->invalidate();
 	bsaProxyModel->setSourceModel( emptyModel );
 	bsaView->setModel( emptyModel );
 	bsaView->setSortingEnabled( false );
@@ -1159,7 +1160,7 @@ void NifSkope::SetAppLocale( QLocale curLocale )
 			qApp->installTranslator( mTranslator );
 		}
 
-		mTranslator->load( fileName );
+		(void) mTranslator->load( fileName );
 	}
 
 	QLocale::setDefault( QLocale::C );
@@ -1171,7 +1172,7 @@ void NifSkope::sltLocaleChanged()
 
 	QMessageBox mb( "NifSkope",
 	                tr( "NifSkope must be restarted for this setting to take full effect." ),
-	                QMessageBox::Information, QMessageBox::Ok + QMessageBox::Default, 0, 0,
+	                QMessageBox::Information, QMessageBox::Ok | QMessageBox::Default, 0, 0,
 	                qApp->activeWindow()
 	);
 	mb.setIconPixmap( QPixmap( ":/res/nifskope.png" ) );

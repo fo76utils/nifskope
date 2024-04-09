@@ -75,7 +75,7 @@ FileSelector::FileSelector( Modes mode, const QString & buttonText, QBoxLayout::
 	: QWidget(), Mode( mode ), dirmdl( 0 ), completer( 0 )
 {
 	QBoxLayout * lay = new QBoxLayout( dir, this );
-	lay->setMargin( 0 );
+	lay->setContentsMargins( 0, 0, 0, 0 );
 	setLayout( lay );
 
 	line = new QLineEdit( this );

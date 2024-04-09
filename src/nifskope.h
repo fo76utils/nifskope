@@ -78,7 +78,6 @@ class QActionGroup;
 class QComboBox;
 class QGraphicsScene;
 class QProgressBar;
-class QStringList;
 class QTimer;
 class QTreeView;
 class QUdpSocket;

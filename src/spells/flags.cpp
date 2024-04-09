@@ -675,7 +675,7 @@ public:
 			Spell::tr( "Not Equal" ),        // 5
 			Spell::tr( "Greater or Equal" ), // 6
 			Spell::tr( "Always" )            // 7
-		};          
+		};
 
 		QComboBox * cmbFunc = dlgCombo( vbox, Spell::tr( "Stencil Function" ), compareFunc );
 
@@ -989,7 +989,7 @@ public:
 			Spell::tr( "Skinned" ),	  // VA_SKINNING = 0x6,
 			Spell::tr( "Land Data" ), // VA_LANDDATA = 0x7,
 			Spell::tr( "Eye Data" ),  // VA_EYEDATA = 0x8,
-			Spell::tr( "" ),          
+			Spell::tr( "" ),
 			Spell::tr( "Full Precision" ) // 1 << 10
 		};
 

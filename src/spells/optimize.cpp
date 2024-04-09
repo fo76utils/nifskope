@@ -11,6 +11,7 @@
 #include <algorithm> // std::sort
 #include <functional> //std::greater
 
+#include "gamemanager.h"
 
 // Brief description is deliberately not autolinked to class Spell
 /*! \file optimize.cpp
@@ -329,7 +330,7 @@ public:
 
 		spRemoveBranch BranchRemover;
 
-		for ( const QModelIndex& rem : remove ) {
+		for ( const QPersistentModelIndex& rem : remove ) {
 			BranchRemover.cast( nif, rem );
 		}
 
@@ -393,7 +394,7 @@ public:
 				.arg( nif->itemName( iBlock ) )
 				.arg( nif->get<QString>( iTriA, "Name" ) )
 				.arg( nif->get<QString>( iTriB, "Name" ) );
-			
+
 			return false;
 		}
 
@@ -447,8 +448,8 @@ public:
 		QModelIndex iUVb = nif->getIndex( iDataB, "UV Sets" );
 
 		for ( int r = 0; r < nif->rowCount( iUVa ); r++ ) {
-			nif->updateArraySize( iUVa.child( r, 0 ) );
-			nif->setArray<Vector2>( iUVa.child( r, 0 ), nif->getArray<Vector2>( iUVa.child( r, 0 ) ).mid( 0, numA ) + nif->getArray<Vector2>( iUVb.child( r, 0 ) ) );
+			nif->updateArraySize( QModelIndex_child( iUVa, r ) );
+			nif->setArray<Vector2>( QModelIndex_child( iUVa, r ), nif->getArray<Vector2>( QModelIndex_child( iUVa, r ) ).mid( 0, numA ) + nif->getArray<Vector2>( QModelIndex_child( iUVb, r ) ) );
 		}
 
 		int triCntA = nif->get<int>( iDataA, "Num Triangles" );
@@ -477,15 +478,15 @@ public:
 		nif->updateArraySize( iDataA, "Points" );
 
 		for ( int r = 0; r < stripCntB; r++ ) {
-			QVector<quint16> strip = nif->getArray<quint16>( nif->getIndex( iDataB, "Points" ).child( r, 0 ) );
+			QVector<quint16> strip = nif->getArray<quint16>( QModelIndex_child( nif->getIndex( iDataB, "Points" ), r ) );
 			QMutableVectorIterator<quint16> it( strip );
 
 			while ( it.hasNext() )
 				it.next() += numA;
 
-			nif->set<int>( nif->getIndex( iDataA, "Strip Lengths" ).child( r + stripCntA, 0 ), strip.size() );
-			nif->updateArraySize( nif->getIndex( iDataA, "Points" ).child( r + stripCntA, 0 ) );
-			nif->setArray<quint16>( nif->getIndex( iDataA, "Points" ).child( r + stripCntA, 0 ), strip );
+			nif->set<int>( QModelIndex_child( nif->getIndex( iDataA, "Strip Lengths" ), r + stripCntA ), strip.size() );
+			nif->updateArraySize( QModelIndex_child( nif->getIndex( iDataA, "Points" ), r + stripCntA ) );
+			nif->setArray<quint16>( QModelIndex_child( nif->getIndex( iDataA, "Points" ), r + stripCntA ), strip );
 		}
 
 		spUpdateCenterRadius CenterRadius;
@@ -499,7 +500,7 @@ REGISTER_SPELL( spCombiTris )
 void scan( const QModelIndex & idx, NifModel * nif, QMap<QString, qint32> & usedStrings, bool hasCED )
 {
 	for ( int i = 0; i < nif->rowCount( idx ); i++ ) {
-		auto child = idx.child( i, 2 );
+		auto child = QModelIndex_child( idx, i, 2 );
 		if ( nif->rowCount( child ) > 0 ) {
 			scan( child, nif, usedStrings, hasCED );
 			continue;

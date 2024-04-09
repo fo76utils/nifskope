@@ -81,7 +81,7 @@ UnsignedValidator::UnsignedValidator( QObject * parent )
 {
 }
 
-QValidator::State UnsignedValidator::validate( QString & input, int & pos ) const
+QValidator::State UnsignedValidator::validate( QString & input, [[maybe_unused]] int & pos ) const
 {
 	if ( input.trimmed().isEmpty() || input.trimmed() == QLatin1String( "0x" ) )
 		return Intermediate;
@@ -528,7 +528,7 @@ void ValueEdit::resizeEvent( QResizeEvent * )
 ColorEdit::ColorEdit( QWidget * parent ) : ValueEdit( parent )
 {
 	QHBoxLayout * lay = new QHBoxLayout;
-	lay->setMargin( 0 );
+	lay->setContentsMargins( 0, 0, 0, 0 );
 	lay->setSpacing( 0 );
 	setLayout( lay );
 
@@ -603,7 +603,7 @@ Color3 ColorEdit::getColor3() const
 VectorEdit::VectorEdit( QWidget * parent ) : ValueEdit( parent )
 {
 	QHBoxLayout * lay = new QHBoxLayout( this );
-	lay->setMargin( 0 );
+	lay->setContentsMargins( 0, 0, 0, 0 );
 	lay->setSpacing( 0 );
 
 	CenterLabel * xl, * yl;
@@ -703,7 +703,7 @@ RotationEdit::RotationEdit( QWidget * parent ) : ValueEdit( parent ), mode( mAut
 	btMode->setDefaultAction( actMode );
 
 	QHBoxLayout * lay = new QHBoxLayout( this );
-	lay->setMargin( 0 );
+	lay->setContentsMargins( 0, 0, 0, 0 );
 	lay->setSpacing( 0 );
 
 	lay->addWidget( btMode, 2 );
@@ -883,7 +883,7 @@ void RotationEdit::sltChanged()
 TriangleEdit::TriangleEdit( QWidget * parent ) : ValueEdit( parent )
 {
 	QHBoxLayout * lay = new QHBoxLayout( this );
-	lay->setMargin( 0 );
+	lay->setContentsMargins( 0, 0, 0, 0 );
 	lay->setSpacing( 0 );
 
 	lay->addWidget( v1 = new QSpinBox );

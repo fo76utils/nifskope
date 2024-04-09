@@ -155,7 +155,7 @@ void PropertyList::del( Property * p )
 	if ( !p )
 		return;
 
-	QHash<Property::Type, Property *>::iterator i = properties.find( p->type() );
+	QMultiHash<Property::Type, Property *>::iterator i = properties.find( p->type() );
 
 	while ( p && i != properties.end() && i.key() == p->type() ) {
 		if ( i.value() == p ) {

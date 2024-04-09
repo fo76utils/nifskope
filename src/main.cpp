@@ -50,7 +50,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 QCoreApplication * createApplication( int &argc, char *argv[] )
 {
-	QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
+	QApplication::setAttribute( Qt::AA_UseDesktopOpenGL );
 	// Iterate over args
 	for ( int i = 1; i < argc; ++i ) {
 		// -no-gui: start as core app without all the GUI overhead
@@ -87,7 +87,9 @@ int main( int argc, char * argv[] )
 
 		// Register types
 		qRegisterMetaType<NifValue>( "NifValue" );
+#if 0
 		QMetaType::registerComparators<NifValue>();
+#endif
 
 		// Set locale
 		QSettings cfg( QString( "%1/nifskope.ini" ).arg( QCoreApplication::applicationDirPath() ), QSettings::IniFormat );
@@ -100,7 +102,7 @@ int main( int argc, char * argv[] )
 		KfmModel::loadXML();
 
 		// Init game manager
-		auto mgr = Game::GameManager::get();
+		(void) Game::GameManager::get();
 
 		int port = NIFSKOPE_IPC_PORT;
 

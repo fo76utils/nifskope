@@ -16,6 +16,7 @@
 #include <QPushButton>
 #include <QSettings>
 
+#include "gamemanager.h"
 
 /* XPM */
 static char const * transform_xpm[] = {
@@ -197,7 +198,7 @@ QModelIndex spApplyTransformation::cast( NifModel * nif, const QModelIndex & ind
 
 		nif->setState( BaseModel::Processing );
 		for ( int i = 0; i < nif->rowCount( iVertData ); i++ ) {
-			auto iVert = iVertData.child( i, 0 );
+			auto iVert = QModelIndex_child( iVertData, i );
 
 			auto vertex = t * nif->get<Vector3>( iVert, "Vertex" );
 			if ( !nif->set<HalfVector3>( iVert, "Vertex", vertex ) )

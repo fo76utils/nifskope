@@ -129,7 +129,7 @@ void SpellBook::cast( NifModel * nif, const QModelIndex & index, SpellPtr spell 
 		if ( accepted )
 			cfg.setValue( "Settings/Suppress Undoable Confirmation", true );
 	}
-	
+
 	if ( (response == QDialogButtonBox::Yes) && spell && spell->isApplicable( nif, index ) ) {
 		bool noSignals = spell->batch();
 		if ( noSignals )
@@ -233,7 +233,7 @@ void SpellBook::newSpellRegistered( SpellPtr spell )
 void SpellBook::registerSpell( SpellPtr spell )
 {
 	spells().append( spell );
-	hash().insertMulti( spell->name(), spell );
+	hash().insert( spell->name(), spell );
 
 	if ( spell->instant() )
 		instants().append( spell );

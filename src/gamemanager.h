@@ -351,7 +351,8 @@ void GameManager::update_status(const QString& game, bool status)
 
 } // end namespace Game
 
-static inline QModelIndex QModelIndex_child( const QModelIndex& m, int arow = 0, int acolumn = 0 )
+template < typename T >
+static inline QModelIndex QModelIndex_child( const T & m, int arow = 0, int acolumn = 0 )
 {
 	const QAbstractItemModel *	model = m.model();
 	if ( !model )
