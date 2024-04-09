@@ -169,9 +169,7 @@ GLView::GLView( const QGLFormat & format, QWidget * p, const QGLWidget * shareWi
 	// Fixes bug with QGraphicsView and double buffering
 	//	Input becomes sluggish and CPU usage doubles when putting GLView
 	//	inside a QGraphicsView.
-#ifndef Q_OS_LINUX
 	setAutoBufferSwap( false );
-#endif
 
 	// Make the context current on this window
 	makeCurrent();
@@ -771,9 +769,7 @@ void GLView::paintGL()
 	emit paintUpdate();
 
 	// Manually handle the buffer swap
-#ifndef Q_OS_LINUX
 	swapBuffers();
-#endif
 
 #ifdef USE_GL_QPAINTER
 	painter.end();
