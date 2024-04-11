@@ -494,7 +494,7 @@ void main(void)
 		}
 	}
 
-	vec3	f0 = albedo * pbrMap.g * 0.96 + 0.04;
+	vec3	f0 = mix(vec3(0.04), albedo, pbrMap.g);
 	albedo = albedo * (1.0 - pbrMap.g);
 
 	// Specular
