@@ -745,7 +745,7 @@ void UVWidget::wheelEvent( QWheelEvent * e )
 {
 	switch ( e->modifiers() ) {
 	case Qt::NoModifier:
-		zoom *= 1.0 + ( e->delta() / 8.0 ) / ZOOMUNIT;
+		zoom *= 1.0 + ( double( e->angleDelta().y() ) / 960.0 ) / ZOOMUNIT;
 
 		if ( zoom < MINZOOM ) {
 			zoom = MINZOOM;
@@ -1004,7 +1004,7 @@ bool UVWidget::setTexCoords()
 		faces.append( face( fIdx, t[0], t[1], t[2] ) );
 
 		for ( int i = 0; i < 3; i++ ) {
-			texcoords2faces.insertMulti( t[i], fIdx );
+			texcoords2faces.insert( t[i], fIdx );
 		}
 	}
 

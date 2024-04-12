@@ -170,7 +170,7 @@ private:
 
 	QVector<Vector2> texcoords;
 	QVector<face> faces;
-	QMap<int, int> texcoords2faces;
+	QMultiMap<int, int> texcoords2faces;
 
 	QSize sHint;
 
