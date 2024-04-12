@@ -67,8 +67,9 @@ float max_anisotropy = 1.0f;
 void set_max_anisotropy()
 {
 	static QSettings settings;
-	max_anisotropy = std::min( std::pow( settings.value( "Settings/Render/General/Anisotropic Filtering", 4.0 ).toFloat(), 2.0f ),
-								max_anisotropy );
+	int	tmp = roundFloat( settings.value( "Settings/Render/General/Anisotropic Filtering", 4.0 ).toFloat() );
+	tmp = 1 << std::min< int >( std::max< int >( tmp, 0 ), 4 );
+	max_anisotropy = std::min( float( tmp ), max_anisotropy );
 }
 
 float get_max_anisotropy()
