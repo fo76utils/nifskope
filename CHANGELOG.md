@@ -1,6 +1,6 @@
  == CHANGELOG ==
 
-#### NifSkope-2.0.dev9-20240411
+#### NifSkope-2.0.dev9-20240412
 
 * New spell for exporting the resource (geometry, material and texture) files used by the currently loaded model. It is available as an option in the right click menu on file paths, this extracts a single file, and in the main Spells menu to extract all resources required by the model. Note that files are extracted in the correct sub-folders (textures/, materials/, etc.) under the selected destination directory, and Starfield materials are automatically converted to JSON .mat format.
 * New spell to replace all occurrences of a regular expression in resource paths that match a filter regular expression. It currently does not work on paths stored as header strings (like materials), and on abstract data loaded from external files.
@@ -8,7 +8,9 @@
 * The planar angle slider of the lighting widget can now be used in frontal light mode to rotate the environment map used by image based lighting.
 * The PBR cube map resolution setting has a new maximum quality option that disables importance sampling at 512x512 resolution per face. Note: changes between the '512x512' and 'max. quality' modes may only take effect after restarting NifSkope if the texture is already cached.
 * Fixed mip level calculation bug in importance sampled cube map filtering.
-* Fixed issue on Linux with anti-aliasing set above 4x.
+* Anti-aliasing is limited to a maximum of 4x on Linux to work around compatibility issues. Additionally, the calculation of sample count has been fixed so that it is set to 2, 4, 8 or 16 as displayed, instead of 1, 4, 9 or 16. The same change has also been applied to anisotropic filtering.
+* Binary packages now include "noavx2" executables for better compatibility with older CPUs, including Ivy Bridge and AMD FX series.
+* Fixed shader compilation error in fo4\_effectshader.frag.
 
 #### NifSkope-2.0.dev9-20240331
 

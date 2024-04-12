@@ -6,7 +6,7 @@ This is an experimental fork of 2.0.dev9 with partial support for Starfield mate
 
 ### Download
 
-Binary packages for Windows and Linux can be downloaded from [Releases](https://github.com/fo76utils/nifskope/releases). The most up to date builds are automatically generated on any change to the source code, and are available as artifacts from GitHub workflows under [Actions](https://github.com/fo76utils/nifskope/actions). Note that downloading artifacts requires signing in to GitHub. Binaries have been built for CPUs with support for AVX2.
+Binary packages for Windows and Linux can be downloaded from [Releases](https://github.com/fo76utils/nifskope/releases). The most up to date builds are automatically generated on any change to the source code, and are available as artifacts from GitHub workflows under [Actions](https://github.com/fo76utils/nifskope/actions). Note that downloading artifacts requires signing in to GitHub. Binaries have been built for CPUs with support for AVX2, or AVX and F16C (NifSkope\_noavx2.exe).
 
 You can also download the latest official release from [niftools/nifskope](https://github.com/niftools/nifskope/releases), or development builds from [hexabits/nifskope](https://github.com/hexabits/nifskope/releases).
 
@@ -30,6 +30,8 @@ Finally, run '**qmake**' and then '**make**' to build the source code (the -j 8 
 
     qmake NifSkope.pro
     make -j 8
+
+By default, code is generated for Intel Haswell or compatible CPUs, including the AMD Zen series or newer. Running qmake with the **noavx2=1** option reduces the requirement to Intel Ivy Bridge or AMD FX CPUs, to build for even older hardware, edit the compiler flags in NifSkope.pro.
 
 ### Issues
 
