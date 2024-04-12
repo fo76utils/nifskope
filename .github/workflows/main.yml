@@ -30,9 +30,6 @@ jobs:
       run: |
         qmake noavx2=1 NifSkope.pro
         make -j 12
-        rm GeneratedFiles/.obj/renderer.o
-        qmake noavx2=1 NifSkope.pro
-        make -j 12
         mv -f release/NifSkope.exe release/NifSkope_noavx2.exe
         make clean
         qmake NifSkope.pro
