@@ -9,10 +9,10 @@ TARGET   = NifSkope
 
 QT += xml opengl network widgets
 
-# Require Qt 5.7 or higher
-contains(QT_VERSION, ^5\\.[0-6]\\..*) {
+# Require Qt 5.15 or higher
+!contains(QT_VERSION, ^5\\.1[5-9].*) {
 	message("Cannot build NifSkope with Qt version $${QT_VERSION}")
-	error("Minimum required version is Qt 5.7")
+	error("Minimum required version is Qt 5.15")
 }
 
 # C++ Standard Support
@@ -45,7 +45,7 @@ DEFINES += \
 	_USE_MATH_DEFINES \ # Define M_PI, etc. in cmath
 	QT_NO_CAST_FROM_BYTEARRAY \ # QByteArray deprecations
 	QT_NO_URL_CAST_FROM_STRING \ # QUrl deprecations
-	QT_DISABLE_DEPRECATED_BEFORE=0x050300 #\ # Disable all functions deprecated as of 5.3
+	QT_DISABLE_DEPRECATED_BEFORE=0x050E00 #\ # Disable all functions deprecated as of 5.14
 
 	# Useful for tracking down strings not using
 	#	QObject::tr() for translations.
@@ -486,7 +486,11 @@ win32 {
 	#  Optimization flags
 	QMAKE_CXXFLAGS_DEBUG -= -O0 -g
 	QMAKE_CXXFLAGS_DEBUG *= -Og -g3
-	QMAKE_CXXFLAGS_RELEASE *= -O3 -march=haswell -mtune=generic
+	contains(noavx2, 1) {
+		QMAKE_CXXFLAGS_RELEASE *= -O3 -march=sandybridge -mf16c -mtune=generic
+	} else {
+		QMAKE_CXXFLAGS_RELEASE *= -O3 -march=haswell -mtune=generic
+	}
 
 	# C++ Standard Support
 	QMAKE_CXXFLAGS_RELEASE *= -std=c++20
