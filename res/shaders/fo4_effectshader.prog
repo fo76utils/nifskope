@@ -12,4 +12,4 @@ texcoords 2 bitangents
 texcoords 3 indices
 texcoords 4 weights
 
-shaders fo4_effectshader.vert fo4_effectshader.frag
+shaders fo4_default.vert fo4_effectshader.frag
