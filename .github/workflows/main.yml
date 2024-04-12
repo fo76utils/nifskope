@@ -28,11 +28,15 @@ jobs:
     - name: 'Build with qmake'
       shell: msys2 {0}
       run: |
-        qmake NifSkope.pro
-        make -j 8
+        qmake noavx2=1 NifSkope.pro
+        make -j 12
         rm GeneratedFiles/.obj/renderer.o
+        qmake noavx2=1 NifSkope.pro
+        make -j 12
+        mv -f release/NifSkope.exe release/NifSkope_noavx2.exe
+        make clean
         qmake NifSkope.pro
-        make -j 8
+        make -j 12
     
     - name: 'Upload Artifacts'
       uses: actions/upload-artifact@v4
@@ -61,8 +65,12 @@ jobs:
       
     - name: 'Build with qmake'
       run: |
+        x86_64-linux-gnu-qmake noavx2=1 NifSkope.pro
+        make -j 12
+        mv -f release/NifSkope release/NifSkope_noavx2
+        make clean
         x86_64-linux-gnu-qmake NifSkope.pro
-        make -j 8
+        make -j 12
       
     - name: 'Upload Artifacts'
       uses: actions/upload-artifact@v4
