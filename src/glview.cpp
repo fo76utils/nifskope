@@ -124,12 +124,18 @@ GLView * GLView::create( NifSkope * window )
 
 	QSettings settings;
 	int aa = settings.value( "Settings/Render/General/Antialiasing", 4 ).toInt();
+#ifdef Q_OS_LINUX
+	// work around issues with MSAA > 4x on Linux
+	aa = std::min< int >( std::max< int >( aa, 0 ), 2 );
+#else
+	aa = std::min< int >( std::max< int >( aa, 0 ), 4 );
+#endif
 
 	// All new windows after the first window will share a format
 	if ( share ) {
 		fmt = share->format();
 	} else {
-		fmt.setSampleBuffers( aa > 0 );
+		fmt.setSampleBuffers( bool(aa) );
 	}
 
 	// OpenGL version
@@ -141,11 +147,7 @@ GLView * GLView::create( NifSkope * window )
 	fmt.setSwapInterval( 1 );
 	fmt.setDoubleBuffer( true );
 
-#ifdef Q_OS_LINUX
-	fmt.setSamples( aa );
-#else
-	fmt.setSamples( aa * aa );
-#endif
+	fmt.setSamples( 1 << aa );
 
 	fmt.setDirectRendering( true );
 	fmt.setRgba( true );
@@ -1915,10 +1917,10 @@ void GLView::mouseReleaseEvent( QMouseEvent * event )
 void GLView::wheelEvent( QWheelEvent * event )
 {
 	if ( view == ViewWalk )
-		mouseMov += Vector3( 0, 0, ((double) event->delta()) / 4.0 ) * scale();
+		mouseMov += Vector3( 0, 0, double( event->angleDelta().y() ) / 480.0 ) * scale();
 	else
 	{
-		if (event->delta() < 0)
+		if (event->angleDelta().y() < 0)
 			setDistance( Dist / ZOOM_MOUSE_WHEEL_MULT );
 		else
 			setDistance( Dist * ZOOM_MOUSE_WHEEL_MULT );
