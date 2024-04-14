@@ -751,48 +751,39 @@ QModelIndex spUpdateBounds::cast_Starfield( NifModel * nif, const QModelIndex & 
 	if ( !meshes.isValid() )
 		return index;
 
-	MeshFile *	meshFile = nullptr;
 	bool	boundsCalculated = false;
 	BoundSphere	bounds;
 	FloatVector4	bndCenter( 0.0f );
 	FloatVector4	bndDims( -1.0f );
-	try {
-		for ( int i = 0; i <= 3; i++ ) {
-			auto mesh = QModelIndex_child( meshes, i );
-			if ( !mesh.isValid() )
-				continue;
-			auto hasMesh = nif->getIndex( mesh, "Has Mesh" );
-			if ( !hasMesh.isValid() || nif->get<quint8>( hasMesh ) == 0 )
-				continue;
-			mesh = nif->getIndex( mesh, "Mesh" );
-			if ( !mesh.isValid() )
-				continue;
-			QString	meshPath( nif->get<QString>( mesh, "Mesh Path" ) );
-			if ( meshPath.isEmpty() )
-				continue;
-			meshFile = new MeshFile( meshPath );
-			quint32	indicesSize = 0;
-			quint32	numVerts = 0;
-			if ( meshFile->isValid() ) {
-				indicesSize = quint32( meshFile->triangles.size() * 3 );
-				numVerts = quint32( meshFile->positions.size() );
-			}
-			nif->set<quint32>( mesh, "Indices Size", indicesSize );
-			nif->set<quint32>( mesh, "Num Verts", numVerts );
-			// FIXME: mesh flags are not updated
-			if ( meshFile->isValid() && meshFile->positions.size() > 0 && !boundsCalculated ) {
-				// Creating a bounding sphere and bounding box from the verts
-				bounds = BoundSphere( meshFile->positions );
-				calculateBoundingBox( bndCenter, bndDims, meshFile->positions );
-				boundsCalculated = true;
-			}
-			delete meshFile;
-			meshFile = nullptr;
+	for ( int i = 0; i <= 3; i++ ) {
+		auto mesh = QModelIndex_child( meshes, i );
+		if ( !mesh.isValid() )
+			continue;
+		auto hasMesh = nif->getIndex( mesh, "Has Mesh" );
+		if ( !hasMesh.isValid() || nif->get<quint8>( hasMesh ) == 0 )
+			continue;
+		mesh = nif->getIndex( mesh, "Mesh" );
+		if ( !mesh.isValid() )
+			continue;
+		QString	meshPath( nif->get<QString>( mesh, "Mesh Path" ) );
+		if ( meshPath.isEmpty() )
+			continue;
+		MeshFile	meshFile( meshPath );
+		quint32	indicesSize = 0;
+		quint32	numVerts = 0;
+		if ( meshFile.isValid() ) {
+			indicesSize = quint32( meshFile.triangles.size() * 3 );
+			numVerts = quint32( meshFile.positions.size() );
 		}
-	} catch ( ... ) {
-		if ( meshFile )
-			delete meshFile;
-		throw;
+		nif->set<quint32>( mesh, "Indices Size", indicesSize );
+		nif->set<quint32>( mesh, "Num Verts", numVerts );
+		// FIXME: mesh flags are not updated
+		if ( meshFile.isValid() && meshFile.positions.size() > 0 && !boundsCalculated ) {
+			// Creating a bounding sphere and bounding box from the verts
+			bounds = BoundSphere( meshFile.positions );
+			calculateBoundingBox( bndCenter, bndDims, meshFile.positions );
+			boundsCalculated = true;
+		}
 	}
 
 	bounds.update( nif, index );
