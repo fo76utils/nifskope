@@ -7,6 +7,8 @@
 #include <cfloat>
 
 #include "gamemanager.h"
+#include "libfo76utils/src/fp32vec4.hpp"
+#include "io/MeshFile.h"
 
 // Brief description is deliberately not autolinked to class Spell
 /*! \file mesh.cpp
@@ -609,12 +611,51 @@ public:
 
 REGISTER_SPELL( spRemoveWasteVertices )
 
+static bool calculateBoundingBox( FloatVector4 & bndCenter, FloatVector4 & bndDims, const QVector< Vector3 > & verts )
+{
+	qsizetype	n = verts.size();
+	if ( n < 1 ) {
+		bndCenter = FloatVector4( 0.0f );
+		bndDims = FloatVector4( -1.0f );
+		return false;
+	}
+
+	FloatVector4	tmpMin( float(FLT_MAX) );
+	FloatVector4	tmpMax( float(-FLT_MAX) );
+	for ( qsizetype i = 0; i < n; i++ ) {
+		FloatVector4	v( verts[i][0], verts[i][1], verts[i][2], 0.0f );
+		tmpMin.minValues( v );
+		tmpMax.maxValues( v );
+	}
+	bndCenter = ( tmpMin + tmpMax ) * 0.5f;
+	bndDims = ( tmpMax - tmpMin ) * 0.5f;
+
+	return true;
+}
+
+static void setBoundingBox( NifModel * nif, const QModelIndex & index, FloatVector4 bndCenter, FloatVector4 bndDims )
+{
+	auto boundMinMax = nif->getIndex( index, "Bound Min Max" );
+	if ( !boundMinMax.isValid() )
+		return;
+	nif->set<float>( QModelIndex_child( boundMinMax, 0 ), bndCenter[0] );
+	nif->set<float>( QModelIndex_child( boundMinMax, 1 ), bndCenter[1] );
+	nif->set<float>( QModelIndex_child( boundMinMax, 2 ), bndCenter[2] );
+	nif->set<float>( QModelIndex_child( boundMinMax, 3 ), bndDims[0] );
+	nif->set<float>( QModelIndex_child( boundMinMax, 4 ), bndDims[1] );
+	nif->set<float>( QModelIndex_child( boundMinMax, 5 ), bndDims[2] );
+}
+
 /*
  * spUpdateCenterRadius
  */
 bool spUpdateCenterRadius::isApplicable( const NifModel * nif, const QModelIndex & index )
 {
-	return nif->getBlockIndex( index, "NiGeometryData" ).isValid();
+	if ( nif->getBlockIndex( index, "NiGeometryData" ).isValid() ) {
+		if ( !( nif->blockInherits( index, "BSTriShape" ) || nif->blockInherits( index, "BSGeometry" ) ) )
+			return true;
+	}
+	return false;
 }
 
 QModelIndex spUpdateCenterRadius::cast( NifModel * nif, const QModelIndex & index )
@@ -636,28 +677,11 @@ QModelIndex spUpdateCenterRadius::cast( NifModel * nif, const QModelIndex & inde
 	if ( ( ( nif->getVersionNumber() & 0x14000000 ) && ( nif->getUserVersion() == 11 ) )
 	     || ( nif->get<ushort>( iData, "Consistency Flags" ) & 0x8000 ) )
 	{
-		/* is a Oblivion mesh! */
-		float xMin( FLT_MAX ), xMax( -FLT_MAX );
-		float yMin( FLT_MAX ), yMax( -FLT_MAX );
-		float zMin( FLT_MAX ), zMax( -FLT_MAX );
-		for ( const Vector3& v : verts ) {
-			if ( v[0] < xMin )
-				xMin = v[0];
-			else if ( v[0] > xMax )
-				xMax = v[0];
+		/* is an Oblivion mesh! */
+		FloatVector4	bndCenter, bndDims;
+		calculateBoundingBox( bndCenter, bndDims, verts );
 
-			if ( v[1] < yMin )
-				yMin = v[1];
-			else if ( v[1] > yMax )
-				yMax = v[1];
-
-			if ( v[2] < zMin )
-				zMin = v[2];
-			else if ( v[2] > zMax )
-				zMax = v[2];
-		}
-
-		center = Vector3( xMin + xMax, yMin + yMax, zMin + zMax ) / 2;
+		center = Vector3( bndCenter[0], bndCenter[1], bndCenter[2] );
 	} else {
 		for ( const Vector3& v : verts ) {
 			center += v;
@@ -687,11 +711,18 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
+		if ( nif->getBSVersion() >= 172 && nif->blockInherits( index, "BSGeometry" ) )
+			return true;
 		return nif->blockInherits( index, "BSTriShape" ) && nif->getIndex( index, "Vertex Data" ).isValid();
 	}
 
+	QModelIndex cast_Starfield( NifModel * nif, const QModelIndex & index );
+
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
 	{
+		if ( nif->getBSVersion() == 172 && nif->blockInherits( index, "BSGeometry" ) )
+			return cast_Starfield( nif, index );
+
 		auto vertData = nif->getIndex( index, "Vertex Data" );
 
 		// Retrieve the verts
@@ -707,9 +738,72 @@ public:
 		BoundSphere bounds = BoundSphere( verts );
 		bounds.update( nif, index );
 
+		if ( nif->getBSVersion() >= 151 ) {
+			// Fallout 76: update bounding box
+			FloatVector4	bndCenter, bndDims;
+			calculateBoundingBox( bndCenter, bndDims, verts );
+			setBoundingBox( nif, index, bndCenter, bndDims );
+		}
+
 		return index;
 	}
 };
+
+QModelIndex spUpdateBounds::cast_Starfield( NifModel * nif, const QModelIndex & index )
+{
+	auto meshes = nif->getIndex( index, "Meshes" );
+	if ( !meshes.isValid() )
+		return index;
+
+	MeshFile *	meshFile = nullptr;
+	bool	boundsCalculated = false;
+	BoundSphere	bounds;
+	FloatVector4	bndCenter( 0.0f );
+	FloatVector4	bndDims( -1.0f );
+	try {
+		for ( int i = 0; i <= 3; i++ ) {
+			auto mesh = QModelIndex_child( meshes, i );
+			if ( !mesh.isValid() )
+				continue;
+			auto hasMesh = nif->getIndex( mesh, "Has Mesh" );
+			if ( !hasMesh.isValid() || nif->get<quint8>( hasMesh ) == 0 )
+				continue;
+			mesh = nif->getIndex( mesh, "Mesh" );
+			if ( !mesh.isValid() )
+				continue;
+			QString	meshPath( nif->get<QString>( mesh, "Mesh Path" ) );
+			if ( meshPath.isEmpty() )
+				continue;
+			meshFile = new MeshFile( meshPath );
+			quint32	indicesSize = 0;
+			quint32	numVerts = 0;
+			if ( meshFile->isValid() ) {
+				indicesSize = quint32( meshFile->triangles.size() * 3 );
+				numVerts = quint32( meshFile->positions.size() );
+			}
+			nif->set<quint32>( mesh, "Indices Size", indicesSize );
+			nif->set<quint32>( mesh, "Num Verts", numVerts );
+			// FIXME: mesh flags are not updated
+			if ( meshFile->isValid() && meshFile->positions.size() > 0 && !boundsCalculated ) {
+				// Creating a bounding sphere and bounding box from the verts
+				bounds = BoundSphere( meshFile->positions );
+				calculateBoundingBox( bndCenter, bndDims, meshFile->positions );
+				boundsCalculated = true;
+			}
+			delete meshFile;
+			meshFile = nullptr;
+		}
+	} catch ( ... ) {
+		if ( meshFile )
+			delete meshFile;
+		throw;
+	}
+
+	bounds.update( nif, index );
+	setBoundingBox( nif, index, bndCenter, bndDims );
+
+	return index;
+}
 
 REGISTER_SPELL( spUpdateBounds )
 

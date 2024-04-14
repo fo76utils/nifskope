@@ -1,5 +1,9 @@
  == CHANGELOG ==
 
+* Implemented the Update Bounds and Update All Bounds mesh spells for Starfield. Casting these also updates the vertex and triangle counts on meshes.
+* Updating the bounds of Fallout 76 shapes now also recalculates the bounding box.
+* Fixed duplicate "Update Bounds" entries in the spells menu with models from Skyrim or newer games.
+
 #### NifSkope-2.0.dev9-20240412
 
 * New spell for exporting the resource (geometry, material and texture) files used by the currently loaded model. It is available as an option in the right click menu on file paths, this extracts a single file, and in the main Spells menu to extract all resources required by the model. Note that files are extracted in the correct sub-folders (textures/, materials/, etc.) under the selected destination directory, and Starfield materials are automatically converted to JSON .mat format.
