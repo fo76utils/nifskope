@@ -10,7 +10,7 @@
 class spUpdateCenterRadius final : public Spell
 {
 public:
-	QString name() const override final { return Spell::tr( "Update Bounds" ); }
+	QString name() const override final { return Spell::tr( "Update Bounding Sphere" ); }
 	QString page() const override final { return Spell::tr( "Mesh" ); }
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final;

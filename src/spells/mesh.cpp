@@ -651,11 +651,7 @@ static void setBoundingBox( NifModel * nif, const QModelIndex & index, FloatVect
  */
 bool spUpdateCenterRadius::isApplicable( const NifModel * nif, const QModelIndex & index )
 {
-	if ( nif->getBlockIndex( index, "NiGeometryData" ).isValid() ) {
-		if ( !( nif->blockInherits( index, "BSTriShape" ) || nif->blockInherits( index, "BSGeometry" ) ) )
-			return true;
-	}
-	return false;
+	return nif->getBlockIndex( index, "NiGeometryData" ).isValid();
 }
 
 QModelIndex spUpdateCenterRadius::cast( NifModel * nif, const QModelIndex & index )
