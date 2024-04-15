@@ -43,6 +43,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <algorithm>
 #include <functional>
 
+#include "libfo76utils/src/fp32vec4.hpp"
 #include "gamemanager.h"
 
 //! \file gltools.cpp GL helper functions
@@ -181,22 +182,72 @@ BoundSphere::BoundSphere( const QVector<Vector3> & verts )
 	if ( verts.isEmpty() ) {
 		center = Vector3();
 		radius = -1;
-	} else {
-		center = Vector3();
-		for ( const Vector3& v : verts ) {
-			center += v;
-		}
-		center /= verts.count();
-
-		radius = 0;
-		for ( const Vector3& v : verts ) {
-			float d = ( center - v ).squaredLength();
-
-			if ( d > radius )
-				radius = d;
-		}
-		radius = sqrt( radius );
+		return;
 	}
+
+	// old algorithm: center of bounding sphere = bounds1 = centroid of verts
+	FloatVector4	bounds1( 0.0f );
+	// p1 and p2 are searched for Ritter's algorithm
+	FloatVector4	p0( verts[0][0], verts[0][1], verts[0][2], 0.0f );
+	FloatVector4	p1( p0 );
+	float	maxDistSqr = 0.0f;
+	for ( const Vector3& v : verts ) {
+		FloatVector4	tmp( v[0], v[1], v[2], 1.0f );
+		bounds1 += tmp;
+		float	d = ( tmp - p0 ).dotProduct3( tmp - p0 );
+		if ( d > maxDistSqr ) {
+			p1 = tmp;
+			maxDistSqr = d;
+		}
+	}
+	bounds1 /= bounds1[3];
+	maxDistSqr = 0.0f;
+	FloatVector4	p2( p1 );
+	for ( const Vector3& v : verts ) {
+		FloatVector4	tmp( v[0], v[1], v[2], 0.0f );
+		float	d = ( tmp - p1 ).dotProduct3( tmp - p1 );
+		if ( d > maxDistSqr ) {
+			p2 = tmp;
+			maxDistSqr = d;
+		}
+	}
+
+	// bounds2 = center of bounding sphere calculated with Ritter's algorithm
+	FloatVector4	bounds2( p1 + p2 );
+	bounds2 *= 0.5f;
+	float	radiusSqr = maxDistSqr * 0.25f;
+	for ( const Vector3& v : verts ) {
+		FloatVector4	tmp( v[0], v[1], v[2], 0.0f );
+		float	d = ( tmp - bounds2 ).dotProduct3( tmp - bounds2 );
+		if ( d > radiusSqr ) {
+			if ( radiusSqr > 0.0f ) {
+				float	radius1 = float( std::sqrt( radiusSqr ) );
+				float	radius2 = float( std::sqrt( d ) );
+				bounds2 += ( tmp - bounds2 ) * ( ( radius2 - radius1 ) * 0.5f / radius2 );
+				radiusSqr = ( radiusSqr + d ) * 0.25f + ( radius1 * radius2 * 0.5f );
+			} else {
+				radiusSqr = d * 0.25f;
+				bounds2 = ( bounds2 + tmp ) * 0.5f;
+			}
+		}
+	}
+
+	float	rSqr1 = 0.0f;
+	float	rSqr2 = 0.0f;
+	for ( const Vector3& v : verts ) {
+		FloatVector4	tmp( v[0], v[1], v[2], 0.0f );
+		rSqr1 = std::max( rSqr1, ( tmp - bounds1 ).dotProduct3( tmp - bounds1 ) );
+		// just in case, this should not be needed if radiusSqr is accurate
+		rSqr2 = std::max( rSqr2, ( tmp - bounds2 ).dotProduct3( tmp - bounds2 ) );
+	}
+	bounds1[3] = float( std::sqrt( rSqr1 ) );
+	bounds2[3] = float( std::sqrt( rSqr2 ) );
+
+	// use the result of whichever method gives a smaller radius
+	if ( bounds2[3] < bounds1[3] ) [[likely]]
+		bounds1 = bounds2;
+	center = Vector3( bounds1[0], bounds1[1], bounds1[2] );
+	radius = bounds1[3];
 }
 
 void BoundSphere::update( NifModel * nif, const QModelIndex & index )

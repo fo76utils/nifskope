@@ -3,6 +3,7 @@
 * Implemented the Update Bounds and Update All Bounds mesh spells for Starfield. Casting these also updates the vertex and triangle counts on meshes.
 * Updating the bounds of Fallout 76 shapes now also recalculates the bounding box.
 * Fixed duplicate "Update Bounds" entries in the spells menu with models from Skyrim or newer games.
+* Improved bounding sphere calculation.
 
 #### NifSkope-2.0.dev9-20240412
 
