@@ -731,7 +731,7 @@ public:
 			return index;
 
 		// Creating a bounding sphere from the verts
-		BoundSphere bounds = BoundSphere( verts );
+		BoundSphere bounds = BoundSphere( verts, true );
 		bounds.update( nif, index );
 
 		if ( nif->getBSVersion() >= 151 ) {
@@ -780,7 +780,7 @@ QModelIndex spUpdateBounds::cast_Starfield( NifModel * nif, const QModelIndex & 
 		// FIXME: mesh flags are not updated
 		if ( meshFile.isValid() && meshFile.positions.size() > 0 && !boundsCalculated ) {
 			// Creating a bounding sphere and bounding box from the verts
-			bounds = BoundSphere( meshFile.positions );
+			bounds = BoundSphere( meshFile.positions, true );
 			calculateBoundingBox( bndCenter, bndDims, meshFile.positions );
 			boundsCalculated = true;
 		}

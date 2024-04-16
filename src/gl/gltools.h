@@ -56,7 +56,7 @@ public:
 	BoundSphere( const BoundSphere & );
 	BoundSphere( const NifModel * nif, const QModelIndex & );
 	BoundSphere( const Vector3 & center, float radius );
-	BoundSphere( const QVector<Vector3> & vertices );
+	BoundSphere( const QVector<Vector3> & vertices, bool useMiniball = false );
 
 	Vector3 center;
 	float radius;

@@ -45,6 +45,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "libfo76utils/src/fp32vec4.hpp"
 #include "gamemanager.h"
+#include "miniball/Seb.h"
 
 //! \file gltools.cpp GL helper functions
 
@@ -177,11 +178,23 @@ BoundSphere::BoundSphere( const NifModel * nif, const QModelIndex & index )
 	radius = nif->get<float>( idx, "Radius" );
 }
 
-BoundSphere::BoundSphere( const QVector<Vector3> & verts )
+BoundSphere::BoundSphere( const QVector<Vector3> & verts, bool useMiniball )
 {
 	if ( verts.isEmpty() ) {
 		center = Vector3();
 		radius = -1;
+		return;
+	}
+
+	if ( useMiniball && verts.size() > 2 ) {
+		SEB_NAMESPACE::Smallest_enclosing_ball<float, Vector3, QVector<Vector3>>	mb( 3, verts );
+		auto	i = mb.center_begin();
+		center[0] = *i;
+		i++;
+		center[1] = *i;
+		i++;
+		center[2] = *i;
+		radius = mb.radius();
 		return;
 	}
 
