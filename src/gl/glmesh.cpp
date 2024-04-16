@@ -407,7 +407,7 @@ void Mesh::updateData_NiMesh( const NifModel * nif )
 					Q_ASSERT( usage == NiMesh::USAGE_VERTEX );
 					if ( compType == NiMesh::E_COLOR ) {
 						// Swizzle BGRA -> RGBA
-						auto c = tempValue.get<ByteColor4>( nif, nullptr ).data();
+						auto c = tempValue.get<ByteColor4>( nif, nullptr );
 						colors[j + off] = {c[2], c[1], c[0], c[3]};
 					}
 					break;
