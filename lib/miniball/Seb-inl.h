@@ -52,7 +52,7 @@ namespace SEB_NAMESPACE {
     // find farthest point:
     radius_square = 0;
     unsigned int farthest = 0; // Note: assignment prevents compiler warnings.
-    for (unsigned int j = 1; j < S.size(); ++j) {
+    for (unsigned int j = 1; j < (unsigned int)S.size(); ++j) {
       // compute squared distance from center to S[j]:
       Float dist = 0;
       for (unsigned int i = 0; i < dim; ++i)
@@ -124,7 +124,7 @@ namespace SEB_NAMESPACE {
     SEB_DEBUG (Float margin = 0;)
 
     // ... but one of the points in S might hinder us:
-    for (unsigned int j = 0; j < S.size(); ++j)
+    for (unsigned int j = 0; j < (unsigned int)S.size(); ++j)
       if (!support->is_member(j)) {
 
         // compute vector center_to_point from center to the point S[i]:
