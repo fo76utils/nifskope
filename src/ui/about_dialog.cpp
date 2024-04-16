@@ -79,6 +79,8 @@ AboutDialog::AboutDialog( QWidget * parent )
 	   they desire.<br></center>
 	</p>
 	
+	<p>For bounding sphere calculation, NifSkope uses <a href="https://github.com/hbf/miniball">Miniball</a> by Kaspar Fischer, Bernd Gärtner and Martin Kutz, the code is available under the <a href="http://www.apache.org/licenses/LICENSE-2.0.html">Apache 2 License</a>.
+	</p>
 	)rhtml" );
 
 	ui.text->setText( text );
