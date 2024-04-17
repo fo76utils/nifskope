@@ -288,26 +288,33 @@ BoundSphere & BoundSphere::operator=( const BoundSphere & o )
 
 BoundSphere & BoundSphere::operator|=( const BoundSphere & o )
 {
-	if ( o.radius < 0 )
-		return *this;
+	FloatVector4	bounds1( center[0], center[1], center[2], radius );
+	FloatVector4	bounds2( o.center[0], o.center[1], o.center[2], o.radius );
+	if ( !( bounds1[3] >= bounds2[3] ) )
+		std::swap( bounds1, bounds2 );
 
-	if ( radius < 0 )
-		return operator=( o );
+	float	r2 = bounds2[3];
+	if ( r2 >= 0.0f ) {
+		float	r1 = bounds1[3];
 
-	float d = ( center - o.center ).length();
+		FloatVector4	a( bounds1 - bounds2 );
+		float	d = a.dotProduct3( a );
 
-	if ( radius >= d + o.radius )
-		return *this;
+		if ( d > 0.0f ) {
+			d = float( std::sqrt( d ) );
+			if ( r1 < ( d + r2 ) ) {
+				float	newRadius = ( r1 + r2 + d ) * 0.5f;
 
-	if ( o.radius >= d + radius )
-		return operator=( o );
+				bounds1 = a * ( ( newRadius - r2 ) / d ) + bounds2;
+				bounds1[3] = newRadius;
+			}
+		}
+	}
 
-	if ( o.radius > radius )
-		radius = o.radius;
-
-	radius += d / 2;
-	center  = ( center + o.center ) / 2;
-
+	center[0] = bounds1[0];
+	center[1] = bounds1[1];
+	center[2] = bounds1[2];
+	radius = bounds1[3];
 	return *this;
 }
 
