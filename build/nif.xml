@@ -1897,6 +1897,12 @@
         <field name="Value" type="char" length="Length">The string itself, null terminated (the null terminator is taken into account in the length byte).</field>
     </struct>
 
+    <struct name="ExportDataSF" module="BSMain">
+        Specific to Bethesda-specific header export strings.
+        <field name="Length" type="byte">The data length.</field>
+        <field name="Value" type="byte" length="Length">The data itself, null terminated (the null terminator is taken into account in the length byte).</field>
+    </struct>
+
     <struct name="SkinInfo" size="8" module="NiAnimation" since="V4_2_2_0">
         NiBoneLODController::SkinInfo. Reference to shape and skin instance.
         <field name="Shape" type="Ptr" template="NiTriBasedGeom" />
@@ -1961,7 +1967,8 @@
         <field name="Unknown Int" type="uint" cond="BS Version #GT# 130" />
         <field name="Process Script" type="ExportString"  cond="BS Version #LT# 131" />
         <field name="Export Script" type="ExportString" />
-        <field name="Max Filepath" type="ExportString" cond="BS Version >= 103" />
+        <field name="Max Filepath" type="ExportString" cond="(BS Version #GTE# 103) #AND# (BS Version #LT# 172)" />
+        <field name="Unknown Data" type="ExportDataSF" cond="BS Version #GTE# 172" />
     </struct>
 
     <!-- Don't use vercond in Header, it breaks niflib -->

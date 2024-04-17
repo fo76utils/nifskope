@@ -3,7 +3,8 @@
 * Implemented the Update Bounds and Update All Bounds mesh spells for Starfield. Casting these also updates the vertex and triangle counts on meshes.
 * Updating the bounds of Fallout 76 shapes now also recalculates the bounding box.
 * Fixed duplicate "Update Bounds" entries in the spells menu with models from Skyrim or newer games.
-* Improved bounding sphere calculation.
+* Improved bounding sphere calculation, using code from [Miniball](https://github.com/hbf/miniball) by Martin Kutz, Kaspar Fischer and Bernd Gärtner.
+* The "Max Filepath" header field is now read as an array of unknown bytes from Starfield NIF files, to avoid converting binary data to UTF-8 on saving the model.
 
 #### NifSkope-2.0.dev9-20240412
 
