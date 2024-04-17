@@ -297,7 +297,7 @@ BoundSphere & BoundSphere::operator|=( const BoundSphere & o )
 	if ( r2 >= 0.0f ) {
 		float	r1 = bounds1[3];
 
-		FloatVector4	a( bounds1 - bounds2 );
+		FloatVector4	a( bounds2 - bounds1 );
 		float	d = a.dotProduct3( a );
 
 		if ( d > 0.0f ) {
@@ -305,7 +305,7 @@ BoundSphere & BoundSphere::operator|=( const BoundSphere & o )
 			if ( r1 < ( d + r2 ) ) {
 				float	newRadius = ( r1 + r2 + d ) * 0.5f;
 
-				bounds1 = a * ( ( newRadius - r2 ) / d ) + bounds2;
+				bounds1 += a * ( ( newRadius - r1 ) / d );
 				bounds1[3] = newRadius;
 			}
 		}
