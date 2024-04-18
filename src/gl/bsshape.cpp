@@ -510,11 +510,20 @@ void BSShape::drawSelection() const
 		glEnd();
 	};
 
-	if ( n == "Bounding Sphere" && !extraData ) {
-		auto sph = BoundSphere( nif, idx );
-		if ( sph.radius > 0.0 ) {
-			glColor4f( 1, 1, 1, 0.33f );
-			drawSphereSimple( sph.center, sph.radius, 72 );
+	if ( !extraData ) {
+		if ( n == "Bounding Sphere" ) {
+			auto sph = BoundSphere( nif, idx );
+			if ( sph.radius > 0.0 ) {
+				glColor4f( 1, 1, 1, 0.33f );
+				drawSphereSimple( sph.center, sph.radius, 72 );
+			}
+		} else if ( nif->getBSVersion() >= 151 && n == "Bound Min Max" ) {
+			Vector3	boundsDims( nif->get<float>( idx, 3 ), nif->get<float>( idx, 4 ), nif->get<float>( idx, 5 ) );
+			if ( boundsDims[0] > 0.0f && boundsDims[1] > 0.0f && boundsDims[2] > 0.0f ) {
+				Vector3	boundsCenter( nif->get<float>( idx, 0 ), nif->get<float>( idx, 1 ), nif->get<float>( idx, 2 ) );
+				glColor4f( 1, 1, 1, 0.33f );
+				drawBox( boundsCenter - boundsDims, boundsCenter + boundsDims );
+			}
 		}
 	}
 

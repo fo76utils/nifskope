@@ -105,10 +105,9 @@ void BSMesh::drawSelection() const
 		return;
 
 	auto& blk = scene->currentBlock;
-#if 0
 	auto& idx = scene->currentIndex;
 	auto nif = NifModel::fromValidIndex(blk);
-#endif
+
 	glDisable(GL_LIGHTING);
 	glDisable(GL_COLOR_MATERIAL);
 	glDisable(GL_TEXTURE_2D);
@@ -134,17 +133,36 @@ void BSMesh::drawSelection() const
 		glPointSize(1.5f);
 		glLineWidth(1.6f);
 		glNormalColor();
-		for ( const Triangle& tri : sortedTriangles ) {
-			glBegin(GL_TRIANGLES);
-			glVertex(transVerts.value(tri.v1()));
-			glVertex(transVerts.value(tri.v2()));
-			glVertex(transVerts.value(tri.v3()));
-			glEnd();
+
+		// Name of this index
+		auto n = idx.data( NifSkopeDisplayRole ).toString();
+
+		if ( n == "Bounding Sphere" ) {
+			auto sph = BoundSphere( nif, idx );
+			if ( sph.radius > 0.0f ) {
+				glColor4f( 1, 1, 1, 0.33f );
+				drawSphereSimple( sph.center, sph.radius, 72 );
+			}
+		} else if ( n == "Bound Min Max" ) {
+			Vector3	boundsDims( nif->get<float>( idx, 3 ), nif->get<float>( idx, 4 ), nif->get<float>( idx, 5 ) );
+			if ( boundsDims[0] > 0.0f && boundsDims[1] > 0.0f && boundsDims[2] > 0.0f ) {
+				Vector3	boundsCenter( nif->get<float>( idx, 0 ), nif->get<float>( idx, 1 ), nif->get<float>( idx, 2 ) );
+				glColor4f( 1, 1, 1, 0.33f );
+				drawBox( boundsCenter - boundsDims, boundsCenter + boundsDims );
+			}
+		} else {
+			for ( const Triangle& tri : sortedTriangles ) {
+				glBegin(GL_TRIANGLES);
+				glVertex(transVerts.value(tri.v1()));
+				glVertex(transVerts.value(tri.v2()));
+				glVertex(transVerts.value(tri.v3()));
+				glEnd();
+			}
 		}
 
 		glDisable(GL_POLYGON_OFFSET_FILL);
 
-#ifndef QT_NO_DEBUG
+#if 0 && !defined(QT_NO_DEBUG)
 		drawSphereSimple(boundSphere.center, boundSphere.radius, 72);
 #endif
 	}
