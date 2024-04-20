@@ -219,7 +219,7 @@ bool EffectMaterial::readFile()
 {
 	Material::readFile();
 
-	size_t numTex = (version >= 10) ? 8 : 5;
+	size_t numTex = ( version >= 10 ) ? ( version <= 20 ? 8 : 10 ) : 5;
 	for ( size_t i = 0; i < numTex; i++ ) {
 		char * str;
 		in >> str;
@@ -227,6 +227,10 @@ bool EffectMaterial::readFile()
 	}
 
 	if ( version >= 10 ) {
+		if ( version > 20 ) {
+			quint8	bUnknown;
+			in >> bUnknown;
+		}
 		in >> bEnvironmentMapping;
 		in >> fEnvironmentMappingMaskScale;
 	}
