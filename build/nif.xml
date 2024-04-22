@@ -1464,7 +1464,7 @@
     <enum name="LightingShaderControlledFloat" storage="uint" prefix="LSCF" versions="#SKY_AND_LATER#">
         An unsigned 32-bit integer, describing which float variable in BSLightingShaderProperty to animate.
         <option value="0" name="Refraction Strength">The amount of distortion.</option>
-        <option value="3" name="Unknown 3" />
+        <option value="3" name="Emissive Multiple (F76)" />
         <option value="4" name="Unknown 4" />
         <option value="8" name="Environment Map Scale">Environment Map Scale.</option>
         <option value="9" name="Glossiness">Glossiness.</option>

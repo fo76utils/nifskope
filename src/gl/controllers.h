@@ -397,6 +397,7 @@ namespace LightingFloat
 	enum Variable
 	{
 		Refraction_Strength = 0,
+		Emissive_Multiple_F76 = 3,
 		Reflection_Strength = 8,
 		Glossiness = 9,
 		Specular_Strength = 10,

@@ -1097,6 +1097,10 @@ void LightingFloatController::updateTime( float time )
 		case LightingFloat::Specular_Strength:
 			target->specularStrength = val;
 			break;
+		case LightingFloat::Emissive_Multiple_F76:
+			if ( target->bsVersion < 151 )
+				break;
+			[[fallthrough]];
 		case LightingFloat::Emissive_Multiple:
 			target->emissiveMult = val;
 			break;
