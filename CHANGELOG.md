@@ -1,5 +1,7 @@
  == CHANGELOG ==
 
+* Fixed unused BSShaderTextureSet blocks in Fallout 76 models being incorrectly added to the footer as root links.
+
 #### NifSkope-2.0.dev9-20240422
 
 * Implemented the Update Bounds and Update All Bounds mesh spells for Starfield. Casting these also updates the vertex and triangle counts on meshes.

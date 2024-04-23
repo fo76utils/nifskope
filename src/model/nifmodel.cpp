@@ -2577,8 +2577,15 @@ void NifModel::updateLinks( int block )
 		}
 
 		for ( int c = 0; c < n; c++ ) {
-			if ( !hasrefs[c] )
-				rootLinks.append( c );
+			if ( !hasrefs[c] ) {
+				const NifItem *	b;
+				if ( bsVersion >= 151 && ( b = getBlockItem( quint32(c) ) ) != nullptr && b->name() == "BSShaderTextureSet" ) {
+					if ( c > 0 && ( b = getBlockItem( quint32(c - 1) ) ) != nullptr && b->name() == "BSLightingShaderProperty" )
+						childLinks[c - 1] += c;
+				} else {
+					rootLinks.append( c );
+				}
+			}
 		}
 	}
 }
