@@ -230,6 +230,11 @@ bool EffectMaterial::readFile()
 		if ( version > 20 ) {
 			quint8	bUnknown;
 			in >> bUnknown;
+			if ( bUnknown ) {
+				float	fUnknown[5];
+				for ( size_t i = 0; i < 5; i++ )
+					in >> fUnknown[i];
+			}
 		}
 		in >> bEnvironmentMapping;
 		in >> fEnvironmentMappingMaskScale;

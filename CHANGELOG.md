@@ -1,6 +1,7 @@
  == CHANGELOG ==
 
 * Fixed unused BSShaderTextureSet blocks in Fallout 76 models being incorrectly added to the footer as root links.
+* Fixed reading unknown fields from version 21 Fallout 76 effect materials.
 
 #### NifSkope-2.0.dev9-20240422
 
