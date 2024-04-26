@@ -60,6 +60,8 @@ using namespace std;
 #define F4_BSAHEADER_VERSION 0x01 //!< Version number of a Fallout 4 BA2
 #define SF_BSAHEADER_VERSION2 0x02 //!< Version number of a Starfield BA2
 #define SF_BSAHEADER_VERSION3 0x03 //!< Version number of a Starfield BA2
+#define F4_BSAHEADER_VERSION7 0x07 //!< Version number of a Fallout 4 BA2
+#define F4_BSAHEADER_VERSION8 0x08 //!< Version number of a Fallout 4 BA2
 
 /* Archive flags */
 #define OB_BSAARCHIVE_PATHNAMES           0x0001 //!< Whether the BSA has names for paths
