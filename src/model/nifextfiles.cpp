@@ -506,8 +506,9 @@ void NifModel::loadFO76Material( const QModelIndex & parent, const void * materi
 		shaderFlags3 |= ( quint16(bool(bgem->bFalloffColorEnabled)) << 4 ) | ( quint16(bool(bgem->bGrayscaleToPaletteAlpha)) << 5 );
 		shaderFlags3 |= ( quint16(bool(bgem->bSoftEnabled)) << 6 ) | ( quint16(bool(bgem->bGlowmap)) << 7 );
 		shaderFlags3 |= ( quint16(bool(bgem->bEffectPbrSpecular)) << 8 );
+		shaderFlags3 |= ( quint16(bool(bgem->bGlassEnabled)) << 9 );
 		setValue<quint16>( p, "Shader Flags 2", shaderFlags3 );
-		textureCnt = 8;
+		textureCnt = ( bgem->version < 21 ? 8 : 10 );
 	}
 
 	// common material properties
@@ -568,6 +569,11 @@ void NifModel::loadFO76Material( const QModelIndex & parent, const void * materi
 
 	// effect material properties
 	if ( bgem ) {
+		if ( bgem->bGlassEnabled ) {
+			setValue<Color3>( p, "Glass Fresnel Color", bgem->cGlassFresnelColor );
+			setValue<float>( p, "Glass Refraction Scale", bgem->fGlassRefractionScaleBase );
+			setValue<float>( p, "Glass Blur Scale", bgem->fGlassBlurScaleBase );
+		}
 		setValue<float>( p, "Environment Map Scale", bgem->fEnvironmentMappingMaskScale );
 		setValue<Color3>( p, "Base Color", bgem->cBaseColor );
 		setValue<float>( p, "Base Color Scale", bgem->fBaseColorScale );

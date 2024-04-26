@@ -7100,6 +7100,7 @@
         <option bit="6" name="Soft_Enabled" />
         <option bit="7" name="Glow_Map" />
         <option bit="8" name="Effect_PBR_Specular" />
+        <option bit="9" name="Glass_Enabled" />
     </bitflags>
 
     <struct name="BSShaderMaterialDataFO76" abstract="true" module="BSMain" versions="#BS_F76#">
@@ -7243,6 +7244,11 @@
         <field name="Texture 5" type="SizedString">Reflectance Texture</field>
         <field name="Texture 6" type="SizedString">Lighting Texture</field>
         <field name="Texture 7" type="SizedString">Emit Gradient Texture</field>
+        <field name="Texture 8" type="SizedString" cond="Version #GTE# 21">Glass Roughness and Scratch Texture</field>
+        <field name="Texture 9" type="SizedString" cond="Version #GTE# 21">Glass Dirt Overlay Texture</field>
+        <field name="Glass Fresnel Color" type="Color3" cond="Shader Flags 2 #BITAND# 0x0200" />
+        <field name="Glass Refraction Scale" type="float" cond="Shader Flags 2 #BITAND# 0x0200" />
+        <field name="Glass Blur Scale" type="float" cond="Shader Flags 2 #BITAND# 0x0200" />
         <field name="Environment Map Scale" type="float" default="1.0" range="0.01:20.0" />
         <field name="Base Color" type="Color3" default="#VEC3_ONE#">Base color</field>
         <field name="Base Color Scale" type="float" default="1.0" range="0.0:360.0">Multiplier for Base Color (RGB part)</field>

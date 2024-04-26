@@ -140,16 +140,14 @@ bool ShaderMaterial::readFile()
 	in >> bEnableEditorAlphaRef;
 	if ( version >= 8 ) {
 		in >> bTranslucency >> bTranslucencyThickObject >> bTranslucencyMixAlbedoWithSubsurfaceCol;
-		in >> subR >> subG >> subB;
-		cTranslucencySubsurfaceColor.setRGB( subR, subG, subB );
+		in >> cTranslucencySubsurfaceColor[0] >> cTranslucencySubsurfaceColor[1] >> cTranslucencySubsurfaceColor[2];
 		in >> fTranslucencyTransmissiveScale >> fTranslucencyTurbulence;
 	}
 	else
 		in >> bRimLighting >> fRimPower >> fBacklightPower >> bSubsurfaceLighting >> fSubsurfaceLightingRolloff;
 
 	in >> bSpecularEnabled;
-	in >> specR >> specG >> specB;
-	cSpecularColor.setRGB( specR, specG, specB );
+	in >> cSpecularColor[0] >> cSpecularColor[1] >> cSpecularColor[2];
 	in >> fSpecularMult >> fSmoothness;
 	in >> fFresnelPower;
 	in >> fWetnessControl_SpecScale >> fWetnessControl_SpecPowerScale >> fWetnessControl_SpecMinvar;
@@ -171,8 +169,7 @@ bool ShaderMaterial::readFile()
 	in >> bAnisoLighting >> bEmitEnabled;
 
 	if ( bEmitEnabled )
-		in >> emitR >> emitG >> emitB;
-	cEmittanceColor.setRGB( emitR, emitG, emitB );
+		in >> cEmittanceColor[0] >> cEmittanceColor[1] >> cEmittanceColor[2];
 
 	in >> fEmittanceMult >> bModelSpaceNormals;
 	in >> bExternalEmittance;
@@ -188,8 +185,7 @@ bool ShaderMaterial::readFile()
 
 	if ( version < 7 )
 		in >> bEnvironmentMappingWindow >> bEnvironmentMappingEye;
-	in >> bHair >> hairR >> hairG >> hairB;
-	cHairTintColor.setRGB( hairR, hairG, hairB );
+	in >> bHair >> cHairTintColor[0] >> cHairTintColor[1] >> cHairTintColor[2];
 
 	in >> bTree >> bFacegen >> bSkinTint >> bTessellate;
 	if ( version == 1 )
@@ -228,12 +224,12 @@ bool EffectMaterial::readFile()
 
 	if ( version >= 10 ) {
 		if ( version > 20 ) {
-			quint8	bUnknown;
-			in >> bUnknown;
-			if ( bUnknown ) {
-				float	fUnknown[5];
-				for ( size_t i = 0; i < 5; i++ )
-					in >> fUnknown[i];
+			in >> bGlassEnabled;
+			if ( bGlassEnabled ) {
+				in >> cGlassFresnelColor[0] >> cGlassFresnelColor[1] >> cGlassFresnelColor[2];
+				// FIXME: the order of these may be incorrect
+				in >> fGlassRefractionScaleBase;
+				in >> fGlassBlurScaleBase;
 			}
 		}
 		in >> bEnvironmentMapping;
@@ -243,9 +239,7 @@ bool EffectMaterial::readFile()
 	in >> bBloodEnabled >> bEffectLightingEnabled;
 	in >> bFalloffEnabled >> bFalloffColorEnabled;
 	in >> bGrayscaleToPaletteAlpha >> bSoftEnabled;
-	in >> baseR >> baseG >> baseB;
-
-	cBaseColor.setRGB( baseR, baseG, baseB );
+	in >> cBaseColor[0] >> cBaseColor[1] >> cBaseColor[2];
 
 	in >> fBaseColorScale;
 	in >> fFalloffStartAngle >> fFalloffStopAngle;
@@ -253,8 +247,7 @@ bool EffectMaterial::readFile()
 	in >> fLightingInfluence >> iEnvmapMinLOD >> fSoftDepth;
 
 	if ( version >= 11 ) {
-		in >> emitR >> emitG >> emitB;
-		cEmittanceColor.setRGB( emitR, emitG, emitB );
+		in >> cEmittanceColor[0] >> cEmittanceColor[1] >> cEmittanceColor[2];
 
 		if ( version >= 15 ) {
 			in >> fAdaptativeEmissive_ExposureOffset >> fAdaptativeEmissive_FinalExposureMin >> fAdaptativeEmissive_FinalExposureMax;

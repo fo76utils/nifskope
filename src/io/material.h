@@ -109,8 +109,7 @@ protected:
 	quint8 bGrayscaleToPaletteColor = 1.0;
 	quint8 ucMaskWrites = 63;
 
-	float emitR = 0, emitG = 0, emitB = 0;
-	Color3 cEmittanceColor;
+	Color3 cEmittanceColor = Color3( 0.0f, 0.0f, 0.0f );
 
 	quint8 bGlowmap = 0;
 
@@ -143,7 +142,6 @@ protected:
 	quint8 bSubsurfaceLighting = 0;
 	float fSubsurfaceLightingRolloff = 0.0;
 	quint8 bSpecularEnabled = 1;
-	float specR = 1.0, specG = 1.0, specB = 1.0;
 	Color3 cSpecularColor;
 	float fSpecularMult = 0;
 	float fSmoothness = 0;
@@ -169,8 +167,7 @@ protected:
 	quint8 bEnvironmentMappingWindow = 0;
 	quint8 bEnvironmentMappingEye = 0;
 	quint8 bHair = 0;
-	float hairR = 0, hairG = 0, hairB = 0;
-	Color3 cHairTintColor;
+	Color3 cHairTintColor = Color3( 0.0f, 0.0f, 0.0f );
 	quint8 bTree = 0;
 	quint8 bFacegen = 0;
 	quint8 bSkinTint = 0;
@@ -188,8 +185,7 @@ protected:
 	quint8 bTranslucency = 0;
 	quint8 bTranslucencyThickObject = 0;
 	quint8 bTranslucencyMixAlbedoWithSubsurfaceCol = 0;
-	float subR = 0, subG = 0, subB = 0;
-	Color3 cTranslucencySubsurfaceColor;
+	Color3 cTranslucencySubsurfaceColor = Color3( 0.0f, 0.0f, 0.0f );
 	float fTranslucencyTransmissiveScale = 0.0;
 	float fTranslucencyTurbulence = 0.0;
 
@@ -226,7 +222,6 @@ protected:
 	quint8 bFalloffColorEnabled = 0;
 	quint8 bGrayscaleToPaletteAlpha = 0;
 	quint8 bSoftEnabled = 0;
-	float baseR = 1.0, baseG = 1.0, baseB = 1.0;
 	Color3 cBaseColor;
 	float fBaseColorScale = 1.0;
 	float fFalloffStartAngle = 1.0;
@@ -238,6 +233,11 @@ protected:
 	float fSoftDepth = 100.0;
 
 	quint8 bEffectPbrSpecular = 0;
+	// version >= 21
+	quint8 bGlassEnabled = 0;
+	Color3 cGlassFresnelColor;
+	float fGlassRefractionScaleBase = 0.0f;
+	float fGlassBlurScaleBase = 0.0f;
 };
 
 
