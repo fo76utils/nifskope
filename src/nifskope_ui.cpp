@@ -186,6 +186,7 @@ void NifSkope::initActions()
 	ui->aWindow->setShortcut( QKeySequence::New );
 
 	connect( ui->aBrowseArchive, &QAction::triggered, this, &NifSkope::archiveDlg );
+	connect( ui->aBrowseArchiveFolder, &QAction::triggered, this, &NifSkope::archiveFolderDlg );
 	connect( ui->aOpen, &QAction::triggered, this, &NifSkope::openDlg );
 	connect( ui->aSave, &QAction::triggered, this, &NifSkope::save );
 	connect( ui->aSaveAs, &QAction::triggered, this, &NifSkope::saveAsDlg );
@@ -760,6 +761,13 @@ void NifSkope::archiveDlg()
 	QString file = QFileDialog::getOpenFileName( this, tr( "Open Archive" ), "", "Archives (*.bsa *.ba2)" );
 	if ( !file.isEmpty() )
 		openArchive( file );
+}
+
+void NifSkope::archiveFolderDlg()
+{
+	QString path = QFileDialog::getExistingDirectory( this, tr( "Open Archive Folder" ), "" );
+	if ( !path.isEmpty() )
+		openArchive( path + "/*.bsa" );
 }
 
 void NifSkope::openDlg()

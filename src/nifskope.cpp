@@ -72,7 +72,8 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QTreeView>
 #include <QStandardItemModel>
 
-#include <fsengine/bsa.h>
+#include "libfo76utils/src/ba2file.hpp"
+#include "bsamodel.h"
 
 #ifdef WIN32
 #  define WINDOWS_LEAN_AND_MEAN
@@ -346,6 +347,8 @@ void NifSkope::exitRequested()
 NifSkope::~NifSkope()
 {
 	delete ui;
+	if ( currentArchive )
+		delete currentArchive;
 }
 
 void NifSkope::swapModels()
@@ -675,15 +678,17 @@ void NifSkope::clearCurrentFile()
 	updateAllRecentFileActions();
 }
 
-void NifSkope::setCurrentArchive( BSA * bsa )
+void NifSkope::setCurrentArchive( const QString & path)
 {
-	currentArchive = bsa;
-
-	QString file = currentArchive->path();
+	currentArchivePath = path;
+	if ( path.endsWith( "/*.bsa" ) )
+		currentArchiveName = path;
+	else
+		currentArchiveName = path.mid( path.lastIndexOf( QChar('/') ) + 1 );
 
 	QSettings settings;
 	QStringList files = settings.value( "File/Recent Archive List" ).toStringList();
-	::updateRecentFiles( files, file );
+	::updateRecentFiles( files, currentArchivePath );
 
 	settings.setValue( "File/Recent Archive List", files );
 
@@ -692,11 +697,19 @@ void NifSkope::setCurrentArchive( BSA * bsa )
 
 void NifSkope::clearCurrentArchive()
 {
+	if ( !currentArchive )
+		return;
+
 	QSettings settings;
 	QStringList files = settings.value( "File/Recent Archive List" ).toStringList();
 
-	files.removeAll( currentArchive->path() );
+	files.removeAll( currentArchivePath );
 	settings.setValue( "File/Recent Archive List", files );
+
+	currentArchivePath.clear();
+	currentArchiveName.clear();
+	delete currentArchive;
+	currentArchive = nullptr;
 
 	updateAllRecentFileActions();
 }
@@ -719,7 +732,7 @@ void NifSkope::updateRecentArchiveFileActions()
 	if ( !currentArchive )
 		return;
 
-	QString key = currentArchive->name();
+	QString key = currentArchiveName;
 
 	QStringList files = hash.value( key ).toStringList();
 
@@ -786,6 +799,69 @@ void NifSkope::checkFile( QFileInfo fInfo, QByteArray hash )
 	emit completeSave( saved, fpath );
 }
 
+static bool archiveFilterFunction( [[maybe_unused]] void * p, const std::string & s )
+{
+	return ( s.ends_with( ".nif" ) || s.ends_with( ".bto" ) || s.ends_with( ".btr" ) );
+}
+
+bool NifSkope::loadArchivesFromFolder( const QString & archive )
+{
+	QStringList	archiveNames;
+	{
+		QDir	archiveDir( archive, QString(), QDir::NoSort, QDir::Files );
+		if ( !archiveDir.exists() ) {
+			qCWarning( nsIo ) << "The archive folder could not be opened.";
+			return false;
+		}
+		archiveDir.setNameFilters( { QString( "*.ba2" ), QString( "*.bsa" ) } );
+		archiveNames = archiveDir.entryList();
+	}
+	for ( qsizetype i = 0; i < archiveNames.size(); ) {
+		QString	archiveName( archiveNames[i].toLower() );
+		static const char *	excludeFilters[6] = { " - faceanimation", " - sounds", " - terrain", " - textures", " - voices", " - wwisesounds" };
+		bool	isExcluded = false;
+		for ( size_t j = 0; j < 6 && !isExcluded; j++ ) {
+			if ( archiveName.contains( excludeFilters[j] ) )
+				isExcluded = true;
+		}
+		if ( isExcluded ) {
+			archiveNames.removeAt( i );
+			continue;
+		}
+		// sort order: 0 = base game archive, 1 = DLC or patch, 2 = mod archive
+		QChar	c( '2' );
+		if ( archiveName == "morrowind.bsa"
+			|| archiveName.startsWith( "oblivion" )
+			|| archiveName.startsWith( "fallout" )
+			|| archiveName.startsWith( "skyrim" )
+			|| archiveName.startsWith( "seventysix" )
+			|| archiveName.startsWith( "starfield" ) ) {
+			if ( archiveName.contains( "update" ) || archiveName.endsWith( "patch.ba2" ) ) {
+				c = '1';
+			} else {
+				c = '0';
+			}
+		} else if ( archiveName.startsWith( "dlc" ) ) {
+			c = '1';
+		}
+		archiveNames[i].insert( 0, c );
+		i++;
+	}
+	if ( archiveNames.size() < 1 )
+		return true;
+	archiveNames.sort( Qt::CaseInsensitive );
+	for ( qsizetype i = 0; i < archiveNames.size(); i++ ) {
+		QString	fullPath = archive + archiveNames[i];
+		fullPath[archive.length()] = QChar( '/' );
+		try {
+			currentArchive->loadArchivePath( fullPath.toStdString().c_str(), &archiveFilterFunction );
+		} catch ( std::exception & ) {
+			qCWarning( nsIo ) << QString( "The BSA %1 could not be opened." ).arg( fullPath );
+		}
+	}
+	return true;
+}
+
 void NifSkope::openArchive( const QString & archive )
 {
 	// Clear memory from previously opened archives
@@ -795,24 +871,34 @@ void NifSkope::openArchive( const QString & archive )
 	bsaView->setModel( emptyModel );
 	bsaView->setSortingEnabled( false );
 
-	archiveHandler.reset();
-
-	archiveHandler = FSArchiveHandler::openArchive( archive );
-	if ( !archiveHandler ) {
-		qCWarning( nsIo ) << "The BSA could not be opened.";
-		return;
+	if ( currentArchive ) {
+		delete currentArchive;
+		currentArchive = nullptr;
 	}
 
-	auto bsa = archiveHandler->getArchive<BSA *>();
-	if ( bsa ) {
+	currentArchive = new BA2File();
+	if ( !archive.endsWith( "/*.bsa" ) ) {
+		// load single archive
+		try {
+			currentArchive->loadArchivePath( archive.toStdString().c_str(), &archiveFilterFunction );
+		} catch ( std::exception & ) {
+			qCWarning( nsIo ) << "The BSA could not be opened.";
+			return;
+		}
+	} else {
+		// load all mesh archives from a folder
+		if ( !loadArchivesFromFolder( archive.left( archive.length() - 6 ) ) )
+			return;
+	}
 
-		setCurrentArchive( bsa );
+	{
+		setCurrentArchive( archive );
 
 		// Models
 		bsaModel->init();
 
 		// Populate model from BSA
-		bsa->fillModel( bsaModel, "meshes" );
+		bsaModel->fillModel( currentArchive, "meshes" );
 
 		if ( bsaModel->rowCount() == 0 ) {
 			qCWarning( nsIo ) << "The BSA does not contain any meshes.";
@@ -835,7 +921,7 @@ void NifSkope::openArchive( const QString & archive )
 		bsaProxyModel->resetFilter();
 
 		// Set filename label
-		ui->bsaName->setText( currentArchive->name() );
+		ui->bsaName->setText( currentArchiveName );
 
 		ui->bsaFilter->setEnabled( true );
 		ui->bsaFilenameOnly->setEnabled( true );
@@ -876,43 +962,47 @@ void NifSkope::openArchiveFile( const QModelIndex & index )
 		openArchiveFileString( currentArchive, filepath );
 }
 
-void NifSkope::openArchiveFileString( BSA * bsa, const QString & filepath )
+void NifSkope::openArchiveFileString( const BA2File * bsa, const QString & filepath )
 {
-	if ( bsa->hasFile( filepath ) ) {
-		if ( !saveConfirm() )
-			return;
+	if ( !currentArchive )
+		return;
+	std::string	filePathStr( filepath.toStdString() );
+	if ( !currentArchive->findFile( filePathStr ) )
+		return;
+	if ( !saveConfirm() )
+		return;
 
-		// Read data from BSA
-		QByteArray data;
-		bsa->fileContents( filepath, data );
+	// Read data from BSA
+	std::vector< unsigned char >	data;
+	const unsigned char *	dataPtr;
+	size_t	dataSize = bsa->extractFile( dataPtr, data, filePathStr );
+	QBuffer	buf;
+	buf.setData( reinterpret_cast< const char * >(dataPtr), qsizetype(dataSize) );
 
-		// Format like "BSANAME.BSA/path/to/file.nif"
-		QString path = bsa->name() + "/" + filepath;
+	// Format like "BSANAME.BSA/path/to/file.nif"
+	QString path = currentArchiveName + "/" + filepath;
 
-		QBuffer buf;
-		buf.setData( data );
-		if ( buf.open( QBuffer::ReadOnly ) ) {
+	if ( buf.open( QBuffer::ReadOnly ) ) {
 
-			emit beginLoading();
+		emit beginLoading();
 
-			bool loaded = nif->load( buf );
-			if ( loaded )
-				setCurrentFile( path );
+		bool loaded = nif->load( buf );
+		if ( loaded )
+			setCurrentFile( path );
 
-			emit completeLoading( loaded, path );
+		emit completeLoading( loaded, path );
 
-			//if ( loaded ) {
-			//	QCryptographicHash hash( QCryptographicHash::Md5 );
-			//	hash.addData( data );
-			//	filehash = hash.result();
-			//
-			//	QFileInfo f( path );
-			//
-			//	checkFile( f, filehash );
-			//}
+		//if ( loaded ) {
+		//	QCryptographicHash hash( QCryptographicHash::Md5 );
+		//	hash.addData( data );
+		//	filehash = hash.result();
+		//
+		//	QFileInfo f( path );
+		//
+		//	checkFile( f, filehash );
+		//}
 
-			buf.close();
-		}
+		buf.close();
 	}
 }
 

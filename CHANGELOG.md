@@ -1,5 +1,7 @@
  == CHANGELOG ==
 
+* Reworked archive loading, added new file menu option to browse an archive folder.
+* The archive browser now displays uncompressed file sizes from BA2 archives.
 * Added support for version 7 and 8 BA2 archives used by the Fallout 4 next gen update.
 * The glass settings added to version 21 Fallout 76 effect materials are now displayed under the material properties.
 * Fixed unused BSShaderTextureSet blocks in Fallout 76 models being incorrectly added to the footer as root links.

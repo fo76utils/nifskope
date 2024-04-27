@@ -219,6 +219,7 @@
     </widget>
     <addaction name="aOpen"/>
     <addaction name="aBrowseArchive"/>
+    <addaction name="aBrowseArchiveFolder"/>
     <addaction name="aReload"/>
     <addaction name="separator"/>
     <addaction name="mRecentFiles"/>
@@ -1945,6 +1946,11 @@ background: qradialgradient(spread:pad, cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0
   <action name="aBrowseArchive">
    <property name="text">
     <string>Browse Archive...</string>
+   </property>
+  </action>
+  <action name="aBrowseArchiveFolder">
+   <property name="text">
+    <string>Browse Archive Folder...</string>
    </property>
   </action>
   <action name="aToggleArchiveBrowser">

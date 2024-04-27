@@ -69,7 +69,7 @@ class ReferenceBrowser;
 class SettingsDialog;
 class SpellBook;
 class FSArchiveHandler;
-class BSA;
+class BA2File;
 class BSAModel;
 class BSAProxyModel;
 class QStandardItemModel;
@@ -166,9 +166,10 @@ public slots:
 	void openFile( QString & );
 	void openFiles( QStringList & );
 
+	bool loadArchivesFromFolder( const QString & );
 	void openArchive( const QString & );
 	void openArchiveFile( const QModelIndex & );
-	void openArchiveFileString( BSA *, const QString & );
+	void openArchiveFileString( const BA2File *, const QString & );
 
 	void enableUi();
 
@@ -227,6 +228,7 @@ protected slots:
 	void saveAsDlg();
 
 	void archiveDlg();
+	void archiveFolderDlg();
 
 	void load();
 	void save();
@@ -293,7 +295,7 @@ private:
 
 	void openRecentArchive();
 	void openRecentArchiveFile();
-	void setCurrentArchive( BSA * );
+	void setCurrentArchive( const QString & );
 	void setCurrentArchiveFile( const QString & );
 	void clearCurrentArchive();
 	void updateRecentArchiveActions();
@@ -329,7 +331,9 @@ private:
 	nstheme::ToolbarSize toolbarSize = nstheme::ToolbarLarge;
 
 	QString currentFile;
-	BSA * currentArchive = nullptr;
+	QString currentArchivePath;
+	QString currentArchiveName;
+	BA2File * currentArchive = nullptr;
 
 	QByteArray filehash;
 
@@ -358,8 +362,6 @@ private:
 
 	//! Spellbook instance
 	std::shared_ptr<SpellBook> book;
-
-	std::shared_ptr<FSArchiveHandler> archiveHandler;
 
 	static SettingsDialog * options;
 
