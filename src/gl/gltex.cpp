@@ -37,8 +37,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "gl/gltexloaders.h"
 #include "model/nifmodel.h"
 
-#include <fsengine/fsengine.h>
-
 #include "gamemanager.h"
 
 #include <QDebug>

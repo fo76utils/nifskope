@@ -13,8 +13,6 @@
 #include "glview.h"
 #include "gl/gltex.h"
 
-#include <fsengine/fsengine.h>
-
 #include <QComboBox>
 #include <QDebug>
 #include <QDir>

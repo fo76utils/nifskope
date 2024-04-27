@@ -1,6 +1,5 @@
 #include "gamemanager.h"
 
-#include "bsa.h"
 #include "message.h"
 #include "bsrefl.hpp"
 

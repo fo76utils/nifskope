@@ -30,44 +30,52 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ***** END LICENCE BLOCK *****/
 
-#include "fsengine.h"
-#include "bsa.h"
+#ifndef BSAMODEL_H
+#define BSAMODEL_H
 
-#include <QDateTime>
-#include <QDebug>
+#include <QStandardItemModel>
+#include <QSortFilterProxyModel>
 #include <QMap>
-#include <QMutex>
-#include <QStringList>
 
+class BA2File;
 
-//! \file fsengine.cpp File system engine implementations
-
-// see fsengine.h
-std::shared_ptr<FSArchiveHandler> FSArchiveHandler::openArchive( const QString & fn )
+class BSAModel : public QStandardItemModel
 {
-	if ( BSA::canOpen( fn ) )
-	{
-		BSA * bsa = new BSA( fn );
-		if ( bsa && bsa->open() ) {
-			//qDebug() << "BSA Open: " << fn;
-			return std::shared_ptr<FSArchiveHandler>( new FSArchiveHandler( bsa ) );
-		}
-		qDebug() << "fsengine error:" << fn << ":" << bsa->statusText();
-		delete bsa;
-	}
-	return nullptr;
-}
+	Q_OBJECT
 
-// see fsengine.h
-FSArchiveHandler::FSArchiveHandler( FSArchiveFile * a )
-{
-	archive = a;
-	archive->ref.ref();
-}
+public:
+	BSAModel( QObject * parent = nullptr );
 
-// see fsengine.h
-FSArchiveHandler::~FSArchiveHandler()
+	void init();
+
+	Qt::ItemFlags flags( const QModelIndex & index ) const override;
+	bool fillModel( const BA2File * bsa, const QString & folder );
+protected:
+	QStandardItem * insertFolder( const QString & path, qsizetype pos, QMap< QString, QStandardItem * > & folderMap, QStandardItem * parent = nullptr );
+};
+
+
+class BSAProxyModel : public QSortFilterProxyModel
 {
-	if ( ! archive->ref.deref() )
-		delete archive;
-}
+	Q_OBJECT
+
+public:
+	BSAProxyModel( QObject * parent = nullptr );
+
+	void setFiletypes( QStringList types );
+
+	void resetFilter();
+
+public slots:
+	void setFilterByNameOnly( bool nameOnly );
+
+protected:
+	bool filterAcceptsRow( int sourceRow, const QModelIndex & sourceParent ) const;
+	bool lessThan( const QModelIndex & left, const QModelIndex & right ) const;
+
+private:
+	QStringList filetypes;
+	bool filterByNameOnly = false;
+};
+
+#endif

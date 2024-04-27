@@ -1,10 +1,8 @@
 #include "io/MeshFile.h"
 #include "gamemanager.h"
 
-#include <fsengine/bsa.h>
-#include <half.h>
-
 #include <QBuffer>
+#include <QDir>
 #include <QFile>
 #include "fp32vec4.hpp"
 

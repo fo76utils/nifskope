@@ -32,8 +32,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "material.h"
 
-#include <fsengine/fsengine.h>
-
 #include <QBuffer>
 #include <QDataStream>
 #include <QDebug>

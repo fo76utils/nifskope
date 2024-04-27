@@ -19,7 +19,7 @@ QT += xml opengl network widgets
 CONFIG += c++20
 
 # Dependencies
-CONFIG += nvtristrip qhull zlib lz4 fsengine gli libfo76utils
+CONFIG += nvtristrip qhull gli libfo76utils
 
 # Debug/Release options
 CONFIG(debug, debug|release) {
@@ -203,6 +203,7 @@ HEADERS += \
 	src/ui/settingspane.h \
 	src/xml/nifexpr.h \
 	src/xml/xmlconfig.h \
+	src/bsamodel.h \
 	src/gamemanager.h \
 	src/glview.h \
 	src/message.h \
@@ -301,6 +302,7 @@ SOURCES += \
 	src/xml/kfmxml.cpp \
 	src/xml/nifexpr.cpp \
 	src/xml/nifxml.cpp \
+	src/bsamodel.cpp \
 	src/gamemanager.cpp \
 	src/glview.cpp \
 	src/main.cpp \
@@ -329,16 +331,6 @@ FORMS += \
 ## DEPENDENCY SCOPES
 ###############################
 
-fsengine {
-	INCLUDEPATH += lib/fsengine
-	HEADERS += \
-		lib/fsengine/bsa.h \
-		lib/fsengine/fsengine.h
-	SOURCES += \
-		lib/fsengine/bsa.cpp \
-		lib/fsengine/fsengine.cpp
-}
-
 nvtristrip {
 	INCLUDEPATH += lib/NvTriStrip
 	HEADERS += \
@@ -365,29 +357,6 @@ gli {
     HEADERS += $$files($$PWD/lib/gli/gli/*.inl, true)
     HEADERS += $$files($$PWD/lib/gli/external/glm/*.hpp, true)
     HEADERS += $$files($$PWD/lib/gli/external/glm/*.inl, true)
-}
-
-zlib {
-	macx {
-        DEFINES += Z_HAVE_UNISTD_H
-    }
-    !*msvc*:QMAKE_CFLAGS += -Ilib/zlib
-    !*msvc*:QMAKE_CXXFLAGS += -Ilib/zlib
-    else:INCLUDEPATH += lib/zlib
-    HEADERS += $$files($$PWD/lib/zlib/*.h, false)
-    SOURCES += $$files($$PWD/lib/zlib/*.c, false)
-}
-
-lz4 {
-    DEFINES += LZ4_STATIC XXH_PRIVATE_API
-
-    HEADERS += \
-        lib/lz4frame.h \
-        lib/xxhash.h
-
-    SOURCES += \
-        lib/lz4frame.c \
-        lib/xxhash.c
 }
 
 libfo76utils {
