@@ -32,7 +32,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "bsamodel.h"
 #include "gamemanager.h"
-#include "libfo76utils/src/ba2file.hpp"
 
 #include <QByteArray>
 #include <QDateTime>
@@ -56,47 +55,45 @@ Qt::ItemFlags BSAModel::flags( const QModelIndex & index ) const
 	return QStandardItemModel::flags( index ) ^ Qt::ItemIsEditable;
 }
 
-static bool fileListFilterFunction( void * p, const std::string & s )
-{
-	const std::string &	path = *( reinterpret_cast< std::string * >( p ) );
-	return ( s.length() > path.length() && ( path.empty() || s.starts_with( path ) ) );
-}
-
 bool BSAModel::fillModel( const BA2File * bsa, const QString & folder )
 {
 	if ( !bsa )
 		return false;
 
-	std::string	path( folder.toStdString() );
-	if ( !path.empty() && !path.ends_with( '/' ) )
-		path += '/';
-	std::vector< std::string >	fileList;
-	bsa->getFileList( fileList, false, &fileListFilterFunction, &path );
-	if ( fileList.size() < 1 )
+	FileScanFuncData	data;
+	data.p = this;
+	data.bsa = bsa;
+	data.path = folder.toStdString();
+	if ( !data.path.empty() && !data.path.ends_with( '/' ) )
+		data.path += '/';
+
+	// List files
+	bsa->scanFileList( &fileListScanFunction, &data );
+
+	return ( rowCount() > 0 );
+}
+
+bool BSAModel::fileListScanFunction( void * p, const BA2File::FileDeclaration & fd )
+{
+	FileScanFuncData & o = *( reinterpret_cast< FileScanFuncData * >( p ) );
+
+	if ( fd.fileName.length() <= o.path.length() || !( o.path.empty() || fd.fileName.starts_with( o.path ) ) )
 		return false;
 
-	QMap< QString, QStandardItem * >	folderMap;
-	bool	foundFiles = false;
-	for ( const auto & i : fileList ) {
-		// List files
-		auto	fd = bsa->findFile( i );
-		if ( !fd )
-			continue;
-		foundFiles = true;
-		qsizetype	bytes = qsizetype( fd->archiveType < 64 || fd->packedSize == 0 ? fd->unpackedSize : fd->packedSize );
-		QString	fileSize( (bytes > 1024) ? QString::number( bytes / 1024 ) + "KB" : QString::number( bytes ) + "B" );
+	qsizetype	bytes = qsizetype( fd.archiveType < 64 || fd.packedSize == 0 ? fd.unpackedSize : fd.packedSize );
+	QString	fileSize( (bytes > 1024) ? QString::number( bytes / 1024 ) + "KB" : QString::number( bytes ) + "B" );
 
-		QString	fullPath( QString::fromStdString( i ) );
-		QString	baseName( fullPath.mid( fullPath.lastIndexOf( QChar( '/' ) ) + 1 ) );
-		auto	folderItem = insertFolder( fullPath, path.length(), folderMap );
+	QString	fullPath( QString::fromStdString( fd.fileName ) );
+	QString	baseName( fullPath.mid( fullPath.lastIndexOf( QChar( '/' ) ) + 1 ) );
+	auto	folderItem = o.p->insertFolder( fullPath, o.path.length(), o.folderMap );
 
-		auto	fileItem = new QStandardItem( baseName );
-		auto	pathItem = new QStandardItem( fullPath );
-		auto	sizeItem = new QStandardItem( fileSize );
+	auto	fileItem = new QStandardItem( baseName );
+	auto	pathItem = new QStandardItem( fullPath );
+	auto	sizeItem = new QStandardItem( fileSize );
 
-		folderItem->appendRow( { fileItem, pathItem, sizeItem } );
-	}
-	return foundFiles;
+	folderItem->appendRow( { fileItem, pathItem, sizeItem } );
+
+	return false;
 }
 
 QStandardItem * BSAModel::insertFolder( const QString & path, qsizetype pos, QMap< QString, QStandardItem * > & folderMap, QStandardItem * parent )

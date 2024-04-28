@@ -33,11 +33,11 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef BSAMODEL_H
 #define BSAMODEL_H
 
+#include "libfo76utils/src/ba2file.hpp"
+
 #include <QStandardItemModel>
 #include <QSortFilterProxyModel>
 #include <QMap>
-
-class BA2File;
 
 class BSAModel : public QStandardItemModel
 {
@@ -51,6 +51,13 @@ public:
 	Qt::ItemFlags flags( const QModelIndex & index ) const override;
 	bool fillModel( const BA2File * bsa, const QString & folder );
 protected:
+	struct FileScanFuncData {
+		BSAModel * p;
+		const BA2File * bsa;
+		std::string path;
+		QMap< QString, QStandardItem * > folderMap;
+	};
+	static bool fileListScanFunction( void * p, const BA2File::FileDeclaration & fd );
 	QStandardItem * insertFolder( const QString & path, qsizetype pos, QMap< QString, QStandardItem * > & folderMap, QStandardItem * parent = nullptr );
 };
 

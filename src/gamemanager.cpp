@@ -37,16 +37,14 @@ BA2Files::~BA2Files()
 	close_all();
 }
 
-static bool archiveFilterFunctionNif( void * p, const std::string & s )
+static bool archiveFilterFunctionNif( [[maybe_unused]] void * p, const std::string & s )
 {
-	(void) p;
 	return !s.ends_with( ".nif" );
 }
 
-static bool archiveFilterFunctionMat( void * p, const std::string & s )
+static bool archiveScanFunctionMat( [[maybe_unused]] void * p, const BA2File::FileDeclaration & fd )
 {
-	(void) p;
-	return ( s.ends_with( ".mat" ) && s.starts_with( "materials/" ) );
+	return ( fd.fileName.ends_with( ".mat" ) && fd.fileName.starts_with( "materials/" ) );
 }
 
 void BA2Files::open_folders(GameMode game, const QStringList& folders)
@@ -117,13 +115,9 @@ bool BA2Files::set_temp_folder(GameMode game, const char* pathName, bool ignoreE
 	archives[game].second = new BA2File();
 	try {
 		archives[game].second->loadArchivePath(pathName, &archiveFilterFunctionNif);
-		if ( game == STARFIELD ) {
-			std::vector< std::string >	matPaths;
-			archives[game].second->getFileList( matPaths, true, &archiveFilterFunctionMat );
-			if ( matPaths.begin() != matPaths.end() ) {
-				GameManager::close_materials();
-				have_temp_materials = true;
-			}
+		if ( game == STARFIELD && archives[game].second->scanFileList(&archiveScanFunctionMat) ) {
+			GameManager::close_materials();
+			have_temp_materials = true;
 		}
 	} catch (FO76UtilsError& e) {
 		delete archives[game].second;
@@ -524,20 +518,35 @@ bool GameManager::set_temp_path(const GameMode game, const char* pathName, bool 
 	return ba2Files.set_temp_folder( game, pathName, ignoreErrors );
 }
 
+struct list_files_scan_function_data {
+	std::set< std::string > * fileSet;
+	bool (*filterFunc)( void * p, const std::string & fileName);
+	void * filterFuncData;
+};
+
+static bool list_files_scan_function( void * p, const BA2File::FileDeclaration & fd )
+{
+	list_files_scan_function_data & o = *( reinterpret_cast< list_files_scan_function_data * >( p ) );
+	if ( !o.filterFunc || o.filterFunc( o.filterFuncData, fd.fileName ) )
+		o.fileSet->insert( fd.fileName );
+	return false;
+}
+
 void GameManager::list_files(std::set< std::string >& fileSet, const GameMode game, bool (*fileListFilterFunc)(void* p, const std::string& fileName), void* fileListFilterFuncData)
 {
 	if ( !(game >= OTHER && game < NUM_GAMES) )
 		return;
 	// make sure that archives are loaded
 	(void) ba2Files.get_file( game, std::string(".") );
-	std::vector< std::string >	tmpFileList;
+	list_files_scan_function_data	tmp;
+	tmp.fileSet = &fileSet;
+	tmp.filterFunc = fileListFilterFunc;
+	tmp.filterFuncData = fileListFilterFuncData;
 	for ( int i = 0; i < 2; i++ ) {
 		const BA2File *	ba2File = ( !i ? ba2Files.archives[game].first : ba2Files.archives[game].second );
 		if ( !ba2File )
 			continue;
-		ba2File->getFileList( tmpFileList, true, fileListFilterFunc, fileListFilterFuncData );
-		for ( size_t j = 0; j < tmpFileList.size(); j++ )
-			fileSet.insert( tmpFileList[j] );
+		ba2File->scanFileList( &list_files_scan_function, &tmp );
 	}
 }
 
