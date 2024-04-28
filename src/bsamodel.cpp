@@ -79,7 +79,7 @@ bool BSAModel::fillModel( const BA2File * bsa, const QString & folder )
 	bool	foundFiles = false;
 	for ( const auto & i : fileList ) {
 		// List files
-		const BA2File::FileDeclaration *	fd = bsa->findFile( i );
+		auto	fd = bsa->findFile( i );
 		if ( !fd )
 			continue;
 		foundFiles = true;

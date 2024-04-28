@@ -166,7 +166,7 @@ public slots:
 	void openFile( QString & );
 	void openFiles( QStringList & );
 
-	bool loadArchivesFromFolder( const QString & );
+	bool loadArchivesFromFolder( QString );
 	void openArchive( const QString & );
 	void openArchiveFile( const QModelIndex & );
 	void openArchiveFileString( const BA2File *, const QString & );
@@ -295,7 +295,7 @@ private:
 
 	void openRecentArchive();
 	void openRecentArchiveFile();
-	void setCurrentArchive( const QString & );
+	void setCurrentArchive( bool );
 	void setCurrentArchiveFile( const QString & );
 	void clearCurrentArchive();
 	void updateRecentArchiveActions();
@@ -332,7 +332,7 @@ private:
 
 	QString currentFile;
 	QString currentArchivePath;
-	QString currentArchiveName;
+	QStringList currentArchiveNames;
 	BA2File * currentArchive = nullptr;
 
 	QByteArray filehash;

@@ -186,7 +186,7 @@ void NifSkope::initActions()
 	ui->aWindow->setShortcut( QKeySequence::New );
 
 	connect( ui->aBrowseArchive, &QAction::triggered, this, &NifSkope::archiveDlg );
-	connect( ui->aBrowseArchiveFolder, &QAction::triggered, this, &NifSkope::archiveFolderDlg );
+	connect( ui->aBrowseGameFolder, &QAction::triggered, this, &NifSkope::archiveFolderDlg );
 	connect( ui->aOpen, &QAction::triggered, this, &NifSkope::openDlg );
 	connect( ui->aSave, &QAction::triggered, this, &NifSkope::save );
 	connect( ui->aSaveAs, &QAction::triggered, this, &NifSkope::saveAsDlg );
@@ -765,9 +765,16 @@ void NifSkope::archiveDlg()
 
 void NifSkope::archiveFolderDlg()
 {
-	QString path = QFileDialog::getExistingDirectory( this, tr( "Open Archive Folder" ), "" );
-	if ( !path.isEmpty() )
-		openArchive( path + "/*.bsa" );
+	QString path = QFileDialog::getExistingDirectory( this, tr( "Open Game or Archive Folder" ), "" );
+	if ( path.isEmpty() )
+		return;
+	if ( path.endsWith( "/Data", Qt::CaseInsensitive ) || path.endsWith( "\\Data", Qt::CaseInsensitive ) ) {
+		QString	parentDir( path );
+		parentDir.truncate( parentDir.length() - 5 );
+		if ( !parentDir.isEmpty() && QFileInfo( parentDir ).isDir() )
+			path = parentDir;
+	}
+	openArchive( path );
 }
 
 void NifSkope::openDlg()

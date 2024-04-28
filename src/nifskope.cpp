@@ -653,6 +653,9 @@ void NifSkope::setCurrentArchiveFile( const QString & filepath )
 	QString path = filepath;
 	path.replace( bsa + "/", "" );
 
+	if ( !currentArchiveNames.empty() )
+		bsa = currentArchiveNames.back();
+
 	QSettings settings;
 	QHash<QString, QVariant> hash = settings.value( "File/Recent Archive Files" ).toHash();
 
@@ -678,13 +681,18 @@ void NifSkope::clearCurrentFile()
 	updateAllRecentFileActions();
 }
 
-void NifSkope::setCurrentArchive( const QString & path)
+void NifSkope::setCurrentArchive( bool isArchiveFolder )
 {
-	currentArchivePath = path;
-	if ( path.endsWith( "/*.bsa" ) )
-		currentArchiveName = path;
-	else
-		currentArchiveName = path.mid( path.lastIndexOf( QChar('/') ) + 1 );
+	QString	archiveName( currentArchivePath );
+	qsizetype	n = -1;
+	if ( isArchiveFolder && archiveName.length() > 5 ) {
+		if ( archiveName.endsWith( "/Data", Qt::CaseInsensitive ) || archiveName.endsWith( "\\Data", Qt::CaseInsensitive ) )
+			n = -6;
+	}
+	archiveName = archiveName.mid( archiveName.lastIndexOf( QChar('/'), n ) + 1 );
+	if ( isArchiveFolder )
+		archiveName += "/*.bsa,*.ba2";
+	currentArchiveNames += archiveName;
 
 	QSettings settings;
 	QStringList files = settings.value( "File/Recent Archive List" ).toStringList();
@@ -706,12 +714,12 @@ void NifSkope::clearCurrentArchive()
 	files.removeAll( currentArchivePath );
 	settings.setValue( "File/Recent Archive List", files );
 
+	updateAllRecentFileActions();
+
 	currentArchivePath.clear();
-	currentArchiveName.clear();
+	currentArchiveNames.clear();
 	delete currentArchive;
 	currentArchive = nullptr;
-
-	updateAllRecentFileActions();
 }
 
 void NifSkope::updateRecentArchiveActions()
@@ -729,12 +737,10 @@ void NifSkope::updateRecentArchiveFileActions()
 	QSettings settings;
 	QHash<QString, QVariant> hash = settings.value( "File/Recent Archive Files" ).toHash();
 
-	if ( !currentArchive )
+	if ( !currentArchive || currentArchiveNames.empty() )
 		return;
 
-	QString key = currentArchiveName;
-
-	QStringList files = hash.value( key ).toStringList();
+	QStringList files = hash.value( currentArchiveNames.back() ).toStringList();
 
 	int numRecentFiles = ::updateRecentActions( recentArchiveFileActs, files );
 
@@ -804,8 +810,14 @@ static bool archiveFilterFunction( [[maybe_unused]] void * p, const std::string 
 	return ( s.ends_with( ".nif" ) || s.ends_with( ".bto" ) || s.ends_with( ".btr" ) );
 }
 
-bool NifSkope::loadArchivesFromFolder( const QString & archive )
+bool NifSkope::loadArchivesFromFolder( QString archive )
 {
+	if ( !( archive.endsWith( "/Data", Qt::CaseInsensitive ) || archive.endsWith( "\\Data", Qt::CaseInsensitive ) ) ) {
+		QString	dataDir( archive + "/Data" );
+		if ( QFileInfo( dataDir ).isDir() )
+			archive = dataDir;
+	}
+
 	QStringList	archiveNames;
 	{
 		QDir	archiveDir( archive, QString(), QDir::NoSort, QDir::Files );
@@ -847,7 +859,7 @@ bool NifSkope::loadArchivesFromFolder( const QString & archive )
 		archiveNames[i].insert( 0, c );
 		i++;
 	}
-	if ( archiveNames.size() < 1 )
+	if ( archiveNames.empty() )
 		return true;
 	archiveNames.sort( Qt::CaseInsensitive );
 	for ( qsizetype i = 0; i < archiveNames.size(); i++ ) {
@@ -855,6 +867,7 @@ bool NifSkope::loadArchivesFromFolder( const QString & archive )
 		fullPath[archive.length()] = QChar( '/' );
 		try {
 			currentArchive->loadArchivePath( fullPath.toStdString().c_str(), &archiveFilterFunction );
+			currentArchiveNames += archiveNames[i].mid( 1 );
 		} catch ( std::exception & ) {
 			qCWarning( nsIo ) << QString( "The BSA %1 could not be opened." ).arg( fullPath );
 		}
@@ -875,24 +888,30 @@ void NifSkope::openArchive( const QString & archive )
 		delete currentArchive;
 		currentArchive = nullptr;
 	}
+	currentArchivePath = archive;
+	currentArchiveNames.clear();
 
 	currentArchive = new BA2File();
-	if ( !archive.endsWith( "/*.bsa" ) ) {
+	bool	isArchiveFolder = QFileInfo( archive ).isDir();
+	if ( !isArchiveFolder ) {
 		// load single archive
 		try {
 			currentArchive->loadArchivePath( archive.toStdString().c_str(), &archiveFilterFunction );
 		} catch ( std::exception & ) {
 			qCWarning( nsIo ) << "The BSA could not be opened.";
+			clearCurrentArchive();
 			return;
 		}
 	} else {
 		// load all mesh archives from a folder
-		if ( !loadArchivesFromFolder( archive.left( archive.length() - 6 ) ) )
+		if ( !loadArchivesFromFolder( archive ) ) {
+			clearCurrentArchive();
 			return;
+		}
 	}
 
 	{
-		setCurrentArchive( archive );
+		setCurrentArchive( isArchiveFolder );
 
 		// Models
 		bsaModel->init();
@@ -921,7 +940,7 @@ void NifSkope::openArchive( const QString & archive )
 		bsaProxyModel->resetFilter();
 
 		// Set filename label
-		ui->bsaName->setText( currentArchiveName );
+		ui->bsaName->setText( currentArchiveNames.back() );
 
 		ui->bsaFilter->setEnabled( true );
 		ui->bsaFilenameOnly->setEnabled( true );
@@ -964,10 +983,11 @@ void NifSkope::openArchiveFile( const QModelIndex & index )
 
 void NifSkope::openArchiveFileString( const BA2File * bsa, const QString & filepath )
 {
-	if ( !currentArchive )
+	if ( !currentArchive || currentArchiveNames.empty() )
 		return;
 	std::string	filePathStr( filepath.toStdString() );
-	if ( !currentArchive->findFile( filePathStr ) )
+	auto	fd = currentArchive->findFile( filePathStr );
+	if ( !fd )
 		return;
 	if ( !saveConfirm() )
 		return;
@@ -980,7 +1000,8 @@ void NifSkope::openArchiveFileString( const BA2File * bsa, const QString & filep
 	buf.setData( reinterpret_cast< const char * >(dataPtr), qsizetype(dataSize) );
 
 	// Format like "BSANAME.BSA/path/to/file.nif"
-	QString path = currentArchiveName + "/" + filepath;
+	QString path( currentArchiveNames[std::min( size_t(fd->archiveFile), size_t(currentArchiveNames.size() - 1) )] );
+	path = path + "/" + filepath;
 
 	if ( buf.open( QBuffer::ReadOnly ) ) {
 
