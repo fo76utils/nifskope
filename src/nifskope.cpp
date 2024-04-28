@@ -985,7 +985,7 @@ void NifSkope::openArchiveFileString( const BA2File * bsa, const QString & filep
 {
 	if ( !currentArchive || currentArchiveNames.empty() )
 		return;
-	std::string	filePathStr( filepath.toStdString() );
+	std::string	filePathStr( filepath.toLower().toStdString() );
 	auto	fd = currentArchive->findFile( filePathStr );
 	if ( !fd )
 		return;
