@@ -96,7 +96,7 @@ bool BSAModel::fileListScanFunction( void * p, const BA2File::FileDeclaration & 
 	return false;
 }
 
-QStandardItem * BSAModel::insertFolder( const QString & path, qsizetype pos, QMap< QString, QStandardItem * > & folderMap, QStandardItem * parent )
+QStandardItem * BSAModel::insertFolder( const QString & path, qsizetype pos, QHash< QString, QStandardItem * > & folderMap, QStandardItem * parent )
 {
 	if ( !parent )
 		parent = invisibleRootItem();

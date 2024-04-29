@@ -37,7 +37,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <QStandardItemModel>
 #include <QSortFilterProxyModel>
-#include <QMap>
+#include <QHash>
 
 class BSAModel : public QStandardItemModel
 {
@@ -55,10 +55,10 @@ protected:
 		BSAModel * p;
 		const BA2File * bsa;
 		std::string path;
-		QMap< QString, QStandardItem * > folderMap;
+		QHash< QString, QStandardItem * > folderMap;
 	};
 	static bool fileListScanFunction( void * p, const BA2File::FileDeclaration & fd );
-	QStandardItem * insertFolder( const QString & path, qsizetype pos, QMap< QString, QStandardItem * > & folderMap, QStandardItem * parent = nullptr );
+	QStandardItem * insertFolder( const QString & path, qsizetype pos, QHash< QString, QStandardItem * > & folderMap, QStandardItem * parent = nullptr );
 };
 
 
