@@ -84,8 +84,9 @@ bool BSAModel::fileListScanFunction( void * p, const BA2File::FileDeclaration & 
 	QString	fileSize( (bytes > 1024) ? QString::number( bytes / 1024 ) + "KB" : QString::number( bytes ) + "B" );
 
 	QString	fullPath( QString::fromStdString( fd.fileName ) );
-	QString	baseName( fullPath.mid( fullPath.lastIndexOf( QChar( '/' ) ) + 1 ) );
-	auto	folderItem = o.p->insertFolder( fullPath, o.path.length(), o.folderMap );
+	qsizetype	dirNameLen = fullPath.lastIndexOf( QChar( '/' ) );
+	QString	baseName( fullPath.mid( dirNameLen + 1 ) );
+	auto	folderItem = o.p->insertFolder( fullPath, o.path.length(), dirNameLen, o.folderMap );
 
 	auto	fileItem = new QStandardItem( baseName );
 	auto	pathItem = new QStandardItem( fullPath );
@@ -96,36 +97,30 @@ bool BSAModel::fileListScanFunction( void * p, const BA2File::FileDeclaration & 
 	return false;
 }
 
-QStandardItem * BSAModel::insertFolder( const QString & path, qsizetype pos, QHash< QString, QStandardItem * > & folderMap, QStandardItem * parent )
+QStandardItem * BSAModel::insertFolder( const QString & path, qsizetype pos1, qsizetype pos2, QHash< QString, QStandardItem * > & folderMap )
 {
-	if ( !parent )
-		parent = invisibleRootItem();
-	if ( path.length() <= pos )
-		return parent;
+	if ( pos2 <= pos1 )
+		return invisibleRootItem();
 
-	qsizetype	i1 = path.indexOf( QChar('/'), pos );
-	if ( i1 < 0 )
-		return parent;
+	QString	key( path.left( pos2 ) );
+	for ( auto i = folderMap.find( key ); i != folderMap.end(); )
+		return i.value();
 
-	QStandardItem *	folderItem = nullptr;
-	QString	key( path.left( i1 ) );
-	for ( auto i = folderMap.find( key ); i != folderMap.end(); ) {
-		folderItem = i.value();
-		break;
-	}
-	if ( !folderItem ) {
-		folderItem = new QStandardItem( path.mid( pos, i1 - pos ) );
-		auto pathDummy = new QStandardItem( "" );
-		auto sizeDummy = new QStandardItem( "" );
-
-		parent->appendRow( { folderItem, pathDummy, sizeDummy } );
-		folderMap.insert( key, folderItem );
-	}
-	if ( path.indexOf( QChar('/'), i1 + 1 ) < 0 )
-		return folderItem;
-
+	qsizetype	i1 = path.lastIndexOf( QChar('/'), pos2 - 1 );
+	QStandardItem *	parent;
 	// Recurse through folders
-	return insertFolder( path, i1 + 1, folderMap, folderItem );
+	if ( i1 > pos1 )
+		parent = insertFolder( path, pos1, i1, folderMap );
+	else
+		parent = invisibleRootItem();
+	QStandardItem *	folderItem = new QStandardItem( path.mid( i1 + 1, pos2 - ( i1 + 1 ) ) );
+	auto pathDummy = new QStandardItem();
+	auto sizeDummy = new QStandardItem();
+
+	parent->appendRow( { folderItem, pathDummy, sizeDummy } );
+	folderMap.insert( key, folderItem );
+
+	return folderItem;
 }
 
 

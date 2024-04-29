@@ -58,7 +58,7 @@ protected:
 		QHash< QString, QStandardItem * > folderMap;
 	};
 	static bool fileListScanFunction( void * p, const BA2File::FileDeclaration & fd );
-	QStandardItem * insertFolder( const QString & path, qsizetype pos, QHash< QString, QStandardItem * > & folderMap, QStandardItem * parent = nullptr );
+	QStandardItem * insertFolder( const QString & path, qsizetype pos1, qsizetype pos2, QHash< QString, QStandardItem * > & folderMap );
 };
 
 
