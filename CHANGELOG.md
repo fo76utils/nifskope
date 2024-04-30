@@ -1,5 +1,7 @@
  == CHANGELOG ==
 
+* Fixed bug in restoring the viewport size after saving supersampled screenshots.
+
 #### NifSkope-2.0.dev9-20240428
 
 * Reworked archive loading, added new file menu option to browse a game or archive folder.

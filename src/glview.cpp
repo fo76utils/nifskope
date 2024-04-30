@@ -1608,18 +1608,12 @@ void GLView::saveImage()
 			// Supersampling
 			int ss = grpSize->checkedId();
 
-			int w, h;
-
-			w = width();
-			h = height();
+			int w = width();
+			int h = height();
 
 			// Resize viewport for supersampling
-			if ( ss > 1 ) {
-				w *= ss;
-				h *= ss;
-
-				resizeGL( w, h );
-			}
+			if ( ss > 1 )
+				resizeGL( w * ss, h * ss );
 
 			QOpenGLFramebufferObjectFormat fboFmt;
 			fboFmt.setTextureTarget( GL_TEXTURE_2D );
@@ -1628,7 +1622,7 @@ void GLView::saveImage()
 			fboFmt.setAttachment( QOpenGLFramebufferObject::Attachment::Depth );
 			fboFmt.setSamples( 16 / ss );
 
-			QOpenGLFramebufferObject fbo( w, h, fboFmt );
+			QOpenGLFramebufferObject fbo( w * ss, h * ss, fboFmt );
 			fbo.bind();
 
 			update();
@@ -1640,7 +1634,7 @@ void GLView::saveImage()
 
 			// Return viewport to original size
 			if ( ss > 1 )
-				resizeGL( width(), height() );
+				resizeGL( w, h );
 
 
 			QImageWriter writer( file->file() );
