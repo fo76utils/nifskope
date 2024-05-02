@@ -317,6 +317,7 @@ GameMode GameManager::get_game( uint32_t version, uint32_t user, uint32_t bsver 
 	case BSSTREAM_155:
 		return FALLOUT_76;
 	case BSSTREAM_172:
+	case BSSTREAM_173:
 		return STARFIELD;
 	default:
 		break;

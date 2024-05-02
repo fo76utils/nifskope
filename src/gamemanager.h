@@ -18,27 +18,6 @@ class QProgressDialog;
 namespace Game
 {
 
-enum VersionMasks
-{
-	USER_MASK = 0xFFFFF,
-	USER_MASK_BS = 0xFFFF,
-	BS_MASK = 0xFF
-};
-
-constexpr uint64_t VersionDef( uint64_t major = 0, uint64_t minor = 0, uint64_t patch = 0, uint64_t inter = 0,
-							uint64_t user = 0, uint64_t bs_min = 0, uint64_t bs_max = 0 )
-{
-	return (bs_min > 0)
-		? (major << 24) | (minor << 16) | (patch << 8) | inter | ((user & USER_MASK_BS) << 32)
-				| ((bs_min & BS_MASK) << 48) | ((((bs_max < bs_min) ? bs_min : bs_max) & BS_MASK) << 56)
-		: (major << 24) | (minor << 16) | (patch << 8) | inter | ((user & USER_MASK) << 32);
-}
-
-constexpr uint32_t VersionInt( uint64_t version )
-{
-	return (uint32_t)version;
-}
-
 enum GameMode : int
 {
 	OTHER,
@@ -112,62 +91,6 @@ static const ResourceListMap FOLDERS = {
 	{OTHER, {}}
 };
 
-enum GameVersion : uint64_t
-{
-	V3_3_0_13 = VersionDef(3, 3, 0, 13),
-	V4_0_0_0 = VersionDef(4),
-	V4_0_0_2 = VersionDef(4, 0, 0, 2),
-	V4_1_0_12 = VersionDef(4, 1, 0, 12),
-	V4_2_0_2 = VersionDef(4, 2, 0, 2),
-	V4_2_1_0 = VersionDef(4, 2, 1, 0),
-	V4_2_2_0 = VersionDef(4, 2, 2, 0),
-	V10_0_1_0 = VersionDef(10, 0, 1, 0),
-	V10_0_1_2 = VersionDef(10, 0, 1, 2, 0, 1, 3),
-	V10_1_0_0 = VersionDef(10, 1, 0, 0),
-	V10_1_0_101 = VersionDef(10, 1, 0, 101, 10, 4),
-	V10_1_0_106 = VersionDef(10, 1, 0, 106, 10, 5),
-	V10_2_0_0 = VersionDef(10, 2, 0, 0),
-	V10_2_0_0__1 = VersionDef(10, 2, 0, 0, 1),
-	V10_2_0_0__10 = VersionDef(10, 2, 0, 0, 10, 6, 9),
-	V10_2_0_1 = VersionDef(10, 2, 0, 1),
-	V10_3_0_1 = VersionDef(10, 3, 0, 1),
-	V10_4_0_1 = VersionDef(10, 4, 0, 1),
-	V20_0_0_4 = VersionDef(20, 0, 0, 4),
-	V20_0_0_4__10 = VersionDef(20, 0, 0, 4, 10, 11),
-	V20_0_0_4__11 = VersionDef(20, 0, 0, 4, 11, 11),
-	V20_0_0_5_OBL = VersionDef(20, 0, 0, 5, 10, 11),
-	V20_1_0_3 = VersionDef(20, 1, 0, 3),
-	V20_2_0_7 = VersionDef(20, 2, 0, 7),
-	V20_2_0_7__11_1 = VersionDef(20, 2, 0, 7, 11, 14),
-	V20_2_0_7__11_2 = VersionDef(20, 2, 0, 7, 11, 16),
-	V20_2_0_7__11_3 = VersionDef(20, 2, 0, 7, 11, 21),
-	V20_2_0_7__11_4 = VersionDef(20, 2, 0, 7, 11, 24),
-	V20_2_0_7__11_5 = VersionDef(20, 2, 0, 7, 11, 25),
-	V20_2_0_7__11_6 = VersionDef(20, 2, 0, 7, 11, 26),
-	V20_2_0_7__11_7 = VersionDef(20, 2, 0, 7, 11, 27, 28),
-	V20_2_0_7__11_8 = VersionDef(20, 2, 0, 7, 11, 30, 33),
-	V20_2_0_7_FO3 = VersionDef(20, 2, 0, 7, 11, 34),
-	V20_2_0_7_SKY = VersionDef(20, 2, 0, 7, 11, 83),
-	V20_2_0_7_SSE = VersionDef(20, 2, 0, 7, 11, 100),
-	V20_2_0_7_FO4 = VersionDef(20, 2, 0, 7, 11, 130),
-	V20_2_0_7_F76 = VersionDef(20, 2, 0, 7, 11, 155),
-	V20_2_0_7_STF = VersionDef(20, 2, 0, 7, 11, 172),
-	V20_2_0_8 = VersionDef(20, 2, 0, 8),
-	V20_3_0_1 = VersionDef(20, 3, 0, 1),
-	V20_3_0_2 = VersionDef(20, 3, 0, 2),
-	V20_3_0_3 = VersionDef(20, 3, 0, 3),
-	V20_3_0_6 = VersionDef(20, 3, 0, 6),
-	V20_3_0_9 = VersionDef(20, 3, 0, 9),
-	V20_3_0_9_DIV2 = VersionDef(20, 3, 0, 9, 0x20000), // TODO: 0x30000?
-	V20_5_0_0 = VersionDef(20, 5, 0, 0),
-	V20_6_0_0 = VersionDef(20, 6, 0, 0),
-	V20_6_5_0_DEM = VersionDef(20, 6, 5, 0, 17),
-	V30_0_0_2 = VersionDef(30, 0, 0, 2),
-	V30_1_0_1 = VersionDef(30, 1, 0, 1),
-	V30_1_0_3 = VersionDef(30, 1, 0, 3),
-	V30_2_0_3 = VersionDef(30, 2, 0, 3),
-};
-
 enum BSVersion
 {
 	BSSTREAM_1 = 1,
@@ -197,6 +120,7 @@ enum BSVersion
 	BSSTREAM_130 = 130,
 	BSSTREAM_155 = 155,
 	BSSTREAM_172 = 172,
+	BSSTREAM_173 = 173
 };
 
 QString StringForMode(GameMode game);

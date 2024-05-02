@@ -42,7 +42,7 @@ quint32 MeshFile::readMesh()
 
 		quint32 magic;
 		in >> magic;
-		if ( magic != 1 )
+		if ( magic != 1 && magic != 2 )
 			return 0;
 
 		quint32 indicesSize;

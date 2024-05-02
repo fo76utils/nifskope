@@ -2,7 +2,7 @@
 
 checkgroup begin and
 	# Starfield
-	check HEADER/BS Header/BS Version == 172
+	check HEADER/BS Header/BS Version >= 172
 	check BSGeometry
 	check BSLightingShaderProperty
 checkgroup end

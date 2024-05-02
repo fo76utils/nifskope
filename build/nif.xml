@@ -215,7 +215,7 @@
     <version id="V20_2_0_7_FO4" num="20.2.0.7" user="12" bsver="130" ext="bto btr">{{Fallout 4}}</version>
     <version id="V20_2_0_7_FO4_2" num="20.2.0.7" user="12" bsver="132 139" ext="bto btr" supported="false">Fallout 4 (LS_Mirelurk.nif, Screen.nif)</version>
     <version id="V20_2_0_7_F76" num="20.2.0.7" user="12" bsver="155" ext="bto">{{Fallout 76}}</version>
-    <version id="V20_2_0_7_STF" num="20.2.0.7" user="12" bsver="172">{{Starfield}}</version>
+    <version id="V20_2_0_7_STF" num="20.2.0.7" user="12" bsver="172 173">{{Starfield}}</version>
     <version id="V20_2_0_8" num="20.2.0.8" ext="nifcache">{{Empire Earth III}}, {{FFT Online}}, Atlantica Online, IRIS Online, Wizard101</version>
     <version id="V20_2_4_7" num="20.2.4.7">QQSpeed</version>
     <version id="V20_3_0_1" num="20.3.0.1">Emerge</version>

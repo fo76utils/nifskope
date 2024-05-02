@@ -716,7 +716,7 @@ public:
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
 	{
-		if ( nif->getBSVersion() == 172 && nif->blockInherits( index, "BSGeometry" ) )
+		if ( nif->getBSVersion() >= 172 && nif->blockInherits( index, "BSGeometry" ) )
 			return cast_Starfield( nif, index );
 
 		auto vertData = nif->getIndex( index, "Vertex Data" );
