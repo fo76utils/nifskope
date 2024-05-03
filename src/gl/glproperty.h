@@ -578,6 +578,7 @@ namespace ShaderFlags
 
 	static QMap<uint, uint64_t> CRC_TO_FLAG = {
 		// SF1
+		{PBR, SLSF1_Specular},
 		{CAST_SHADOWS, SLSF1_Cast_Shadows},
 		{ZBUFFER_TEST, SLSF1_ZBuffer_Test},
 		{SKINNED, SLSF1_Skinned},
@@ -608,7 +609,6 @@ namespace ShaderFlags
 		{LOD_OBJECTS, (uint64_t)SLSF2_LOD_Objects << 32},
 
 		// TODO
-		{PBR, 0},
 		{REFRACTION_FALLOFF, 0},
 		{INVERTED_FADE_PATTERN, 0},
 		{HAIRTINT, 0},
