@@ -1,6 +1,7 @@
  == CHANGELOG ==
 
 * Updated for Starfield version 1.11.33.0.
+* Fixed U and V scale and offset controllers on Fallout 76 effect materials.
 * Fixed bug in restoring the viewport size after saving supersampled screenshots.
 
 #### NifSkope-2.0.dev9-20240428

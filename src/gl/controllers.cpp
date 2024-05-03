@@ -1005,15 +1005,31 @@ void EffectFloatController::updateTime( float time )
 		case EffectFloat::Alpha:
 			target->emissiveColor.setAlpha( val );
 			break;
+		case EffectFloat::U_Offset_F76:
+			if ( target->bsVersion < 151 )
+				break;
+			[[fallthrough]];
 		case EffectFloat::U_Offset:
 			target->uvOffset.x = val;
 			break;
+		case EffectFloat::U_Scale_F76:
+			if ( target->bsVersion < 151 )
+				break;
+			[[fallthrough]];
 		case EffectFloat::U_Scale:
 			target->uvScale.x = val;
 			break;
+		case EffectFloat::V_Offset_F76:
+			if ( target->bsVersion < 151 )
+				break;
+			[[fallthrough]];
 		case EffectFloat::V_Offset:
 			target->uvOffset.y = val;
 			break;
+		case EffectFloat::V_Scale_F76:
+			if ( target->bsVersion < 151 )
+				break;
+			[[fallthrough]];
 		case EffectFloat::V_Scale:
 			target->uvScale.y = val;
 			break;
