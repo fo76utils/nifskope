@@ -1336,7 +1336,7 @@ void BSLightingShaderProperty::updateParams( const NifModel * nif )
 		hasSpecularMap = m->bSpecularEnabled && (!m->textureList[2].isEmpty()
 						|| (bsVersion >= 151 && !m->textureList[7].isEmpty()));
 		hasGlowMap = m->bGlowmap;
-		hasEmittance = m->bEmitEnabled && ( bsVersion < 151 || ( m->bGlowmap | m->bExternalEmittance ) );
+		hasEmittance = m->bEmitEnabled;
 		hasBacklight = m->bBackLighting;
 		hasRimlight = m->bRimLighting;
 		hasSoftlight = m->bSubsurfaceLighting;
