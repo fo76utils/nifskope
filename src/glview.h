@@ -231,6 +231,7 @@ private:
 	ViewState view;
 	DebugMode debugMode;
 	bool perspectiveMode;
+	bool gridDisabled = false;
 
 	class TexCache * textures;
 

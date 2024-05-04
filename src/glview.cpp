@@ -476,7 +476,7 @@ void GLView::paintGL()
 
 	// Clear Viewport
 	if ( scene->hasVisMode(Scene::VisSilhouette) ) {
-		qglClearColor( QColor( 255, 255, 255, 255 ) );
+		glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
 	}
 
 	glDisable(GL_FRAMEBUFFER_SRGB);
@@ -538,7 +538,7 @@ void GLView::paintGL()
 	glLoadIdentity();
 
 	// Draw the grid
-	if ( scene->hasOption(Scene::ShowGrid) ) {
+	if ( scene->hasOption(Scene::ShowGrid) && !gridDisabled ) {
 		glDisable( GL_ALPHA_TEST );
 		glDisable( GL_BLEND );
 		glDisable( GL_LIGHTING );
@@ -929,7 +929,7 @@ int indexAt( /*GLuint *buffer,*/ NifModel * model, Scene * scene, QList<DrawFunc
 	glShadeModel( GL_FLAT );
 	glEnable( GL_DEPTH_TEST );
 	glDepthFunc( GL_LEQUAL );
-	glClearColor( 0, 0, 0, 1 );
+	glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
 	// Rasterize the scene
@@ -1628,11 +1628,14 @@ void GLView::saveImage()
 			fbo.bind();
 
 			const QColor & c = cfg.background;
-			if ( isPNG )
-				qglClearColor( QColor( c.red(), c.green(), c.blue(), 0 ) );
+			if ( isPNG ) {
+				glClearColor( c.redF(), c.greenF(), c.blueF(), 0.0f );
+				gridDisabled = true;
+			}
 			update();
 			updateGL();
-			qglClearColor( c );
+			gridDisabled = false;
+			glClearColor( c.redF(), c.greenF(), c.blueF(), c.alphaF() );
 
 			fbo.release();
 
