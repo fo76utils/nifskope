@@ -1,6 +1,7 @@
  == CHANGELOG ==
 
 * Updated for Starfield version 1.11.33.0.
+* Added support for saving screenshots in PNG format with transparency.
 * Fixed U and V scale and offset controllers on Fallout 76 effect materials.
 * Fixed bug in restoring the viewport size after saving supersampled screenshots.
 
@@ -305,7 +306,7 @@ changes since 1.0.15:
  * add Fallout 3 to game texture auto detection
  * nif.xml updates for Fallout 3
  * add support for Fallout 3 BSA files
- * add material color override in settings 
+ * add material color override in settings
  * new version condition evaluation engine to handle Fallout
  * using GLee, so nifskope now also compiles on mac
  * update tangent and binormal update script for Fallout as well as rendering
@@ -435,7 +436,7 @@ changes since 1.0:
   - Add ByteMatrix data type for NiPixelData
   - extra space in text editor to ensure that single line strings are nicely displayed on edit
   - Allow for multiple file filters in the file open and save dialogs.
-  - Force C locale so there is at least some consistency somewhere in the app.  
+  - Force C locale so there is at least some consistency somewhere in the app.
       Currently some editors use system locale but Qt forces C locale on some string operations.
   - Fix sync bug when using delete branch
   - Add multiline editor for text fields.  Also sets uniform row height on tree.
@@ -444,8 +445,8 @@ changes since 1.0:
 
  * NIF Compatibility
   - fixes for oblivion skeleton.nif files
-  - Fixes for Emerge Demo and Megami Tensei: Imagine and the NiBoneLODController and related items.  
-  - Fixes for the following: Loki, Guild 2, Warhammer, PCM 2007, 
+  - Fixes for Emerge Demo and Megami Tensei: Imagine and the NiBoneLODController and related items.
+  - Fixes for the following: Loki, Guild 2, Warhammer, PCM 2007,
       1. Added skeleton PhysX blocks from copetech examples
       2. Fixed NiSortNode
       3. Fixed NiPixelData to better match file format
@@ -454,7 +455,7 @@ changes since 1.0:
   - fixed NiGeometryData for 10.1.0.0 nifs
   - Fixes for NiCollisionObject and Multiline text in nifskope.
   - number of vertices in oblivion sub shapes
-  
+
 changes since 0.9.8:
  * User Interface
   - Expanded help menu and renamed "Reference Browser" to "Interactive Help" and made it come up when F1 is pressed.
@@ -481,7 +482,7 @@ changes since 0.9.8:
   - Fixed issue where links in old files weren't mapped if the file didn't load completely.
   - The XML checker window's Block choosing button now has the same new menu structure as the Block > Insert spell.
 
- 
+
  * 3D View
   - Added ability to center the view on the selected node or shape.  Select the node/shape and press the C key.
   - Made it so you can zoom in and out by right-dragging left and right as well as up and down.
@@ -513,14 +514,14 @@ changes since 0.9.8:
   - Fixed a the same bug in 3ds import as was fixed in OBJ import where "Has UV" was not being set properly.
   - Fixed OBJ and 3ds import and export so that NiImage and NiTexture are created in 3.x files, and are detected during OBJ export.
   - Fixed a bug that was causing the "Has UV" bool not to be set correctly when an OBJ file was imported.
-  
+
  * NIF Compatibility
   - Added partial support for the following new games: Loki, Pro Cycling Manager, Shin Megami Tensei
   - Fixed a bug that made NifSkope fail to load the 3.3.0.13 file.
   - Fixed problem with version 3.03 conditions in the XML.  Version 3.1 files can be read again.
   - XML changes which allow NiSkinPartition objects that won't crash Morrowind and Freedom Force to be created.
- 
- * Misc. 
+
+ * Misc.
   - GCC build fixes.
   - Added check for empty QFileSystemWatcher, this removes the nasty qWarning
   - Uninstall now correctly removes all folders.
@@ -597,7 +598,7 @@ changes since 0.9.1:
     because otherwise Oblivion doesn't find textures located within .bsa archives
   - stripifier now outputs single strips
     because CivIV draws only the first strip
-	
+
 
 changes since 0.8.8:
   - now plays embedded animation sequences (good examples are the doors
@@ -618,8 +619,8 @@ changes since 0.8.8:
       copying and pasting between nifs on windows platform)
       note that this works by opening a local udp server socket. communication on
       this socket is limited to local host only. so it shouldn't be a security issue.
- 
-  
+
+
 changes since 0.8.7:
   - havok blocks will be ordered automatically
   - some hot keys for the spells
@@ -627,14 +628,14 @@ changes since 0.8.7:
   - new spell allows editing of string offsets
   - new spell for removing blocks by id
   - new spell to upload morph frames
-  
+
 
 changes since 0.8.6:
   - gundalf contributed a new feature: oblivion furniture
     animation markers
   - Skin Partitions made with NifSkope should now work properly
     on nvidia cards too
-  
+
 
 changes since 0.8.5:
   - fixed compability with older graphic cards

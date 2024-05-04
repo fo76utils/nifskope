@@ -1611,13 +1611,15 @@ void GLView::saveImage()
 			int w = width();
 			int h = height();
 
+			bool isPNG = file->file().endsWith( ".png", Qt::CaseInsensitive );
+
 			// Resize viewport for supersampling
 			if ( ss > 1 )
 				resizeGL( w * ss, h * ss );
 
 			QOpenGLFramebufferObjectFormat fboFmt;
 			fboFmt.setTextureTarget( GL_TEXTURE_2D );
-			fboFmt.setInternalTextureFormat( GL_SRGB8 );
+			fboFmt.setInternalTextureFormat( !isPNG ? GL_SRGB8 : GL_SRGB8_ALPHA8 );
 			fboFmt.setMipmap( false );
 			fboFmt.setAttachment( QOpenGLFramebufferObject::Attachment::Depth );
 			fboFmt.setSamples( 16 / ss );
@@ -1625,12 +1627,17 @@ void GLView::saveImage()
 			QOpenGLFramebufferObject fbo( w * ss, h * ss, fboFmt );
 			fbo.bind();
 
+			const QColor & c = cfg.background;
+			if ( isPNG )
+				qglClearColor( QColor( c.red(), c.green(), c.blue(), 0 ) );
 			update();
 			updateGL();
+			qglClearColor( c );
 
 			fbo.release();
 
-			QImage * img = new QImage(fbo.toImage());
+			QImage fboImg( fbo.toImage() );
+			QImage img( fboImg.constBits(), fboImg.width(), fboImg.height(), ( !isPNG ? QImage::Format_RGB32 : QImage::Format_ARGB32 ) );
 
 			// Return viewport to original size
 			if ( ss > 1 )
@@ -1652,16 +1659,16 @@ void GLView::saveImage()
 			} else if ( file->file().endsWith( ".webp", Qt::CaseInsensitive ) ) {
 				writer.setFormat( "webp" );
 				writer.setQuality( 75 + pixQuality->value() / 4 );
+			} else if ( isPNG ) {
+				writer.setFormat( "png" );
+				writer.setQuality( 50 + pixQuality->value() / 2 );
 			}
 
-			if ( writer.write( *img ) ) {
+			if ( writer.write( img ) ) {
 				dlg->accept();
 			} else {
 				Message::critical( this, tr( "Could not save %1" ).arg( file->file() ) );
 			}
-
-			delete img;
-			img = nullptr;
 		}
 	);
 	connect( btnCancel, &QPushButton::clicked, dlg, &QDialog::reject );
