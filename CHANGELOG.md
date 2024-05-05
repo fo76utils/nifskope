@@ -1,9 +1,12 @@
  == CHANGELOG ==
 
+#### NifSkope-2.0.dev9-20240505
+
 * Updated for Starfield version 1.11.33.0.
 * Added support for saving screenshots in PNG format with transparency.
 * Fixed U and V scale and offset controllers on Fallout 76 effect materials.
 * Fixed bug in restoring the viewport size after saving supersampled screenshots.
+* Shading is no longer disabled on Starfield models when textures are turned off.
 
 #### NifSkope-2.0.dev9-20240428
 
