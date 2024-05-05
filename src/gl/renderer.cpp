@@ -729,7 +729,7 @@ bool Renderer::Program::uniSampler_l( BSShaderLightingProperty * bsprop, int & t
 			else
 				clampMode = TexClampMode::CLAMP_S_CLAMP_T;
 		}
-		if ( bsprop->bind( -1, QString::fromStdString(*texturePath), clampMode ) ) {
+		if ( bsprop->bind( QString::fromStdString(*texturePath), false, clampMode ) ) {
 			f->glUniform1i( uniLocation("textureUnits[%d]", texunit - 2), texunit );
 			f->glUniform1i( l1, texunit - 2 );
 			texunit++;
@@ -805,21 +805,29 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 
 	// Always bind cube to texture units 0 (specular) and 1 (diffuse),
 	// regardless of shader settings
-	prog->uni1i( HAS_MAP_CUBE, scene->hasOption(Scene::DoCubeMapping) && scene->hasOption(Scene::DoLighting) );
+	bool hasCubeMap = scene->hasOption(Scene::DoCubeMapping) && scene->hasOption(Scene::DoLighting);
 	GLint uniCubeMap = prog->uniformLocations[SAMP_CUBE];
-	if ( uniCubeMap < 0 || !activateTextureUnit( texunit ) || !bsprop->bindCube( cfg.cubeMapPathSTF ) )
+	if ( uniCubeMap < 0 || !activateTextureUnit( texunit ) )
 		return false;
+	hasCubeMap = hasCubeMap && bsprop->bindCube( cfg.cubeMapPathSTF );
+	if ( !hasCubeMap ) [[unlikely]]
+		bsprop->bind( gray, true );
 	fn->glUniform1i( uniCubeMap, texunit++ );
 
 	uniCubeMap = prog->uniformLocations[SAMP_CUBE_2];
-	if ( uniCubeMap < 0 || !activateTextureUnit( texunit ) || !bsprop->bindCube( cfg.cubeMapPathSTF, true ) )
+	if ( uniCubeMap < 0 || !activateTextureUnit( texunit ) )
 		return false;
+	hasCubeMap = hasCubeMap && bsprop->bindCube( cfg.cubeMapPathSTF, true );
+	if ( !hasCubeMap ) [[unlikely]]
+		bsprop->bind( gray, true );
 	fn->glUniform1i( uniCubeMap, texunit++ );
+
+	prog->uni1i( HAS_MAP_CUBE, hasCubeMap );
 
 	// texture unit 2 is reserved for the environment BRDF LUT texture
 	if ( !activateTextureUnit( texunit, true ) )
 		return false;
-	if ( !bsprop->bind( -1, pbr_lut_sf, TexClampMode::CLAMP_S_CLAMP_T ) )
+	if ( !bsprop->bind( pbr_lut_sf, true, TexClampMode::CLAMP_S_CLAMP_T ) )
 		return false;
 	prog->uni1i_l( prog->uniLocation("textureUnits[%d]", texunit - 2), texunit );
 	texunit++;
@@ -1032,7 +1040,7 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 	for ( ; texunit < TexCache::num_texture_units ; texunit++ ) {
 		if ( !activateTextureUnit( texunit, true ) )
 			return false;
-		if ( !bsprop->bind( -1, white, TexClampMode::WRAP_S_WRAP_T ) )
+		if ( !bsprop->bind( white, true, TexClampMode::WRAP_S_WRAP_T ) )
 			return false;
 		prog->uni1i_l( prog->uniLocation("textureUnits[%d]", texunit - 2), texunit );
 	}

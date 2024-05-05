@@ -942,47 +942,28 @@ void BSShaderLightingProperty::loadSFMaterial()
 	const_cast< NifModel * >(nif)->loadSFMaterial( iBlock, ( sf_material_valid ? sf_material : nullptr ) );
 }
 
-bool BSShaderLightingProperty::bind( int id, const QString & fname, TexClampMode mode )
+bool BSShaderLightingProperty::bind( const QString & fname, bool forceTexturing, TexClampMode mode )
 {
-	GLuint mipmaps = 0;
+	GLuint mipmaps = scene->bindTexture( fname, false, forceTexturing );
 
-	if ( !fname.isEmpty() )
-		mipmaps = scene->bindTexture( fname );
-	else
-		mipmaps = scene->bindTexture( this->fileName( id ) );
-
-	if ( mipmaps == 0 )
+	if ( !mipmaps )
 		return false;
 
+	static const GLint clampModes[14] = {
+		GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE,	// CLAMP_S_CLAMP_T
+		GL_CLAMP_TO_EDGE, GL_REPEAT,	// CLAMP_S_WRAP_T
+		GL_REPEAT, GL_CLAMP_TO_EDGE,	// WRAP_S_CLAMP_T
+		GL_REPEAT, GL_REPEAT,	// WRAP_S_WRAP_T
+		GL_MIRRORED_REPEAT, GL_MIRRORED_REPEAT,	// MIRRORED_S_MIRRORED_T
+		GL_CLAMP_TO_BORDER, GL_CLAMP_TO_BORDER,	// BORDER_S_BORDER_T
+		GL_REPEAT, GL_REPEAT	// invalid, default to WRAP_S_WRAP_T
+	};
 
-	switch ( mode )
-	{
-	case TexClampMode::CLAMP_S_CLAMP_T:
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
-		break;
-	case TexClampMode::CLAMP_S_WRAP_T:
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
-		break;
-	case TexClampMode::WRAP_S_CLAMP_T:
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
-		break;
-	case TexClampMode::MIRRORED_S_MIRRORED_T:
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT );
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT );
-		break;
-	case TexClampMode::BORDER_S_BORDER_T:
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER );
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER );
-		break;
-	case TexClampMode::WRAP_S_WRAP_T:
-	default:
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
-		break;
-	}
+	unsigned int i = std::min< unsigned int >( (unsigned int) mode, 6U ) << 1;
+	GLint wrapS = clampModes[i];
+	GLint wrapT = clampModes[i + 1];
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapS );
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapT );
 
 	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, get_max_anisotropy() );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );

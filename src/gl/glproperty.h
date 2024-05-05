@@ -664,8 +664,12 @@ public:
 
 	void clear() override;
 
-	bool bind( int id, const QString & fname = QString(), TexClampMode mode = TexClampMode::WRAP_S_WRAP_T );
 	bool bind( int id, const QVector<QVector<Vector2> > & texcoords );
+	bool bind( const QString & fname, bool forceTexturing, TexClampMode mode = TexClampMode::WRAP_S_WRAP_T );
+	inline bool bind( int id, const QString & fname = QString(), TexClampMode mode = TexClampMode::WRAP_S_WRAP_T )
+	{
+		return bind( ( !fname.isEmpty() ? fname : this->fileName( id ) ), false, mode );
+	}
 
 	bool bindCube( const QString & fname = QString(), bool useSecondTexture = false );
 

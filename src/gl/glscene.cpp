@@ -108,9 +108,8 @@ void Scene::updateShaders()
 	renderer->updateShaders();
 }
 
-void Scene::clear( bool flushTextures )
+void Scene::clear( [[maybe_unused]] bool flushTextures )
 {
-	Q_UNUSED( flushTextures );
 	nodes.clear();
 	properties.clear();
 	roots.clear();
@@ -464,21 +463,5 @@ QString Scene::textStats()
 		}
 	}
 	return QString();
-}
-
-int Scene::bindTexture( const QString & fname, bool useSecondTexture )
-{
-	if ( !hasOption(DoTexturing) || fname.isEmpty() )
-		return 0;
-
-	return textures->bind( fname, game, useSecondTexture );
-}
-
-int Scene::bindTexture( const QModelIndex & iSource )
-{
-	if ( !hasOption(DoTexturing) || !iSource.isValid() )
-		return 0;
-
-	return textures->bind( iSource, game );
 }
 

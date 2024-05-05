@@ -36,6 +36,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "glnode.h"
 #include "glproperty.h"
 #include "gltools.h"
+#include "gltex.h"
 
 #include "gamemanager.h"
 
@@ -52,7 +53,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class NifModel;
 class Renderer;
-class TexCache;
 class Shape;
 class QAction;
 class QOpenGLContext;
@@ -84,9 +84,6 @@ public:
 	void setSequence( const QString & seqname );
 
 	QString textStats();
-
-	int bindTexture( const QString & fname, bool useSecondTexture = false );
-	int bindTexture( const QModelIndex & index );
 
 	Node * getNode( const NifModel * nif, const QModelIndex & iNode );
 	Property * getProperty( const NifModel * nif, const QModelIndex & iProperty );
@@ -121,6 +118,20 @@ public:
 
 	SceneOptions options;
 	inline bool hasOption(SceneOptions optValue) const { return ( options & optValue ); }
+
+	inline int bindTexture( const QString & fname, bool useSecondTexture = false, bool forceTexturing = false )
+	{
+		if ( ( forceTexturing || hasOption(DoTexturing) ) && !fname.isEmpty() ) [[likely]]
+			return textures->bind( fname, game, useSecondTexture );
+		return 0;
+	}
+
+	inline int bindTexture( const QModelIndex & iSource )
+	{
+		if ( hasOption(DoTexturing) && iSource.isValid() ) [[likely]]
+			return textures->bind( iSource, game );
+		return 0;
+	}
 
 	enum VisModes
 	{
@@ -158,7 +169,7 @@ public:
 
 	LodLevel lodLevel;
 
-	
+
 	Renderer * renderer;
 
 	NodeList nodes;
