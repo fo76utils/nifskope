@@ -43,10 +43,9 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QColor>
 #include <QDebug>
 #include <QFile>
+#include <QFileInfo>
 #include <QSettings>
 #include <QStringBuilder>
-
-#include <dirent.h>
 
 //! @file nifmodel.cpp The NIF data model.
 
@@ -1814,11 +1813,8 @@ static void setTempDataPath( const Game::GameMode game, const char * pathName )
 		}
 		if ( FileBuffer::checkType( extStr, ".ba2" ) || FileBuffer::checkType( extStr, ".bsa" ) )
 			break;
-		DIR*	d = opendir( tmpPath.c_str() );
-		if ( d ) {
-			closedir( d );
+		if ( QFileInfo( QString::fromStdString( tmpPath ) ).isDir() )
 			break;
-		}
 	}
 	Game::GameManager::set_temp_path( game, tmpPath.c_str(), true );
 }
