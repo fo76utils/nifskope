@@ -1473,48 +1473,42 @@ void GLView::saveImage()
 	dlg->setLayout( lay );
 	dlg->setMinimumWidth( 400 );
 
+	// Save file format, quality and default screenshot path
+	int imgFormat, jpegQuality;
+	QString imgPath;
+	{
+		QSettings settings;
+		jpegQuality = settings.value( "JPEG/Quality", 90 ).toInt();
+		imgFormat = settings.value( "Screenshot/Format", 0 ).toInt();
+		imgPath = settings.value( "Screenshot/Folder", "screenshots" ).toString();
+	}
+
 	QString date = QDateTime::currentDateTime().toString( "yyyyMMdd_HH-mm-ss" );
 	QString name = model->getFilename();
 
 	QString nifFolder = model->getFolder();
-	// TODO: Default extension in Settings
-	QString filename = name + (!name.isEmpty() ? "_" : "") + date + ".jpg";
+	QString filename = name + (!name.isEmpty() ? "_" : "") + date + (imgFormat == 0 ? ".jpg" : ".png");
 
 	// Default: NifSkope directory
-	// TODO: User-configurable default screenshot path in Options
 	QString nifskopePath = "screenshots/" + filename;
 	// Absolute: NIF directory
 	QString nifPath = nifFolder + (!nifFolder.isEmpty() ? "/" : "") + filename;
 
 	FileSelector * file = new FileSelector( FileSelector::SaveFile, tr( "File" ), QBoxLayout::LeftToRight );
 	file->setParent( dlg );
-	// TODO: Default extension in Settings
 	file->setFilter( { "Images (*.jpg *.png *.webp *.bmp)", "JPEG (*.jpg)", "PNG (*.png)", "WebP (*.webp)", "BMP (*.bmp)" } );
-	file->setFile( nifskopePath );
+	file->setFile( imgPath + "/" + filename  );
 	lay->addWidget( file, 0, 0, 1, -1 );
 
-	auto grpDir = new QButtonGroup( dlg );
-
-	QRadioButton * nifskopeDir = new QRadioButton( tr( "NifSkope Directory" ), dlg );
-	nifskopeDir->setChecked( true );
+	QPushButton * nifskopeDir = new QPushButton( tr( "NifSkope Directory" ), dlg );
 	nifskopeDir->setToolTip( tr( "Save to NifSkope screenshots directory" ) );
 
-	QRadioButton * niffileDir = new QRadioButton( tr( "NIF Directory" ), dlg );
-	niffileDir->setChecked( false );
+	QPushButton * niffileDir = new QPushButton( tr( "NIF Directory" ), dlg );
 	niffileDir->setDisabled( nifFolder.isEmpty() );
 	niffileDir->setToolTip( tr( "Save to NIF file directory" ) );
 
-	grpDir->addButton( nifskopeDir );
-	grpDir->addButton( niffileDir );
-	grpDir->setExclusive( true );
-
 	lay->addWidget( nifskopeDir, 1, 0, 1, 1 );
 	lay->addWidget( niffileDir, 1, 1, 1, 1 );
-
-	// Save JPEG Quality
-	QSettings settings;
-	int jpegQuality = settings.value( "JPEG/Quality", 90 ).toInt();
-	settings.setValue( "JPEG/Quality", jpegQuality );
 
 	QHBoxLayout * pixBox = new QHBoxLayout;
 	pixBox->setAlignment( Qt::AlignRight );
@@ -1578,14 +1572,14 @@ void GLView::saveImage()
 	lay->addLayout( hBox, 3, 0, 1, -1 );
 
 	// Set FileSelector to NifSkope dir (relative)
-	connect( nifskopeDir, &QRadioButton::clicked, [=]()
+	connect( nifskopeDir, &QPushButton::clicked, [=]()
 		{
 			file->setText( nifskopePath );
 			file->setFile( nifskopePath );
 		}
 	);
 	// Set FileSelector to NIF File dir (absolute)
-	connect( niffileDir, &QRadioButton::clicked, [=]()
+	connect( niffileDir, &QPushButton::clicked, [=]()
 		{
 			file->setText( nifPath );
 			file->setFile( nifPath );
@@ -1595,23 +1589,24 @@ void GLView::saveImage()
 	// Validate on OK
 	connect( btnOk, &QPushButton::clicked, [&]()
 		{
-			// Save JPEG Quality
+			imgPath = file->file();
+#ifdef Q_OS_WIN32
+			imgPath.replace( QChar('\\'), QChar('/') );
+#endif
+			imgPath.truncate( imgPath.lastIndexOf( QChar('/') ) );
+			bool isPNG = file->file().endsWith( ".png", Qt::CaseInsensitive );
+			// Save JPEG Quality and other settings
 			QSettings settings;
 			settings.setValue( "JPEG/Quality", pixQuality->value() );
-
-			// TODO: Set up creation of screenshots directory in Options
-			if ( nifskopeDir->isChecked() ) {
-				QDir workingDir;
-				workingDir.mkpath( "screenshots" );
-			}
+			settings.setValue( "Screenshot/Format", int(isPNG) );
+			if ( !imgPath.isEmpty() )
+				settings.setValue( "Screenshot/Folder", imgPath );
 
 			// Supersampling
 			int ss = grpSize->checkedId();
 
 			int w = width();
 			int h = height();
-
-			bool isPNG = file->file().endsWith( ".png", Qt::CaseInsensitive );
 
 			// Resize viewport for supersampling
 			if ( ss > 1 )

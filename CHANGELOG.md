@@ -1,5 +1,6 @@
  == CHANGELOG ==
 
+* The screenshot dialog now saves the image format and path selected as settings.
 * Fixed bugs in rendering ordered nodes.
 * Fixed the axes not being correctly drawn depending on the OpenGL settings from the last shape.
 
