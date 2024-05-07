@@ -1,5 +1,7 @@
  == CHANGELOG ==
 
+* Fixed the axes not being correctly drawn depending on the OpenGL settings from the last shape.
+
 #### NifSkope-2.0.dev9-20240505
 
 * Updated for Starfield version 1.11.33.0.

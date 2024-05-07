@@ -436,16 +436,16 @@ Transform bhkBodyTrans( const NifModel * nif, const QModelIndex & index )
 }
 
 QModelIndex bhkGetEntity( const NifModel * nif, const QModelIndex & index, const QString & name )
- {
-	 auto iEntity = nif->getIndex( index, name );
-	 if ( !iEntity.isValid() ) {
-		 iEntity = nif->getIndex( nif->getIndex( index, "Constraint Info" ), name );
-		 if ( !iEntity.isValid() )
-			 return {};
-	 }
+{
+	auto iEntity = nif->getIndex( index, name );
+	if ( !iEntity.isValid() ) {
+		iEntity = nif->getIndex( nif->getIndex( index, "Constraint Info" ), name );
+		if ( !iEntity.isValid() )
+			return {};
+	}
 
-	 return iEntity;
- }
+	return iEntity;
+}
 
 QModelIndex bhkGetRBInfo( const NifModel * nif, const QModelIndex & index, const QString & name )
 {
@@ -459,7 +459,7 @@ QModelIndex bhkGetRBInfo( const NifModel * nif, const QModelIndex & index, const
 	return iInfo;
 }
 
- QVector<int> sortAxes( QVector<float> axesDots )
+QVector<int> sortAxes( QVector<float> axesDots )
 {
 	QVector<float> dotsSorted = axesDots;
 	std::stable_sort( dotsSorted.begin(), dotsSorted.end() );
@@ -485,7 +485,10 @@ void drawAxesOverlay( const Vector3 & c, float axis, QVector<int> axesOrder )
 	GLfloat arrow = axis / 36.0;
 
 	glDisable( GL_LIGHTING );
-	glDepthFunc( GL_ALWAYS );
+	glDisable( GL_COLOR_MATERIAL );
+	glDisable( GL_BLEND );
+	glDisable( GL_TEXTURE_2D );
+	glDisable( GL_DEPTH_TEST );
 	glLineWidth( 2.0f );
 	glBegin( GL_LINES );
 
