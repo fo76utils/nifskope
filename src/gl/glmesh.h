@@ -48,7 +48,7 @@ public:
 
 	void transformShapes() override;
 
-	void drawShapes( NodeList * secondPass = nullptr, bool presort = false ) override;
+	void drawShapes( NodeList * secondPass = nullptr ) override;
 	void drawSelection() const override;
 
 	BoundSphere bounds() const override;

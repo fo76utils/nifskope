@@ -1,5 +1,6 @@
  == CHANGELOG ==
 
+* Fixed bugs in rendering ordered nodes.
 * Fixed the axes not being correctly drawn depending on the OpenGL settings from the last shape.
 
 #### NifSkope-2.0.dev9-20240505

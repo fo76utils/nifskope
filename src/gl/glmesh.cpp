@@ -751,7 +751,7 @@ BoundSphere Mesh::bounds() const
 	return worldTrans() * boundSphere;
 }
 
-void Mesh::drawShapes( NodeList * secondPass, bool presort )
+void Mesh::drawShapes( NodeList * secondPass )
 {
 	if ( isHidden() )
 		return;
@@ -759,9 +759,6 @@ void Mesh::drawShapes( NodeList * secondPass, bool presort )
 	// TODO: Only run this if BSXFlags has "EditorMarkers present" flag
 	if ( !scene->hasOption(Scene::ShowMarkers) && name.startsWith( "EditorMarker" ) )
 		return;
-
-	// BSOrderedNode
-	presorted |= presort;
 
 	// Draw translucent meshes in second pass
 	if ( secondPass && drawInSecondPass ) {

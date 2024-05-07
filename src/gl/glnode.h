@@ -66,7 +66,7 @@ public:
 
 	const QVector<Node *> & list() const { return nodes; }
 
-	void sort();
+	void orderedNodeSort();
 	void alphaSort();
 
 protected:
@@ -110,7 +110,7 @@ public:
 	virtual void transformShapes();
 
 	virtual void draw();
-	virtual void drawShapes( NodeList * secondPass = nullptr, bool presort = false );
+	virtual void drawShapes( NodeList * secondPass = nullptr );
 	virtual void drawHavok();
 	virtual void drawFurn();
 	virtual void drawSelection() const;
@@ -128,7 +128,7 @@ public:
 
 	bool isVisible() const { return !isHidden(); }
 	bool isPresorted() const { return presorted; }
-	
+
 	Node * findChild( int id ) const;
 	Node * findChild( const QString & str ) const;
 

@@ -133,20 +133,12 @@ void NodeList::validate()
 	}
 }
 
-bool compareNodes( const Node * node1, const Node * node2 )
+static bool compareNodes( const Node * node1, const Node * node2 )
 {
-	bool p1 = node1->isPresorted();
-	bool p2 = node2->isPresorted();
-
-	// Presort meshes
-	if ( p1 && p2 ) {
-		return node1->id() < node2->id();
-	}
-
-	return p2;
+	return node1->id() < node2->id();
 }
 
-bool compareNodesAlpha( const Node * node1, const Node * node2 )
+static bool compareNodesAlpha( const Node * node1, const Node * node2 )
 {
 	// Presorted meshes override other sorting
 	// Alpha enabled meshes on top (sorted from rear to front)
@@ -173,8 +165,10 @@ bool compareNodesAlpha( const Node * node1, const Node * node2 )
 	return a2;
 }
 
-void NodeList::sort()
+void NodeList::orderedNodeSort()
 {
+	for ( Node * node : nodes )
+		node->presorted = true;
 	std::stable_sort( nodes.begin(), nodes.end(), compareNodes );
 }
 
@@ -286,6 +280,10 @@ void Node::updateImpl( const NifModel * nif, const QModelIndex & index )
 	if ( iBlock == index ) {
 		flags.bits = nif->get<int>( iBlock, "Flags" );
 		local = Transform( nif, iBlock );
+		// BSOrderedNode support
+		//	Only set if true (|=) so that it propagates to all children
+		if ( nif->getBlockIndex( iBlock, "BSOrderedNode" ).isValid() )
+			presorted = true;
 
 		// Properties
 		properties.clear();
@@ -1802,24 +1800,16 @@ void Node::drawFurn()
 	glPopMatrix();
 }
 
-void Node::drawShapes( NodeList * secondPass, bool presort )
+void Node::drawShapes( NodeList * secondPass )
 {
 	if ( isHidden() )
 		return;
 
-	auto nif = NifModel::fromIndex( iBlock );
-
-	// BSOrderedNode support
-	//	Only set if true (|=) so that it propagates to all children
-	presort |= nif->getBlockIndex( iBlock, "BSOrderedNode" ).isValid();
-
-	presorted = presort;
 	if ( presorted )
-		children.sort();
+		children.orderedNodeSort();
 
-	for ( Node * node : children.list() ) {
-		node->drawShapes( secondPass, presort );
-	}
+	for ( Node * node : children.list() )
+		node->drawShapes( secondPass );
 }
 
 #define Farg( X ) arg( X, 0, 'f', 5 )

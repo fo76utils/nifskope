@@ -126,10 +126,8 @@ BoundSphere Particles::bounds() const
 	return worldTrans() * sphere | Node::bounds();
 }
 
-void Particles::drawShapes( NodeList * secondPass, bool presort )
+void Particles::drawShapes( NodeList * secondPass )
 {
-	Q_UNUSED( presort );
-
 	if ( isHidden() )
 		return;
 

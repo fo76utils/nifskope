@@ -19,9 +19,8 @@ void BSMesh::transformShapes()
 {
 }
 
-void BSMesh::drawShapes(NodeList* secondPass, bool presort)
+void BSMesh::drawShapes( NodeList * secondPass )
 {
-	(void) presort;
 	if ( !scene->hasOption(Scene::ShowMarkers) && name.contains("EditorMarker") )
 		return;
 

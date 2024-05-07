@@ -247,7 +247,7 @@ void BSShape::transformShapes()
 	}
 }
 
-void BSShape::drawShapes( NodeList * secondPass, [[maybe_unused]] bool presort )
+void BSShape::drawShapes( NodeList * secondPass )
 {
 	if ( isHidden() )
 		return;
@@ -392,8 +392,10 @@ void BSShape::drawVerts() const
 	}
 
 	auto nif = NifModel::fromIndex( iBlock );
-	if ( !nif )
+	if ( !nif ) {
+		glEnd();
 		return;
+	}
 
 	// Vertices are on NiSkinPartition in version 100
 	bool selected = iBlock == scene->currentBlock;
