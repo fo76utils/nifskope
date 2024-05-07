@@ -42,7 +42,7 @@ static bool archiveFilterFunctionNif( [[maybe_unused]] void * p, const std::stri
 	return !s.ends_with( ".nif" );
 }
 
-static bool archiveScanFunctionMat( [[maybe_unused]] void * p, const BA2File::FileDeclaration & fd )
+static bool archiveScanFunctionMat( [[maybe_unused]] void * p, const BA2File::FileInfo & fd )
 {
 	return ( fd.fileName.ends_with( ".mat" ) && fd.fileName.starts_with( "materials/" ) );
 }
@@ -525,7 +525,7 @@ struct list_files_scan_function_data {
 	void * filterFuncData;
 };
 
-static bool list_files_scan_function( void * p, const BA2File::FileDeclaration & fd )
+static bool list_files_scan_function( void * p, const BA2File::FileInfo & fd )
 {
 	list_files_scan_function_data & o = *( reinterpret_cast< list_files_scan_function_data * >( p ) );
 	if ( !o.filterFunc || o.filterFunc( o.filterFuncData, fd.fileName ) )

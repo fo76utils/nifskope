@@ -73,7 +73,7 @@ bool BSAModel::fillModel( const BA2File * bsa, const QString & folder )
 	return ( rowCount() > 0 );
 }
 
-bool BSAModel::fileListScanFunction( void * p, const BA2File::FileDeclaration & fd )
+bool BSAModel::fileListScanFunction( void * p, const BA2File::FileInfo & fd )
 {
 	FileScanFuncData & o = *( reinterpret_cast< FileScanFuncData * >( p ) );
 
