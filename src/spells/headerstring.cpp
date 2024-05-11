@@ -165,21 +165,21 @@ public:
 	}
 };
 
-static bool bgsmFileNameFilterFunc( void * p, const std::string & s )
+static bool bgsmFileNameFilterFunc( [[maybe_unused]] void * p, const std::string_view & s )
 {
-	(void) p;
 	return ( s.starts_with( "materials/" ) && ( s.ends_with( ".bgsm" ) || s.ends_with( ".bgem" ) ) );
 }
 
 void spEditStringIndex::browseMaterial( QLineEdit * le, quint32 bsVersion )
 {
-	std::set< std::string >	materials;
+	std::set< std::string_view >	materials;
+	AllocBuffers	stringBuf;
 	if ( bsVersion < 160 ) {
 		Game::GameManager::list_files( materials, ( bsVersion < 151 ? Game::FALLOUT_4 : Game::FALLOUT_76 ), &bgsmFileNameFilterFunc );
 	} else {
 		const CE2MaterialDB * matDB = Game::GameManager::materials( Game::STARFIELD );
 		if ( matDB )
-				matDB->getMaterialList( materials );
+			matDB->getMaterialList( materials, stringBuf );
 	}
 
 	std::string	prvPath;
@@ -188,9 +188,9 @@ void spEditStringIndex::browseMaterial( QLineEdit * le, quint32 bsVersion )
 
 	FileBrowserWidget	fileBrowser( 800, 600, "Select Material", materials, prvPath );
 	if ( fileBrowser.exec() == QDialog::Accepted ) {
-		const std::string *	s = fileBrowser.getItemSelected();
+		const std::string_view *	s = fileBrowser.getItemSelected();
 		if ( s )
-			le->setText( QString::fromStdString( *s ) );
+			le->setText( QString::fromUtf8( s->data(), qsizetype(s->length()) ) );
 	}
 }
 

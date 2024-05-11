@@ -805,7 +805,7 @@ void NifSkope::checkFile( QFileInfo fInfo, QByteArray hash )
 	emit completeSave( saved, fpath );
 }
 
-static bool archiveFilterFunction( [[maybe_unused]] void * p, const std::string & s )
+static bool archiveFilterFunction( [[maybe_unused]] void * p, const std::string_view & s )
 {
 	return ( s.ends_with( ".nif" ) || s.ends_with( ".bto" ) || s.ends_with( ".btr" ) );
 }

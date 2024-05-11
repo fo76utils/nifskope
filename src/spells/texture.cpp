@@ -156,9 +156,8 @@ QModelIndex getUV( const NifModel * nif, const QModelIndex & index )
 	return QModelIndex();
 }
 
-static bool texturePathFilterFunc( void *p, const std::string & s )
+static bool texturePathFilterFunc( [[maybe_unused]] void *p, const std::string_view & s )
 {
-	(void) p;
 	return ( s.starts_with( "textures/" ) && s.ends_with( ".dds" ) );
 }
 
@@ -229,14 +228,14 @@ public:
 		if ( file.isEmpty() )
 			file = settings.value( key, QVariant( QDir::homePath() ) ).toString();
 
-		std::set< std::string >	texturePaths;
+		std::set< std::string_view >	texturePaths;
 		Game::GameManager::list_files( texturePaths, game, &texturePathFilterFunc );
 		std::string	prvPath( file.toStdString() );
 		FileBrowserWidget	fileBrowser( 800, 600, "Choose Texture", texturePaths, prvPath );
 		if ( fileBrowser.exec() == QDialog::Accepted ) {
-			const std::string *	s = fileBrowser.getItemSelected();
+			const std::string_view *	s = fileBrowser.getItemSelected();
 			if ( s && !s->empty() ) {
-				file = QString::fromStdString( *s );
+				file = QString::fromUtf8( s->data(), qsizetype(s->length()) );
 				// save path for future
 				settings.setValue( key, QVariant( file ) );
 

@@ -34,28 +34,28 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "filebrowser.h"
 
-QTreeWidgetItem *	FileBrowserWidget::findDirectory( std::map< std::string, QTreeWidgetItem * > & dirMap, const std::string& d )
+QTreeWidgetItem *	FileBrowserWidget::findDirectory( std::map< std::string_view, QTreeWidgetItem * > & dirMap, const std::string_view & d )
 {
-	std::map< std::string, QTreeWidgetItem * >::iterator	i = dirMap.find( d );
+	std::map< std::string_view, QTreeWidgetItem * >::iterator	i = dirMap.find( d );
 	if ( i != dirMap.end() )
 		return i->second;
-	size_t	n = std::string::npos;
+	size_t	n = std::string_view::npos;
 	if ( d.length() >= 2 )
 		n = d.rfind( '/', d.length() - 2 );
-	if ( n == std::string::npos )
+	if ( n == std::string_view::npos )
 		n = 0;
 	else
 		n++;
 	QTreeWidgetItem *	parent = nullptr;
 	if ( n )
-		parent = findDirectory( dirMap, std::string( d, 0, n ) );
+		parent = findDirectory( dirMap, std::string_view( d.data(), n ) );
 	QTreeWidgetItem *	tmp;
 	if ( !parent )
 		tmp = new QTreeWidgetItem( treeWidget, -2 );
 	else
 		tmp = new QTreeWidgetItem( parent, -2 );
 	dirMap.emplace( d, tmp );
-	tmp->setText( 0, QString::fromStdString( std::string( d, n, d.length() - n ) ) );
+	tmp->setText( 0, QString::fromUtf8( d.data() + n, qsizetype(d.length() - n) ) );
 	return tmp;
 }
 
@@ -65,29 +65,29 @@ void FileBrowserWidget::updateTreeWidget()
 	filesShown.clear();
 	std::string	filterString( filter->text().trimmed().toStdString() );
 	int	curFileIndex = -1;
-	for ( std::set< std::string >::const_iterator i = fileSet.begin(); i != fileSet.end(); i++ ) {
-		if ( currentFile && *i == *currentFile ) {
+	for ( const auto & i : fileSet ) {
+		if ( currentFile && i == *currentFile ) {
 			curFileIndex = int( filesShown.size() );
-		} else if ( !filterString.empty() && i->find( filterString ) == std::string::npos ) {
+		} else if ( !filterString.empty() && i.find( filterString ) == std::string_view::npos ) {
 			continue;
 		}
-		filesShown.push_back( &(*i) );
+		filesShown.push_back( &i );
 	}
 
-	std::map< std::string, QTreeWidgetItem * >	dirMap;
-	std::string	d;
+	std::map< std::string_view, QTreeWidgetItem * >	dirMap;
+	std::string_view	d;
 	for ( size_t i = 0; i < filesShown.size(); i++ ) {
-		const std::string &	fullPath( *(filesShown[i]) );
-		size_t	n = std::string::npos;
+		const std::string_view &	fullPath( *(filesShown[i]) );
+		size_t	n = std::string_view::npos;
 		if ( filesShown.size() > 100 )
 			n = fullPath.rfind( '/' );
-		if ( n == std::string::npos )
+		if ( n == std::string_view::npos )
 			n = 0;
 		else
 			n++;
 		QTreeWidgetItem *	parent = nullptr;
 		if ( n ) {
-			d = std::string( fullPath, 0, n );
+			d = std::string_view( fullPath.data(), n );
 			parent = findDirectory( dirMap, d );
 		}
 		QTreeWidgetItem *	tmp;
@@ -95,7 +95,7 @@ void FileBrowserWidget::updateTreeWidget()
 			tmp = new QTreeWidgetItem( treeWidget, int(i) );
 		else
 			tmp = new QTreeWidgetItem( parent, int(i) );
-		tmp->setText( 0, QString::fromStdString( std::string( *(filesShown[i]), n, filesShown[i]->length() - n ) ) );
+		tmp->setText( 0, QString::fromUtf8( fullPath.data() + n, qsizetype(fullPath.length() - n) ) );
 		if ( i == size_t(curFileIndex) )
 			treeWidget->setCurrentItem( tmp );
 	}
@@ -107,7 +107,7 @@ void FileBrowserWidget::checkItemActivated()
 		dlg.accept();
 }
 
-FileBrowserWidget::FileBrowserWidget( int w, int h, const char * titleString, const std::set< std::string > & files, const std::string& fileSelected )
+FileBrowserWidget::FileBrowserWidget( int w, int h, const char * titleString, const std::set< std::string_view > & files, const std::string_view & fileSelected )
 	: fileSet( files ), currentFile( nullptr )
 {
 	layout = new QGridLayout( &dlg );
@@ -140,7 +140,7 @@ FileBrowserWidget::~FileBrowserWidget()
 {
 }
 
-const std::string * FileBrowserWidget::getItemSelected() const
+const std::string_view * FileBrowserWidget::getItemSelected() const
 {
 	QList< QTreeWidgetItem * >	tmp = treeWidget->selectedItems();
 	if ( tmp.size() > 0 ) {

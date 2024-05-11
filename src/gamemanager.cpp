@@ -37,10 +37,30 @@ BA2Files::~BA2Files()
 	close_all();
 }
 
-static bool archiveFilterFunctionNif( [[maybe_unused]] void * p, const std::string & s )
+static bool archiveFilterFunction_1( [[maybe_unused]] void * p, const std::string_view & s )
 {
-	return !s.ends_with( ".nif" );
+	return !( s.ends_with( ".mp3" ) || s.ends_with( ".ogg" ) || s.ends_with( ".wav" ) );
 }
+
+static bool archiveFilterFunction_2( [[maybe_unused]] void * p, const std::string_view & s )
+{
+	return !( s.ends_with( ".nif" ) || s.ends_with( ".fuz" ) || s.ends_with( ".lip" ) );
+}
+
+static bool archiveFilterFunction_3( [[maybe_unused]] void * p, const std::string_view & s )
+{
+	return !( s.ends_with( ".nif" ) || s.ends_with( ".wem" ) || s.ends_with( ".ffxanim" ) );
+}
+
+typedef bool (*ArchiveFilterFuncType)( void *, const std::string_view & );
+static const ArchiveFilterFuncType archiveFilterFuncTable[NUM_GAMES] =
+{
+	&archiveFilterFunction_1, &archiveFilterFunction_1,	// other, Morrowind
+	&archiveFilterFunction_1, &archiveFilterFunction_1,	// Oblivion, Fallout_3NV
+	&archiveFilterFunction_2, &archiveFilterFunction_2,	// Skyrim, Skyrim_SE
+	&archiveFilterFunction_2, &archiveFilterFunction_2,	// Fallout_4, Fallout_76
+	&archiveFilterFunction_3	// Starfield
+};
 
 static bool archiveScanFunctionMat( [[maybe_unused]] void * p, const BA2File::FileInfo & fd )
 {
@@ -68,7 +88,7 @@ void BA2Files::open_folders(GameMode game, const QStringList& folders)
 	size_t	archivesLoaded = 0;
 	for (size_t i = tmp.size(); i-- > 0; ) {
 		try {
-			archives[game].first->loadArchivePath(tmp[i].c_str(), &archiveFilterFunctionNif);
+			archives[game].first->loadArchivePath(tmp[i].c_str(), archiveFilterFuncTable[game]);
 			archivesLoaded++;
 		} catch (FO76UtilsError& e) {
 			QMessageBox::critical(nullptr, "NifSkope error", QString("Error opening archive path '%1': %2").arg(tmp[i].c_str()).arg(e.what()));
@@ -114,7 +134,7 @@ bool BA2Files::set_temp_folder(GameMode game, const char* pathName, bool ignoreE
 		return true;
 	archives[game].second = new BA2File();
 	try {
-		archives[game].second->loadArchivePath(pathName, &archiveFilterFunctionNif);
+		archives[game].second->loadArchivePath(pathName, archiveFilterFuncTable[game]);
 		if ( game == STARFIELD && archives[game].second->scanFileList(&archiveScanFunctionMat) ) {
 			GameManager::close_materials();
 			have_temp_materials = true;
@@ -520,8 +540,8 @@ bool GameManager::set_temp_path(const GameMode game, const char* pathName, bool 
 }
 
 struct list_files_scan_function_data {
-	std::set< std::string > * fileSet;
-	bool (*filterFunc)( void * p, const std::string & fileName);
+	std::set< std::string_view > * fileSet;
+	bool (*filterFunc)( void * p, const std::string_view & fileName);
 	void * filterFuncData;
 };
 
@@ -533,7 +553,7 @@ static bool list_files_scan_function( void * p, const BA2File::FileInfo & fd )
 	return false;
 }
 
-void GameManager::list_files(std::set< std::string >& fileSet, const GameMode game, bool (*fileListFilterFunc)(void* p, const std::string& fileName), void* fileListFilterFuncData)
+void GameManager::list_files(std::set< std::string_view >& fileSet, const GameMode game, bool (*fileListFilterFunc)(void* p, const std::string_view& fileName), void* fileListFilterFuncData)
 {
 	if ( !(game >= OTHER && game < NUM_GAMES) )
 		return;

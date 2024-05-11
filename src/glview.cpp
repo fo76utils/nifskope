@@ -257,14 +257,14 @@ void GLView::updateSettings()
 	settings.endGroup();
 }
 
-static bool envMapFileListFilterFunction( void * p, const std::string & s )
+static bool envMapFileListFilterFunction( void * p, const std::string_view & s )
 {
 	(void) p;
 	if ( !s.starts_with("textures/") )
 		return false;
 	if ( !(s.ends_with(".dds") || s.ends_with(".hdr")) )
 		return false;
-	return ( s.find("/cubemaps/") != std::string::npos );
+	return ( s.find("/cubemaps/") != std::string_view::npos );
 }
 
 void GLView::selectPBRCubeMap( quint32 bsVersion )
@@ -279,7 +279,7 @@ void GLView::selectPBRCubeMap( quint32 bsVersion )
 	bool	isStarfield = ( bsVersion >= 170 );
 	QString	cfgPath( !isStarfield ? "Settings/Render/General/Cube Map Path FO 76" : "Settings/Render/General/Cube Map Path STF" );
 
-	std::set< std::string >	fileSet;
+	std::set< std::string_view >	fileSet;
 	Game::GameManager::list_files( fileSet, (!isStarfield ? Game::FALLOUT_76 : Game::STARFIELD), &envMapFileListFilterFunction );
 	QSettings	settings;
 	std::string	prvPath( settings.value( cfgPath ).toString().toStdString() );
@@ -287,7 +287,7 @@ void GLView::selectPBRCubeMap( quint32 bsVersion )
 		prvPath.clear();
 
 	FileBrowserWidget	fileBrowser( 640, 480, "Select Default Environment Map", fileSet, prvPath );
-	const std::string *	newPath = nullptr;
+	const std::string_view *	newPath = nullptr;
 	if ( fileBrowser.exec() == QDialog::Accepted )
 		newPath = fileBrowser.getItemSelected();
 	if ( !newPath || newPath->empty() )
@@ -295,7 +295,7 @@ void GLView::selectPBRCubeMap( quint32 bsVersion )
 
 	if ( NifSkope::getOptions() )
 		NifSkope::getOptions()->apply();
-	settings.setValue( cfgPath, QString::fromStdString( *newPath ) );
+	settings.setValue( cfgPath, QString::fromLatin1( newPath->data(), qsizetype(newPath->length()) ) );
 	if ( NifSkope::getOptions() )
 		emit NifSkope::getOptions()->loadSettings();
 	if ( scene && scene->renderer ) {

@@ -54,20 +54,20 @@ protected:
 	QGridLayout *	layout2;
 	QLineEdit *	filter;
 	QLabel *	filterTitle;
-	const std::set< std::string > &	fileSet;
-	const std::string *	currentFile;
-	std::vector< const std::string * >	filesShown;
-	QTreeWidgetItem *	findDirectory( std::map< std::string, QTreeWidgetItem * > & dirMap, const std::string& d );
+	const std::set< std::string_view > &	fileSet;
+	const std::string_view *	currentFile;
+	std::vector< const std::string_view * >	filesShown;
+	QTreeWidgetItem *	findDirectory( std::map< std::string_view, QTreeWidgetItem * > & dirMap, const std::string_view & d );
 	void updateTreeWidget();
 	void checkItemActivated();
 public:
-	FileBrowserWidget( int w, int h, const char * titleString, const std::set< std::string > & files, const std::string& fileSelected );
+	FileBrowserWidget( int w, int h, const char * titleString, const std::set< std::string_view > & files, const std::string_view & fileSelected );
 	~FileBrowserWidget();
 	int exec()
 	{
 		return dlg.exec();
 	}
-	const std::string *	getItemSelected() const;
+	const std::string_view *	getItemSelected() const;
 };
 
 #endif

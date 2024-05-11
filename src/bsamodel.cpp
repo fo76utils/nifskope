@@ -83,7 +83,7 @@ bool BSAModel::fileListScanFunction( void * p, const BA2File::FileInfo & fd )
 	qsizetype	bytes = qsizetype( fd.archiveType < 64 || fd.packedSize == 0 ? fd.unpackedSize : fd.packedSize );
 	QString	fileSize( (bytes > 1024) ? QString::number( bytes / 1024 ) + "KB" : QString::number( bytes ) + "B" );
 
-	QString	fullPath( QString::fromStdString( fd.fileName ) );
+	QString	fullPath( QString::fromLatin1( fd.fileName.data(), qsizetype(fd.fileName.length()) ) );
 	qsizetype	dirNameLen = fullPath.lastIndexOf( QChar( '/' ) );
 	QString	baseName( fullPath.mid( dirNameLen + 1 ) );
 	auto	folderItem = o.p->insertFolder( fullPath, o.path.length(), dirNameLen, o.folderMap );
