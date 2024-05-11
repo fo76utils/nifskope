@@ -200,7 +200,7 @@ bool exportCreateNodes(const NifModel* nif, const Scene* scene, tinygltf::Model&
 	if ( !hasSkeleton )
 		return true;
 
-	for ( const auto skin : gltf.skins ) {
+	for ( [[maybe_unused]] const auto skin : gltf.skins ) {
 		auto gltfSkin = tinygltf::Skin();
 		model.skins.push_back(gltfSkin);
 	}

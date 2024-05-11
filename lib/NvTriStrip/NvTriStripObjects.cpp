@@ -561,7 +561,7 @@ bool NvStripInfo::Unique(NvFaceInfoVec& faceVec, NvFaceInfo* face)
 //
 // Builds a strip forward as far as we can go, then builds backwards, and joins the two lists
 //
-void NvStripInfo::Build(NvEdgeInfoVec &edgeInfos, NvFaceInfoVec &faceInfos)
+void NvStripInfo::Build(NvEdgeInfoVec &edgeInfos, [[maybe_unused]] NvFaceInfoVec &faceInfos)
 {
 	// used in building the strips forward and backward
 	WordVec scratchIndices;
@@ -798,7 +798,7 @@ void NvStripifier::CommitStrips(NvStripInfoVec &allStrips, const NvStripInfoVec 
 //
 // Finds the next face to start the next strip on.
 //
-bool NvStripifier::FindTraversal(NvFaceInfoVec &faceInfos,
+bool NvStripifier::FindTraversal([[maybe_unused]] NvFaceInfoVec &faceInfos,
 								 NvEdgeInfoVec    &edgeInfos,
 								 NvStripInfo      *strip,
 								 NvStripStartInfo &startInfo){
