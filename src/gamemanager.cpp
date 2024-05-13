@@ -87,12 +87,12 @@ void BA2Files::open_folders(GameMode game, const QStringList& folders)
 		return;
 	archives[game].first = new BA2File();
 	size_t	archivesLoaded = 0;
-	for (size_t i = tmp.size(); i-- > 0; ) {
+	for (const auto& i : tmp) {
 		try {
-			archives[game].first->loadArchivePath(tmp[i].c_str(), archiveFilterFuncTable[game]);
+			archives[game].first->loadArchivePath(i.c_str(), archiveFilterFuncTable[game]);
 			archivesLoaded++;
 		} catch (FO76UtilsError& e) {
-			QMessageBox::critical(nullptr, "NifSkope error", QString("Error opening archive path '%1': %2").arg(tmp[i].c_str()).arg(e.what()));
+			QMessageBox::critical(nullptr, "NifSkope error", QString("Error opening archive path '%1': %2").arg(i.c_str()).arg(e.what()));
 		}
 	}
 	if (!archivesLoaded) {

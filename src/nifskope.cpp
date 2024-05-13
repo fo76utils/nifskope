@@ -862,12 +862,14 @@ bool NifSkope::loadArchivesFromFolder( QString archive )
 	if ( archiveNames.empty() )
 		return true;
 	archiveNames.sort( Qt::CaseInsensitive );
-	for ( qsizetype i = 0; i < archiveNames.size(); i++ ) {
+	for ( qsizetype i = archiveNames.size(); i-- > 0; ) {
 		QString	fullPath = archive + archiveNames[i];
 		fullPath[archive.length()] = QChar( '/' );
 		try {
+			size_t	prvCnt = currentArchive->getArchiveFileCnt();
 			currentArchive->loadArchivePath( fullPath.toStdString().c_str(), &archiveFilterFunction );
-			currentArchiveNames += archiveNames[i].mid( 1 );
+			if ( currentArchive->getArchiveFileCnt() > prvCnt )
+				currentArchiveNames += archiveNames[i].mid( 1 );
 		} catch ( std::exception & ) {
 			qCWarning( nsIo ) << QString( "The BSA %1 could not be opened." ).arg( fullPath );
 		}
