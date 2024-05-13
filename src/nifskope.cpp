@@ -993,7 +993,7 @@ void NifSkope::openArchiveFileString( const BA2File * bsa, const QString & filep
 		return;
 
 	// Read data from BSA
-	std::vector< unsigned char >	data;
+	BA2File::UCharArray	data;
 	const unsigned char *	dataPtr;
 	size_t	dataSize = bsa->extractFile( dataPtr, data, filePathStr );
 	QBuffer	buf;
