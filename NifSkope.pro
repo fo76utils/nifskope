@@ -267,6 +267,7 @@ SOURCES += \
 	src/spells/light.cpp \
 	src/spells/materialedit.cpp \
 	src/spells/mesh.cpp \
+	src/spells/meshreplace.cpp \
 	src/spells/misc.cpp \
 	src/spells/moppcode.cpp \
 	src/spells/morphctrl.cpp \
