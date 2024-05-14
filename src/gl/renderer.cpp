@@ -1225,17 +1225,16 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 	if ( lsp )
 		clamp = lsp->clampMode;
 
+	QString	emptyString;
 	int texunit = 0;
 	if ( bsprop ) {
-		QString forced;
+		const QString *	forced = &emptyString;
 		if ( scene->hasOption(Scene::DoLighting) && scene->hasVisMode(Scene::VisNormalsOnly) )
-			forced = white;
+			forced = &white;
 
-		QString alt = white;
-		if ( scene->hasOption(Scene::DoErrorColor) )
-			alt = magenta;
+		const QString &	alt = ( !scene->hasOption(Scene::DoErrorColor) ? white : magenta );
 
-		prog->uniSampler( bsprop, SAMP_BASE, 0, texunit, alt, clamp, forced );
+		prog->uniSampler( bsprop, SAMP_BASE, 0, texunit, alt, clamp, *forced );
 	} else {
 		GLint uniBaseMap = prog->uniformLocations[SAMP_BASE];
 		if ( uniBaseMap >= 0 && (texprop || (bsprop && lsp)) ) {
@@ -1247,11 +1246,10 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 	}
 
 	if ( bsprop && !esp ) {
-		QString	tmp;
-		const QString *	forced = &tmp;
+		const QString *	forced = &emptyString;
 		if ( !scene->hasOption(Scene::DoLighting) )
 			forced = ( bsprop->bsVersion < 151 ? &default_n : &default_ns );
-		prog->uniSampler( bsprop, SAMP_NORMAL, 1, texunit, tmp, clamp, *forced );
+		prog->uniSampler( bsprop, SAMP_NORMAL, 1, texunit, emptyString, clamp, *forced );
 	} else if ( !bsprop ) {
 		GLint uniNormalMap = prog->uniformLocations[SAMP_NORMAL];
 		if ( uniNormalMap >= 0 && texprop ) {
