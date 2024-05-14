@@ -57,8 +57,27 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //! @file renderer.cpp Renderer and child classes implementation
 
-bool shader_initialized = false;
-bool shader_ready = true;
+static bool shader_initialized = false;
+static bool shader_ready = true;
+
+static QString white = "#FFFFFFFF";
+static QString black = "#FF000000";
+static QString lighting = "#FF00F040";
+static QString reflectivity = "#FF0A0A0A";
+static QString gray = "#FF808080s";
+static QString magenta = "#FFFF00FF";
+static QString default_n = "#FFFF8080";
+static QString default_ns = "#FFFF8080n";
+static QString cube_sk = "textures/cubemaps/bleakfallscube_e.dds";
+static QString cube_fo4 = "textures/shared/cubemaps/mipblur_defaultoutside1.dds";
+static QString pbr_lut_sf = "#sfpbr.dds";
+
+static const std::uint32_t defaultSFTextureSet[21] = {
+	0xFFFF00FFU, 0xFFFF8080U, 0xFFFFFFFFU, 0xFFC0C0C0U, 0xFF000000U, 0xFFFFFFFFU,
+	0xFF000000U, 0xFF000000U, 0xFF000000U, 0xFF808080U, 0xFF000000U, 0xFF808080U,
+	0xFF000000U, 0xFF000000U, 0xFF808080U, 0xFF808080U, 0xFF808080U, 0xFF000000U,
+	0xFF000000U, 0xFFFFFFFFU, 0xFF808080U
+};
 
 bool Renderer::initialize()
 {
@@ -577,24 +596,37 @@ bool Renderer::Program::uniSampler( BSShaderLightingProperty * bsprop, UniformTy
 									uint clamp, const QString & forced )
 {
 	GLint uniSamp = uniformLocations[var];
-	if ( uniSamp >= 0 ) {
-
-		// TODO: On stream 155 bsprop->fileName can reference incorrect strings because
-		// the BSSTS is not filled out nor linked from the BSSP
-		QString fname = (forced.isEmpty()) ? bsprop->fileName( textureSlot ) : forced;
-		if ( fname.isEmpty() )
-			fname = alternate;
-
-		if ( !fname.isEmpty() && (!activateTextureUnit( texunit )
-										|| !(bsprop->bind( textureSlot, fname, TexClampMode(clamp) )
-										|| bsprop->bind( textureSlot, alternate, TexClampMode(3) ))) )
-			return uniSamplerBlank( var, texunit );
-
-		f->glUniform1i( uniSamp, texunit++ );
-
+	if ( uniSamp < 0 )
 		return true;
-	}
+	if ( !activateTextureUnit( texunit ) )
+		return false;
 
+	// TODO: On stream 155 bsprop->fileName can reference incorrect strings because
+	// the BSSTS is not filled out nor linked from the BSSP
+	do {
+		if ( !forced.isEmpty() && bsprop->bind( forced, true, TexClampMode(clamp) ) )
+			break;
+		if ( textureSlot >= 0 ) {
+			QString	fname = bsprop->fileName( textureSlot );
+			if ( !fname.isEmpty() && bsprop->bind( fname, false, TexClampMode(clamp) ) )
+				break;
+		}
+		if ( !alternate.isEmpty() && bsprop->bind( alternate, false, TexClampMode::WRAP_S_WRAP_T ) )
+			break;
+		const QString *	fname = &black;
+		if ( textureSlot == 0 )
+			fname = &white;
+		else if ( textureSlot == 1 )
+			fname = ( bsprop->bsVersion < 151 ? &default_n : &default_ns );
+		else if ( textureSlot >= 8 && bsprop->bsVersion >= 151 )
+			fname = ( textureSlot == 8 ? &reflectivity : &lighting );
+		if ( bsprop->bind( *fname, true, TexClampMode::WRAP_S_WRAP_T ) )
+			break;
+
+		return false;
+	} while ( false );
+
+	f->glUniform1i( uniSamp, texunit++ );
 	return true;
 }
 
@@ -744,25 +776,6 @@ bool Renderer::Program::uniSampler_l( BSShaderLightingProperty * bsprop, int & t
 	f->glUniform1i( l1, 0 );
 	return false;
 }
-
-static QString white = "#FFFFFFFF";
-static QString black = "#FF000000";
-static QString lighting = "#FF00F040";
-static QString reflectivity = "#FF0A0A0A";
-static QString gray = "#FF808080s";
-static QString magenta = "#FFFF00FF";
-static QString default_n = "#FFFF8080";
-static QString default_ns = "#FFFF8080n";
-static QString cube_sk = "textures/cubemaps/bleakfallscube_e.dds";
-static QString cube_fo4 = "textures/shared/cubemaps/mipblur_defaultoutside1.dds";
-static QString pbr_lut_sf = "#sfpbr.dds";
-
-static const std::uint32_t defaultSFTextureSet[21] = {
-	0xFFFF00FFU, 0xFFFF8080U, 0xFFFFFFFFU, 0xFFC0C0C0U, 0xFF000000U, 0xFFFFFFFFU,
-	0xFF000000U, 0xFF000000U, 0xFF000000U, 0xFF808080U, 0xFF000000U, 0xFF808080U,
-	0xFF000000U, 0xFF000000U, 0xFF808080U, 0xFF808080U, 0xFF808080U, 0xFF000000U,
-	0xFF000000U, 0xFFFFFFFFU, 0xFF808080U
-};
 
 bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 {
@@ -1234,10 +1247,11 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 	}
 
 	if ( bsprop && !esp ) {
-		QString forced;
+		QString	tmp;
+		const QString *	forced = &tmp;
 		if ( !scene->hasOption(Scene::DoLighting) )
-			forced = default_n;
-		prog->uniSampler( bsprop, SAMP_NORMAL, 1, texunit, default_n, clamp, forced );
+			forced = ( bsprop->bsVersion < 151 ? &default_n : &default_ns );
+		prog->uniSampler( bsprop, SAMP_NORMAL, 1, texunit, tmp, clamp, *forced );
 	} else if ( !bsprop ) {
 		GLint uniNormalMap = prog->uniformLocations[SAMP_NORMAL];
 		if ( uniNormalMap >= 0 && texprop ) {
@@ -1381,37 +1395,50 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 
 		// Environment Mapping
 
-		prog->uni1i( HAS_MAP_CUBE, scene->hasOption(Scene::DoCubeMapping) && scene->hasOption(Scene::DoLighting) && (lsp->hasEnvironmentMap || nifVersion >= 151) );
+		bool	hasCubeMap = ( scene->hasOption(Scene::DoCubeMapping) && scene->hasOption(Scene::DoLighting) && (lsp->hasEnvironmentMap || nifVersion >= 151) );
 		prog->uni1i( HAS_MASK_ENV, lsp->useEnvironmentMask );
 		float refl = ( nifVersion < 151 ? lsp->environmentReflection : 1.0f );
 		prog->uni1f( ENV_REFLECTION, refl );
 
 		// Always bind cube regardless of shader settings
 		GLint uniCubeMap = prog->uniformLocations[SAMP_CUBE];
-		if ( uniCubeMap >= 0 ) {
+		if ( uniCubeMap < 0 ) {
+			hasCubeMap = false;
+		} else {
+			if ( !activateTextureUnit( texunit ) )
+				return false;
 			QString	fname = bsprop->fileName( 4 );
-			const QString&	cube = (nifVersion < 151 ? (nifVersion < 128 ? cube_sk : cube_fo4) : cfg.cubeMapPathFO76);
-			if ( fname.isEmpty() )
-				fname = cube;
-
-			if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( fname ) )
-				if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( cube ) )
-					return false;
+			const QString *	cube = &fname;
+			if ( hasCubeMap && ( fname.isEmpty() || !bsprop->bindCube( fname ) ) ) {
+				cube = ( nifVersion < 151 ? ( nifVersion < 128 ? &cube_sk : &cube_fo4 ) : &cfg.cubeMapPathFO76 );
+				hasCubeMap = bsprop->bindCube( *cube );
+			}
+			if ( !hasCubeMap ) [[unlikely]]
+				bsprop->bind( gray, true );
 			fn->glUniform1i( uniCubeMap, texunit++ );
-
 			if ( nifVersion >= 151 && ( uniCubeMap = prog->uniformLocations[SAMP_CUBE_2] ) >= 0 ) {
-				if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( fname, true ) )
-					if ( !activateTextureUnit( texunit ) || !bsprop->bindCube( cube, true ) )
-						return false;
+				// Fallout 76: load second cube map for diffuse lighting
+				if ( !activateTextureUnit( texunit ) )
+					return false;
+				hasCubeMap = hasCubeMap && bsprop->bindCube( *cube, true );
+				if ( !hasCubeMap ) [[unlikely]]
+					bsprop->bind( gray, true );
 				fn->glUniform1i( uniCubeMap, texunit++ );
 			}
 		}
+		prog->uni1i( HAS_MAP_CUBE, hasCubeMap );
 
 		if ( nifVersion < 151 ) {
 			// Always bind mask regardless of shader settings
 			prog->uniSampler( bsprop, SAMP_ENV_MASK, 5, texunit, white, clamp );
 		} else {
-			prog->uniSampler( bsprop, SAMP_ENV_MASK, -1, texunit, pbr_lut_sf, TexClampMode::CLAMP_S_CLAMP_T, pbr_lut_sf );
+			if ( prog->uniformLocations[SAMP_ENV_MASK] >= 0 ) {
+				if ( !activateTextureUnit( texunit ) )
+					return false;
+				if ( !bsprop->bind( pbr_lut_sf, true, TexClampMode::CLAMP_S_CLAMP_T ) )
+					return false;
+				fn->glUniform1i( prog->uniformLocations[SAMP_ENV_MASK], texunit++ );
+			}
 			prog->uniSampler( bsprop, SAMP_REFLECTIVITY, 8, texunit, reflectivity, clamp );
 			prog->uniSampler( bsprop, SAMP_LIGHTING, 9, texunit, lighting, clamp );
 		}

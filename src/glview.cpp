@@ -623,9 +623,8 @@ void GLView::paintGL()
 		}
 
 		float amb = ambient;
-		if ( scene->hasVisMode(Scene::VisNormalsOnly) && scene->hasOption(Scene::DoTexturing) && !scene->hasOption(Scene::DisableShaders) ) {
-			amb = 0.1f;
-		}
+		if ( scene->hasOption(Scene::DisableShaders) )
+			amb *= 0.375f;
 		GLfloat mat_amb[] = { amb, amb, amb, toneMapping };
 
 		const FloatVector4	a6( 0.02729229f, -0.03349948f, -0.93633725f, 0.0f );
