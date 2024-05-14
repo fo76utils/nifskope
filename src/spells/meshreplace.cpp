@@ -80,7 +80,7 @@ void spMeshUpdate::replacePaths(NifModel *nif, NifItem *item, const QHash<QStrin
 
 	for ( int i = 0; i < item->childCount(); i++ ) {
 		if ( item->child( i ) )
-			replacePaths( nif, item->child( i ), searchPattern, replacementString, filterPattern );
+			replacePaths( nif, item->child( i ), pathMap );
 	}
 }
 
@@ -110,9 +110,9 @@ QModelIndex spMeshUpdate::cast ( NifModel * nif, const QModelIndex & index )
 
 	QDialog dlg;
 
-	QLabel * lb = new QLabel( msg.toUtf8().constData() );
+	QLabel * lb = new QLabel( &dlg );
 	lb->setAlignment( Qt::AlignCenter );
-	lb->setText( Spell::tr( msg ) );
+	lb->setText( Spell::tr( msg.toUtf8().constData() ) );
 
 	QPushButton * bo = new QPushButton( Spell::tr( "Ok" ), &dlg );
 	QObject::connect( bo, &QPushButton::clicked, &dlg, &QDialog::accept );
