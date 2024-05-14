@@ -6,8 +6,9 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QPushButton>
+#include <string>
 
-#include <QFileDialog>
+//#include <QFileDialog>
 #include <QHash>
 #include <QFile>
 #include <QTextStream>
@@ -24,7 +25,7 @@
 class spMeshUpdate final : public Spell
 {
 public:
-	QString name() const override final { return Spell::tr( "Replace Mesh Paths TESTING" ); }
+	QString name() const override final { return Spell::tr( "Update to SF 1.11.33 Mesh Paths" ); }
 	QString page() const override final { return Spell::tr( "" ); }
 	QIcon icon() const override final
 	{
@@ -40,7 +41,7 @@ public:
 
 
 	QHash<QString, QString> loadMapFile(const QString& filename);
-	void replacePaths(NifModel *nif, NifItem *item, const QHash<QString, QString> &pathMap);
+	int replacePaths(NifModel *nif, NifItem *item, const QHash<QString, QString> &pathMap);
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final;
 };
 
@@ -68,20 +69,38 @@ QHash<QString, QString> spMeshUpdate::loadMapFile(const QString& filename) {
     return pathMap;
 }
 
-void spMeshUpdate::replacePaths(NifModel *nif, NifItem *item, const QHash<QString, QString> &pathMap)
+//lookup all mesh paths in qhash and replace if found.
+int spMeshUpdate::replacePaths(NifModel *nif, NifItem *item, const QHash<QString, QString> &pathMap)
 {
+	int replaceCnt = 0;
+	//int likelyVanillaCnt = 0;
 	//#TODO: Restrict to only LOD mesh paths
 	if ( item && item->value().isString() && ( item->name().endsWith( "Path" ) ) ) {
 		QString	itemValue( item->getValueAsString() );
-		if ( pathMap.contains(itemValue) ) {
+
+		if (!itemValue.isEmpty()) {
+			// QRegularExpression regex("^[0-9a-f]{20}\\[0-9a-f]{20}$");
+			// if (regex.match(itemValue).hasMatch()) {
+			// 	likelyVanillaCnt++;
+			// }
+			if (pathMap.contains(itemValue) ) {
+				item->setValueFromString( pathMap.value(itemValue) );
+				replaceCnt++;
+			}
+		}
+
+		if (!itemValue.isEmpty() && pathMap.contains(itemValue) ) {
 			item->setValueFromString( pathMap.value(itemValue) );
+			replaceCnt++;
 		}
 	}
 
 	for ( int i = 0; i < item->childCount(); i++ ) {
-		if ( item->child( i ) )
-			replacePaths( nif, item->child( i ), pathMap );
+		if ( item->child( i ) ){
+			replaceCnt += replacePaths( nif, item->child( i ), pathMap );
+		}
 	}
+	return replaceCnt;
 }
 
 QModelIndex spMeshUpdate::cast ( NifModel * nif, const QModelIndex & index )
@@ -93,26 +112,37 @@ QModelIndex spMeshUpdate::cast ( NifModel * nif, const QModelIndex & index )
 
 	QString filePath = QDir(executableDir).filePath("sf_mesh_map_1_11_33.txt");
 
-    // Open a file picker dialog to the latest hash map
-    QString selectedFilePath = QFileDialog::getOpenFileName(nullptr, "Open SF Mesh Map File", executableDir, "Text Files (*.txt);;All Files (*)", nullptr, QFileDialog::DontUseCustomDirectoryIcons);
+    //// Open a file picker dialog to the latest hash map
+    //QString selectedFilePath = QFileDialog::getOpenFileName(nullptr, "Open SF Mesh Map File", executableDir, "Text Files (*.txt);;All Files (*)", nullptr, QFileDialog::DontUseCustomDirectoryIcons);
+	QString selectedFilePath = filePath;
 
-    // Check if the user selected a file
-    if (selectedFilePath.isEmpty()) {
-		return index;
-    }
+    // // Check if the user selected a file
+    // if (selectedFilePath.isEmpty()) {
+	// 	return index;
+    // }
 
 	QHash<QString, QString> meshMap = loadMapFile(selectedFilePath);
 
-	QString msg = "Script will replace old SF mesh paths with new. Are you sure? Safety not Guaranteed...";
-	if (meshMap.isEmpty()) {
-		msg = "No file loaded - nothing will be modified";
+	if (meshMap.isEmpty()) 
+	{
+		//#TODO: Show warning
+		return index;
 	}
 
+	int updateCnt = 0;
+
+	for ( int b = 0; b < nif->getBlockCount(); b++ ) {
+		NifItem *	item = nif->getBlockItem( quint32(b) );
+		if ( item )
+			updateCnt += replacePaths( nif, item, meshMap );
+	}
+
+	std::string msg = "Updated " + std::to_string(updateCnt) + " Meshes";
 	QDialog dlg;
 
 	QLabel * lb = new QLabel( &dlg );
 	lb->setAlignment( Qt::AlignCenter );
-	lb->setText( Spell::tr( msg.toUtf8().constData() ) );
+	lb->setText( Spell::tr( QString::fromStdString(msg).toUtf8().constData() ) );
 
 	QPushButton * bo = new QPushButton( Spell::tr( "Ok" ), &dlg );
 	QObject::connect( bo, &QPushButton::clicked, &dlg, &QDialog::accept );
@@ -128,14 +158,6 @@ QModelIndex spMeshUpdate::cast ( NifModel * nif, const QModelIndex & index )
 	if ( dlg.exec() != QDialog::Accepted )
 		return index;
 
-	if (meshMap.isEmpty())
-		return index;
-
-	for ( int b = 0; b < nif->getBlockCount(); b++ ) {
-		NifItem *	item = nif->getBlockItem( quint32(b) );
-		if ( item )
-			replacePaths( nif, item, meshMap );
-	}
 
 	return index;
 }
