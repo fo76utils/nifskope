@@ -45,7 +45,7 @@ public:
     };
 
 	QHash<QString, QString> loadMapFile(const QString& filename);
-	void replacePaths(NifModel *nif, NifItem *item, const QHash<QString, QString> &pathMap, QRegularExpression regex, updateStats &stats);
+	void replacePaths(NifModel *nif, NifItem *item, const QHash<QString, QString> &pathMap, const QRegularExpression &regex, updateStats &stats);
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final;
 };
 
@@ -74,7 +74,7 @@ QHash<QString, QString> spMeshUpdate::loadMapFile(const QString& filename) {
 }
 
 //lookup all mesh paths in qhash and replace if found.
-void spMeshUpdate::replacePaths(NifModel *nif, NifItem *item, const QHash<QString, QString> &pathMap, const QRegularExpression regex, updateStats stats)
+void spMeshUpdate::replacePaths(NifModel *nif, NifItem *item, const QHash<QString, QString> &pathMap, const QRegularExpression &regex, updateStats &stats)
 {
 	if ( item && item->value().isString() && ( item->name().endsWith( "Path" ) ) ) {
 		QString	itemValue( item->getValueAsString() );
@@ -135,7 +135,7 @@ QModelIndex spMeshUpdate::cast ( NifModel * nif, const QModelIndex & index )
 
 	std::string msg = "Updated " + std::to_string(stats.replaceCnt) + " out of " + std::to_string(stats.matchedCnt) + " vanilla looking meshes";
 	QDialog dlg;
-	dlg.setWindowTitle("Mesh Update Results")
+	dlg.setWindowTitle("Mesh Update Results");
 	QLabel * lb = new QLabel( &dlg );
 	lb->setAlignment( Qt::AlignCenter );
 	lb->setText( Spell::tr( QString::fromStdString(msg).toUtf8().constData() ) );
