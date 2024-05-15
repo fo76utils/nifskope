@@ -533,6 +533,9 @@ win32:contains(QT_ARCH, i386) {
 	# Copy Readmes and rename to TXT
 	copyFiles( $$READMES,,,, md:txt )
 
+	# Copy SF Mesh map file
+	copyFiles( sf_mesh_map_1_11_33.txt,, true )
+
 	win32:!static {
 		# Copy DLLs to build dir
 		copyFiles( $$QtBins(),, true )

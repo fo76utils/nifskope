@@ -39,9 +39,13 @@ public:
 		return ( nif && !index.isValid() );
 	}
 
+    struct updateStats {
+        int matchedCnt = 0;
+		int replaceCnt = 0;
+    };
 
 	QHash<QString, QString> loadMapFile(const QString& filename);
-	int replacePaths(NifModel *nif, NifItem *item, const QHash<QString, QString> &pathMap);
+	void replacePaths(NifModel *nif, NifItem *item, const QHash<QString, QString> &pathMap, QRegularExpression regex, updateStats &stats);
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final;
 };
 
@@ -70,37 +74,27 @@ QHash<QString, QString> spMeshUpdate::loadMapFile(const QString& filename) {
 }
 
 //lookup all mesh paths in qhash and replace if found.
-int spMeshUpdate::replacePaths(NifModel *nif, NifItem *item, const QHash<QString, QString> &pathMap)
+void spMeshUpdate::replacePaths(NifModel *nif, NifItem *item, const QHash<QString, QString> &pathMap, const QRegularExpression regex, updateStats stats)
 {
-	int replaceCnt = 0;
-	//int likelyVanillaCnt = 0;
-	//#TODO: Restrict to only LOD mesh paths
 	if ( item && item->value().isString() && ( item->name().endsWith( "Path" ) ) ) {
 		QString	itemValue( item->getValueAsString() );
 
 		if (!itemValue.isEmpty()) {
-			// QRegularExpression regex("^[0-9a-f]{20}\\[0-9a-f]{20}$");
-			// if (regex.match(itemValue).hasMatch()) {
-			// 	likelyVanillaCnt++;
-			// }
+			if (regex.isValid() && regex.match(itemValue).hasMatch()) {
+				stats.matchedCnt++;
+			}
 			if (pathMap.contains(itemValue) ) {
 				item->setValueFromString( pathMap.value(itemValue) );
-				replaceCnt++;
+				stats.replaceCnt++;
 			}
-		}
-
-		if (!itemValue.isEmpty() && pathMap.contains(itemValue) ) {
-			item->setValueFromString( pathMap.value(itemValue) );
-			replaceCnt++;
 		}
 	}
 
 	for ( int i = 0; i < item->childCount(); i++ ) {
 		if ( item->child( i ) ){
-			replaceCnt += replacePaths( nif, item->child( i ), pathMap );
+			replacePaths( nif, item->child( i ), pathMap , regex, stats);
 		}
 	}
-	return replaceCnt;
 }
 
 QModelIndex spMeshUpdate::cast ( NifModel * nif, const QModelIndex & index )
@@ -125,38 +119,35 @@ QModelIndex spMeshUpdate::cast ( NifModel * nif, const QModelIndex & index )
 
 	if (meshMap.isEmpty()) 
 	{
-		//#TODO: Show warning
+		//TODO: translations
+		QMessageBox::critical(nullptr, "Error", "Problem loading map file\nPlease ensure the file sf_mesh_map_1_11_33.txt is in the same folder as NifSkope.");
 		return index;
 	}
 
-	int updateCnt = 0;
+	updateStats stats;
+	QRegularExpression regex("^[0-9a-f]{20}\\\\[0-9a-f]{20}$");
 
 	for ( int b = 0; b < nif->getBlockCount(); b++ ) {
 		NifItem *	item = nif->getBlockItem( quint32(b) );
 		if ( item )
-			updateCnt += replacePaths( nif, item, meshMap );
+			replacePaths( nif, item, meshMap , regex , stats);
 	}
 
-	std::string msg = "Updated " + std::to_string(updateCnt) + " Meshes";
+	std::string msg = "Updated " + std::to_string(stats.replaceCnt) + " out of " + std::to_string(stats.matchedCnt) + " vanilla looking meshes";
 	QDialog dlg;
-
+	dlg.setWindowTitle("Mesh Update Results")
 	QLabel * lb = new QLabel( &dlg );
 	lb->setAlignment( Qt::AlignCenter );
 	lb->setText( Spell::tr( QString::fromStdString(msg).toUtf8().constData() ) );
 
 	QPushButton * bo = new QPushButton( Spell::tr( "Ok" ), &dlg );
-	QObject::connect( bo, &QPushButton::clicked, &dlg, &QDialog::accept );
-
-	QPushButton * bc = new QPushButton( Spell::tr( "Cancel" ), &dlg );
-	QObject::connect( bc, &QPushButton::clicked, &dlg, &QDialog::reject );
+	QObject::connect(bo, &QPushButton::clicked, &dlg, &QDialog::accept);
 
 	QGridLayout * grid = new QGridLayout;
 	dlg.setLayout( grid );
 	grid->addWidget( lb, 0, 0, 1, 2 );
 	grid->addWidget( bo, 7, 0, 1, 1 );
-	grid->addWidget( bc, 7, 1, 1, 1 );
-	if ( dlg.exec() != QDialog::Accepted )
-		return index;
+	dlg.exec();
 
 
 	return index;
