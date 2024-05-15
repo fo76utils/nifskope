@@ -3,6 +3,8 @@
 * The screenshot dialog now saves the image format and path selected as settings.
 * Fixed bugs in rendering ordered nodes.
 * Fixed the axes not being correctly drawn depending on the OpenGL settings from the last shape.
+* Fixes in the lighting only and textures disabled rendering modes.
+* Optimizations in the archive manager.
 
 #### NifSkope-2.0.dev9-20240505
 

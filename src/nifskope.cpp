@@ -862,12 +862,14 @@ bool NifSkope::loadArchivesFromFolder( QString archive )
 	if ( archiveNames.empty() )
 		return true;
 	archiveNames.sort( Qt::CaseInsensitive );
-	for ( qsizetype i = 0; i < archiveNames.size(); i++ ) {
+	for ( qsizetype i = archiveNames.size(); i-- > 0; ) {
 		QString	fullPath = archive + archiveNames[i];
 		fullPath[archive.length()] = QChar( '/' );
 		try {
+			size_t	prvCnt = currentArchive->getArchiveFileCnt();
 			currentArchive->loadArchivePath( fullPath.toStdString().c_str(), &archiveFilterFunction );
-			currentArchiveNames += archiveNames[i].mid( 1 );
+			if ( currentArchive->getArchiveFileCnt() > prvCnt )
+				currentArchiveNames += archiveNames[i].mid( 1 );
 		} catch ( std::exception & ) {
 			qCWarning( nsIo ) << QString( "The BSA %1 could not be opened." ).arg( fullPath );
 		}
@@ -993,7 +995,7 @@ void NifSkope::openArchiveFileString( const BA2File * bsa, const QString & filep
 		return;
 
 	// Read data from BSA
-	std::vector< unsigned char >	data;
+	BA2File::UCharArray	data;
 	const unsigned char *	dataPtr;
 	size_t	dataSize = bsa->extractFile( dataPtr, data, filePathStr );
 	QBuffer	buf;

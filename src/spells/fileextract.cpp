@@ -58,7 +58,7 @@ public:
 
 	static std::string getNifItemFilePath( NifModel * nif, const NifItem * item );
 	static std::string getOutputDirectory();
-	static void writeFileWithPath( const char * fileName, const void * buf, size_t bufSize );
+	static void writeFileWithPath( const char * fileName, const char * buf, qsizetype bufSize );
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
@@ -121,8 +121,10 @@ std::string spResourceFileExtract::getOutputDirectory()
 	return fullPath;
 }
 
-void spResourceFileExtract::writeFileWithPath( const char * fileName, const void * buf, size_t bufSize )
+void spResourceFileExtract::writeFileWithPath( const char * fileName, const char * buf, qsizetype bufSize )
 {
+	if ( bufSize < 0 )
+		return;
 	OutputFile *	f = nullptr;
 	try {
 		f = new OutputFile( fileName, 0 );
@@ -146,7 +148,7 @@ void spResourceFileExtract::writeFileWithPath( const char * fileName, const void
 	}
 
 	try {
-		f->writeData( buf, bufSize );
+		f->writeData( buf, size_t(bufSize) );
 	}
 	catch ( ... ) {
 		delete f;
@@ -190,9 +192,9 @@ QModelIndex spResourceFileExtract::cast( NifModel * nif, const QModelIndex & ind
 
 		if ( !matFileData.empty() ) {
 			matFileData += '\n';
-			writeFileWithPath( fullPath.c_str(), matFileData.c_str(), matFileData.length() );
+			writeFileWithPath( fullPath.c_str(), matFileData.c_str(), qsizetype(matFileData.length()) );
 		} else {
-			std::vector< unsigned char >	fileData;
+			QByteArray	fileData;
 			if ( Game::GameManager::get_file( fileData, game, filePath ) )
 				writeFileWithPath( fullPath.c_str(), fileData.data(), fileData.size() );
 		}
@@ -261,7 +263,7 @@ QModelIndex spExtractAllResources::cast( NifModel * nif, const QModelIndex & ind
 
 	std::string	matFileData;
 	std::string	fullPath;
-	std::vector< unsigned char >	fileData;
+	QByteArray	fileData;
 	try {
 		for ( std::set< std::string >::const_iterator i = fileSet.begin(); i != fileSet.end(); i++ ) {
 			matFileData.clear();
@@ -281,7 +283,7 @@ QModelIndex spExtractAllResources::cast( NifModel * nif, const QModelIndex & ind
 			fullPath += *i;
 			if ( !matFileData.empty() ) {
 				matFileData += '\n';
-				spResourceFileExtract::writeFileWithPath( fullPath.c_str(), matFileData.c_str(), matFileData.length() );
+				spResourceFileExtract::writeFileWithPath( fullPath.c_str(), matFileData.c_str(), qsizetype(matFileData.length()) );
 			} else if ( Game::GameManager::get_file( fileData, game, *i ) ) {
 				spResourceFileExtract::writeFileWithPath( fullPath.c_str(), fileData.data(), fileData.size() );
 			}

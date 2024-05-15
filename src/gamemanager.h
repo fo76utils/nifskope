@@ -151,8 +151,7 @@ public:
 	//! Search for file 'path' in the resource archives and folders, and return the full path if the file is found, or an empty string otherwise.
 	static QString find_file(const GameMode game, const QString& path, const char* archiveFolder, const char* extension);
 	//! Find and load resource file to 'data'. The return value is true on success.
-	static bool get_file(std::vector< unsigned char >& data, const GameMode game, const std::string& fullPath);
-	static bool get_file(std::vector< unsigned char >& data, const GameMode game, const QString& path, const char* archiveFolder, const char* extension);
+	static bool get_file(QByteArray& data, const GameMode game, const std::string_view& fullPath);
 	static bool get_file(QByteArray& data, const GameMode game, const QString& path, const char* archiveFolder, const char* extension);
 	//! Return pointer to Starfield material database, loading it first if necessary. On error, nullptr is returned.
 	static CE2MaterialDB* materials(const GameMode game);

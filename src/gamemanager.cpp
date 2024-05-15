@@ -24,7 +24,8 @@ struct BA2Files {
 	void open_folders(GameMode game, const QStringList& folders);
 	void close_all(bool tempPathsFirst = false);
 	bool set_temp_folder(GameMode game, const char* pathName, bool ignoreErrors);
-	bool get_file(GameMode game, const std::string& pathName, std::vector< unsigned char >* outBuf = nullptr, const unsigned char** outBufPtr = nullptr, size_t* bufSizePtr = nullptr);
+	static unsigned char* byteArrayAllocFunc(void* bufPtr, size_t nBytes);
+	bool get_file(GameMode game, const std::string_view& pathName, QByteArray* outBuf = nullptr);
 };
 
 BA2Files::BA2Files()
@@ -86,12 +87,12 @@ void BA2Files::open_folders(GameMode game, const QStringList& folders)
 		return;
 	archives[game].first = new BA2File();
 	size_t	archivesLoaded = 0;
-	for (size_t i = tmp.size(); i-- > 0; ) {
+	for (const auto& i : tmp) {
 		try {
-			archives[game].first->loadArchivePath(tmp[i].c_str(), archiveFilterFuncTable[game]);
+			archives[game].first->loadArchivePath(i.c_str(), archiveFilterFuncTable[game]);
 			archivesLoaded++;
 		} catch (FO76UtilsError& e) {
-			QMessageBox::critical(nullptr, "NifSkope error", QString("Error opening archive path '%1': %2").arg(tmp[i].c_str()).arg(e.what()));
+			QMessageBox::critical(nullptr, "NifSkope error", QString("Error opening archive path '%1': %2").arg(i.c_str()).arg(e.what()));
 		}
 	}
 	if (!archivesLoaded) {
@@ -149,19 +150,23 @@ bool BA2Files::set_temp_folder(GameMode game, const char* pathName, bool ignoreE
 	return true;
 }
 
-bool BA2Files::get_file(GameMode game, const std::string& pathName, std::vector< unsigned char >* outBuf, const unsigned char** outBufPtr, size_t* bufSizePtr)
+unsigned char* BA2Files::byteArrayAllocFunc(void* bufPtr, size_t nBytes)
+{
+	QByteArray*	p = reinterpret_cast< QByteArray* >(bufPtr);
+	p->resize(qsizetype(nBytes));
+	return reinterpret_cast< unsigned char* >(p->data());
+}
+
+bool BA2Files::get_file(GameMode game, const std::string_view& pathName, QByteArray* outBuf)
 {
 	if (outBuf)
-		outBuf->clear();
+		outBuf->resize(0);
 	if (!(game >= OTHER && game < NUM_GAMES && !pathName.empty())) [[unlikely]]
 		return false;
-	if (archives[game].second && archives[game].second->findFile(pathName)) {
-		if (outBuf) {
-			if (outBufPtr)
-				*bufSizePtr = archives[game].second->extractFile(*outBufPtr, *outBuf, pathName);
-			else
-				archives[game].second->extractFile(*outBuf, pathName);
-		}
+	const BA2File::FileInfo*	fd;
+	if (archives[game].second && (fd = archives[game].second->findFile(pathName)) != nullptr) {
+		if (outBuf)
+			archives[game].second->extractFile(outBuf, &byteArrayAllocFunc, *fd);
 		return true;
 	}
 	if (!archives[game].first) { [[unlikely]]
@@ -176,13 +181,11 @@ bool BA2Files::get_file(GameMode game, const std::string& pathName, std::vector<
 			return false;
 		}
 	}
-	if (!outBuf)
-		return bool(archives[game].first->findFile(pathName));
+	fd = archives[game].first->findFile(pathName);
+	if (!outBuf || !fd)
+		return bool(fd);
 	try {
-		if (outBufPtr)
-			*bufSizePtr = archives[game].first->extractFile(*outBufPtr, *outBuf, pathName);
-		else
-			archives[game].first->extractFile(*outBuf, pathName);
+		archives[game].first->extractFile(outBuf, &byteArrayAllocFunc, *fd);
 	} catch (FO76UtilsError&) {
 		outBuf->clear();
 		return false;
@@ -463,20 +466,10 @@ QString GameManager::find_file(const GameMode game, const QString& path, const c
 	return QString();
 }
 
-bool GameManager::get_file(std::vector< unsigned char >& data, const GameMode game, const std::string& fullPath)
+bool GameManager::get_file(QByteArray& data, const GameMode game, const std::string_view& fullPath)
 {
 	if (!ba2Files.get_file(game, fullPath, &data)) {
-		qWarning() << "File '" << fullPath.c_str() << "' not found in archives";
-		return false;
-	}
-	return true;
-}
-
-bool GameManager::get_file(std::vector< unsigned char >& data, const GameMode game, const QString& path, const char* archiveFolder, const char* extension)
-{
-	std::string	fullPath(get_full_path(path, archiveFolder, extension));
-	if (!ba2Files.get_file(game, fullPath, &data)) {
-		qWarning() << "File '" << fullPath.c_str() << "' not found in archives";
+		qWarning() << "File '" << QString::fromUtf8(fullPath.data(), qsizetype(fullPath.length())) << "' not found in archives";
 		return false;
 	}
 	return true;
@@ -485,16 +478,10 @@ bool GameManager::get_file(std::vector< unsigned char >& data, const GameMode ga
 bool GameManager::get_file(QByteArray& data, const GameMode game, const QString& path, const char* archiveFolder, const char* extension)
 {
 	std::string	fullPath(get_full_path(path, archiveFolder, extension));
-	std::vector< unsigned char >	tmpData;
-	const unsigned char*	outBufPtr = nullptr;
-	size_t	dataSize = 0;
-	if (!ba2Files.get_file(game, fullPath, &tmpData, &outBufPtr, &dataSize)) {
+	if (!ba2Files.get_file(game, fullPath, &data)) {
 		qWarning() << "File '" << fullPath.c_str() << "' not found in archives";
 		return false;
 	}
-	data.resize(dataSize);
-	if (dataSize) [[likely]]
-		std::memcpy(data.data(), outBufPtr, dataSize);
 	return true;
 }
 
