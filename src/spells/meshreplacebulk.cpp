@@ -138,6 +138,7 @@ QModelIndex spBulkMeshUpdate::cast ( NifModel * nif, const QModelIndex & index )
 {
     if ( !nif )
         return index;
+    QDateTime startTime(QDateTime::currentDateTime());
 
     //Reference to NifSkope required for successful saving
     NifSkope* nifSkope = qobject_cast<NifSkope*>(nif->getWindow());
@@ -166,7 +167,11 @@ QModelIndex spBulkMeshUpdate::cast ( NifModel * nif, const QModelIndex & index )
         return index;
     }
 
-    QString logFilePath = rootDir.filePath("sf_mesh_map_1_11_33_log.v2.txt");
+
+    QString logFileName = QString("sf_mesh_map_1_11_33_log_%1.txt").arg(QDateTime::currentDateTime().toString("yyyy-MM-dd_hh-mm-ss"));
+
+
+    QString logFilePath = rootDir.filePath(logFileName);
     QFile logFile(logFilePath);
     if (!logFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QMessageBox::critical(nullptr, "Error", "Failed to create log file.");
@@ -175,11 +180,7 @@ QModelIndex spBulkMeshUpdate::cast ( NifModel * nif, const QModelIndex & index )
 
     QTextStream logStream(&logFile);
     logStream << "Spell Name: " << name() << "\n";
-    //TODO: fix compiler warning - Qt::DefaultLocaleShortDate is deprecated
-
-    //QLocale::system().dateTimeFormat(QLocale::ShortFormat);
-    logStream << "Date and Time: " << QDateTime::currentDateTime().toString(QLocale::system().dateTimeFormat(QLocale::ShortFormat)) << "\n";
-    //logStream << "Date and Time: " << QDateTime::currentDateTime().toString(Qt::DefaultLocaleShortDate) << "\n";
+    logStream << "Date and Time: " << startTime.toString("yyyy-MM-dd hh:mm:ss") << "\n";
 
     int filesProcessed = 0;
     int updatesPerformed = 0;
