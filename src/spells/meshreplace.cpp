@@ -45,10 +45,11 @@ public:
     };
 
 	QHash<QString, QString> loadMapFile(const QString& filename);
+	void processNif(NifModel * nif, const QHash<QString, QString> &pathMap);
+
 	void replacePaths(NifModel *nif, NifItem *item, const QHash<QString, QString> &pathMap, const QRegularExpression &regex, updateStats &stats);
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final;
 };
-
 
 QHash<QString, QString> spMeshUpdate::loadMapFile(const QString& filename) {
     QHash<QString, QString> pathMap;
@@ -97,42 +98,16 @@ void spMeshUpdate::replacePaths(NifModel *nif, NifItem *item, const QHash<QStrin
 	}
 }
 
-QModelIndex spMeshUpdate::cast ( NifModel * nif, const QModelIndex & index )
+void spMeshUpdate::processNif(NifModel * nif, const QHash<QString, QString> &pathMap)
 {
-	if ( !nif )
-		return index;
-
-    QString executableDir = QCoreApplication::applicationDirPath();
-
-	QString filePath = QDir(executableDir).filePath("sf_mesh_map_1_11_33.txt");
-
-    //// Open a file picker dialog to the latest hash map
-    //QString selectedFilePath = QFileDialog::getOpenFileName(nullptr, "Open SF Mesh Map File", executableDir, "Text Files (*.txt);;All Files (*)", nullptr, QFileDialog::DontUseCustomDirectoryIcons);
-	QString selectedFilePath = filePath;
-
-    // // Check if the user selected a file
-    // if (selectedFilePath.isEmpty()) {
-	// 	return index;
-    // }
-
-	QHash<QString, QString> meshMap = loadMapFile(selectedFilePath);
-
-	if (meshMap.isEmpty()) 
-	{
-		//TODO: translations
-		QMessageBox::critical(nullptr, "Error", "Problem loading map file\nPlease ensure the file sf_mesh_map_1_11_33.txt is in the same folder as NifSkope.");
-		return index;
-	}
-
 	updateStats stats;
 	QRegularExpression regex("^[0-9a-f]{20}\\\\[0-9a-f]{20}$");
 
 	for ( int b = 0; b < nif->getBlockCount(); b++ ) {
 		NifItem *	item = nif->getBlockItem( quint32(b) );
 		if ( item )
-			replacePaths( nif, item, meshMap , regex , stats);
+			replacePaths( nif, item, pathMap , regex , stats);
 	}
-
 	std::string msg = "Updated " + std::to_string(stats.replaceCnt) + " out of " + std::to_string(stats.matchedCnt) + " vanilla looking meshes";
 	QDialog dlg;
 	dlg.setWindowTitle("Mesh Update Results");
@@ -149,7 +124,27 @@ QModelIndex spMeshUpdate::cast ( NifModel * nif, const QModelIndex & index )
 	grid->addWidget( bo, 7, 0, 1, 1 );
 	dlg.exec();
 
+}
 
+QModelIndex spMeshUpdate::cast ( NifModel * nif, const QModelIndex & index )
+{
+	if ( !nif )
+		return index;
+
+    QString executableDir = QCoreApplication::applicationDirPath();
+
+	QString filePath = QDir(executableDir).filePath("sf_mesh_map_1_11_33.txt");
+
+	QHash<QString, QString> meshMap = loadMapFile(filePath);
+
+	if (meshMap.isEmpty()) 
+	{
+		//TODO: translations
+		QMessageBox::critical(nullptr, "Error", "Problem loading map file\nPlease ensure the file sf_mesh_map_1_11_33.txt is in the same folder as NifSkope.");
+		return index;
+	}
+
+	processNif(nif, meshMap);
 	return index;
 }
 
