@@ -535,7 +535,7 @@ win32:contains(QT_ARCH, i386) {
 	copyFiles( $$READMES,,,, md:txt )
 
 	# Copy SF Mesh map file
-	copyFiles( sf_mesh_map_1_11_33.txt,, true )
+	copyFiles( sf_mesh_map_1_11_33.v2.txt,, true )
 
 	win32:!static {
 		# Copy DLLs to build dir

@@ -10,6 +10,9 @@
 #include <QMessageBox>
 #include <QTextStream>
 #include <string>
+//TODO: Handle load and save comletion events properly
+//TODO: Move mesh map path into starfield settings
+
 
 
 // Brief description is deliberately not autolinked to class Spell
@@ -70,16 +73,17 @@ QHash<QString, QString> spBulkMeshUpdate::loadMapFile(const QString &filename)
     QTextStream in(&file);
     while (!in.atEnd()) {
         QString line = in.readLine();
-        QStringList parts = line.split(':');
-        if (parts.size() == 2) {
+        QStringList parts = line.split(':', Qt::KeepEmptyParts); // Use KeepEmptyParts to keep empty strings after split
+        if (parts.size() >= 1) {
             QString key = parts[0].trimmed();
-            QString value = parts[1].trimmed();
+            QString value = (parts.size() > 1) ? parts[1].trimmed() : ""; // Handle cases where there is no value after the colon
             pathMap.insert(key, value);
         }
     }
 
     return pathMap;
 }
+
 
 
 void spBulkMeshUpdate::replacePaths(NifModel *nif, NifItem *item, const QHash<QString, QString> &pathMap, QList<ReplacementLog> &replacementLogs)
@@ -140,12 +144,12 @@ QModelIndex spBulkMeshUpdate::cast ( NifModel * nif, const QModelIndex & index )
 
     QString executableDir = QCoreApplication::applicationDirPath();
 
-    QString filePath = QDir(executableDir).filePath("sf_mesh_map_1_11_33.txt");
+    QString filePath = QDir(executableDir).filePath("sf_mesh_map_1_11_33.v2.txt");
 
     QHash<QString, QString> meshMap = loadMapFile(filePath);
 
     if (meshMap.isEmpty()) {
-        QMessageBox::critical(nullptr, "Error", "Problem loading map file\nPlease ensure the file sf_mesh_map_1_11_33.txt is in the same folder as NifSkope.");
+        QMessageBox::critical(nullptr, "Error", "Problem loading map file\nPlease ensure the file sf_mesh_map_1_11_33.v2.txt is in the same folder as NifSkope.");
         return index;
     }
 
@@ -172,7 +176,10 @@ QModelIndex spBulkMeshUpdate::cast ( NifModel * nif, const QModelIndex & index )
     QTextStream logStream(&logFile);
     logStream << "Spell Name: " << name() << "\n";
     //TODO: fix compiler warning - Qt::DefaultLocaleShortDate is deprecated
-    logStream << "Date and Time: " << QDateTime::currentDateTime().toString(Qt::DefaultLocaleShortDate) << "\n";
+
+    //QLocale::system().dateTimeFormat(QLocale::ShortFormat);
+    logStream << "Date and Time: " << QDateTime::currentDateTime().toString(QLocale::system().dateTimeFormat(QLocale::ShortFormat)) << "\n";
+    //logStream << "Date and Time: " << QDateTime::currentDateTime().toString(Qt::DefaultLocaleShortDate) << "\n";
 
     int filesProcessed = 0;
     int updatesPerformed = 0;

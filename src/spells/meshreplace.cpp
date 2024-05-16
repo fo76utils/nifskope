@@ -133,14 +133,14 @@ QModelIndex spMeshUpdate::cast ( NifModel * nif, const QModelIndex & index )
 
     QString executableDir = QCoreApplication::applicationDirPath();
 
-	QString filePath = QDir(executableDir).filePath("sf_mesh_map_1_11_33.txt");
+	QString filePath = QDir(executableDir).filePath("sf_mesh_map_1_11_33.v2.txt");
 
 	QHash<QString, QString> meshMap = loadMapFile(filePath);
 
 	if (meshMap.isEmpty()) 
 	{
 		//TODO: translations
-		QMessageBox::critical(nullptr, "Error", "Problem loading map file\nPlease ensure the file sf_mesh_map_1_11_33.txt is in the same folder as NifSkope.");
+		QMessageBox::critical(nullptr, "Error", "Problem loading map file\nPlease ensure the file sf_mesh_map_1_11_33.v2.txt is in the same folder as NifSkope.");
 		return index;
 	}
 
