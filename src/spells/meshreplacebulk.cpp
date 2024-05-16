@@ -1,3 +1,4 @@
+#include "NifSkope.h"
 #include "spellbook.h"
 
 #include <QDialog>
@@ -15,6 +16,8 @@
 #include <QDir>
 #include <QDateTime>
 #include <QDirIterator>
+//TODO: Cleanup includes (sort, remove unused)
+
 
 // Brief description is deliberately not autolinked to class Spell
 /*! \file meshreplacebulk.cpp
@@ -48,7 +51,7 @@ public:
     };
 
     QHash<QString, QString> loadMapFile(const QString &filename);
-    QList<spBulkMeshUpdate::ReplacementLog> processNif(NifModel * nif, const QHash<QString, QString> &pathMap, const QString &rootFolder);
+    QList<spBulkMeshUpdate::ReplacementLog> processNif(NifModel * nif, const QHash<QString, QString> &pathMap);
 
 	void replacePaths(NifModel *nif, NifItem *item, const QHash<QString, QString> &pathMap, QList<ReplacementLog> &replacementLogs);
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final;
@@ -86,8 +89,9 @@ void spBulkMeshUpdate::replacePaths(NifModel *nif, NifItem *item, const QHash<QS
 
         if (!itemValue.isEmpty()) {
             if (pathMap.contains(itemValue) ) {
-                if (!pathMap.value(itemValue).isEmpty())
+                if (!pathMap.value(itemValue).isEmpty()) {
                     item->setValueFromString( pathMap.value(itemValue) );
+                }
                 ReplacementLog log;
                 log.objectName = nif->get<QString>( item->parent()->parent()->parent()->parent(), "Name" );
                 log.oldPath = itemValue;
@@ -105,7 +109,7 @@ void spBulkMeshUpdate::replacePaths(NifModel *nif, NifItem *item, const QHash<QS
 }
 
 
-QList<spBulkMeshUpdate::ReplacementLog> spBulkMeshUpdate::processNif(NifModel * nif, const QHash<QString, QString> &pathMap, const QString &rootFolder)
+QList<spBulkMeshUpdate::ReplacementLog> spBulkMeshUpdate::processNif(NifModel * nif, const QHash<QString, QString> &pathMap)
 {
     QList<ReplacementLog> replacementLogs;
 
@@ -123,6 +127,8 @@ QModelIndex spBulkMeshUpdate::cast ( NifModel * nif, const QModelIndex & index )
 {
     if ( !nif )
         return index;
+
+    NifSkope* nifSkope = qobject_cast<NifSkope*>(nif->getWindow());
 
     QString executableDir = QCoreApplication::applicationDirPath();
 
@@ -167,11 +173,16 @@ QModelIndex spBulkMeshUpdate::cast ( NifModel * nif, const QModelIndex & index )
     while (it.hasNext()) {
         QString filePath = it.next();
         if (filePath.endsWith(".nif", Qt::CaseInsensitive)) {
-            // NifModel tempNif;
-            // tempNif.loadFromFile(filePath);
-            nif->loadFromFile( filePath );
-            QList<ReplacementLog> logs = processNif(nif, meshMap, rootFolder);
-            nif->saveToFile( filePath );
+            //TODO: check if file is readonly and if so, skip processing and add message alerting that file coun't be processed
+
+            nifSkope->openFile(filePath);
+
+            QCoreApplication::processEvents();
+            QList<ReplacementLog> logs = processNif(nif, meshMap);
+            QCoreApplication::processEvents();
+            //TODO: Check if there were any changes made to this .nif file, and skip save if none
+            nifSkope->publicSave();
+            QCoreApplication::processEvents();
 
             // Write to log file
             QString relativePath = rootDir.relativeFilePath(filePath);
@@ -186,6 +197,7 @@ QModelIndex spBulkMeshUpdate::cast ( NifModel * nif, const QModelIndex & index )
             filesProcessed++;
         }
     }
+    //TODO: Update summary to include count of files that could not be processed
 
     // Show summary
     QString summaryMsg = QString("Files processed: %1\nUpdates performed: %2\nUnmapped items encountered: %3").arg(filesProcessed).arg(updatesPerformed).arg(unmappedItemsEncountered);

@@ -77,7 +77,7 @@ QHash<QString, QString> spMeshUpdate::loadMapFile(const QString& filename) {
 //lookup all mesh paths in qhash and replace if found.
 void spMeshUpdate::replacePaths(NifModel *nif, NifItem *item, const QHash<QString, QString> &pathMap, const QRegularExpression &regex, updateStats &stats)
 {
-	if ( item && item->value().isString() && ( item->name().endsWith( "Path" ) ) ) {
+	if ( item && item->value().isString() && ( item->name() == "Mesh Path" ) ) {
 		QString	itemValue( item->getValueAsString() );
 
 		if (!itemValue.isEmpty()) {
