@@ -72,19 +72,23 @@ void spExtractMeshPaths::processGeometries(NifModel *nif, NifItem *item, QTextSt
         QString objectName = nif->get<QString>(item, "Name");
         NifItem* meshArrayItems = findChildByName(item, "Meshes");
 
-        for (int i = 0; i < meshArrayItems->childCount(); i++) {
-            NifItem *meshArrayItem = meshArrayItems->child(i);
-            if (!nif->get<bool>(meshArrayItem, "Has Mesh")) {
-                continue;
+        if (meshArrayItems) {
+            for (int i = 0; i < meshArrayItems->childCount(); i++) {
+                NifItem *meshArrayItem = meshArrayItems->child(i);
+                if (!nif->get<bool>(meshArrayItem, "Has Mesh")) {
+                    continue;
+                }
+                NifItem *mesh = findChildByName(meshArrayItem, "Mesh");
+                if (mesh) {
+                    QString meshPath = nif->get<QString>(mesh, "Mesh Path");
+                    //todo: escape " characters in objectName (check if needed)
+                    *output << "\"" << filePath << "\",\"" << objectName << "\",\"" << QString::number(i + 1) << "\",\"" << meshPath << "\"\r\n";
+                    output->flush(); // Flush after each write
+                }
             }
-            NifItem *mesh = nif->getItem(meshArrayItem, "Mesh");
-            QString meshPath = nif->get<QString>(mesh, "Mesh Path");
-            //todo: escape " characters in objectname
-            *output << "\"" << filePath << "\",\"" << objectName << "\",\"" << QString::number(i + 1) << "\",\"" << meshPath << "\"\r\n";
-            output->flush(); // Flush after each write
         }
         // BSGeometri are leaf structures so no need to process children
-            } else {
+    } else {
         // Process children
         for (int i = 0; i < item->childCount(); i++) {
             if (item->child(i)) {
@@ -93,8 +97,6 @@ void spExtractMeshPaths::processGeometries(NifModel *nif, NifItem *item, QTextSt
         }
     }
 }
-
-
 
 QModelIndex spExtractMeshPaths::cast(NifModel *nif, const QModelIndex &index)
 {
@@ -124,24 +126,29 @@ QModelIndex spExtractMeshPaths::cast(NifModel *nif, const QModelIndex &index)
 
     QDirIterator it(rootFolder, QDir::Files, QDirIterator::Subdirectories);
     NifModel tempNifModel(nif->getWindow());
+    QString errorLogFilePath = rootDir.filePath("unreadable_files.log");
 
     while (it.hasNext()) {
         QString filePath = it.next();
         if (filePath.endsWith(".nif", Qt::CaseInsensitive)) {
             tempNifModel.clear();
-            
+
             if (tempNifModel.loadFromFile(filePath)) {
-                for ( int b = 0; b < tempNifModel.getBlockCount(); b++ ) {
-                    NifItem *	item = tempNifModel.getBlockItem( quint32(b) );
-                    if ( item )
+                for (int b = 0; b < tempNifModel.getBlockCount(); b++) {
+                    NifItem *item = tempNifModel.getBlockItem(quint32(b));
+                    if (item) {
                         processGeometries(&tempNifModel, item, &logStream, rootDir.relativeFilePath(filePath));
+                    }
                 }
-                //processGeometries(&tempNifModel, tempNifModel.getRootItem(), &logStream, rootDir.relativeFilePath(filePath));
+            } else {
+                // Log failed nifs to a separate file for reporting to NifSkope devs
+                QFile errorLogFile(errorLogFilePath);
+                if (errorLogFile.open(QIODevice::Append | QIODevice::Text)) {
+                    QTextStream errorLogStream(&errorLogFile);
+                    errorLogStream << "Failed to read: " << filePath << "\n";
+                    errorLogFile.close();
+                }
             }
-            else {
-                //todo: log failed nifs to a separate file for reporting to NifSkope devs
-            }
-            
         }
     }
 
@@ -150,5 +157,6 @@ QModelIndex spExtractMeshPaths::cast(NifModel *nif, const QModelIndex &index)
 
     return index;
 }
+
 
 REGISTER_SPELL(spExtractMeshPaths)
