@@ -269,6 +269,7 @@ SOURCES += \
 	src/spells/mesh.cpp \
 	src/spells/meshreplace.cpp \
 	src/spells/meshreplacebulk.cpp \
+	src/spells/extractmeshpaths.cpp \
 	src/spells/misc.cpp \
 	src/spells/moppcode.cpp \
 	src/spells/morphctrl.cpp \
