@@ -1,4 +1,4 @@
-#include "../NifSkope.h"
+#include "nifskope.h"
 #include "spellbook.h"
 
 #include <QDateTime>
