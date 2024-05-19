@@ -53,6 +53,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QOpenGLFunctions>
 #include <QSettings>
 #include <QTextStream>
+#include <chrono>
 
 
 //! @file renderer.cpp Renderer and child classes implementation
@@ -283,7 +284,7 @@ bool Renderer::Shader::load( const QString & filepath )
 Renderer::Program::Program( const QString & n, QOpenGLFunctions * fn )
 	: f( fn ), name( n ), id( 0 )
 {
-	uniformLocationsSF.resize( 2048, std::pair< std::uint32_t, int >(0, -1) );
+	uniformLocationsSF.resize( 2048 );
 	id = f->glCreateProgram();
 }
 
@@ -646,17 +647,43 @@ bool Renderer::Program::uniSamplerBlank( UniformType var, int & texunit )
 	return true;
 }
 
+inline Renderer::Program::UniformLocationMapItem::UniformLocationMapItem()
+	: fmt( nullptr ), args( 0 ), l( -1 )
+{
+}
+
+inline Renderer::Program::UniformLocationMapItem::UniformLocationMapItem( const char *s, int arg1, int arg2 )
+	: fmt( s ), args( std::uint32_t( ( arg1 & 0xFFFF) | ( arg2 << 16 ) ) ), l( -1 )
+{
+}
+
+inline bool Renderer::Program::UniformLocationMapItem::operator==( const UniformLocationMapItem & r ) const
+{
+	return ( fmt == r.fmt && args == r.args );
+}
+
 int Renderer::Program::uniLocation( const char * fmt, int arg1, int arg2 )
 {
+	UniformLocationMapItem	key( fmt, arg1, arg2 );
+
+	std::uint32_t	h = 0xFFFFFFFFU;
+	hashFunctionCRC32C< std::uint64_t >( h, reinterpret_cast< std::uintptr_t >( fmt ) );
+	hashFunctionCRC32C< std::uint32_t >( h, key.args );
+
+	size_t	hashMask = uniformLocationsSF.size() - 1;
+	size_t	i = h & hashMask;
+	for ( ; uniformLocationsSF[i].fmt; i = (i + 1) & hashMask ) {
+		if ( uniformLocationsSF[i] == key )
+			return uniformLocationsSF[i].l;
+	}
+
 	char	varNameBuf[256];
 	char *	sp = varNameBuf;
 	char *	endp = sp + 254;
-	std::uint32_t	h = 0;
 	while ( sp < endp ) [[likely]] {
 		char	c = *( fmt++ );
 		if ( (unsigned char) c > (unsigned char) '%' ) [[likely]] {
 			*( sp++ ) = c;
-			hashFunctionCRC32C< unsigned char >( h, (unsigned char) c );
 			continue;
 		}
 		if ( !c )
@@ -669,7 +696,6 @@ int Renderer::Program::uniLocation( const char * fmt, int arg1, int arg2 )
 				if ( n >= 10 ) {
 					c = char( (n / 10) & 15 ) | '0';
 					*( sp++ ) = c;
-					hashFunctionCRC32C< unsigned char >( h, (unsigned char) c );
 					n = n % 10;
 				}
 				c = char( n & 15 ) | '0';
@@ -678,23 +704,13 @@ int Renderer::Program::uniLocation( const char * fmt, int arg1, int arg2 )
 			}
 		}
 		*( sp++ ) = c;
-		hashFunctionCRC32C< unsigned char >( h, (unsigned char) c );
 	}
 	*sp = '\0';
-	size_t	hashMask = uniformLocationsSF.size() - 1;
-	size_t	i = h & hashMask;
-	for ( ; uniformLocationsSF[i].first; i = (i + 1) & hashMask) {
-		if ( uniformLocationsSF[i].first == h )
-			return uniformLocationsSF[i].second;
-	}
-	int	l = f->glGetUniformLocation( id, varNameBuf );
-	uniformLocationsSF[i] = std::pair< std::uint32_t, int >(h, l);
-#if 0
-	std::fprintf(stderr, "Hash 0x%08X: uniform '%s' location %d\n", (unsigned int) h, varNameBuf, l);
-#endif
-	if ( l < 0 )
+	key.l = f->glGetUniformLocation( id, varNameBuf );
+	uniformLocationsSF[i] = key;
+	if ( key.l < 0 )
 		qWarning() << "Warning: uniform '" << varNameBuf << "' not found";
-	return l;
+	return key.l;
 }
 
 void Renderer::Program::uni1b_l( int l, bool x )
@@ -777,6 +793,22 @@ bool Renderer::Program::uniSampler_l( BSShaderLightingProperty * bsprop, int & t
 	return false;
 }
 
+static int setFlipbookParameters( const CE2Material::Material & m )
+{
+	int	flipbookColumns = std::min< int >( m.flipbookColumns, 127 );
+	int	flipbookRows = std::min< int >( m.flipbookRows, 127 );
+	int	flipbookFrames = flipbookColumns * flipbookRows;
+	if ( flipbookFrames < 2 )
+		return 0;
+	double	flipbookFrame = double( std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::steady_clock::now().time_since_epoch() ).count() );
+	// FIXME: this is limited to looping at 30 frames per second
+	flipbookFrame = flipbookFrame * 0.03 / double( flipbookFrames );
+	flipbookFrame = flipbookFrame - std::floor( flipbookFrame );
+	int	materialFlags = ( flipbookColumns << 2 ) | ( flipbookRows << 9 );
+	materialFlags = materialFlags | ( std::min< int >( int( flipbookFrame * double( flipbookFrames ) ), flipbookFrames - 1 ) << 16 );
+	return materialFlags;
+}
+
 bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 {
 	auto nif = NifModel::fromValidIndex( mesh->index() );
@@ -856,14 +888,12 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.firstLayerIndex"), mat->layeredEmissiveSettings->layer1Index );
 		prog->uni4c_l( prog->uniLocation("lm.layeredEmissivity.firstLayerTint"), mat->layeredEmissiveSettings->layer1Tint );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.firstLayerMaskIndex"), mat->layeredEmissiveSettings->layer1MaskIndex );
-		prog->uni1b_l( prog->uniLocation("lm.layeredEmissivity.secondLayerActive"), mat->layeredEmissiveSettings->layer2Active );
-		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.secondLayerIndex"), mat->layeredEmissiveSettings->layer2Index );
+		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.secondLayerIndex"), ( mat->layeredEmissiveSettings->layer2Active ? int(mat->layeredEmissiveSettings->layer2Index) : -1 ) );
 		prog->uni4c_l( prog->uniLocation("lm.layeredEmissivity.secondLayerTint"), mat->layeredEmissiveSettings->layer2Tint );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.secondLayerMaskIndex"), mat->layeredEmissiveSettings->layer2MaskIndex );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.firstBlenderIndex"), mat->layeredEmissiveSettings->blender1Index );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.firstBlenderMode"), mat->layeredEmissiveSettings->blender1Mode );
-		prog->uni1b_l( prog->uniLocation("lm.layeredEmissivity.thirdLayerActive"), mat->layeredEmissiveSettings->layer3Active );
-		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.thirdLayerIndex"), mat->layeredEmissiveSettings->layer3Index );
+		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.thirdLayerIndex"), ( mat->layeredEmissiveSettings->layer3Active ? int(mat->layeredEmissiveSettings->layer3Index) : -1 ) );
 		prog->uni4c_l( prog->uniLocation("lm.layeredEmissivity.thirdLayerTint"), mat->layeredEmissiveSettings->layer3Tint );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.thirdLayerMaskIndex"), mat->layeredEmissiveSettings->layer3MaskIndex );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.secondBlenderIndex"), mat->layeredEmissiveSettings->blender2Index );
@@ -986,10 +1016,13 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 			blender = mat->blenders[i - 1];
 		if ( layer->material ) {
 			prog->uni4f_l( prog->uniLocation("lm.layers[%d].material.color", i), layer->material->color, true );
-			prog->uni1b_l( prog->uniLocation("lm.layers[%d].material.colorModeLerp", i), bool(layer->material->colorMode) );
+			int	materialFlags = layer->material->colorModeFlags & 3;
+			if ( layer->material->flipbookFlags & 1 ) [[unlikely]]
+				materialFlags = materialFlags | setFlipbookParameters( *(layer->material) );
+			prog->uni1i_l( prog->uniLocation("lm.layers[%d].material.flags", i), materialFlags );
 		} else {
 			prog->uni4f_l( prog->uniLocation("lm.layers[%d].material.color", i), FloatVector4(1.0f) );
-			prog->uni1b_l( prog->uniLocation("lm.layers[%d].material.colorModeLerp", i), false );
+			prog->uni1i_l( prog->uniLocation("lm.layers[%d].material.flags", i), 0 );
 		}
 		if ( layer->material && layer->material->textureSet ) {
 			const CE2Material::TextureSet *	textureSet = layer->material->textureSet;

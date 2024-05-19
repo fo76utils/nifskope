@@ -120,7 +120,7 @@ void NifModel::loadSFMaterial( NifItem * parent, const void * o )
 	if ( o ) {
 		name = material->name;
 		color = material->color;
-		colorMode = material->colorMode;
+		colorMode = material->colorModeFlags;
 		isFlipbook = bool(material->flipbookFlags & 1);
 		textureSet = material->textureSet;
 	}

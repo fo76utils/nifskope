@@ -6664,6 +6664,8 @@
     <enum name="BSMaterialColorOverrideMode" storage="byte" versions="#STF#">
         <option name="Multiply" value="0" />
         <option name="Lerp" value="1" />
+        <option name="Multiply, Use Vertex Color" value="2" />
+        <option name="Lerp, Use Vertex Color" value="3" />
     </enum>
 
     <struct name="BSMaterial" abstract="true" module="BSMain" versions="#STF#">

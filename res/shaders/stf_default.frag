@@ -16,7 +16,12 @@ struct TextureSet {
 
 struct Material {
 	vec4	color;
-	bool	colorModeLerp;
+	// bit 0 = color override mode (0: multiply, 1: lerp)
+	// bit 1 = use vertex color as tint (1: yes)
+	// bits 2 to 8 = flipbook columns (0: not a flipbook)
+	// bits 9 to 15 = flipbook rows (0: not a flipbook)
+	// bits 16 to 29 = flipbook frame
+	int	flags;
 	TextureSet	textureSet;
 };
 
@@ -43,14 +48,12 @@ struct LayeredEmissivityComponent {
 	int	firstLayerIndex;
 	vec4	firstLayerTint;
 	int	firstLayerMaskIndex;
-	bool	secondLayerActive;
-	int	secondLayerIndex;
+	int	secondLayerIndex;	// -1 if the layer is not active
 	vec4	secondLayerTint;
 	int	secondLayerMaskIndex;
 	int	firstBlenderIndex;
 	int	firstBlenderMode;
-	bool	thirdLayerActive;
-	int	thirdLayerIndex;
+	int	thirdLayerIndex;	// -1 if the layer is not active
 	vec4	thirdLayerTint;
 	int	thirdLayerMaskIndex;
 	int	secondBlenderIndex;
@@ -356,16 +359,19 @@ vec2 parallaxMapping(int n, vec3 V, vec2 offset, float parallaxScale, float maxL
 	return mix( currentTextureCoords, prevTCoords, weight );
 }
 
-void getLayer(int n, inout vec4 baseMap, inout vec3 normalMap, inout vec3 pbrMap)
+void getLayer(int n, vec2 offset, inout vec4 baseMap, inout vec3 normalMap, inout vec3 pbrMap)
 {
-	vec2	offset = getTexCoord(lm.layers[n].uvStream);
 	// _height.dds
 	if ( lm.layers[n].material.textureSet.textures[6] >= 1 )
 		offset = parallaxMapping( lm.layers[n].material.textureSet.textures[6], normalize( ViewDir_norm * btnMatrix_norm ), offset, parallaxOcclusionSettings.y, parallaxOcclusionSettings.x );
 	// _color.dds
 	if ( lm.layers[n].material.textureSet.textures[0] != 0 )
 		baseMap.rgb = getLayerTexture(n, 0, offset).rgb;
-	baseMap.rgb *= lm.layers[n].material.color.rgb;
+	if ( n == 0 || lm.layers[n].material.textureSet.textures[0] != 0 ) {
+		baseMap.rgb *= lm.layers[n].material.color.rgb;
+		if ( (lm.layers[n].material.flags & 2) != 0 )
+			baseMap.rgb *= C.rgb;
+	}
 	// _normal.dds
 	if ( lm.layers[n].material.textureSet.textures[1] != 0 ) {
 		normalMap.rg = getLayerTexture(n, 1, offset).rg;
@@ -394,23 +400,36 @@ void main(void)
 	vec3	normal = vec3(0.0, 0.0, 1.0);
 	vec3	pbrMap = vec3(0.75, 0.0, 1.0);	// roughness, metalness, AO
 	float	alpha = 1.0;
+	vec3	emissive = vec3(0.0);
 
-	if ( lm.layersEnabled[0] ) {
-		if ( lm.decalSettings.isDecal && lm.layers[0].material.textureSet.textures[0] == 0 )
-			discard;
-		getLayer( 0, baseMap, normal, pbrMap );
-	}
-	for (int i = 1; i < 4; i++) {
-		if ( lm.layersEnabled[i] ) {
+	for (int i = 0; i < 4; i++) {
+		if ( !lm.layersEnabled[i] )
+			break;
+
+		vec2	offset = getTexCoord( lm.layers[i].uvStream );
+		if ( (lm.layers[i].material.flags & 0xFFFC) != 0 ) {
+			// flipbook
+			int	w = ( lm.layers[i].material.flags >> 2 ) & 0x7F;
+			int	h = ( lm.layers[i].material.flags >> 9 ) & 0x7F;
+			int	n = lm.layers[i].material.flags >> 16;
+			offset.x = ( fract( offset.x ) + float( n % w ) ) / float( w );
+			offset.y = ( fract( offset.y ) + float( n / w ) ) / float( h );
+		}
+
+		if ( i == 0 ) {
+			if ( lm.decalSettings.isDecal && lm.layers[0].material.textureSet.textures[0] == 0 )
+				discard;
+			getLayer( 0, offset, baseMap, normal, pbrMap );
+		} else {
 			vec4	layerBaseMap = baseMap;
 			vec3	layerNormal = normal;
 			vec3	layerPBRMap = pbrMap;
-			getLayer(i, layerBaseMap, layerNormal, layerPBRMap);
+			getLayer( i, offset, layerBaseMap, layerNormal, layerPBRMap );
+
 			float	layerMask = getBlenderMask(i - 1);
 			switch ( lm.blenders[i - 1].blendMode) {
 				case 0:		// Linear
 					baseMap.rgb = mix(baseMap.rgb, layerBaseMap.rgb, layerMask);
-					baseMap.a *= layerBaseMap.a;
 					normal = normalize(mix(normal, layerNormal, layerMask));
 					pbrMap = mix(pbrMap, layerPBRMap, layerMask);
 					break;
@@ -419,6 +438,36 @@ void main(void)
 				case 2:		// PositionContrast (TODO)
 					break;
 			}
+		}
+
+		if ( lm.layers[i].material.textureSet.textures[2] != 0 ) {
+			// _opacity.dds
+			if ( lm.isEffect && lm.hasOpacityComponent && i == lm.opacity.firstLayerIndex ) {
+				baseMap.a *= getLayerTexture( i, 2, offset ).r;
+			} else if ( lm.alphaSettings.hasOpacity && i == lm.alphaSettings.opacitySourceLayer ) {
+				if ( (lm.layers[i].material.flags & 0xFFFC) == 0 )
+					baseMap.a *= getLayerTexture( i, 2, getTexCoord(lm.alphaSettings.opacityUVstream) ).r;
+				else
+					baseMap.a *= getLayerTexture( i, 2, offset ).r;
+				alpha = lm.layers[i].material.color.a;
+			}
+		}
+
+		if ( lm.layers[i].material.textureSet.textures[7] != 0 ) {
+			// _emissive.dds
+			// TODO: layered emissivity masks
+			vec4	tmp = vec4(0.0);
+			if ( lm.emissiveSettings.isEnabled && i == lm.emissiveSettings.emissiveSourceLayer )
+				tmp = lm.emissiveSettings.emissiveTint;
+			else if ( lm.layeredEmissivity.isEnabled && i == lm.layeredEmissivity.firstLayerIndex )
+				tmp = lm.layeredEmissivity.firstLayerTint;
+			else if ( lm.layeredEmissivity.isEnabled && i == lm.layeredEmissivity.secondLayerIndex )
+				tmp = lm.layeredEmissivity.secondLayerTint;
+			else if ( lm.layeredEmissivity.isEnabled && i == lm.layeredEmissivity.thirdLayerIndex )
+				tmp = lm.layeredEmissivity.thirdLayerTint;
+			else
+				continue;
+			emissive += getLayerTexture( i, 7, offset ).rgb * tmp.rgb * tmp.a;
 		}
 	}
 
@@ -439,21 +488,10 @@ void main(void)
 	vec3	reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(R, 0.0)));
 	vec3	normalWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(normal, 0.0)));
 
-	if ( lm.alphaSettings.hasOpacity && lm.alphaSettings.opacitySourceLayer < 4 && lm.layersEnabled[lm.alphaSettings.opacitySourceLayer] ) {
-		int	n = lm.alphaSettings.opacitySourceLayer;
-		if ( lm.alphaSettings.useVertexColor )
-			baseMap.a = C[lm.alphaSettings.vertexColorChannel];
-		if ( lm.layers[n].material.textureSet.textures[2] != 0 )
-			baseMap.a *= getLayerTexture(n, 2, getTexCoord(lm.alphaSettings.opacityUVstream)).r;
-		alpha = lm.layers[n].material.color.a;
-	}
+	if ( lm.alphaSettings.hasOpacity && lm.alphaSettings.useVertexColor )
+		alpha *= C[lm.alphaSettings.vertexColorChannel];
 
 	if ( lm.isEffect ) {
-		if ( lm.hasOpacityComponent ) {
-			int	n = lm.opacity.firstLayerIndex;
-			if ( n < 4 && lm.layersEnabled[n] && lm.layers[n].material.textureSet.textures[2] != 0 )
-				baseMap.a = getLayerTexture(n, 2, getTexCoord(lm.layers[n].uvStream)).r;
-		}
 		if ( lm.effectSettings.useFallOff || lm.effectSettings.useRGBFallOff ) {
 			float	startAngle = cos(radians(lm.effectSettings.falloffStartAngle));
 			float	stopAngle = cos(radians(lm.effectSettings.falloffStopAngle));
@@ -481,17 +519,11 @@ void main(void)
 	vec4	color;
 	vec3	albedo = baseMap.rgb;
 
-	// TODO: layered emissivity
-	vec3	emissive = vec3(0.0);
+	// emissive intensity (FIXME: this is probably incorrect)
 	if ( lm.emissiveSettings.isEnabled ) {
-		int	n = lm.emissiveSettings.emissiveSourceLayer;
-		if ( n <= 3 ) {
-			if ( lm.layersEnabled[n] && lm.layers[n].material.textureSet.textures[7] != 0 ) {
-				emissive = getLayerTexture(n, 7, getTexCoord(lm.layers[n].uvStream)).rgb;
-				emissive *= lm.emissiveSettings.emissiveTint.rgb;
-				emissive *= lm.emissiveSettings.emissiveTint.a * exp2(lm.emissiveSettings.exposureOffset * 0.5);
-			}
-		}
+		emissive *= exp2( lm.emissiveSettings.exposureOffset * 0.5 );
+	} else if ( lm.layeredEmissivity.isEnabled ) {
+		emissive *= exp2( lm.layeredEmissivity.exposureOffset * 0.5 );
 	}
 
 	vec3	f0 = mix(vec3(0.04), albedo, pbrMap.g);
