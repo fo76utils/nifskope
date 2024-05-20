@@ -415,7 +415,7 @@ void main(void)
 			int	w = ( lm.layers[i].material.flags >> 2 ) & 0x7F;
 			int	h = ( lm.layers[i].material.flags >> 9 ) & 0x7F;
 			int	n = lm.layers[i].material.flags >> 16;
-			offset = ( fract( offset ) + vec2( float(n % w), float(n / w) ) ) / vec2( float(w), float(h) );
+			offset = ( offset + vec2( float(n % w), float(n / w) ) ) / vec2( float(w), float(h) );
 		}
 
 		if ( i == 0 ) {
