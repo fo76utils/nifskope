@@ -350,15 +350,19 @@ public:
 
 		int uniformLocations[NUM_UNIFORM_TYPES];
 private:
-		struct	UniformLocationMapItem {
+		struct UniformLocationMapItem {
 			const char *	fmt;
 			std::uint32_t	args;
 			int	l;
 			inline UniformLocationMapItem();
 			inline UniformLocationMapItem( const char *s, int arg1, int arg2 );
 			inline bool operator==( const UniformLocationMapItem & r ) const;
+			inline std::uint32_t hashFunction() const;
 		};
-		std::vector< UniformLocationMapItem >	uniformLocationsSF;
+		UniformLocationMapItem *	uniLocationsMap;
+		unsigned int	uniLocationsMapMask;
+		unsigned int	uniLocationsMapSize;
+		int storeUniformLocation( const UniformLocationMapItem & o, size_t i );
 public:
 		void setUniformLocations();
 
@@ -373,8 +377,8 @@ public:
 							int & texunit, const QString & alternate, uint clamp, const QString & forced = {} );
 		bool uniSamplerBlank( UniformType var, int & texunit );
 
-		// fmt must be a string constant,
-		// only supports at most two %d format integers in the range 0 to 99
+		// fmt must be a string literal, with at most two %d format
+		// integer arguments in the range 0 to 99
 		int uniLocation( const char * fmt, int arg1 = 0, int arg2 = 0 );
 		void uni1b_l( int l, bool x );
 		void uni1i_l( int l, int x );

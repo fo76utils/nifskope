@@ -284,7 +284,9 @@ bool Renderer::Shader::load( const QString & filepath )
 Renderer::Program::Program( const QString & n, QOpenGLFunctions * fn )
 	: f( fn ), name( n ), id( 0 )
 {
-	uniformLocationsSF.resize( 2048 );
+	uniLocationsMap = new UniformLocationMapItem[512];
+	uniLocationsMapMask = 511;
+	uniLocationsMapSize = 0;
 	id = f->glCreateProgram();
 }
 
@@ -292,6 +294,7 @@ Renderer::Program::~Program()
 {
 	if ( id )
 		f->glDeleteShader( id );
+	delete[] uniLocationsMap;
 }
 
 bool Renderer::Program::load( const QString & filepath, Renderer * renderer )
@@ -662,20 +665,20 @@ inline bool Renderer::Program::UniformLocationMapItem::operator==( const Uniform
 	return ( fmt == r.fmt && args == r.args );
 }
 
-int Renderer::Program::uniLocation( const char * fmt, int arg1, int arg2 )
+inline std::uint32_t Renderer::Program::UniformLocationMapItem::hashFunction() const
 {
-	UniformLocationMapItem	key( fmt, arg1, arg2 );
-
 	std::uint32_t	h = 0xFFFFFFFFU;
+	// note: this requires fmt to point to a string literal
 	hashFunctionCRC32C< std::uint64_t >( h, reinterpret_cast< std::uintptr_t >( fmt ) );
-	hashFunctionCRC32C< std::uint32_t >( h, key.args );
+	hashFunctionCRC32C< std::uint32_t >( h, args );
+	return h;
+}
 
-	size_t	hashMask = uniformLocationsSF.size() - 1;
-	size_t	i = h & hashMask;
-	for ( ; uniformLocationsSF[i].fmt; i = (i + 1) & hashMask ) {
-		if ( uniformLocationsSF[i] == key )
-			return uniformLocationsSF[i].l;
-	}
+int Renderer::Program::storeUniformLocation( const UniformLocationMapItem & o, size_t i )
+{
+	const char *	fmt = o.fmt;
+	int	arg1 = int( o.args & 0xFFFF );
+	int	arg2 = int( o.args >> 16 );
 
 	char	varNameBuf[256];
 	char *	sp = varNameBuf;
@@ -706,11 +709,42 @@ int Renderer::Program::uniLocation( const char * fmt, int arg1, int arg2 )
 		*( sp++ ) = c;
 	}
 	*sp = '\0';
-	key.l = f->glGetUniformLocation( id, varNameBuf );
-	uniformLocationsSF[i] = key;
-	if ( key.l < 0 )
+	int	l = f->glGetUniformLocation( id, varNameBuf );
+	uniLocationsMap[i] = o;
+	uniLocationsMap[i].l = l;
+	if ( l < 0 )
 		qWarning() << "Warning: uniform '" << varNameBuf << "' not found";
-	return key.l;
+
+	uniLocationsMapSize++;
+	if ( ( uniLocationsMapSize * size_t(3) ) > ( uniLocationsMapMask * size_t(2) ) ) {
+		unsigned int	m = ( uniLocationsMapMask << 1 ) | 0xFFU;
+		UniformLocationMapItem *	tmpBuf = new UniformLocationMapItem[m + 1U];
+		for ( size_t j = 0; j <= uniLocationsMapMask; j++ ) {
+			size_t	k = uniLocationsMap[j].hashFunction() & m;
+			while ( tmpBuf[k].fmt )
+				k = ( k + 1 ) & m;
+			tmpBuf[k] = uniLocationsMap[j];
+		}
+		delete[] uniLocationsMap;
+		uniLocationsMap = tmpBuf;
+		uniLocationsMapMask = m;
+	}
+
+	return l;
+}
+
+int Renderer::Program::uniLocation( const char * fmt, int arg1, int arg2 )
+{
+	UniformLocationMapItem	key( fmt, arg1, arg2 );
+
+	size_t	hashMask = uniLocationsMapMask;
+	size_t	i = key.hashFunction() & hashMask;
+	for ( ; uniLocationsMap[i].fmt; i = (i + 1) & hashMask ) {
+		if ( uniLocationsMap[i] == key )
+			return uniLocationsMap[i].l;
+	}
+
+	return storeUniformLocation( key, i );
 }
 
 void Renderer::Program::uni1b_l( int l, bool x )
@@ -800,9 +834,9 @@ static int setFlipbookParameters( const CE2Material::Material & m )
 	int	flipbookFrames = flipbookColumns * flipbookRows;
 	if ( flipbookFrames < 2 )
 		return 0;
+	float	flipbookFPMS = std::min( std::max( m.flipbookFPS, 1.0f ), 100.0f ) * 0.001f;
 	double	flipbookFrame = double( std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::steady_clock::now().time_since_epoch() ).count() );
-	// FIXME: this is limited to looping at 30 frames per second
-	flipbookFrame = flipbookFrame * 0.03 / double( flipbookFrames );
+	flipbookFrame = flipbookFrame * flipbookFPMS / double( flipbookFrames );
 	flipbookFrame = flipbookFrame - std::floor( flipbookFrame );
 	int	materialFlags = ( flipbookColumns << 2 ) | ( flipbookRows << 9 );
 	materialFlags = materialFlags | ( std::min< int >( int( flipbookFrame * double( flipbookFrames ) ), flipbookFrames - 1 ) << 16 );
