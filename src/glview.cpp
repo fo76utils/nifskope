@@ -1460,6 +1460,9 @@ void GLView::advanceGears()
 		rotate( mouseRot[0], mouseRot[1], mouseRot[2] );
 		mouseRot = Vector3();
 	}
+
+	// update display without movement
+	if ( kbd[ Qt::Key_M ] ) update();
 }
 
 
@@ -1774,6 +1777,7 @@ void GLView::keyPressEvent( QKeyEvent * event )
 	//case Qt::Key_F:
 	case Qt::Key_Q:
 	case Qt::Key_E:
+	case Qt::Key_M:
 	case Qt::Key_Space:
 		kbd[event->key()] = true;
 		break;
@@ -1808,6 +1812,7 @@ void GLView::keyReleaseEvent( QKeyEvent * event )
 	//case Qt::Key_F:
 	case Qt::Key_Q:
 	case Qt::Key_E:
+	case Qt::Key_M:
 	case Qt::Key_Space:
 		kbd[event->key()] = false;
 		break;
