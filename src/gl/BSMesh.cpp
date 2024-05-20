@@ -17,11 +17,16 @@ BSMesh::BSMesh(Scene* s, const QModelIndex& iBlock) : Shape(s, iBlock)
 
 void BSMesh::transformShapes()
 {
+	// TODO: implement this
+#if 0
+	if ( isHidden() )
+		return;
+#endif
 }
 
 void BSMesh::drawShapes( NodeList * secondPass )
 {
-	if ( !scene->hasOption(Scene::ShowMarkers) && name.contains("EditorMarker") )
+	if ( isHidden() || ( !scene->hasOption(Scene::ShowMarkers) && name.contains("EditorMarker") ) )
 		return;
 
 	// Draw translucent meshes in second pass
