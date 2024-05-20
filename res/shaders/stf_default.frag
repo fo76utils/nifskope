@@ -197,6 +197,7 @@ struct TerrainSettingsComponent {
 };
 
 struct LayeredMaterial {
+	// shader model IDs are defined in lib/libfo76utils/src/mat_dump.cpp
 	int	shaderModel;
 	bool	isEffect;
 	bool	isTwoSided;
@@ -395,6 +396,8 @@ void main(void)
 		fragColor = solidColor;
 		return;
 	}
+	if ( lm.shaderModel == 45 )	// "Invisible"
+		discard;
 
 	vec4	baseMap = vec4(1.0);
 	vec3	normal = vec3(0.0, 0.0, 1.0);
@@ -412,8 +415,7 @@ void main(void)
 			int	w = ( lm.layers[i].material.flags >> 2 ) & 0x7F;
 			int	h = ( lm.layers[i].material.flags >> 9 ) & 0x7F;
 			int	n = lm.layers[i].material.flags >> 16;
-			offset.x = ( fract( offset.x ) + float( n % w ) ) / float( w );
-			offset.y = ( fract( offset.y ) + float( n / w ) ) / float( h );
+			offset = ( fract( offset ) + vec2( float(n % w), float(n / w) ) ) / vec2( float(w), float(h) );
 		}
 
 		if ( i == 0 ) {
