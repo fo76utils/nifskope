@@ -1,11 +1,15 @@
  == CHANGELOG ==
 
+#### NifSkope-2.0.dev9-20240520
+
 * The screenshot dialog now saves the image format and path selected as settings.
-* Added limited support for rendering Starfield flipbooks and layered emissivity, and for the use vertex color as tint material setting.
+* Added limited support for rendering Starfield flipbooks and layered emissivity, and for the use vertex color as tint material setting. Flipbooks are currently animated only during movement, or while the M key is pressed.
 * Fixed bugs in rendering ordered nodes.
 * Fixed the axes not being correctly drawn depending on the OpenGL settings from the last shape.
 * Fixes in the lighting only and textures disabled rendering modes.
+* Fixed the hidden flag being ignored on Starfield shapes.
 * Optimizations in the archive manager.
+* Improvements and fixes to Starfield material support. **Note:** loading .mat files from archives is currently disabled for materials that also exist in CDB format. Base game materials can only be replaced with loose .mat files.
 
 #### NifSkope-2.0.dev9-20240505
 
