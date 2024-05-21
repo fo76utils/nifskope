@@ -1,6 +1,6 @@
  == CHANGELOG ==
 
-#### NifSkope-2.0.dev9-20240520
+#### NifSkope-2.0.dev9-20240521
 
 * The screenshot dialog now saves the image format and path selected as settings.
 * Added limited support for rendering Starfield flipbooks and layered emissivity, and for the use vertex color as tint material setting. Flipbooks are currently animated only during movement, or while the M key is pressed.
