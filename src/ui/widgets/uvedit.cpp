@@ -806,7 +806,7 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 		if ( nif->getBSVersion() < 170 ) {
 			// Fallout 76
 			for ( int texSlot = 0; texSlot <= 9; texSlot++ ) {
-				while ( texSlot >= texfiles.size() )
+				if ( texSlot >= texfiles.size() )
 					texfiles.append( QString() );
 				texfiles[texSlot] = TexCache::find( nif->get<QString>( iTexPropData, QString( "Texture %1" ).arg( texSlot ) ), game );
 			}
@@ -853,7 +853,7 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 			QModelIndex iTextures = nif->getIndex( iTexSource, "Textures" );
 			if ( iTextures.isValid() ) {
 				for ( int texSlot = 0; texSlot <= 9; texSlot++ ) {
-					while ( texSlot >= texfiles.size() )
+					if ( texSlot >= texfiles.size() )
 						texfiles.append( QString() );
 					texfiles[texSlot] = TexCache::find( nif->get<QString>( QModelIndex_child( iTextures, texSlot ) ), game );
 				}

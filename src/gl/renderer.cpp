@@ -1205,7 +1205,7 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 		if ( isEffect ) {
 			glEnable( GL_BLEND );
 			if ( mat->effectSettings->flags & (CE2Material::EffectFlag_EmissiveOnly | CE2Material::EffectFlag_EmissiveOnlyAuto) )
-				glBlendFunc( GL_ONE, GL_ONE );
+				glBlendFunc( GL_SRC_ALPHA, GL_ONE );
 			else
 				glBlendFunc( blendMapS[mat->effectSettings->blendMode], blendMapD[mat->effectSettings->blendMode] );
 		} else if ( (mat->flags & CE2Material::Flag_IsDecal) && (mat->flags & CE2Material::Flag_AlphaBlending) ) {

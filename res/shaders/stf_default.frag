@@ -400,6 +400,8 @@ void main(void)
 		discard;
 
 	vec4	baseMap = vec4(1.0);
+	if ( lm.isEffect && ( lm.effectSettings.emissiveOnlyEffect || lm.effectSettings.emissiveOnlyAutomaticallyApplied ) )
+		baseMap.rgb = vec3(0.0);
 	vec3	normal = vec3(0.0, 0.0, 1.0);
 	vec3	pbrMap = vec3(0.75, 0.0, 1.0);	// roughness, metalness, AO
 	float	alpha = 1.0;
@@ -444,8 +446,9 @@ void main(void)
 
 		if ( lm.layers[i].material.textureSet.textures[2] != 0 ) {
 			// _opacity.dds
-			if ( lm.isEffect && lm.hasOpacityComponent && i == lm.opacity.firstLayerIndex ) {
-				baseMap.a *= getLayerTexture( i, 2, offset ).r;
+			if ( lm.isEffect ) {
+				if ( i == (lm.hasOpacityComponent ? lm.opacity.firstLayerIndex : 0) )
+					baseMap.a *= getLayerTexture( i, 2, offset ).r;
 			} else if ( lm.alphaSettings.hasOpacity && i == lm.alphaSettings.opacitySourceLayer ) {
 				if ( (lm.layers[i].material.flags & 0xFFFC) == 0 )
 					baseMap.a *= getLayerTexture( i, 2, getTexCoord(lm.alphaSettings.opacityUVstream) ).r;
