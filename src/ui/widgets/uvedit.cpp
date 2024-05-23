@@ -827,17 +827,16 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 				if ( !( matData->layers[i] && matData->layers[i]->material && matData->layers[i]->material->textureSet ) )
 					continue;
 				const CE2Material::TextureSet *	txtSet = matData->layers[i]->material->textureSet;
-				for ( int texSlot = 0; texSlot < CE2Material::TextureSet::maxTexturePaths; texSlot++ ) {
-					if ( !( txtSet->texturePathMask & ( 1U << (unsigned int) texSlot ) ) )
-						continue;
-					while ( texSlot >= texfiles.size() )
+				std::uint32_t	texPathMask = txtSet->texturePathMask;
+				if ( !texPathMask )
+					continue;
+				for ( int texSlot = 0; texPathMask && texSlot < CE2Material::TextureSet::maxTexturePaths; texSlot++, texPathMask = texPathMask >> 1 ) {
+					if ( texSlot >= texfiles.size() )
 						texfiles.append( QString() );
-					if ( !txtSet->texturePaths[texSlot]->empty() ) {
+					if ( ( texPathMask & 1 ) && !txtSet->texturePaths[texSlot]->empty() )
 						texfiles[texSlot] = TexCache::find( QString::fromStdString( *(txtSet->texturePaths[texSlot]) ), game );
-						if ( !texfiles[texSlot].isEmpty() )
-							return;
-					}
 				}
+				break;
 			}
 		}
 		return;
