@@ -1,5 +1,9 @@
  == CHANGELOG ==
 
+* Added limited (read only) Starfield support to the UV editor.
+* Implemented texture slot selection in the UV editor for Fallout 3 and newer games.
+* Fixed textures not being rendered in the UV editor.
+
 #### NifSkope-2.0.dev9-20240521
 
 * The screenshot dialog now saves the image format and path selected as settings.
