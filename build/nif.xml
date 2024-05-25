@@ -6878,6 +6878,32 @@
         <field name="Min Offset Emittance" type="float" />
     </struct>
 
+    <struct name="BSLayeredEmissivityComponent" abstract="true" module="BSMain" versions="#STF#">
+        <field name="First Layer Index" type="byte" />
+        <field name="First Layer Tint" type="Color4" />
+        <field name="First Layer Mask Source" type="BSMaskSourceBlender" />
+        <field name="Second Layer Active" type="bool" />
+        <field name="Second Layer Index" type="byte" cond="Second Layer Active" />
+        <field name="Second Layer Tint" type="Color4" cond="Second Layer Active" />
+        <field name="Second Layer Mask Source" type="BSMaskSourceBlender" cond="Second Layer Active" />
+        <field name="First Blender Index" type="byte" cond="Second Layer Active" />
+        <field name="First Blender Mode" type="BSOpacityBlenderMode" cond="Second Layer Active" />
+        <field name="Third Layer Active" type="bool" />
+        <field name="Third Layer Index" type="byte" cond="Third Layer Active" />
+        <field name="Third Layer Tint" type="Color4" cond="Third Layer Active" />
+        <field name="Third Layer Mask Source" type="BSMaskSourceBlender" cond="Third Layer Active" />
+        <field name="Second Blender Index" type="byte" cond="Third Layer Active" />
+        <field name="Second Blender Mode" type="BSOpacityBlenderMode" cond="Third Layer Active" />
+        <field name="Emissive Clip Threshold" type="float" />
+        <field name="Adaptive Emittance" type="bool" />
+        <field name="Luminous Emittance" type="float" />
+        <field name="Exposure Offset" type="float" />
+        <field name="Enable Adaptive Limits" type="bool" />
+        <field name="Max Offset Emittance" type="float" />
+        <field name="Min Offset Emittance" type="float" />
+        <field name="Ignores Fog" type="bool" />
+    </struct>
+
     <struct name="BSTranslucencySettingsComponent" abstract="true" module="BSMain" versions="#STF#">
         <field name="Is Thin" type="bool" />
         <field name="Flip Back Face Normals In View Space" type="bool" />
@@ -6945,6 +6971,8 @@
         <field name="Water Settings" type="BSWaterSettingsComponent" cond="Is Water" />
         <field name="Is Emissive" type="bool" />
         <field name="Emissive Settings" type="BSEmissiveSettingsComponent" cond="Is Emissive" />
+        <field name="Layered Emissivity" type="bool" />
+        <field name="Layered Emissivity Settings" type="BSLayeredEmissivityComponent" cond="Layered Emissivity" />
         <field name="Is Translucent" type="bool" />
         <field name="Translucency Settings" type="BSTranslucencySettingsComponent" cond="Is Translucent" />
     </struct>

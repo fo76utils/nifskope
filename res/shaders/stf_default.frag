@@ -257,8 +257,8 @@ float emissiveIntensity( bool useAdaptive, bool adaptiveLimits, vec4 luminancePa
 	float	l = luminanceParams[0];	// luminousEmittance
 
 	if ( useAdaptive ) {
-		l = length( A.rgb ) * 46.188 + length( D.rgb ) * 184.752;
-		l = l * exp2( luminanceParams[1] );	// exposureOffset
+		l = dot( A.rgb * 80.0 + D.rgb * 320.0, vec3(0.2126, 0.7152, 0.0722) );
+		l = l * exp2( luminanceParams[1] * 0.5 );	// exposureOffset
 		if ( adaptiveLimits )	// maxOffsetEmittance, minOffsetEmittance
 			l = clamp( l, luminanceParams[3], luminanceParams[2] );
 	}

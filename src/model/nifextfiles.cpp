@@ -430,6 +430,40 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, const void *matPtr, i
 		setValue<float>( o, "Max Offset Emittance", sp->maxOffset );
 		setValue<float>( o, "Min Offset Emittance", sp->minOffset );
 	}
+	bool	layeredEmissivity = false;
+	if ( material )
+		layeredEmissivity = bool( material->flags & CE2Material::Flag_LayeredEmissivity );
+	setValue<bool>( m, "Layered Emissivity", layeredEmissivity );
+	if ( layeredEmissivity && ( o = getItem( itemToIndex(m), "Layered Emissivity Settings" ) ) != nullptr ) {
+		const CE2Material::LayeredEmissiveSettings *	sp = material->layeredEmissiveSettings;
+		setValue<quint8>( o, "First Layer Index", sp->layer1Index );
+		setValue<Color4>( o, "First Layer Tint", ByteColor4( sp->layer1Tint ) );
+		setValue<quint8>( o, "First Layer Mask Source", sp->layer1MaskIndex );
+		setValue<bool>( o, "Second Layer Active", sp->layer2Active );
+		if ( sp->layer2Active ) {
+			setValue<quint8>( o, "Second Layer Index", sp->layer2Index );
+			setValue<Color4>( o, "Second Layer Tint", ByteColor4( sp->layer2Tint ) );
+			setValue<quint8>( o, "Second Layer Mask Source", sp->layer2MaskIndex );
+			setValue<quint8>( o, "First Blender Index", sp->blender1Index );
+			setValue<quint8>( o, "First Blender Mode", sp->blender1Mode );
+		}
+		setValue<bool>( o, "Third Layer Active", sp->layer3Active );
+		if ( sp->layer3Active ) {
+			setValue<quint8>( o, "Third Layer Index", sp->layer3Index );
+			setValue<Color4>( o, "Third Layer Tint", ByteColor4( sp->layer3Tint ) );
+			setValue<quint8>( o, "Third Layer Mask Source", sp->layer3MaskIndex );
+			setValue<quint8>( o, "Second Blender Index", sp->blender2Index );
+			setValue<quint8>( o, "Second Blender Mode", sp->blender2Mode );
+		}
+		setValue<float>( o, "Emissive Clip Threshold", sp->clipThreshold );
+		setValue<bool>( o, "Adaptive Emittance", sp->adaptiveEmittance );
+		setValue<float>( o, "Luminous Emittance", sp->luminousEmittance );
+		setValue<float>( o, "Exposure Offset", sp->exposureOffset );
+		setValue<bool>( o, "Enable Adaptive Limits", sp->enableAdaptiveLimits );
+		setValue<float>( o, "Max Offset Emittance", sp->maxOffset );
+		setValue<float>( o, "Min Offset Emittance", sp->minOffset );
+		setValue<bool>( o, "Ignores Fog", sp->ignoresFog );
+	}
 	bool	isTranslucent = false;
 	if ( material )
 		isTranslucent = bool( material->flags & CE2Material::Flag_Translucency );
