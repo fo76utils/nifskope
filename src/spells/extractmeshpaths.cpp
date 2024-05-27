@@ -158,5 +158,5 @@ QModelIndex spExtractMeshPaths::cast(NifModel *nif, const QModelIndex &index)
     return index;
 }
 
-
-REGISTER_SPELL(spExtractMeshPaths)
+//Disabling to avoid confusion
+//REGISTER_SPELL(spExtractMeshPaths)
