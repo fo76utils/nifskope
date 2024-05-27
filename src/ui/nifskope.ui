@@ -1044,7 +1044,10 @@ background: qradialgradient(spread:pad, cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0
   </action>
   <action name="aCloseArchives">
    <property name="text">
-    <string>Close Archives</string>
+    <string>Close Resources</string>
+   </property>
+   <property name="toolTip">
+    <string>Close Resource Archives and Clear Cache of Resource File List</string>
    </property>
    <property name="shortcut">
     <string>Alt+Q</string>

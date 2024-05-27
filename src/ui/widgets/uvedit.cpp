@@ -41,6 +41,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ui/settingsdialog.h"
 
 #include "lib/nvtristripwrapper.h"
+#include "io/MeshFile.h"
 
 #include <QUndoStack> // QUndoCommand Inherited
 #include <QActionGroup>
@@ -226,8 +227,8 @@ void UVWidget::initializeGL()
 
 	qglClearColor( cfg.background );
 
-	if ( !texfile.isEmpty() )
-		bindTexture( texfile, game );
+	if ( currentTexSlot < texfiles.size() && !texfiles[currentTexSlot].isEmpty() )
+		bindTexture( texfiles[currentTexSlot], game );
 	else
 		bindTexture( texsource, game );
 
@@ -282,8 +283,8 @@ void UVWidget::paintGL()
 	else
 		glDisable( GL_BLEND );
 
-	if ( !texfile.isEmpty() )
-		bindTexture( texfile, game );
+	if ( currentTexSlot < texfiles.size() && !texfiles[currentTexSlot].isEmpty() )
+		bindTexture( texfiles[currentTexSlot], game );
 	else
 		bindTexture( texsource, game );
 
@@ -787,6 +788,88 @@ void UVWidget::keyReleaseEvent( QKeyEvent * e )
 	}
 }
 
+void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
+{
+	if ( !iTexProp.isValid() )
+		return;
+
+	const QString &	blockType = nif->getItem( iTexProp )->name();
+
+	if ( !( blockType == "BSLightingShaderProperty" || blockType == "BSEffectShaderProperty" ) )
+		return;
+
+	QModelIndex	iTexPropData;
+	if ( nif->getBSVersion() >= 151 )
+		iTexPropData = nif->getIndex( iTexProp, "Material" );
+	if ( iTexPropData.isValid() ) {
+		// using external material file
+		if ( nif->getBSVersion() < 170 ) {
+			// Fallout 76
+			for ( int texSlot = 0; texSlot <= 9; texSlot++ ) {
+				if ( texSlot >= texfiles.size() )
+					texfiles.append( QString() );
+				texfiles[texSlot] = TexCache::find( nif->get<QString>( iTexPropData, QString( "Texture %1" ).arg( texSlot ) ), game );
+			}
+		} else {
+			// Starfield
+			std::string	matPath = Game::GameManager::get_full_path( nif->get<QString>( iTexProp, "Name" ), "materials/", ".mat" );
+			if ( matPath.empty() )
+				return;
+			CE2MaterialDB *	sfMaterials = Game::GameManager::materials( game );
+			if ( !sfMaterials )
+				return;
+			const CE2Material *	matData = sfMaterials->loadMaterial( matPath );
+			if ( !matData )
+				return;
+			for ( size_t i = 0; i < CE2Material::maxLayers; i++ ) {
+				if ( !( matData->layerMask & ( 1U << i ) ) )
+					continue;
+				if ( !( matData->layers[i] && matData->layers[i]->material && matData->layers[i]->material->textureSet ) )
+					continue;
+				const CE2Material::TextureSet *	txtSet = matData->layers[i]->material->textureSet;
+				std::uint32_t	texPathMask = txtSet->texturePathMask;
+				if ( !texPathMask )
+					continue;
+				for ( int texSlot = 0; texPathMask && texSlot < CE2Material::TextureSet::maxTexturePaths; texSlot++, texPathMask = texPathMask >> 1 ) {
+					if ( texSlot >= texfiles.size() )
+						texfiles.append( QString() );
+					if ( ( texPathMask & 1 ) && !txtSet->texturePaths[texSlot]->empty() )
+						texfiles[texSlot] = TexCache::find( QString::fromStdString( *(txtSet->texturePaths[texSlot]) ), game );
+				}
+				break;
+			}
+		}
+		return;
+	}
+
+	iTexPropData = nif->getIndex( iTexProp, "Shader Property Data" );
+	if ( !iTexPropData.isValid() )
+		return;
+	if ( blockType == "BSLightingShaderProperty" ) {
+		QModelIndex iTexSource = nif->getBlockIndex( nif->getLink( iTexPropData, "Texture Set" ) );
+
+		if ( iTexSource.isValid() ) {
+			QModelIndex iTextures = nif->getIndex( iTexSource, "Textures" );
+			if ( iTextures.isValid() ) {
+				for ( int texSlot = 0; texSlot <= 9; texSlot++ ) {
+					if ( texSlot >= texfiles.size() )
+						texfiles.append( QString() );
+					texfiles[texSlot] = TexCache::find( nif->get<QString>( QModelIndex_child( iTextures, texSlot ) ), game );
+				}
+			}
+		}
+	} else {
+		for ( int texSlot = 0; texSlot <= 1; texSlot++ ) {
+			QModelIndex	iTexturePath = nif->getIndex( iTexPropData, ( texSlot == 0 ? "Source Texture" : "Normal Texture" ) );
+			if ( !iTexturePath.isValid() )
+				continue;
+			while ( texSlot >= texfiles.size() )
+				texfiles.append( QString() );
+			texfiles[texSlot] = TexCache::find( nif->get<QString>( iTexturePath ), game );
+		}
+	}
+}
+
 bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 {
 	if ( nif ) {
@@ -818,14 +901,14 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 		coordSetSelect = new QMenu( tr( "Select Coordinate Set" ) );
 		addAction( coordSetSelect->menuAction() );
 		connect( coordSetSelect, &QMenu::aboutToShow, this, &UVWidget::getCoordSets );
-
-		texSlotGroup = new QActionGroup( this );
-		connect( texSlotGroup, &QActionGroup::triggered, this, &UVWidget::selectTexSlot );
-
-		menuTexSelect = new QMenu( tr( "Select Texture Slot" ) );
-		addAction( menuTexSelect->menuAction() );
-		connect( menuTexSelect, &QMenu::aboutToShow, this, &UVWidget::getTexSlots );
 	}
+
+	texSlotGroup = new QActionGroup( this );
+	connect( texSlotGroup, &QActionGroup::triggered, this, &UVWidget::selectTexSlot );
+
+	menuTexSelect = new QMenu( tr( "Select Texture Slot" ) );
+	addAction( menuTexSelect->menuAction() );
+	connect( menuTexSelect, &QMenu::aboutToShow, this, &UVWidget::getTexSlots );
 
 	if ( nif ) {
 		connect( nif, &NifModel::modelReset, this, &UVWidget::close );
@@ -884,8 +967,39 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 
 		if ( !setTexCoords() )
 			return false;
+	} else if ( nif->getBSVersion() >= 170 && nif->blockInherits( iShape, "BSGeometry" ) ) {
+		auto meshes = nif->getIndex( iShape, "Meshes" );
+		if ( !meshes.isValid() )
+			return false;
+
+		for ( int i = 0; i <= 3; i++ ) {
+			auto mesh = QModelIndex_child( meshes, i );
+			if ( !mesh.isValid() )
+				continue;
+			auto hasMesh = nif->getIndex( mesh, "Has Mesh" );
+			if ( !hasMesh.isValid() || nif->get<quint8>( hasMesh ) == 0 )
+				continue;
+			mesh = nif->getIndex( mesh, "Mesh" );
+			if ( !mesh.isValid() )
+				continue;
+			QString	meshPath( nif->get<QString>( mesh, "Mesh Path" ) );
+			if ( meshPath.isEmpty() )
+				continue;
+			MeshFile	meshFile( meshPath );
+			if ( meshFile.isValid() && meshFile.coords.size() > 0 && meshFile.triangles.size() > 0 ) {
+				for ( qsizetype j = 0; j < meshFile.coords.size(); j++ )
+					texcoords << Vector2( meshFile.coords[j][0], meshFile.coords[j][1] );
+				if ( !setTexCoords( &(meshFile.triangles) ) )
+					return false;
+				break;
+			}
+		}
+
+		// Fake index so that isValid() checks do not fail
+		iTexCoords = iShape;
 	}
 
+	texfiles.clear();
 	auto props = nif->getLinkArray( iShape, "Properties" );
 	props << nif->getLink( iShape, "Shader Property" );
 	for ( const auto l : props )
@@ -918,7 +1032,6 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 				QModelIndex iTexSource = nif->getBlockIndex( nif->getLink( iTexProp, "Image" ) );
 
 				if ( iTexSource.isValid() ) {
-					//texfile = TexCache::find( nif->get<QString>( iTexSource, "File Name" ) );
 					texsource = iTexSource;
 					return true;
 				}
@@ -926,8 +1039,13 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 				// TODO: use the BSShaderTextureSet
 				iTexProp = nif->getBlockIndex( l, "BSShaderPPLightingProperty" );
 
-				if ( !iTexProp.isValid() )
+				if ( !iTexProp.isValid() ) {
 					iTexProp = nif->getBlockIndex( l, "BSLightingShaderProperty" );
+					if ( iTexProp.isValid() ) {
+						setTexturePaths( nif, iTexProp );
+						iTexProp = QModelIndex();
+					}
+				}
 
 				if ( iTexProp.isValid() ) {
 					QModelIndex iTexSource = nif->getBlockIndex( nif->getLink( iTexProp, "Texture Set" ) );
@@ -939,7 +1057,8 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 						QModelIndex iTextures = nif->getIndex( iTexSource, "Textures" );
 
 						if ( iTextures.isValid() ) {
-							texfile = TexCache::find( nif->get<QString>( QModelIndex_child( iTextures ) ), game );
+							for ( int i = 0; i <= 1; i++ )
+								texfiles.append( TexCache::find( nif->get<QString>( QModelIndex_child( iTextures, i ) ), game ) );
 							return true;
 						}
 					}
@@ -947,12 +1066,8 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 					iTexProp = nif->getBlockIndex( l, "BSEffectShaderProperty" );
 
 					if ( iTexProp.isValid() ) {
-						QString texture = nif->get<QString>( iTexProp, "Source Texture" );
-
-						if ( !texture.isEmpty() ) {
-							texfile = TexCache::find( texture, game );
-							return true;
-						}
+						setTexturePaths( nif, iTexProp );
+						return true;
 					}
 				}
 			}
@@ -962,7 +1077,7 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 	return true;
 }
 
-bool UVWidget::setTexCoords()
+bool UVWidget::setTexCoords( const QVector<Triangle> * triangles )
 {
 	if ( nif->blockInherits( iShape, "NiTriBasedGeom" ) )
 		texcoords = nif->getArray<Vector2>( iTexCoords );
@@ -989,7 +1104,8 @@ bool UVWidget::setTexCoords()
 				tris << nif->getArray<Triangle>( nif->index( i, 0, partIdx ), "Triangles" );
 			}
 		}
-
+	} else if ( triangles ) {
+		tris = *triangles;
 	}
 
 	if ( tris.isEmpty() )
@@ -1519,6 +1635,22 @@ void UVWidget::getTexSlots()
 	menuTexSelect->clear();
 	validTexs.clear();
 
+	if ( texfiles.size() > 0 ) {
+		for ( const QString& name : texfiles ) {
+			if ( name.isEmpty() || validTexs.indexOf( name ) >= 0 )
+				continue;
+			validTexs << name;
+			QAction * temp = new QAction( name, this );
+			menuTexSelect->addAction( temp );
+			texSlotGroup->addAction( temp );
+			temp->setCheckable( true );
+
+			if ( currentTexSlot < texfiles.size() && name == texfiles[currentTexSlot] )
+				temp->setChecked( true );
+		}
+		return;
+	}
+
 	auto props = nif->getLinkArray( iShape, "Properties" );
 	props << nif->getLink( iShape, "Shader Property" );
 	for ( const auto l : props )
@@ -1548,6 +1680,14 @@ void UVWidget::getTexSlots()
 void UVWidget::selectTexSlot()
 {
 	QString selected = texSlotGroup->checkedAction()->text();
+
+	if ( texfiles.size() > 0 ) {
+		currentTexSlot = texfiles.indexOf( selected );
+		if ( currentTexSlot < 0 )
+			currentTexSlot = 0;
+		return;
+	}
+
 	currentTexSlot = texnames.indexOf( selected );
 
 	auto props = nif->getLinkArray( iShape, "Properties" );
@@ -1580,7 +1720,7 @@ void UVWidget::getCoordSets()
 	coordSetSelect->clear();
 
 	quint8 numUvSets = (nif->get<quint16>( iShapeData, "Data Flags" ) & 0x3F)
-					 | (nif->get<quint16>( iShapeData, "BS Data Flags" ) & 0x1);
+						| (nif->get<quint16>( iShapeData, "BS Data Flags" ) & 0x1);
 
 	for ( int i = 0; i < numUvSets; i++ ) {
 		QAction * temp;

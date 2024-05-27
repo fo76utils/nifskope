@@ -268,6 +268,8 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
+		if ( nif->getBSVersion() >= 170 && nif->blockInherits( index, "BSGeometry" ) )
+			return true;
 		auto iUVs = getUV( nif, index );
 		auto iTriData = nif->getIndex( index, "Num Triangles" );
 		return (iUVs.isValid() || iTriData.isValid())

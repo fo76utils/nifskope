@@ -69,6 +69,9 @@ protected:
 	UVWidget( QWidget * parent = nullptr );
 	~UVWidget();
 
+	// for BSLightingShaderProperty and BSEffectShaderProperty
+	void setTexturePaths( NifModel * nif, QModelIndex iTexProp );
+
 public:
 	//! Creates the UV editor widget
 	static UVWidget * createEditor( NifModel * nif, const QModelIndex & index );
@@ -175,7 +178,7 @@ private:
 	QSize sHint;
 
 	TexCache * textures;
-	QString texfile;
+	QStringList texfiles;
 	QModelIndex texsource;
 
 	void drawTexCoords();
@@ -212,7 +215,7 @@ private:
 	//! Texture slot currently being operated on
 	int currentTexSlot = 0;
 	//! Read texcoords from the nif
-	bool setTexCoords();
+	bool setTexCoords( const QVector<Triangle> * triangles = nullptr );
 	//! Coordinate set currently in use
 	int currentCoordSet = 0;
 

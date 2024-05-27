@@ -397,13 +397,19 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
+		if ( nif->blockInherits( index, "BSTriShape" ) && nif->getIndex( index, "Triangles" ).isValid() )
+			return true;
 		return getTriShapeData( nif, index ).isValid();
 	}
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
 	{
-		QModelIndex iData = getTriShapeData( nif, index );
-
+		QModelIndex iData;
+		bool isBSTriShape = nif->blockInherits( index, "BSTriShape" );
+		if ( !isBSTriShape )
+			iData = getTriShapeData( nif, index );
+		else
+			iData = index;
 		QList<Triangle> tris = nif->getArray<Triangle>( iData, "Triangles" ).toList();
 		int cnt = 0;
 
@@ -447,7 +453,8 @@ public:
 		if ( cnt > 0 ) {
 			Message::info( nullptr, Spell::tr( "Removed %1 triangles" ).arg( cnt ) );
 			nif->set<int>( iData, "Num Triangles", tris.count() );
-			nif->set<int>( iData, "Num Triangle Points", tris.count() * 3 );
+			if ( !isBSTriShape )
+				nif->set<int>( iData, "Num Triangle Points", tris.count() * 3 );
 			nif->updateArraySize( iData, "Triangles" );
 			nif->setArray<Triangle>( iData, "Triangles", tris.toVector() );
 		}
