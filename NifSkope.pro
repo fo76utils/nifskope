@@ -447,22 +447,32 @@ win32 {
 
 
 # MinGW, GCC
-#  Recommended: GCC 4.8.1+
+#  Recommended: GCC 13+
 *-g++ {
 
 	# COMPILER FLAGS
 
-	#  Optimization flags
-	QMAKE_CXXFLAGS_DEBUG -= -O0 -g
-	QMAKE_CXXFLAGS_DEBUG *= -Og -g3
-	contains(noavx2, 1) {
-		QMAKE_CXXFLAGS_RELEASE *= -O3 -march=sandybridge -mf16c -mtune=generic
-	} else {
-		QMAKE_CXXFLAGS_RELEASE *= -O3 -march=haswell -mtune=generic
-	}
-
 	# C++ Standard Support
-	QMAKE_CXXFLAGS_RELEASE *= -std=c++20
+	QMAKE_CXXFLAGS *= -std=c++20
+
+	# Optimization and debugging flags
+	QMAKE_CXXFLAGS -= -O0
+	QMAKE_CXXFLAGS -= -O1
+	QMAKE_CXXFLAGS -= -O2
+	QMAKE_CXXFLAGS -= -g
+	contains(debug, 1) {
+		QMAKE_CXXFLAGS *= -Og -ggdb
+	} else {
+		QMAKE_CXXFLAGS *= -O3
+	}
+	contains(nof16c, 1) {
+		QMAKE_CXXFLAGS *= -march=sandybridge
+	} else:contains(noavx2, 1) {
+		QMAKE_CXXFLAGS *= -march=sandybridge -mf16c
+	} else {
+		QMAKE_CXXFLAGS *= -march=haswell
+	}
+	QMAKE_CXXFLAGS *= -mtune=generic
 }
 
 win32 {
