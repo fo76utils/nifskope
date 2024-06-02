@@ -48,8 +48,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QSettings>
 #include <QTextStream>
 
-#include "gamemanager.h"
-
 #define tr( x ) QApplication::tr( x )
 
 /**

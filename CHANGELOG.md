@@ -5,6 +5,7 @@
 * Fixed textures not being rendered in the UV editor.
 * Implemented the Prune Triangles mesh spell for games using BSTriShape geometry.
 * Layered emissivity settings are now shown in Starfield BSLightingShaderProperty blocks.
+* The resource manager has been overhauled to allow for multiple loose NIF files to use local data paths when opened in separate windows. GameManager functions can now also be accessed from NifModel.
 * Starfield rendering fixes.
 
 #### NifSkope-2.0.dev9-20240521

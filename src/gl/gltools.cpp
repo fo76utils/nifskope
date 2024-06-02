@@ -44,7 +44,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <functional>
 
 #include "libfo76utils/src/fp32vec4.hpp"
-#include "gamemanager.h"
 #include "miniball/Seb.h"
 
 //! \file gltools.cpp GL helper functions

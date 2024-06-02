@@ -34,7 +34,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define MATERIAL_H
 
 #include "data/niftypes.h"
-#include "gamemanager.h"
 
 #include <QObject>
 #include <QByteArray>
@@ -52,7 +51,7 @@ class Material : public QObject
 	friend class NifModel;
 
 public:
-	Material( QString name, Game::GameMode game );
+	Material( const QString & name, const NifModel * nif );
 
 	bool isValid() const;
 	bool hasAlphaBlend() const { return (bAlphaBlend != 0); }
@@ -130,7 +129,7 @@ class ShaderMaterial : public Material
 	friend class NifModel;
 
 public:
-	ShaderMaterial( QString name, Game::GameMode game );
+	ShaderMaterial( const QString & name, const NifModel * nif );
 
 protected:
 	bool readFile() override final;
@@ -211,7 +210,7 @@ class EffectMaterial : public Material
 	friend class NifModel;
 
 public:
-	EffectMaterial( QString name, Game::GameMode game );
+	EffectMaterial( const QString & name, const NifModel * nif );
 
 protected:
 	bool readFile() override final;

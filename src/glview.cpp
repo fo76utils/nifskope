@@ -40,7 +40,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "model/nifmodel.h"
 #include "ui/settingsdialog.h"
 #include "ui/widgets/fileselect.h"
-#include "gamemanager.h"
 #include "libfo76utils/src/fp32vec4.hpp"
 #include "ui/widgets/filebrowser.h"
 

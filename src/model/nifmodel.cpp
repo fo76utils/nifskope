@@ -37,7 +37,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "spellbook.h"
 #include "data/niftypes.h"
 #include "io/nifstream.h"
-#include "gamemanager.h"
+#include "libfo76utils/src/filebuf.hpp"
 
 #include <QByteArray>
 #include <QColor>
@@ -265,10 +265,17 @@ void setupArrayPseudonyms()
 
 NifModel::NifModel( QObject * parent ) : BaseModel( parent )
 {
+	gameResources = &( Game::GameManager::getNIFResources( nullptr ) );
+
 	setupArrayPseudonyms();
 	updateSettings();
 
 	clear();
+}
+
+NifModel::~NifModel()
+{
+	Game::GameManager::removeNIFResourcePath( this );
 }
 
 void NifModel::updateSettings()
@@ -418,6 +425,9 @@ void NifModel::clear()
 
 	lockUpdates = false;
 	needUpdates = utNone;
+
+	Game::GameManager::removeNIFResourcePath( this );
+	gameResources = &( Game::GameManager::getNIFResources( this ) );
 }
 
 
@@ -757,16 +767,8 @@ QModelIndex NifModel::insertNiBlock( const QString & identifier, int at )
 
 		branch->prepareInsert( block->types.count() );
 
-		if ( getBSVersion() >= 151 && identifier.startsWith( "BSLighting" ) ) {
-			// TODO: This appears to be incomplete
-			for ( const NifData& data : block->types ) {
-				insertType( branch, data );
-			}
-		} else {
-			for ( const NifData& data : block->types ) {
-				insertType( branch, data );
-			}
-		}
+		for ( const NifData& data : block->types )
+			insertType( branch, data );
 
 		if ( state != Loading ) {
 			updateHeader();
@@ -1786,7 +1788,7 @@ bool NifModel::setHeaderString( const QString & s, uint ver )
 	return false;
 }
 
-static void setTempDataPath( const Game::GameMode game, const char * pathName )
+static QString getNIFDataPath( const char * pathName )
 {
 	std::string	tmpPath( pathName ? pathName : "" );
 	while ( !tmpPath.empty() ) {
@@ -1813,10 +1815,11 @@ static void setTempDataPath( const Game::GameMode game, const char * pathName )
 		}
 		if ( FileBuffer::checkType( extStr, ".ba2" ) || FileBuffer::checkType( extStr, ".bsa" ) )
 			break;
-		if ( QFileInfo( QString::fromStdString( tmpPath ) ).isDir() )
-			break;
+		QString	dataPath = QString::fromStdString( tmpPath );
+		if ( QFileInfo( dataPath ).isDir() )
+			return dataPath;
 	}
-	Game::GameManager::set_temp_path( game, tmpPath.c_str(), true );
+	return QString();
 }
 
 bool NifModel::load( QIODevice & device, const char* fileName )
@@ -1841,7 +1844,7 @@ bool NifModel::load( QIODevice & device, const char* fileName )
 		return false;
 	}
 
-	setTempDataPath( Game::GameManager::get_game( version, cfg.userVersion, bsVersion ), fileName );
+	gameResources = Game::GameManager::addNIFResourcePath( this, getNIFDataPath( fileName ) );
 
 	int numblocks = 0;
 	numblocks = get<int>( header, "Num Blocks" );
@@ -3063,3 +3066,35 @@ QVariant NifModelEval::operator()( const QVariant & v ) const
 
 	return v;
 }
+
+/*
+ * GameManager interface
+ */
+
+QString NifModel::findResourceFile( const QString & path, const char * archiveFolder, const char * extension ) const
+{
+	std::string	fullPath( Game::GameManager::get_full_path( path, archiveFolder, extension ) );
+	return gameResources->find_file( fullPath );
+}
+
+bool NifModel::getResourceFile(
+	QByteArray & data, const QString & path, const char * archiveFolder, const char * extension ) const
+{
+	std::string	fullPath( Game::GameManager::get_full_path( path, archiveFolder, extension ) );
+	return gameResources->get_file( data, fullPath );
+}
+
+CE2MaterialDB * NifModel::getCE2Materials() const
+{
+	if ( gameResources->sfMaterialDB_ID ) [[likely]]
+		return gameResources->sfMaterials;
+	return gameResources->init_materials();
+}
+
+void NifModel::listResourceFiles(
+	std::set< std::string_view > & fileSet,
+	bool (*fileListFilterFunc)( void * p, const std::string_view & fileName ), void * fileListFilterFuncData ) const
+{
+	gameResources->list_files( fileSet, fileListFilterFunc, fileListFilterFuncData );
+}
+

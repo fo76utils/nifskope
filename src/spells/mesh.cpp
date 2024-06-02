@@ -775,7 +775,7 @@ QModelIndex spUpdateBounds::cast_Starfield( NifModel * nif, const QModelIndex & 
 		QString	meshPath( nif->get<QString>( mesh, "Mesh Path" ) );
 		if ( meshPath.isEmpty() )
 			continue;
-		MeshFile	meshFile( meshPath );
+		MeshFile	meshFile( meshPath, nif );
 		quint32	indicesSize = 0;
 		quint32	numVerts = 0;
 		if ( meshFile.isValid() ) {

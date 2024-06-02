@@ -1,5 +1,5 @@
 #include "io/MeshFile.h"
-#include "gamemanager.h"
+#include "model/nifmodel.h"
 
 #include <QBuffer>
 #include <QDir>
@@ -11,13 +11,13 @@
 double snormToDouble(int16_t x) { return x < 0 ? x / double(32768) : x / double(32767); }
 #endif
 
-MeshFile::MeshFile(const QString& filepath)
+MeshFile::MeshFile( const QString & filepath, const NifModel * nif )
 {
-	path = QDir::fromNativeSeparators(filepath.toLower()).toStdString();
-	if ( path.size() == 0 )
+	QString	path( QDir::fromNativeSeparators(filepath.toLower()) );
+	if ( path.isEmpty() || !nif )
 		return;
 
-	if ( readBytes(QString::fromStdString(path), data) && readMesh() > 0 ) {
+	if ( nif->getResourceFile( data, path, "geometries", ".mesh" ) && readMesh() > 0 ) {
 		qDebug() << "MeshFile created for" << filepath;
 	} else {
 		qWarning() << "MeshFile creation failed for" << filepath;
@@ -90,12 +90,8 @@ quint32 MeshFile::readMesh()
 			uint32_t uv;
 
 			in >> uv;
-			FloatVector4  uv_f(FloatVector4::convertFloat16(uv));
 
-			coords[i][0] = uv_f[0];
-			coords[i][1] = uv_f[1];
-			coords[i][2] = 0.0f;
-			coords[i][3] = 0.0f;
+			coords[i] = Vector4(FloatVector4::convertFloat16(uv));
 		}
 
 		quint32 numCoord2;
@@ -121,9 +117,7 @@ quint32 MeshFile::readMesh()
 		for ( quint32 i = 0; i < numColor; i++ ) {
 			uint32_t	bgra;
 			in >> bgra;
-			FloatVector4	color(bgra);
-			color /= 255.0f;
-			colors[i] = Color4(color[2], color[1], color[0], color[3]);
+			colors[i] = Color4( ( FloatVector4(bgra) / 255.0f ).shuffleValues( 0xC6 ) );	// 2, 1, 0, 3
 		}
 
 		quint32 numNormal;

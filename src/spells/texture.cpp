@@ -7,7 +7,7 @@
 #include "ui/widgets/nifeditors.h"
 #include "ui/widgets/uvedit.h"
 #include "ui/widgets/filebrowser.h"
-#include "gamemanager.h"
+#include "model/nifmodel.h"
 
 #include "lib/nvtristripwrapper.h"
 
@@ -220,8 +220,7 @@ public:
 		if ( !iFile.isValid() )
 			return idx;
 
-		Game::GameMode	game = Game::GameManager::get_game( nif->getVersionNumber(), nif->getUserVersion(), nif->getBSVersion() );
-		QString	file = Game::GameManager::find_file( game, nif->get<QString>( iFile ), "textures", ".dds" );
+		QString	file = nif->findResourceFile( nif->get<QString>( iFile ), "textures", ".dds" );
 
 		QSettings	settings;
 		QString	key = QString( "%1/%2/%3/Last Texture Path" ).arg( "Spells", page(), name() );
@@ -229,7 +228,7 @@ public:
 			file = settings.value( key, QVariant( QDir::homePath() ) ).toString();
 
 		std::set< std::string_view >	texturePaths;
-		Game::GameManager::list_files( texturePaths, game, &texturePathFilterFunc );
+		nif->listResourceFiles( texturePaths, &texturePathFilterFunc );
 		std::string	prvPath( file.toStdString() );
 		FileBrowserWidget	fileBrowser( 800, 600, "Choose Texture", texturePaths, prvPath );
 		if ( fileBrowser.exec() == QDialog::Accepted ) {

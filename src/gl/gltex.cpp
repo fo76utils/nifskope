@@ -37,8 +37,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "gl/gltexloaders.h"
 #include "model/nifmodel.h"
 
-#include "gamemanager.h"
-
 #include <QDebug>
 #include <QDir>
 #include <QListView>
@@ -159,7 +157,7 @@ TexCache::~TexCache()
 	//flush();
 }
 
-QString TexCache::find( const QString & file, Game::GameMode game )
+QString TexCache::find( const QString & file, const NifModel * nif )
 {
 	if ( file.isEmpty() )
 		return QString();
@@ -174,7 +172,11 @@ QString TexCache::find( const QString & file, Game::GameMode game )
 
 	// attempt to find the texture with one of the extensions
 	for ( size_t i = 0; i < 6; i++ ) {
-		QString	fullPath( Game::GameManager::find_file(game, filename, "textures", extensions[i]) );
+		QString	fullPath;
+		if ( !nif )
+			fullPath = Game::GameManager::find_file( Game::OTHER, filename, "textures", extensions[i] );
+		else
+			fullPath = nif->findResourceFile( filename, "textures", extensions[i] );
 		if ( !fullPath.isEmpty() )
 			return fullPath;
 		if ( i == 0 ) {
@@ -239,7 +241,7 @@ bool TexCache::isSupported( const QString & filePath )
 	return texIsSupported( filePath );
 }
 
-int TexCache::bind( const QString & fname, Game::GameMode game, bool useSecondTexture )
+int TexCache::bind( const QString & fname, const NifModel * nif, bool useSecondTexture )
 {
 	Tex * tx = textures.value( fname );
 	if ( !tx ) [[unlikely]] {
@@ -248,15 +250,14 @@ int TexCache::bind( const QString & fname, Game::GameMode game, bool useSecondTe
 		tx->id[0] = 0;
 		tx->id[1] = 0;
 		tx->mipmaps = 0;
-		tx->game = game;
 
 		textures.insert( tx->filename, tx );
 
 		if ( !isSupported( fname ) ) {
 			tx->id[0] = 0xFFFFFFFF;
 		} else {
-			tx->filepath = find( tx->filename, game );
-			tx->load();
+			tx->filepath = find( tx->filename, nif );
+			tx->load( nif );
 			return tx->mipmaps;
 		}
 	}
@@ -273,7 +274,7 @@ int TexCache::bind( const QString & fname, Game::GameMode game, bool useSecondTe
 	return tx->mipmaps;
 }
 
-int TexCache::bind( const QModelIndex & iSource, Game::GameMode game )
+int TexCache::bind( const QModelIndex & iSource )
 {
 	auto nif = NifModel::fromValidIndex(iSource);
 	if ( nif ) {
@@ -287,7 +288,6 @@ int TexCache::bind( const QModelIndex & iSource, Game::GameMode game )
 					tx = new Tex();
 					tx->id[0] = 0;
 					tx->id[1] = 0;
-					tx->game = game;
 					try
 					{
 						glGenTextures( 1, tx->id );
@@ -305,7 +305,7 @@ int TexCache::bind( const QModelIndex & iSource, Game::GameMode game )
 				return tx->mipmaps;
 			}
 		} else if ( !nif->get<QString>( iSource, "File Name" ).isEmpty() ) {
-			return bind( nif->get<QString>( iSource, "File Name" ), game );
+			return bind( nif->get<QString>( iSource, "File Name" ), nif );
 		}
 	}
 
@@ -404,7 +404,7 @@ bool TexCache::importFile( NifModel * nif, const QModelIndex & iSource, QModelIn
 *  TexCache::Tex
 */
 
-void TexCache::Tex::load()
+void TexCache::Tex::load( const NifModel * nif )
 {
 	if ( !id[0] )
 		glGenTextures( 1, id );
@@ -418,7 +418,7 @@ void TexCache::Tex::load()
 	try
 	{
 		QByteArray	data;
-		texLoad( game, filepath, format, target, width, height, mipmaps, data, id );
+		texLoad( nif, filepath, format, target, width, height, mipmaps, data, id );
 	}
 	catch ( QString & e )
 	{
@@ -442,5 +442,5 @@ bool TexCache::Tex::savePixelData( NifModel * nif, const QModelIndex & iSource, 
 	Q_UNUSED( iSource );
 	// gltexloaders function goes here
 	//qDebug() << "TexCache::Tex:savePixelData: Packing" << iSource << "from file" << filepath << "to" << iData;
-	return texSaveNIF( game, nif, filepath, iData );
+	return texSaveNIF( nif, filepath, iData );
 }

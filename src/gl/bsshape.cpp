@@ -6,8 +6,6 @@
 #include "io/material.h"
 #include "model/nifmodel.h"
 
-#include "gamemanager.h"
-
 void BSShape::updateImpl( const NifModel * nif, const QModelIndex & index )
 {
 	Shape::updateImpl( nif, index );

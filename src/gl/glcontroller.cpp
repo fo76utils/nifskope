@@ -35,8 +35,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "gl/glscene.h"
 #include "model/nifmodel.h"
 
-#include "gamemanager.h"
-
 //! @file glcontroller.cpp Controllable management, Interpolation management
 
 /*

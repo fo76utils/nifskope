@@ -38,8 +38,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "gl/glscene.h"
 #include "model/nifmodel.h"
 
-#include "gamemanager.h"
-
 // `NiControllerManager` blocks
 
 ControllerManager::ControllerManager( Node * node, const QModelIndex & index )

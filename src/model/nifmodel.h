@@ -34,6 +34,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define NIFMODEL_H
 
 #include "basemodel.h" // Inherited
+#include "gamemanager.h"
 
 #include <QHash>
 #include <QReadWriteLock>
@@ -70,6 +71,7 @@ class NifModel final : public BaseModel
 
 public:
 	NifModel( QObject * parent = 0 );
+	~NifModel();
 
 	static const NifModel * fromIndex( const QModelIndex & index );
 	static const NifModel * fromValidIndex( const QModelIndex & index );
@@ -723,6 +725,48 @@ protected:
 
 	void invalidateItemConditions( NifItem * item );
 
+	// GameManager interface
+
+	Game::GameManager::GameResources *	gameResources;
+
+public:
+	//! Return the resources associated with this model.
+	inline Game::GameManager::GameResources & getGameResources() const
+	{
+		return *gameResources;
+	}
+
+	//! Search for file 'path' in the resource archives and folders, and return the full path if the file is found,
+	// or an empty string otherwise.
+	QString findResourceFile( const QString & path, const char * archiveFolder, const char * extension ) const;
+
+	//! Find and load resource file to 'data'. The return value is true on success.
+	inline bool getResourceFile( QByteArray & data, const std::string_view & fullPath ) const
+	{
+		return gameResources->get_file( data, fullPath );
+	}
+	bool getResourceFile(
+		QByteArray & data, const QString & path, const char * archiveFolder, const char * extension ) const;
+
+	//! Return pointer to Starfield material database, loading it first if necessary.
+	// On error, nullptr is returned.
+	CE2MaterialDB * getCE2Materials() const;
+
+	//! Returns a unique ID for the currently loaded material database (0 if none).
+	// Previously returned material pointers become invalid when this value changes.
+	inline std::uint64_t getCE2MaterialDB_ID() const
+	{
+		return gameResources->sfMaterialDB_ID;
+	}
+
+	//! List resource files available on the archive filesystem, as a set of null-terminated strings.
+	// The file list can be optionally filtered by a function that returns false if the file should be excluded.
+	void listResourceFiles(
+		std::set< std::string_view > & fileSet,
+		bool (*fileListFilterFunc)( void * p, const std::string_view & fileName ) = nullptr,
+		void * fileListFilterFuncData = nullptr ) const;
+
+protected:
 	//! Parse the XML file using a NifXmlHandler
 	static QString parseXmlDescription( const QString & filename );
 

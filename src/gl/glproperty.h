@@ -36,7 +36,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "icontrollable.h" // Inherited
 #include "data/niftypes.h"
 #include "material.hpp"
-#include "gamemanager.h"
+#include "model/nifmodel.h"
 
 #include <QHash>
 #include <QPersistentModelIndex>
@@ -52,7 +52,6 @@ typedef float GLfloat;
 
 
 class Material;
-class NifModel;
 
 //! Controllable properties attached to nodes and meshes
 class Property : public IControllable
@@ -703,9 +702,9 @@ public:
 	TexClampMode clampMode = CLAMP_S_CLAMP_T;
 
 	Material * getMaterial() const { return material; }
-	inline bool getSFMaterial( const CE2Material *& m )
+	inline bool getSFMaterial( const CE2Material *& m, const NifModel * nif )
 	{
-		if ( sfMaterialDB_ID != Game::GameManager::get_material_db_id() ) [[unlikely]]
+		if ( sfMaterialDB_ID != nif->getCE2MaterialDB_ID() ) [[unlikely]]
 			loadSFMaterial();
 		m = sf_material;
 		return sf_material_valid;
@@ -721,7 +720,7 @@ protected:
 
 	Material * material = nullptr;
 	const CE2Material *	sf_material = nullptr;
-	std::uintptr_t	sfMaterialDB_ID = 0;
+	std::uint64_t	sfMaterialDB_ID = std::uint64_t(-1);
 	bool	sf_material_valid = false;
 	std::string	sfMaterialPath;
 	void setMaterial( Material * newMaterial );

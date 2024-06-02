@@ -32,7 +32,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "uvedit.h"
 
-#include "gamemanager.h"
 #include "message.h"
 #include "nifskope.h"
 #include "gl/gltex.h"
@@ -40,6 +39,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "model/nifmodel.h"
 #include "ui/settingsdialog.h"
 
+#include "libfo76utils/src/material.hpp"
 #include "lib/nvtristripwrapper.h"
 #include "io/MeshFile.h"
 
@@ -125,8 +125,6 @@ UVWidget::UVWidget( QWidget * parent )
 	pos = QPoint( 0, 0 );
 
 	mousePos = QPoint( -1000, -1000 );
-
-	game = Game::OTHER;
 
 	setCursor( QCursor( Qt::CrossCursor ) );
 	setMouseTracking( true );
@@ -228,9 +226,9 @@ void UVWidget::initializeGL()
 	qglClearColor( cfg.background );
 
 	if ( currentTexSlot < texfiles.size() && !texfiles[currentTexSlot].isEmpty() )
-		bindTexture( texfiles[currentTexSlot], game );
+		bindTexture( texfiles[currentTexSlot] );
 	else
-		bindTexture( texsource, game );
+		bindTexture( texsource );
 
 	glEnableClientState( GL_VERTEX_ARRAY );
 	glVertexPointer( 2, GL_SHORT, 0, vertArray );
@@ -284,9 +282,9 @@ void UVWidget::paintGL()
 		glDisable( GL_BLEND );
 
 	if ( currentTexSlot < texfiles.size() && !texfiles[currentTexSlot].isEmpty() )
-		bindTexture( texfiles[currentTexSlot], game );
+		bindTexture( texfiles[currentTexSlot] );
 	else
-		bindTexture( texsource, game );
+		bindTexture( texsource );
 
 	glTranslatef( -0.5f, -0.5f, 0.0f );
 
@@ -532,10 +530,10 @@ QVector<int> UVWidget::indices( const QRegion & region ) const
 	return hits.toVector();
 }
 
-bool UVWidget::bindTexture( const QString & filename, const Game::GameMode game )
+bool UVWidget::bindTexture( const QString & filename )
 {
 	GLuint mipmaps = 0;
-	mipmaps = textures->bind( filename, game );
+	mipmaps = textures->bind( filename, nif );
 
 	if ( mipmaps ) {
 		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
@@ -554,10 +552,10 @@ bool UVWidget::bindTexture( const QString & filename, const Game::GameMode game 
 	return false;
 }
 
-bool UVWidget::bindTexture( const QModelIndex & iSource, const Game::GameMode game )
+bool UVWidget::bindTexture( const QModelIndex & iSource )
 {
 	GLuint mipmaps = 0;
-	mipmaps = textures->bind( iSource, game );
+	mipmaps = textures->bind( iSource );
 
 	if ( mipmaps ) {
 		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
@@ -808,14 +806,14 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 			for ( int texSlot = 0; texSlot <= 9; texSlot++ ) {
 				if ( texSlot >= texfiles.size() )
 					texfiles.append( QString() );
-				texfiles[texSlot] = TexCache::find( nif->get<QString>( iTexPropData, QString( "Texture %1" ).arg( texSlot ) ), game );
+				texfiles[texSlot] = TexCache::find( nif->get<QString>( iTexPropData, QString( "Texture %1" ).arg( texSlot ) ), nif );
 			}
 		} else {
 			// Starfield
 			std::string	matPath = Game::GameManager::get_full_path( nif->get<QString>( iTexProp, "Name" ), "materials/", ".mat" );
 			if ( matPath.empty() )
 				return;
-			CE2MaterialDB *	sfMaterials = Game::GameManager::materials( game );
+			CE2MaterialDB *	sfMaterials = nif->getCE2Materials();
 			if ( !sfMaterials )
 				return;
 			const CE2Material *	matData = sfMaterials->loadMaterial( matPath );
@@ -834,7 +832,7 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 					if ( texSlot >= texfiles.size() )
 						texfiles.append( QString() );
 					if ( ( texPathMask & 1 ) && !txtSet->texturePaths[texSlot]->empty() )
-						texfiles[texSlot] = TexCache::find( QString::fromStdString( *(txtSet->texturePaths[texSlot]) ), game );
+						texfiles[texSlot] = TexCache::find( QString::fromStdString( *(txtSet->texturePaths[texSlot]) ), nif );
 				}
 				break;
 			}
@@ -854,7 +852,7 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 				for ( int texSlot = 0; texSlot <= 9; texSlot++ ) {
 					if ( texSlot >= texfiles.size() )
 						texfiles.append( QString() );
-					texfiles[texSlot] = TexCache::find( nif->get<QString>( QModelIndex_child( iTextures, texSlot ) ), game );
+					texfiles[texSlot] = TexCache::find( nif->get<QString>( QModelIndex_child( iTextures, texSlot ) ), nif );
 				}
 			}
 		}
@@ -865,7 +863,7 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 				continue;
 			while ( texSlot >= texfiles.size() )
 				texfiles.append( QString() );
-			texfiles[texSlot] = TexCache::find( nif->get<QString>( iTexturePath ), game );
+			texfiles[texSlot] = TexCache::find( nif->get<QString>( iTexturePath ), nif );
 		}
 	}
 }
@@ -890,8 +888,6 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 	if (nif)
 		newTitle += tr(" - ") + nif->getFileInfo().fileName();
 	setWindowTitle(newTitle);
-
-	game = Game::GameManager::get_game(nif->getVersionNumber(), nif->getUserVersion(), nif->getBSVersion());
 
 	// Version dependent actions
 	if ( nif && nif->getVersionNumber() != 0x14020007 ) {
@@ -985,7 +981,7 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 			QString	meshPath( nif->get<QString>( mesh, "Mesh Path" ) );
 			if ( meshPath.isEmpty() )
 				continue;
-			MeshFile	meshFile( meshPath );
+			MeshFile	meshFile( meshPath, nif );
 			if ( meshFile.isValid() && meshFile.coords.size() > 0 && meshFile.triangles.size() > 0 ) {
 				for ( qsizetype j = 0; j < meshFile.coords.size(); j++ )
 					texcoords << Vector2( meshFile.coords[j][0], meshFile.coords[j][1] );
@@ -1058,7 +1054,7 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 
 						if ( iTextures.isValid() ) {
 							for ( int i = 0; i <= 1; i++ )
-								texfiles.append( TexCache::find( nif->get<QString>( QModelIndex_child( iTextures, i ) ), game ) );
+								texfiles.append( TexCache::find( nif->get<QString>( QModelIndex_child( iTextures, i ) ), nif ) );
 							return true;
 						}
 					}

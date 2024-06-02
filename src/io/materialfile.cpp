@@ -31,6 +31,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***** END LICENCE BLOCK *****/
 
 #include "material.h"
+#include "model/nifmodel.h"
 
 #include <QBuffer>
 #include <QDataStream>
@@ -44,10 +45,10 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define BGSM 0x4D534742
 #define BGEM 0x4D454742
 
-Material::Material( QString name, Game::GameMode game )
+Material::Material( const QString & name, const NifModel * nif )
 {
-	if (!name.isEmpty())
-		Game::GameManager::get_file(data, game, name, "materials", "");
+	if ( !name.isEmpty() && nif )
+		nif->getResourceFile( data, name, "materials", "" );
 	fileExists = !data.isEmpty();
 }
 
@@ -118,7 +119,7 @@ QString Material::getPath() const
 }
 
 
-ShaderMaterial::ShaderMaterial( QString name, Game::GameMode game ) : Material( name, game )
+ShaderMaterial::ShaderMaterial( const QString & name, const NifModel * nif ) : Material( name, nif )
 {
 	if ( fileExists )
 		readable = openFile();
@@ -203,7 +204,7 @@ bool ShaderMaterial::readFile()
 	return in.status() == QDataStream::Ok;
 }
 
-EffectMaterial::EffectMaterial( QString name, Game::GameMode game ) : Material( name, game )
+EffectMaterial::EffectMaterial( const QString & name, const NifModel * nif ) : Material( name, nif )
 {
 	if ( fileExists )
 		readable = openFile();

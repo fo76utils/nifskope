@@ -26,8 +26,6 @@
 #include <QComboBox>
 #include <QQueue>
 
-#include "gamemanager.h"
-
 #define NUM_THREADS 4
 
 

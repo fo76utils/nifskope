@@ -551,7 +551,7 @@ void SettingsResources::write()
 	if ( !isModified() )
 		return;
 
-	GameManager::close_archives();
+	GameManager::close_resources();
 	auto mgr = GameManager::get();
 	mgr->save();
 

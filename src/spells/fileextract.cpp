@@ -4,10 +4,10 @@
 #include <QFileDialog>
 #include <QSettings>
 
-#include "gamemanager.h"
 #include "libfo76utils/src/common.hpp"
 #include "libfo76utils/src/filebuf.hpp"
 #include "libfo76utils/src/material.hpp"
+#include "model/nifmodel.h"
 
 #ifdef Q_OS_WIN32
 #  include <direct.h>
@@ -78,15 +78,15 @@ std::string spResourceFileExtract::getNifItemFilePath( NifModel * nif, const Nif
 	if ( item->parent() && bsVersion >= 130 && item->name() == "Name" ) {
 		if ( item->parent()->name() == "BSLightingShaderProperty" ) {
 			archiveFolder = "materials/";
-			extension = ( bsVersion < 160 ? ".bgsm" : ".mat" );
+			extension = ( bsVersion < 170 ? ".bgsm" : ".mat" );
 		} else if ( item->parent()->name() == "BSEffectShaderProperty" ) {
 			archiveFolder = "materials/";
-			extension = ( bsVersion < 160 ? ".bgem" : ".mat" );
+			extension = ( bsVersion < 170 ? ".bgem" : ".mat" );
 		}
-	} else if ( ( item->parent() && item->parent()->name() == "Textures" ) || item->name().contains( "Texture" ) || ( bsVersion >= 160 && item->name() == "Path" ) ) {
+	} else if ( ( item->parent() && item->parent()->name() == "Textures" ) || item->name().contains( "Texture" ) || ( bsVersion >= 170 && item->name() == "Path" ) ) {
 		archiveFolder = "textures/";
 		extension = ".dds";
-	} else if ( bsVersion >= 160 && item->name() == "Mesh Path" ) {
+	} else if ( bsVersion >= 170 && item->name() == "Mesh Path" ) {
 		archiveFolder = "geometries/";
 		extension = ".mesh";
 	}
@@ -161,7 +161,6 @@ QModelIndex spResourceFileExtract::cast( NifModel * nif, const QModelIndex & ind
 {
 	if ( !nif )
 		return index;
-	Game::GameMode	game = Game::GameManager::get_game( nif->getVersionNumber(), nif->getUserVersion(), nif->getBSVersion() );
 
 	const NifItem * item = nif->getItem( index );
 	if ( !item )
@@ -173,15 +172,15 @@ QModelIndex spResourceFileExtract::cast( NifModel * nif, const QModelIndex & ind
 
 	std::string	matFileData;
 	try {
-		if ( nif->getBSVersion() >= 160 && filePath.ends_with( ".mat" ) && filePath.starts_with( "materials/" ) ) {
-			CE2MaterialDB *	materials = Game::GameManager::materials( game );
+		if ( nif->getBSVersion() >= 170 && filePath.ends_with( ".mat" ) && filePath.starts_with( "materials/" ) ) {
+			CE2MaterialDB *	materials = nif->getCE2Materials();
 			if ( materials ) {
 				(void) materials->loadMaterial( filePath );
 				materials->getJSONMaterial( matFileData, filePath );
 			}
 			if ( matFileData.empty() )
 				return index;
-		} else if ( Game::GameManager::find_file( game, QString::fromStdString( filePath ), nullptr, nullptr ).isEmpty() ) {
+		} else if ( nif->findResourceFile( QString::fromStdString( filePath ), nullptr, nullptr ).isEmpty() ) {
 			return index;
 		}
 
@@ -195,7 +194,7 @@ QModelIndex spResourceFileExtract::cast( NifModel * nif, const QModelIndex & ind
 			writeFileWithPath( fullPath.c_str(), matFileData.c_str(), qsizetype(matFileData.length()) );
 		} else {
 			QByteArray	fileData;
-			if ( Game::GameManager::get_file( fileData, game, filePath ) )
+			if ( nif->getResourceFile( fileData, filePath ) )
 				writeFileWithPath( fullPath.c_str(), fileData.data(), fileData.size() );
 		}
 	} catch ( std::exception & e ) {
@@ -246,7 +245,6 @@ QModelIndex spExtractAllResources::cast( NifModel * nif, const QModelIndex & ind
 {
 	if ( !nif )
 		return index;
-	Game::GameMode	game = Game::GameManager::get_game( nif->getVersionNumber(), nif->getUserVersion(), nif->getBSVersion() );
 
 	std::set< std::string >	fileSet;
 	for ( int b = 0; b < nif->getBlockCount(); b++ ) {
@@ -267,15 +265,15 @@ QModelIndex spExtractAllResources::cast( NifModel * nif, const QModelIndex & ind
 	try {
 		for ( std::set< std::string >::const_iterator i = fileSet.begin(); i != fileSet.end(); i++ ) {
 			matFileData.clear();
-			if ( nif->getBSVersion() >= 160 && i->ends_with( ".mat" ) && i->starts_with( "materials/" ) ) {
-				CE2MaterialDB *	materials = Game::GameManager::materials( game );
+			if ( nif->getBSVersion() >= 170 && i->ends_with( ".mat" ) && i->starts_with( "materials/" ) ) {
+				CE2MaterialDB *	materials = nif->getCE2Materials();
 				if ( materials ) {
 					(void) materials->loadMaterial( *i );
 					materials->getJSONMaterial( matFileData, *i );
 				}
 				if ( matFileData.empty() )
 					continue;
-			} else if ( Game::GameManager::find_file( game, QString::fromStdString( *i ), nullptr, nullptr ).isEmpty() ) {
+			} else if ( nif->findResourceFile( QString::fromStdString( *i ), nullptr, nullptr ).isEmpty() ) {
 				continue;
 			}
 
@@ -284,7 +282,7 @@ QModelIndex spExtractAllResources::cast( NifModel * nif, const QModelIndex & ind
 			if ( !matFileData.empty() ) {
 				matFileData += '\n';
 				spResourceFileExtract::writeFileWithPath( fullPath.c_str(), matFileData.c_str(), qsizetype(matFileData.length()) );
-			} else if ( Game::GameManager::get_file( fileData, game, *i ) ) {
+			} else if ( nif->getResourceFile( fileData, *i ) ) {
 				spResourceFileExtract::writeFileWithPath( fullPath.c_str(), fileData.data(), fileData.size() );
 			}
 		}

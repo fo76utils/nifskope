@@ -36,8 +36,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "model/nifmodel.h"
 #include "model/kfmmodel.h"
 
-#include "gamemanager.h"
-
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QDesktopServices>

@@ -38,7 +38,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "data/niftypes.h"
 #include "io/nifstream.h"
 #include "material.hpp"
-#include "gamemanager.h"
 #include "io/material.h"
 
 #include <QByteArray>

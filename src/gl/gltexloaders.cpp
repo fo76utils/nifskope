@@ -37,6 +37,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "model/nifmodel.h"
 
 #include "dds.h"
+#include "libfo76utils/src/filebuf.hpp"
 #include "libfo76utils/src/pbr_lut.hpp"
 #include "libfo76utils/src/sfcube2.hpp"
 
@@ -667,7 +668,7 @@ GLuint texLoadDDS( const QString & filepath, GLenum & target, GLuint & mipmaps, 
 
 static SFCubeMapCache	sfCubeMapCache;
 
-GLuint texLoadPBRCubeMap( const Game::GameMode game, const QString & filepath, GLenum & target, GLuint & mipmaps, QByteArray & data, GLuint * id )
+GLuint texLoadPBRCubeMap( const NifModel * nif, const QString & filepath, GLenum & target, GLuint & mipmaps, QByteArray & data, GLuint * id )
 {
 	if ( data.size() < 148 )
 		return 0;
@@ -677,7 +678,7 @@ GLuint texLoadPBRCubeMap( const Game::GameMode game, const QString & filepath, G
 	do {
 		if ( FileBuffer::readUInt64Fast( dataPtr ) == 0x4E41494441523F23ULL ) {	// "#?RADIAN"
 			sfCubeMapCache.setNormalizeLevel( 0.25f );
-			if ( game != Game::FALLOUT_76 )
+			if ( nif->getBSVersion() >= 170 )	// not Fallout 76
 				break;
 			for ( size_t i = 0; i <= 144; i++ ) {
 				std::uint32_t	tmp = FileBuffer::readUInt32Fast( dataPtr + i );
@@ -734,7 +735,7 @@ GLuint texLoadPBRCubeMap( const Game::GameMode game, const QString & filepath, G
 	return texLoadDDS( filepath, target, mipmaps, data, id );
 }
 
-bool texLoadColor( const Game::GameMode game, const QString & filepath, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint * id )
+bool texLoadColor( const NifModel * nif, const QString & filepath, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint * id )
 {
 	// generate 1x1 texture from an RGBA color in "#AABBGGRR" format
 	QChar	c;
@@ -763,8 +764,8 @@ bool texLoadColor( const Game::GameMode game, const QString & filepath, GLenum &
 	for ( int i = 0; i < n; i++ )
 		FileBuffer::writeUInt32Fast( dataPtr + ( 148 + (i << 2) ), color );
 
-	if ( isCubeMap && ( game == Game::FALLOUT_76 || game == Game::STARFIELD ) )
-		return bool( texLoadPBRCubeMap( game, filepath, target, mipmaps, data, id ) );
+	if ( isCubeMap && nif && nif->getBSVersion() >= 151 )
+		return bool( texLoadPBRCubeMap( nif, filepath, target, mipmaps, data, id ) );
 	return bool( texLoadDDS( filepath, target, mipmaps, data, id ) );
 }
 
@@ -1242,10 +1243,10 @@ gli::texture load_if_valid( const char * data, unsigned int size )
 }
 
 
-bool texLoad( const Game::GameMode game, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint * id)
+bool texLoad( const NifModel * nif, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint * id)
 {
 	QByteArray	tmp;
-	return texLoad( game, filepath, format, target, width, height, mipmaps, tmp, id );
+	return texLoad( nif, filepath, format, target, width, height, mipmaps, tmp, id );
 }
 
 static void extract_pbr_lut_data( QByteArray & data )
@@ -1259,7 +1260,7 @@ static void extract_pbr_lut_data( QByteArray & data )
 	data = pbrLUTData;
 }
 
-bool texLoad( const Game::GameMode game, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint * id )
+bool texLoad( const NifModel * nif, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint * id )
 {
 	width = height = mipmaps = 0;
 
@@ -1268,9 +1269,15 @@ bool texLoad( const Game::GameMode game, const QString & filepath, QString & for
 			if ( filepath == "#sfpbr.dds" )
 				extract_pbr_lut_data( data );
 			else
-				return texLoadColor( game, filepath, target, width, height, mipmaps, data, id );
-		} else if ( !Game::GameManager::get_file(data, game, filepath, "textures", "") ) {
-			throw QString( "could not open file" );
+				return texLoadColor( nif, filepath, target, width, height, mipmaps, data, id );
+		} else {
+			bool	fileFound;
+			if ( !nif )
+				fileFound = Game::GameManager::get_file( data, Game::OTHER, filepath, "textures", "" );
+			else
+				fileFound = nif->getResourceFile( data, filepath, "textures", "" );
+			if ( !fileFound )
+				throw QString( "could not open file" );
 		}
 
 		if ( data.isEmpty() )
@@ -1278,21 +1285,21 @@ bool texLoad( const Game::GameMode game, const QString & filepath, QString & for
 	}
 
 	bool isSupported = true;
-	if ( filepath.endsWith( ".dds", Qt::CaseInsensitive ) || ( filepath.endsWith( ".hdr", Qt::CaseInsensitive ) && ( game == Game::FALLOUT_76 || game == Game::STARFIELD ) ) ) {
+	if ( filepath.endsWith( ".dds", Qt::CaseInsensitive ) || ( filepath.endsWith( ".hdr", Qt::CaseInsensitive ) && nif && nif->getBSVersion() >= 151 ) ) {
 		bool	isCubeMap = false;
 		if ( data.size() >= 148 ) {
 			if ( FileBuffer::readUInt32Fast( data.data() ) == 0x20534444 ) {	// "DDS "
 				if ( data.data()[113] & 0x02 ) {	// DDSCAPS2_CUBEMAP
 					isCubeMap = true;
-					if ( game == Game::FALLOUT_76 && FileBuffer::readUInt32Fast( data.data() + 84 ) == 0x30315844 && data.data()[128] == 0x57 )
-						data[128] = 0x5B;	// DXGI_FORMAT_B8G8R8A8_UNORM -> DXGI_FORMAT_B8G8R8A8_UNORM_SRGB
+					if ( nif->getBSVersion() < 170 && FileBuffer::readUInt32Fast( data.data() + 84 ) == 0x30315844 && data.data()[128] == 0x57 )
+						data[128] = 0x5B;	// Fallout 76: DXGI_FORMAT_B8G8R8A8_UNORM -> DXGI_FORMAT_B8G8R8A8_UNORM_SRGB
 				}
 			} else if ( FileBuffer::readUInt64Fast( data.data() ) == 0x4E41494441523F23ULL ) {	// "#?RADIAN"
 				isCubeMap = true;
 			}
 		}
-		if ( isCubeMap && ( game == Game::FALLOUT_76 || game == Game::STARFIELD ) ) {
-			mipmaps = texLoadPBRCubeMap( game, filepath, target, mipmaps, data, id );
+		if ( isCubeMap && nif && nif->getBSVersion() >= 151 ) {
+			mipmaps = texLoadPBRCubeMap( nif, filepath, target, mipmaps, data, id );
 		} else {
 			mipmaps = texLoadDDS( filepath, target, mipmaps, data, id );
 		}
@@ -1738,7 +1745,7 @@ bool texSaveTGA( const QModelIndex & index, const QString & filepath, const GLui
 }
 
 
-bool texSaveNIF( const Game::GameMode game, NifModel * nif, const QString & filepath, QModelIndex & iData )
+bool texSaveNIF( NifModel * nif, const QString & filepath, QModelIndex & iData )
 {
 	// Work out the extension and format
 	// If DDS raw, DXT1 or DXT5, copy directly from texture
@@ -1860,7 +1867,7 @@ bool texSaveNIF( const Game::GameMode game, NifModel * nif, const QString & file
 		id[1] = 0;
 
 		// fastest way to get parameters and ensure texture is active
-		if ( texLoad( game, filepath, format, target, width, height, mipmaps, id ) ) {
+		if ( texLoad( nif, filepath, format, target, width, height, mipmaps, id ) ) {
 			//qDebug() << "Width" << width << "height" << height << "mipmaps" << mipmaps << "format" << format;
 		} else {
 			qCCritical( nsIo ) << QObject::tr( "Error importing %1" ).arg( filepath );

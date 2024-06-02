@@ -250,7 +250,7 @@ void BSMesh::updateImpl(const NifModel* nif, const QModelIndex& index)
 	iMeshes = nif->getIndex(index, "Meshes");
 	meshes.clear();
 	std::function<void(const QString&, int)> createMeshFile = [&](const QString& meshPath, int lodLevel) {
-		auto mesh = std::make_shared<MeshFile>(meshPath);
+		auto mesh = std::make_shared<MeshFile>(meshPath, nif);
 		if ( mesh->isValid() ) {
 			meshes.append(mesh);
 			if ( lodLevel > 0 || mesh->lods.size() > 0 )

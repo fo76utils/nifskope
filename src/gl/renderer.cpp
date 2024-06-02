@@ -41,7 +41,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "io/material.h"
 #include "model/nifmodel.h"
 #include "ui/settingsdialog.h"
-#include "gamemanager.h"
 #include "gl/BSMesh.h"
 #include "libfo76utils/src/ddstxt16.hpp"
 
@@ -858,7 +857,7 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 
 	const CE2Material *	mat = nullptr;
 	bool	useErrorColor = false;
-	if ( !lsp->getSFMaterial( mat ) )
+	if ( !lsp->getSFMaterial( mat, nif ) )
 		useErrorColor = scene->hasOption(Scene::DoErrorColor);
 	if ( !mat )
 		return false;

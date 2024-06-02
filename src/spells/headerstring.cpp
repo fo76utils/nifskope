@@ -8,9 +8,9 @@
 #include <QPushButton>
 
 #include "ui/widgets/filebrowser.h"
-#include "gamemanager.h"
 #include "libfo76utils/src/common.hpp"
 #include "libfo76utils/src/material.hpp"
+#include "model/nifmodel.h"
 
 // Brief description is deliberately not autolinked to class Spell
 /*! \file headerstring.cpp
@@ -96,7 +96,7 @@ public:
 		return false;
 	}
 
-	void browseMaterial( QLineEdit * le, quint32 bsVersion );
+	void browseMaterial( QLineEdit * le, const NifModel * nif );
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
 	{
@@ -139,7 +139,7 @@ public:
 		QPushButton * bm = nullptr;
 		if ( nif->getBSVersion() >= 130 ) {
 			bm = new QPushButton( Spell::tr( "Browse Materials" ), &dlg );
-			QObject::connect( bm, &QPushButton::clicked, le, [this, le, nif]() { browseMaterial( le, nif->getBSVersion() ); } );
+			QObject::connect( bm, &QPushButton::clicked, le, [this, le, nif]() { browseMaterial( le, nif ); } );
 		}
 
 		QGridLayout * grid = new QGridLayout;
@@ -170,21 +170,22 @@ static bool bgsmFileNameFilterFunc( [[maybe_unused]] void * p, const std::string
 	return ( s.starts_with( "materials/" ) && ( s.ends_with( ".bgsm" ) || s.ends_with( ".bgem" ) ) );
 }
 
-void spEditStringIndex::browseMaterial( QLineEdit * le, quint32 bsVersion )
+void spEditStringIndex::browseMaterial( QLineEdit * le, const NifModel * nif )
 {
 	std::set< std::string_view >	materials;
 	AllocBuffers	stringBuf;
-	if ( bsVersion < 160 ) {
-		Game::GameManager::list_files( materials, ( bsVersion < 151 ? Game::FALLOUT_4 : Game::FALLOUT_76 ), &bgsmFileNameFilterFunc );
+	quint32	bsVersion = nif->getBSVersion();
+	if ( bsVersion < 170 ) {
+		nif->listResourceFiles( materials, &bgsmFileNameFilterFunc );
 	} else {
-		const CE2MaterialDB * matDB = Game::GameManager::materials( Game::STARFIELD );
+		const CE2MaterialDB * matDB = nif->getCE2Materials();
 		if ( matDB )
 			matDB->getMaterialList( materials, stringBuf );
 	}
 
 	std::string	prvPath;
 	if ( !le->text().isEmpty() )
-		prvPath = Game::GameManager::get_full_path( le->text(), "materials", ( bsVersion >= 160 ? ".mat" : nullptr ) );
+		prvPath = Game::GameManager::get_full_path( le->text(), "materials", ( bsVersion >= 170 ? ".mat" : nullptr ) );
 
 	FileBrowserWidget	fileBrowser( 800, 600, "Select Material", materials, prvPath );
 	if ( fileBrowser.exec() == QDialog::Accepted ) {
