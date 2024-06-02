@@ -551,6 +551,17 @@ public:
 		xyzw[ 2 ] = z;
 		xyzw[ 3 ] = w;
 	}
+	Vector4( const FloatVector4 & v )
+	{
+		xyzw[0] = v[0];
+		xyzw[1] = v[1];
+		xyzw[2] = v[2];
+		xyzw[3] = v[3];
+	}
+	inline operator FloatVector4() const
+	{
+		return FloatVector4( xyzw[0], xyzw[1], xyzw[2], xyzw[3] );
+	}
 	//! Constructor from a Vector3 and a float
 	explicit Vector4( const Vector3 & v3, float w = 0.0 )
 	{
@@ -1373,6 +1384,12 @@ public:
 	explicit Color4( const QColor & c ) { fromQColor( c ); }
 	//! Constructor
 	Color4( float r, float g, float b, float a ) { setRGBA( r, g, b, a ); }
+	Color4( const FloatVector4 & c ) { rgba[0] = c[0]; rgba[1] = c[1]; rgba[2] = c[2]; rgba[3] = c[3]; }
+
+	inline operator FloatVector4() const
+	{
+		return FloatVector4( rgba[0], rgba[1], rgba[2], rgba[3] );
+	}
 
 	//! Array operator
 	float & operator[]( unsigned int i )
@@ -1508,18 +1525,13 @@ class ByteColor4 : public Color4
 public:
 	//! Default constructor
 	ByteColor4() { rgba[0] = rgba[1] = rgba[2] = rgba[3] = 1.0; }
-	ByteColor4( const std::uint32_t& c )
+	ByteColor4( const std::uint32_t & c )
+		: Color4( FloatVector4(c) / 255.0f )
 	{
-		FloatVector4	v(c);
-		v /= 255.0f;
-		rgba[0] = v[0];
-		rgba[1] = v[1];
-		rgba[2] = v[2];
-		rgba[3] = v[3];
 	}
 	inline operator std::uint32_t() const
 	{
-		return std::uint32_t( FloatVector4(rgba[0], rgba[1], rgba[2], rgba[3]) * 255.0f );
+		return std::uint32_t( FloatVector4(*this) * 255.0f );
 	}
 };
 
