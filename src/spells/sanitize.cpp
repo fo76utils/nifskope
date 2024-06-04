@@ -1,7 +1,7 @@
 #include "spellbook.h"
 #include "sanitize.h"
 #include "spells/misc.h"
-#include "gamemanager.h"
+#include "qtcompat.h"
 
 #include <QInputDialog>
 

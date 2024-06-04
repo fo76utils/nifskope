@@ -37,6 +37,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "gl/glproperty.h"
 #include "gl/glscene.h"
 #include "model/nifmodel.h"
+#include "qtcompat.h"
 
 // `NiControllerManager` blocks
 

@@ -6,6 +6,7 @@
 #include "io/material.h"
 #include "io/nifstream.h"
 #include "model/nifmodel.h"
+#include "qtcompat.h"
 
 #include <QDir>
 #include <QBuffer>

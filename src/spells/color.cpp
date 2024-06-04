@@ -1,5 +1,5 @@
 #include "spellbook.h"
-#include "gamemanager.h"
+#include "qtcompat.h"
 
 #include "ui/widgets/colorwheel.h"
 

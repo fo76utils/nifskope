@@ -1,4 +1,5 @@
 #include "spellbook.h"
+#include "qtcompat.h"
 
 #include "lib/nvtristripwrapper.h"
 
@@ -7,8 +8,6 @@
 #include <QLabel>
 #include <QLayout>
 #include <QPushButton>
-
-#include "gamemanager.h"
 
 // Brief description is deliberately not autolinked to class Spell
 /*! \file normals.cpp

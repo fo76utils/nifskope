@@ -1,5 +1,5 @@
 #include "tangentspace.h"
-#include "gamemanager.h"
+#include "qtcompat.h"
 
 #include "lib/nvtristripwrapper.h"
 

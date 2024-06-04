@@ -1,14 +1,9 @@
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-variable"
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-#endif
-
 
 #include "3ds.h"
 
 #include "spellbook.h"
 #include "gl/gltex.h"
+#include "qtcompat.h"
 
 #include "lib/nvtristripwrapper.h"
 
@@ -19,8 +14,6 @@
 #include <QMessageBox>
 #include <QSettings>
 #include <QString>
-
-#include "gamemanager.h"
 
 #define tr( x ) QCoreApplication::tr( "3dsImport", x )
 
@@ -175,7 +168,7 @@ void import3ds( NifModel * nif, const QModelIndex & index )
 
 	//Be sure the user hasn't clicked on a NiTriStrips object
 	if ( iBlock.isValid() && nif->itemName( iBlock ) == "NiTriStrips" ) {
-		int result = QMessageBox::information( 0, tr( "Import OBJ" ), tr( "You cannot import an OBJ file over a NiTriStrips object.  Please convert it to a NiTriShape object first by right-clicking and choosing Mesh > Triangulate" ) );
+		(void) QMessageBox::information( 0, tr( "Import OBJ" ), tr( "You cannot import an OBJ file over a NiTriStrips object.  Please convert it to a NiTriShape object first by right-clicking and choosing Mesh > Triangulate" ) );
 		return;
 	}
 
@@ -242,7 +235,6 @@ void import3ds( NifModel * nif, const QModelIndex & index )
 
 	//--Read the file--//
 
-	float ObjScale;
 	QVector<objMesh> ObjMeshes;
 	QMap<QString, objMaterial> ObjMaterials;
 	QMultiMap<QString, objKfSequence> ObjKeyframes;
@@ -287,11 +279,9 @@ void import3ds( NifModel * nif, const QModelIndex & index )
 
 	Chunk * MasterScale = ModelData->getChild( MASTER_SCALE );
 
-	if ( MasterScale ) {
-		ObjScale = MasterScale->read<float>();
-	} else {
-		ObjScale = 1.0f;
-	}
+	[[maybe_unused]] float	ObjScale = 1.0f;
+	if ( MasterScale )
+		ObjScale = MasterScale->read<float>();	// FIXME: object scale is not used
 
 	QList<Chunk *> Materials = ModelData->getChildren( MATERIAL );
 	QList<Chunk *> Meshes = ModelData->getChildren( NAMED_OBJECT );
@@ -444,7 +434,7 @@ void import3ds( NifModel * nif, const QModelIndex & index )
 	Chunk * Keyframes = Model->getChild( KFDATA );
 
 	if ( Keyframes ) {
-		if ( Chunk * KfHdr = Keyframes->getChild( KFHDR ) ) {
+		if ( [[maybe_unused]] Chunk * KfHdr = Keyframes->getChild( KFHDR ) ) {
 		}
 
 		QList<Chunk *> KfSegs = Keyframes->getChildren( KFSEG );
@@ -476,9 +466,9 @@ void import3ds( NifModel * nif, const QModelIndex & index )
 			if ( Chunk * NodeHdr = KfObj->getChild( NODE_HDR ) ) {
 				newKfSeq.objectName = NodeHdr->readString();
 
-				unsigned short Flags1 = NodeHdr->read<unsigned short>();
-				unsigned short Flags2 = NodeHdr->read<unsigned short>();
-				unsigned short Hierarchy = NodeHdr->read<unsigned short>();
+				(void) NodeHdr->read<unsigned short>();	// Flags1
+				(void) NodeHdr->read<unsigned short>();	// Flags2
+				(void) NodeHdr->read<unsigned short>();	// Hierarchy
 			}
 
 			if ( Chunk * Pivot = KfObj->getChild( PIVOT ) ) {
@@ -490,20 +480,20 @@ void import3ds( NifModel * nif, const QModelIndex & index )
 			}
 
 			if ( Chunk * PosTrack = KfObj->getChild( POS_TRACK_TAG ) ) {
-				unsigned short flags = PosTrack->read<unsigned short>();
+				(void) PosTrack->read<unsigned short>();	// flags
 
-				unsigned short unknown1 = PosTrack->read<unsigned short>();
-				unsigned short unknown2 = PosTrack->read<unsigned short>();
-				unsigned short unknown3 = PosTrack->read<unsigned short>();
-				unsigned short unknown4 = PosTrack->read<unsigned short>();
+				(void) PosTrack->read<unsigned short>();	// unknown1
+				(void) PosTrack->read<unsigned short>();	// unknown2
+				(void) PosTrack->read<unsigned short>();	// unknown3
+				(void) PosTrack->read<unsigned short>();	// unknown4
 
 				unsigned short keys = PosTrack->read<unsigned short>();
 
-				unsigned short unknown = PosTrack->read<unsigned short>();
+				(void) PosTrack->read<unsigned short>();	// unknown
 
 				for ( int key = 0; key < keys; key++ ) {
 					unsigned short kfNum = PosTrack->read<unsigned short>();
-					unsigned long kfUnknown = PosTrack->read<unsigned long>();
+					(void) PosTrack->read<unsigned long>();	// kfUnknown
 					float kfPosX = PosTrack->read<float>();
 					float kfPosY = PosTrack->read<float>();
 					float kfPosZ = PosTrack->read<float>();
@@ -513,20 +503,20 @@ void import3ds( NifModel * nif, const QModelIndex & index )
 			}
 
 			if ( Chunk * RotTrack = KfObj->getChild( ROT_TRACK_TAG ) ) {
-				unsigned short flags = RotTrack->read<unsigned short>();
+				(void) RotTrack->read<unsigned short>();	// flags
 
-				unsigned short unknown1 = RotTrack->read<unsigned short>();
-				unsigned short unknown2 = RotTrack->read<unsigned short>();
-				unsigned short unknown3 = RotTrack->read<unsigned short>();
-				unsigned short unknown4 = RotTrack->read<unsigned short>();
+				(void) RotTrack->read<unsigned short>();	// unknown1
+				(void) RotTrack->read<unsigned short>();	// unknown2
+				(void) RotTrack->read<unsigned short>();	// unknown3
+				(void) RotTrack->read<unsigned short>();	// unknown4
 
 				unsigned short keys = RotTrack->read<unsigned short>();
 
-				unsigned short unknown = RotTrack->read<unsigned short>();
+				(void) RotTrack->read<unsigned short>();	// unknown
 
 				for ( unsigned short key = 0; key < keys; key++ ) {
 					unsigned short kfNum = RotTrack->read<unsigned short>();
-					unsigned long kfUnknown = RotTrack->read<unsigned long>();
+					(void) RotTrack->read<unsigned long>();	// kfUnknown
 					float kfRotAngle = RotTrack->read<float>();
 					float kfAxisX = RotTrack->read<float>();
 					float kfAxisY = RotTrack->read<float>();
@@ -538,20 +528,20 @@ void import3ds( NifModel * nif, const QModelIndex & index )
 			}
 
 			if ( Chunk * SclTrack = KfObj->getChild( SCL_TRACK_TAG ) ) {
-				unsigned short flags = SclTrack->read<unsigned short>();
+				(void) SclTrack->read<unsigned short>();	// flags
 
-				unsigned short unknown1 = SclTrack->read<unsigned short>();
-				unsigned short unknown2 = SclTrack->read<unsigned short>();
-				unsigned short unknown3 = SclTrack->read<unsigned short>();
-				unsigned short unknown4 = SclTrack->read<unsigned short>();
+				(void) SclTrack->read<unsigned short>();	// unknown1
+				(void) SclTrack->read<unsigned short>();	// unknown2
+				(void) SclTrack->read<unsigned short>();	// unknown3
+				(void) SclTrack->read<unsigned short>();	// unknown4
 
 				unsigned short keys = SclTrack->read<unsigned short>();
 
-				unsigned short unknown = SclTrack->read<unsigned short>();
+				(void) SclTrack->read<unsigned short>();	// unknown
 
 				for ( unsigned short key = 0; key < keys; key++ ) {
 					unsigned short kfNum = SclTrack->read<unsigned short>();
-					unsigned long kfUnknown = SclTrack->read<unsigned long>();
+					(void) SclTrack->read<unsigned long>();	// kfUnknown
 					float kfSclX = SclTrack->read<float>();
 					float kfSclY = SclTrack->read<float>();
 					float kfSclZ = SclTrack->read<float>();

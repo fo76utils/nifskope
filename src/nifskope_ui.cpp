@@ -51,6 +51,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ui/widgets/xmlcheck.h"
 #include "ui/about_dialog.h"
 #include "ui/settingsdialog.h"
+#include "qtcompat.h"
 
 #include <QAction>
 #include <QApplication>

@@ -4,6 +4,7 @@
 #include "model/kfmmodel.h"
 #include "model/nifmodel.h"
 #include "ui/widgets/fileselect.h"
+#include "qtcompat.h"
 
 #include "spells/sanitize.h"
 

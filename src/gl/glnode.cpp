@@ -40,6 +40,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "gl/marker/constraints.h"
 #include "model/nifmodel.h"
 #include "ui/settingsdialog.h"
+#include "qtcompat.h"
 
 #include "lib/nvtristripwrapper.h"
 

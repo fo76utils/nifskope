@@ -8,6 +8,7 @@
 #include "ui/widgets/uvedit.h"
 #include "ui/widgets/filebrowser.h"
 #include "model/nifmodel.h"
+#include "qtcompat.h"
 
 #include "lib/nvtristripwrapper.h"
 

@@ -2,7 +2,7 @@
 
 #include "blocks.h"
 #include "gl/gltools.h"
-#include "gamemanager.h"
+#include "qtcompat.h"
 
 #include "lib/nvtristripwrapper.h"
 

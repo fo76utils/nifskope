@@ -38,6 +38,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "gl/gltex.h"
 #include "io/material.h"
 #include "gamemanager.h"
+#include "qtcompat.h"
 
 #include <QOpenGLContext>
 

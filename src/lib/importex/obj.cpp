@@ -35,6 +35,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "gl/glscene.h"
 #include "model/nifmodel.h"
 #include "spells/tangentspace.h"
+#include "qtcompat.h"
 
 #include "lib/nvtristripwrapper.h"
 

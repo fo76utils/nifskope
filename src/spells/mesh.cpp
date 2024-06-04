@@ -1,12 +1,12 @@
 #include "mesh.h"
 #include "gl/gltools.h"
+#include "qtcompat.h"
 
 #include <QDialog>
 #include <QGridLayout>
 
 #include <cfloat>
 
-#include "gamemanager.h"
 #include "libfo76utils/src/fp32vec4.hpp"
 #include "io/MeshFile.h"
 

@@ -2,6 +2,7 @@
 
 #include "spellbook.h"
 #include "gl/gltools.h"
+#include "qtcompat.h"
 
 #include "lib/nvtristripwrapper.h"
 
@@ -14,8 +15,6 @@
 #include <QSpinBox>
 
 #include <algorithm> // std::sort
-
-#include "gamemanager.h"
 
 #define SKEL_DAT ":/res/skel.dat"
 

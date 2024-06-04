@@ -38,6 +38,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "gl/gltools.h"
 #include "model/nifmodel.h"
 #include "ui/settingsdialog.h"
+#include "qtcompat.h"
 
 #include "libfo76utils/src/material.hpp"
 #include "lib/nvtristripwrapper.h"

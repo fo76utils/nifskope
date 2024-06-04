@@ -35,6 +35,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "message.h"
 #include "model/nifmodel.h"
+#include "qtcompat.h"
 
 #include "dds.h"
 #include "libfo76utils/src/filebuf.hpp"
