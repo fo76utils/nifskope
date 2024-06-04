@@ -1,5 +1,7 @@
  == CHANGELOG ==
 
+* Fixed the "Search Other Games if no match" resource setting, and the edit and browse path widgets not being enabled/disabled according to the game status.
+
 #### NifSkope-2.0.dev9-20240602
 
 * Added limited (read only) Starfield support to the UV editor.

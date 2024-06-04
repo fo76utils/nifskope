@@ -540,8 +540,8 @@ void SettingsResources::read()
 
 	setFolderList();
 
-	ui->chkAlternateExt->setChecked( settings.value( "Settings/Resources/Alternate Extensions", true ).toBool() );
-	ui->chkOtherGamesFallback->setChecked( settings.value("Settings/Resources/Other Games Fallback", true).toBool() );
+	ui->chkAlternateExt->setChecked( settings.value( "Settings/Resources/Alternate Extensions", false ).toBool() );
+	ui->chkOtherGamesFallback->setChecked( settings.value("Settings/Resources/Other Games Fallback", false ).toBool() );
 
 	setModified( false );
 }
@@ -585,9 +585,11 @@ void SettingsResources::manager_sync( bool make_connections )
 		auto path_string = GameManager::path(game);
 		if ( !path_string.isNull() )
 			edt->setText(path_string);
+		edt->setEnabled( GameManager::status(game) );
+		btn->setEnabled( GameManager::status(game) );
 
 		// Sync Enabled checkbox
-		chk->setChecked(GameManager::status(game));
+		chk->setChecked( GameManager::status(game) );
 
 		// Rename all GAME_%1 list items to the supported game at that position
 		auto game_txt = QString("GAME_%1");
@@ -606,8 +608,10 @@ void SettingsResources::manager_sync( bool make_connections )
 		if ( make_connections ) {
 			connect(btn, &QPushButton::clicked, this, &SettingsResources::onBrowseClicked);
 			connect(chk, &QCheckBox::clicked, this, &SettingsPane::modifyPane);
-			connect(chk, &QCheckBox::clicked, [chk, game]() {
-				GameManager::update_status(game, chk->isChecked());
+			connect(chk, &QCheckBox::clicked, [btn, chk, edt, game]() {
+				GameManager::update_status( game, chk->isChecked() );
+				edt->setEnabled( chk->isChecked() );
+				btn->setEnabled( chk->isChecked() );
 			});
 		}
 	}
@@ -672,7 +676,8 @@ QString SettingsResources::currentFolderItem()
 
 void SettingsResources::modifyPane()
 {
-	GameManager::update_folders(currentFolderItem(), folders->stringList());
+	GameManager::update_folders( currentFolderItem(), folders->stringList() );
+	GameManager::update_other_games_fallback( ui->chkOtherGamesFallback->isChecked() );
 	SettingsPane::modifyPane();
 }
 

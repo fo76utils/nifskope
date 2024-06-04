@@ -2,15 +2,10 @@
 #define GAMEMANAGER_H
 
 #include "libfo76utils/src/common.hpp"
-#include <cstdint>
-#include <memory>
-#include <unordered_map>
 
-#include <QMap>
+#include <unordered_map>
 #include <QString>
-#include <QStringBuilder>
-#include <QMutex>
-#include <QAbstractItemModel>
+#include <QStringList>
 
 class QProgressDialog;
 class NifModel;
@@ -34,63 +29,6 @@ enum GameMode : int
 	STARFIELD,
 
 	NUM_GAMES
-};
-
-using GameMap = QMap<GameMode, QString>;
-using GameEnabledMap = QMap<GameMode, bool>;
-using ResourceListMap = QMap<GameMode, QStringList>;
-
-using namespace std::string_literals;
-
-static const auto beth = QString("HKEY_LOCAL_MACHINE\\SOFTWARE\\Bethesda Softworks\\%1");
-static const auto msft = QString("HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\%1");
-
-
-static const GameMap STRING = {
-	{MORROWIND, "Morrowind"},
-	{OBLIVION, "Oblivion"},
-	{FALLOUT_3NV, "Fallout 3 / New Vegas"},
-	{SKYRIM, "Skyrim"},
-	{SKYRIM_SE, "Skyrim SE"},
-	{FALLOUT_4, "Fallout 4"},
-	{FALLOUT_76, "Fallout 76"},
-	{STARFIELD, "Starfield"},
-	{OTHER, "Other Games"}
-};
-
-static const GameMap KEY = {
-	{MORROWIND, beth.arg("Morrowind")},
-	{OBLIVION, beth.arg("Oblivion")},
-	{FALLOUT_3NV, beth.arg("FalloutNV")},
-	{SKYRIM, beth.arg("Skyrim")},
-	{SKYRIM_SE, beth.arg("Skyrim Special Edition")},
-	{FALLOUT_4, beth.arg("Fallout4")},
-	{FALLOUT_76, msft.arg("Fallout 76")},
-	{OTHER, ""}
-};
-
-static const GameMap DATA = {
-	{MORROWIND, "Data Files"},
-	{OBLIVION, "Data"},
-	{FALLOUT_3NV, "Data"},
-	{SKYRIM, "Data"},
-	{SKYRIM_SE, "Data"},
-	{FALLOUT_4, "Data"},
-	{FALLOUT_76, "Data"},
-	{STARFIELD, "Data"},
-	{OTHER, ""}
-};
-
-static const ResourceListMap FOLDERS = {
-	{MORROWIND, {"."}},
-	{OBLIVION, {"."}},
-	{FALLOUT_3NV, {"."}},
-	{SKYRIM, {"."}},
-	{SKYRIM_SE, {"."}},
-	{FALLOUT_4, {".", "Textures"}},
-	{FALLOUT_76, {".", "Textures"}},
-	{STARFIELD, {".", "Textures"}},
-	{OTHER, {}}
 };
 
 enum BSVersion
@@ -157,7 +95,8 @@ public:
 		CE2MaterialDB *	sfMaterials = nullptr;
 		std::uint64_t	sfMaterialDB_ID = 0;
 		GameResources *	parent = nullptr;
-		QString	dataPath;	// for loose NIF files only, empty otherwise
+		// list of data paths, empty for archived NIFs
+		QStringList	dataPaths;
 		~GameResources();
 		void init_archives();
 		CE2MaterialDB * init_materials();
@@ -222,40 +161,30 @@ public:
 	static inline void update_folders( const QString & game, const QStringList & list );
 	static inline void update_status( const GameMode game, bool status );
 	static inline void update_status( const QString & game, bool status );
+	static inline void update_other_games_fallback( bool status );
 
-	void init_settings( int & manager_version, QProgressDialog * dlg = nullptr ) const;
-	void update_settings( int & manager_version, QProgressDialog * dlg = nullptr ) const;
+	static void init_settings( int & manager_version, QProgressDialog * dlg = nullptr );
+	static void update_settings( int & manager_version, QProgressDialog * dlg = nullptr );
 
 	//! Save the manager to settings
-	void save() const;
+	static void save();
 	//! Load the manager from settings
-	void load();
+	static void load();
 	//! Reset the manager
-	void clear();
-
-	struct GameInfo
-	{
-		GameMode id = OTHER;
-		QString name;
-		QString path;
-		bool status = false;
-	};
+	static void clear();
 
 private:
-	void insert_game( const GameMode game, const QString & path );
-	void insert_folders( const GameMode game, const QStringList & list );
-	void insert_status( const GameMode game, bool status );
-
-	mutable QMutex mutex;
+	static void insert_game( const GameMode game, const QString & path );
+	static void insert_folders( const GameMode game, const QStringList & list );
+	static void insert_status( const GameMode game, bool status );
 
 	static GameResources	archives[NUM_GAMES];
 	// resources associated with loose NIF files
 	static std::unordered_map< const NifModel *, GameResources * >	nifResourceMap;
 	static std::uint64_t	material_db_prv_id;
-
-	GameMap game_paths;
-	GameEnabledMap game_status;
-	ResourceListMap game_folders;
+	static QString	gamePaths[NUM_GAMES];
+	static bool	gameStatus[NUM_GAMES];
+	static bool	otherGamesFallback;
 };
 
 inline GameManager::GameResources & GameManager::getNIFResources( const NifModel * nif )
@@ -293,7 +222,7 @@ QStringList GameManager::find_folders( const QString & game )
 
 void GameManager::update_game( const GameMode game, const QString & path )
 {
-	get()->insert_game( game, path );
+	insert_game( game, path );
 }
 
 void GameManager::update_game( const QString & game, const QString & path )
@@ -303,7 +232,7 @@ void GameManager::update_game( const QString & game, const QString & path )
 
 void GameManager::update_folders( const GameMode game, const QStringList & list )
 {
-	get()->insert_folders( game, list );
+	insert_folders( game, list );
 }
 
 void GameManager::update_folders( const QString & game, const QStringList & list )
@@ -313,7 +242,7 @@ void GameManager::update_folders( const QString & game, const QStringList & list
 
 void GameManager::update_status( const GameMode game, bool status )
 {
-	get()->insert_status( game, status );
+	insert_status( game, status );
 }
 
 void GameManager::update_status( const QString & game, bool status )
@@ -321,15 +250,11 @@ void GameManager::update_status( const QString & game, bool status )
 	update_status( ModeForString(game), status );
 }
 
-} // end namespace Game
-
-template < typename T >
-static inline QModelIndex QModelIndex_child( const T & m, int arow = 0, int acolumn = 0 )
+void GameManager::update_other_games_fallback( bool status )
 {
-	const QAbstractItemModel *	model = m.model();
-	if ( !model )
-		return QModelIndex();
-	return model->index( arow, acolumn, m );
+	otherGamesFallback = status;
 }
+
+} // end namespace Game
 
 #endif // GAMEMANAGER_H

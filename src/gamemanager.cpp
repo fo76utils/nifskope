@@ -11,13 +11,73 @@
 #include <QProgressDialog>
 #include <QDir>
 #include <QMessageBox>
+#include <QStringBuilder>
 
 namespace Game
 {
 
+using GameMap = QMap<GameMode, QString>;
+using ResourceListMap = QMap<GameMode, QStringList>;
+
+using namespace std::string_literals;
+
+static const auto beth = QString("HKEY_LOCAL_MACHINE\\SOFTWARE\\Bethesda Softworks\\%1");
+static const auto msft = QString("HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\%1");
+
+
+static const GameMap STRING = {
+	{MORROWIND, "Morrowind"},
+	{OBLIVION, "Oblivion"},
+	{FALLOUT_3NV, "Fallout 3 / New Vegas"},
+	{SKYRIM, "Skyrim"},
+	{SKYRIM_SE, "Skyrim SE"},
+	{FALLOUT_4, "Fallout 4"},
+	{FALLOUT_76, "Fallout 76"},
+	{STARFIELD, "Starfield"},
+	{OTHER, "Other Games"}
+};
+
+static const GameMap KEY = {
+	{MORROWIND, beth.arg("Morrowind")},
+	{OBLIVION, beth.arg("Oblivion")},
+	{FALLOUT_3NV, beth.arg("FalloutNV")},
+	{SKYRIM, beth.arg("Skyrim")},
+	{SKYRIM_SE, beth.arg("Skyrim Special Edition")},
+	{FALLOUT_4, beth.arg("Fallout4")},
+	{FALLOUT_76, msft.arg("Fallout 76")},
+	{OTHER, ""}
+};
+
+static const GameMap DATA = {
+	{MORROWIND, "Data Files"},
+	{OBLIVION, "Data"},
+	{FALLOUT_3NV, "Data"},
+	{SKYRIM, "Data"},
+	{SKYRIM_SE, "Data"},
+	{FALLOUT_4, "Data"},
+	{FALLOUT_76, "Data"},
+	{STARFIELD, "Data"},
+	{OTHER, ""}
+};
+
+static const ResourceListMap FOLDERS = {
+	{MORROWIND, {"."}},
+	{OBLIVION, {"."}},
+	{FALLOUT_3NV, {"."}},
+	{SKYRIM, {"."}},
+	{SKYRIM_SE, {"."}},
+	{FALLOUT_4, {".", "Textures"}},
+	{FALLOUT_76, {".", "Textures"}},
+	{STARFIELD, {".", "Textures"}},
+	{OTHER, {}}
+};
+
 std::uint64_t	GameManager::material_db_prv_id = 0;
 GameManager::GameResources	GameManager::archives[NUM_GAMES];
 std::unordered_map< const NifModel *, GameManager::GameResources * >	GameManager::nifResourceMap;
+QString	GameManager::gamePaths[NUM_GAMES];
+bool	GameManager::gameStatus[NUM_GAMES] = { true, true, true, true, true, true, true, true, true };
+bool	GameManager::otherGamesFallback = false;
 
 static bool archiveFilterFunction_1( [[maybe_unused]] void * p, const std::string_view & s )
 {
@@ -88,17 +148,6 @@ QStringList existing_folders(GameMode game, QString path)
 	return folders;
 }
 
-GameManager::GameInfo get_game_info(GameMode game)
-{
-	GameManager::GameInfo info;
-	info.id = game;
-	info.name = StringForMode(game);
-	info.path = registry_game_path(KEY.value(game, {}));
-	if ( info.path.isEmpty() && game == FALLOUT_3NV )
-		info.path = registry_game_path(beth.arg("Fallout3"));
-	return info;
-}
-
 QString StringForMode( GameMode game )
 {
 	if ( game >= NUM_GAMES )
@@ -149,10 +198,11 @@ void GameManager::GameResources::init_archives()
 		parent->init_archives();
 
 	QStringList	tmp;
-	if ( !parent )
-		tmp = GameManager::folders( game );
-	else if ( !dataPath.isEmpty() )
-		tmp.append( dataPath );
+	if ( gameStatus[game] ) {
+		tmp = dataPaths;
+		if ( !parent && otherGamesFallback && game != OTHER && gameStatus[OTHER] )
+			tmp.append( archives[OTHER].dataPaths );
+	}
 	if ( tmp.isEmpty() )
 		return;
 	ba2File = new BA2File();
@@ -233,7 +283,7 @@ void GameManager::GameResources::close_materials()
 
 QString GameManager::GameResources::find_file( const std::string_view & fullPath )
 {
-	if ( !ba2File && !( parent && dataPath.isEmpty() ) )
+	if ( !ba2File && !dataPaths.isEmpty() )
 		init_archives();
 	if ( ba2File && ba2File->findFile( fullPath ) )
 		return QString::fromUtf8( fullPath.data(), qsizetype(fullPath.length()) );
@@ -251,7 +301,7 @@ static unsigned char * byteArrayAllocFunc( void * bufPtr, size_t nBytes )
 
 bool GameManager::GameResources::get_file( QByteArray & data, const std::string_view & fullPath )
 {
-	if ( !ba2File && !( parent && dataPath.isEmpty() ) )
+	if ( !ba2File && !dataPaths.isEmpty() )
 		init_archives();
 	const BA2File::FileInfo *	fd = nullptr;
 	if ( ba2File )
@@ -396,54 +446,68 @@ GameManager * GameManager::get()
 	return instance;
 }
 
-void GameManager::init_settings( int& manager_version, QProgressDialog* dlg ) const
+static QString getGamePathFromRegistry( GameMode game )
+{
+	QString	path = registry_game_path( KEY.value(game, {}) );
+	if ( path.isEmpty() && game == FALLOUT_3NV )
+		path = registry_game_path( beth.arg("Fallout3") );
+	return path;
+}
+
+void GameManager::init_settings( int & manager_version, QProgressDialog * dlg )
 {
 	QSettings settings;
 	QVariantMap paths, folders, status;
 	for ( int g = 0; g < NUM_GAMES; g++ ) {
-		process(dlg, g);
-		auto game = get_game_info(GameMode(g));
-		if ( game.path.isEmpty() )
-			continue;
-		paths.insert(game.name, game.path);
-		folders.insert(game.name, existing_folders(game.id, game.path));
+		process( dlg, g );
+		GameMode	gameID = GameMode( g );
+		QString	gamePath = getGamePathFromRegistry( gameID );
+		QString	gameName = StringForMode( gameID );
+		if ( !gamePath.isEmpty() ) {
+			paths.insert( gameName, gamePath );
+			folders.insert( gameName, existing_folders( gameID, gamePath ) );
+		}
 
 		// Game Enabled Status
-		status.insert(game.name, !game.path.isEmpty());
+		status.insert( gameName, true );
 	}
 
-	settings.setValue(GAME_PATHS, paths);
-	settings.setValue(GAME_FOLDERS, folders);
-	settings.setValue(GAME_STATUS, status);
-	settings.setValue(GAME_MGR_VER, ++manager_version);
+	settings.setValue( GAME_PATHS, paths );
+	settings.setValue( GAME_FOLDERS, folders );
+	settings.setValue( GAME_STATUS, status );
+	settings.setValue( "Settings/Resources/Other Games Fallback", QVariant(false) );
+	settings.setValue( GAME_MGR_VER, ++manager_version );
 }
 
-void GameManager::update_settings( int& manager_version, QProgressDialog * dlg ) const
+void GameManager::update_settings( int & manager_version, QProgressDialog * dlg )
 {
 	QSettings settings;
 	QVariantMap folders;
 
 	for ( int g = 0; g < NUM_GAMES; g++ ) {
-		process(dlg, g);
-		auto game = get_game_info(GameMode(g));
-		if ( game.path.isEmpty() )
+		process( dlg, g );
+		GameMode	gameID = GameMode( g );
+		QString	gamePath = getGamePathFromRegistry( gameID );
+		if ( gamePath.isEmpty() || manager_version != 1 )
 			continue;
 
-		if ( manager_version == 1 )
-			folders.insert(game.name, existing_folders(game.id, game.path));
+		QString	gameName = StringForMode( gameID );
+		folders.insert( gameName, existing_folders( gameID, gamePath ) );
 	}
 
 	if ( manager_version == 1 ) {
-		settings.setValue(GAME_FOLDERS, folders);
+		settings.setValue( GAME_FOLDERS, folders );
 		manager_version++;
 	}
 
-	settings.setValue(GAME_MGR_VER, manager_version);
+	settings.setValue( GAME_MGR_VER, manager_version );
 }
 
 QString GameManager::path( const GameMode game )
 {
-	return get()->game_paths.value(game, {});
+	if ( game >= OTHER && game < NUM_GAMES )
+		return gamePaths[game];
+	return QString();
 }
 
 QString GameManager::data( const GameMode game )
@@ -453,14 +517,16 @@ QString GameManager::data( const GameMode game )
 
 QStringList GameManager::folders( const GameMode game )
 {
-	if ( status(game) )
-		return get()->game_folders.value( game, {} );
+	if ( game >= OTHER && game < NUM_GAMES && gameStatus[game] )
+		return archives[game].dataPaths;
 	return {};
 }
 
 bool GameManager::status( const GameMode game )
 {
-	return get()->game_status.value( game, true );
+	if ( game >= OTHER && game < NUM_GAMES )
+		return gameStatus[game];
+	return false;
 }
 
 GameManager::GameResources * GameManager::addNIFResourcePath( const NifModel * nif, const QString & dataPath )
@@ -468,27 +534,32 @@ GameManager::GameResources * GameManager::addNIFResourcePath( const NifModel * n
 	if ( !nif ) [[unlikely]]
 		return &(GameManager::archives[OTHER]);
 
+	GameMode	game = get_game( nif );
 	auto	i = nifResourceMap.find( nif );
 	if ( i != nifResourceMap.end() ) {
-		if ( i->second->dataPath == dataPath )
-			return i->second;
+		if ( ( dataPath.isEmpty() && i->second->dataPaths.isEmpty() ) || i->second->dataPaths.startsWith( dataPath ) ) {
+			if ( i->second->game == game )
+				return i->second;
+		}
 		removeNIFResourcePath( nif );
 	}
 	GameResources *	r = nullptr;
-	GameMode	game = get_game( nif );
 	for ( auto i = nifResourceMap.begin(); i != nifResourceMap.end(); i++ ) {
-		if ( i->second->game == game && i->second->dataPath == dataPath ) {
-			// the same data path is already in use by another window
-			r = i->second;
-			r->refCnt++;
-			break;
+		if ( ( dataPath.isEmpty() && i->second->dataPaths.isEmpty() ) || i->second->dataPaths.startsWith( dataPath ) ) {
+			if ( i->second->game == game ) {
+				// the same data path is already in use by another window
+				r = i->second;
+				r->refCnt++;
+				break;
+			}
 		}
 	}
 	if ( !r ) {
 		r = new GameResources();
 		r->game = game;
 		r->parent = &(archives[game]);
-		r->dataPath = dataPath;
+		if ( !dataPath.isEmpty() )
+			r->dataPaths.append( dataPath );
 	}
 	nifResourceMap.emplace( nif, r );
 	return r;
@@ -607,65 +678,81 @@ void GameManager::list_files(
 
 QStringList GameManager::find_folders( const GameMode game )
 {
-	return existing_folders( game, get()->game_paths.value(game, {}) );
+	if ( game >= OTHER && game < NUM_GAMES )
+		return existing_folders( game, gamePaths[game] );
+	return QStringList();
 }
 
-void GameManager::save() const
+void GameManager::save()
 {
-	QSettings settings;
 	QVariantMap paths, folders, status;
-	for ( const auto& p : game_paths.toStdMap() )
-		paths.insert(StringForMode(p.first), p.second);
+	for ( size_t i = size_t(OTHER); i < size_t(NUM_GAMES); i++ ) {
+		GameMode	game = GameMode(i);
+		QString	gameName = StringForMode(game);
+		if ( !gamePaths[i].isEmpty() )
+			paths.insert( gameName, gamePaths[i] );
+		if ( !archives[i].dataPaths.isEmpty() )
+			folders.insert( gameName, archives[i].dataPaths );
+		status.insert( gameName, gameStatus[i] );
+	}
 
-	for ( const auto& f : game_folders.toStdMap() )
-		folders.insert(StringForMode(f.first), f.second);
-
-	for ( const auto& s : game_status.toStdMap() )
-		status.insert(StringForMode(s.first), s.second);
-
-	settings.setValue(GAME_PATHS, paths);
-	settings.setValue(GAME_FOLDERS, folders);
-	settings.setValue(GAME_STATUS, status);
+	QSettings settings;
+	settings.setValue( GAME_PATHS, paths );
+	settings.setValue( GAME_FOLDERS, folders );
+	settings.setValue( GAME_STATUS, status );
+	settings.setValue( "Settings/Resources/Other Games Fallback", QVariant(otherGamesFallback) );
 }
 
 void GameManager::load()
 {
-	QMutexLocker locker(&mutex);
-	QSettings settings;
-	for ( const auto& p : settings.value(GAME_PATHS).toMap().toStdMap() )
-		game_paths[ModeForString(p.first)] = p.second.toString();
+	QSettings	settings;
+	auto	paths = settings.value(GAME_PATHS).toMap();
+	auto	folders = settings.value(GAME_FOLDERS).toMap();
+	auto	status = settings.value(GAME_STATUS).toMap();
+	bool	useOther = settings.value( "Settings/Resources/Other Games Fallback", false ).toBool();
 
-	for ( const auto& f : settings.value(GAME_FOLDERS).toMap().toStdMap() )
-		game_folders[ModeForString(f.first)] = f.second.toStringList();
+	clear();
 
-	for ( const auto& s : settings.value(GAME_STATUS).toMap().toStdMap() )
-		game_status[ModeForString(s.first)] = s.second.toBool();
+	otherGamesFallback = useOther;
+	for ( auto i = paths.constBegin(); i != paths.constEnd(); i++ )
+		insert_game( ModeForString( i.key() ), i.value().toString() );
+	for ( auto i = folders.constBegin(); i != folders.constEnd(); i++ )
+		insert_folders( ModeForString( i.key() ), i.value().toStringList() );
+	for ( auto i = status.constBegin(); i != status.constEnd(); i++ )
+		insert_status( ModeForString( i.key() ), i.value().toBool() );
 }
 
 void GameManager::clear()
 {
-	QMutexLocker locker(&mutex);
-	game_paths.clear();
-	game_folders.clear();
-	game_status.clear();
+	for ( size_t i = size_t(OTHER); i < size_t(NUM_GAMES); i++ ) {
+		gamePaths[i].clear();
+		archives[i].dataPaths.clear();
+		gameStatus[i] = true;
+	}
+	otherGamesFallback = false;
 }
 
-void GameManager::insert_game( const GameMode game, const QString& path )
+void GameManager::insert_game( const GameMode game, const QString & path )
 {
-	QMutexLocker locker(&mutex);
-	game_paths.insert(game, path);
+	if ( game >= OTHER && game < NUM_GAMES )
+		gamePaths[game] = path;
 }
 
-void GameManager::insert_folders( const GameMode game, const QStringList& list )
+void GameManager::insert_folders( const GameMode game, const QStringList & list )
 {
-	QMutexLocker locker(&mutex);
-	game_folders.insert(game, list);
+	if ( !( game >= OTHER && game < NUM_GAMES ) )
+		return;
+	archives[game].dataPaths.clear();
+	for ( const auto & i : list ) {
+		if ( !i.isEmpty() )
+			archives[game].dataPaths.append( i );
+	}
 }
 
 void GameManager::insert_status( const GameMode game, bool status )
 {
-	QMutexLocker locker(&mutex);
-	game_status.insert(game, status);
+	if ( game >= OTHER && game < NUM_GAMES )
+		gameStatus[game] = status;
 }
 
 } // end namespace Game
