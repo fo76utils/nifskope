@@ -390,6 +390,7 @@ public:
 		// textureReplacementMode <= 0: disabled, > 0: enabled
 		// 1: linear, 2: sRGB, 3: normal map (-1.0 to 1.0)
 		bool uniSampler_l( BSShaderLightingProperty * bsprop, int & texunit, int l1, int l2, const std::string * texturePath, std::uint32_t textureReplacement, int textureReplacementMode, const CE2Material::UVStream * uvStream );
+		void uniSampler_l( int l, int firstTextureUnit, int textureCnt, int arraySize );
 	};
 
 	QMap<QString, Shader *> shaders;

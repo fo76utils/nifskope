@@ -768,12 +768,8 @@ void Renderer::Program::uni2f_l( int l, float x, float y )
 
 void Renderer::Program::uni4f_l( int l, FloatVector4 x, bool isSRGB )
 {
-	if ( isSRGB ) {
-		float	a = x[3];
-		x *= (x * 0.13945550f + 0.86054450f);
-		x *= x;
-		x[3] = a;
-	}
+	if ( isSRGB )
+		x = DDSTexture16::srgbExpand( x );
 	f->glUniform4f( l, x[0], x[1], x[2], x[3] );
 }
 
@@ -811,7 +807,6 @@ bool Renderer::Program::uniSampler_l( BSShaderLightingProperty * bsprop, int & t
 				clampMode = TexClampMode::CLAMP_S_CLAMP_T;
 		}
 		if ( bsprop->bind( QString::fromStdString(*texturePath), false, clampMode ) ) {
-			f->glUniform1i( uniLocation("textureUnits[%d]", texunit - 2), texunit );
 			f->glUniform1i( l1, texunit - 2 );
 			texunit++;
 			return true;
@@ -824,6 +819,19 @@ bool Renderer::Program::uniSampler_l( BSShaderLightingProperty * bsprop, int & t
 	}
 	f->glUniform1i( l1, 0 );
 	return false;
+}
+
+void Renderer::Program::uniSampler_l( int l, int firstTextureUnit, int textureCnt, int arraySize )
+{
+	arraySize = std::min< int >( arraySize, TexCache::maxTextureUnits );
+	textureCnt = std::min< int >( textureCnt, arraySize );
+	GLint	tmp[TexCache::maxTextureUnits];
+	int	i;
+	for ( i = 0; i < textureCnt; i++ )
+		tmp[i] = firstTextureUnit + i;
+	for ( ; i < arraySize; i++ )
+		tmp[i] = firstTextureUnit;
+	f->glUniform1iv( l, arraySize, tmp );
 }
 
 static int setFlipbookParameters( const CE2Material::Material & m )
@@ -907,7 +915,6 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 		return false;
 	if ( !bsprop->bind( pbr_lut_sf, true, TexClampMode::CLAMP_S_CLAMP_T ) )
 		return false;
-	prog->uni1i_l( prog->uniLocation("textureUnits[%d]", texunit - 2), texunit );
 	texunit++;
 	prog->uni1b_l( prog->uniLocation("isWireframe"), false );
 	prog->uni1i( HAS_SPECULAR, int(scene->hasOption(Scene::DoSpecular)) );
@@ -1116,8 +1123,7 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 				prog->uni1b_l( prog->uniLocation("lm.blenders[%d].boolParams[%d]", i - 1, j), blender->boolParams[j]);
 		}
 	}
-	for ( int i = texunit; i < TexCache::num_texture_units; i++ )
-		prog->uni1i_l( prog->uniLocation("textureUnits[%d]", i - 2), 2 );
+	prog->uniSampler_l( prog->uniLocation("textureUnits"), 2, texunit - 2, TexCache::num_texture_units - 2 );
 
 	prog->uni4m( MAT_VIEW, mesh->viewTrans().toMatrix4() );
 	prog->uni4m( MAT_WORLD, mesh->worldTrans().toMatrix4() );
