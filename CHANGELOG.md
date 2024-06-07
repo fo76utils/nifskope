@@ -1,6 +1,7 @@
  == CHANGELOG ==
 
 * Fixed the "Search Other Games if no match" resource setting, and the edit and browse path widgets not being enabled/disabled according to the game status.
+* Anti-aliasing above 4x can be enabled on Linux by adding "Render\\General\\Antialiasing%20Limit=4" to the configuration file (NifTools/NifSkope 2.0.conf) under Settings.
 * Minor Starfield rendering optimization.
 
 #### NifSkope-2.0.dev9-20240602

@@ -122,13 +122,18 @@ GLView * GLView::create( NifSkope * window )
 	}
 
 	QSettings settings;
-	int aa = settings.value( "Settings/Render/General/Antialiasing", 4 ).toInt();
+	int	aa = settings.value( "Settings/Render/General/Antialiasing", 4 ).toInt();
 #ifdef Q_OS_LINUX
 	// work around issues with MSAA > 4x on Linux
-	aa = std::min< int >( std::max< int >( aa, 0 ), 2 );
-#else
-	aa = std::min< int >( std::max< int >( aa, 0 ), 4 );
+	{
+		int	aaLimit = settings.value( "Settings/Render/General/Antialiasing Limit", 2 ).toInt();
+		if ( aa > aaLimit ) {
+			aa = aaLimit;
+			settings.setValue( "Settings/Render/General/Antialiasing", QVariant(aa) );
+		}
+	}
 #endif
+	aa = std::min< int >( std::max< int >( aa, 0 ), 4 );
 
 	// All new windows after the first window will share a format
 	if ( share ) {
