@@ -1116,13 +1116,8 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 				prog->uni1b_l( prog->uniLocation("lm.blenders[%d].boolParams[%d]", i - 1, j), blender->boolParams[j]);
 		}
 	}
-	for ( ; texunit < TexCache::num_texture_units ; texunit++ ) {
-		if ( !activateTextureUnit( texunit, true ) )
-			return false;
-		if ( !bsprop->bind( white, true, TexClampMode::WRAP_S_WRAP_T ) )
-			return false;
-		prog->uni1i_l( prog->uniLocation("textureUnits[%d]", texunit - 2), texunit );
-	}
+	for ( int i = texunit; i < TexCache::num_texture_units; i++ )
+		prog->uni1i_l( prog->uniLocation("textureUnits[%d]", i - 2), 2 );
 
 	prog->uni4m( MAT_VIEW, mesh->viewTrans().toMatrix4() );
 	prog->uni4m( MAT_WORLD, mesh->worldTrans().toMatrix4() );
