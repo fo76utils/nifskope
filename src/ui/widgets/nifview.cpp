@@ -225,6 +225,7 @@ void NifTreeView::pasteTo( const QModelIndex iDest, const NifValue & srcValue )
 		break;
 	case NifValue::tString:
 	case NifValue::tSizedString:
+	case NifValue::tSizedString16:
 	case NifValue::tText:
 	case NifValue::tShortString:
 	case NifValue::tHeaderString:

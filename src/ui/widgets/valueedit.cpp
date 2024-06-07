@@ -58,9 +58,9 @@ bool ValueEdit::canEdit( NifValue::Type t )
 {
 	return t == NifValue::tByte || t == NifValue::tWord || t == NifValue::tInt || t == NifValue::tFlags
 		|| t == NifValue::tLink || t == NifValue::tUpLink || t == NifValue::tFloat || t == NifValue::tText
-		|| t == NifValue::tSizedString || t == NifValue::tLineString || t == NifValue::tChar8String
-		|| t == NifValue::tShortString || t == NifValue::tStringIndex || t == NifValue::tString
-		|| t == NifValue::tVector4 || t == NifValue::tVector3 || t == NifValue::tVector2
+		|| t == NifValue::tSizedString || t == NifValue::tSizedString16 || t == NifValue::tLineString
+		|| t == NifValue::tChar8String || t == NifValue::tShortString || t == NifValue::tStringIndex
+		|| t == NifValue::tString || t == NifValue::tVector4 || t == NifValue::tVector3 || t == NifValue::tVector2
 		|| t == NifValue::tColor3 || t == NifValue::tColor4 || t == NifValue::tByteColor4
 		|| t == NifValue::tMatrix || t == NifValue::tQuat || t == NifValue::tQuatXYZW
 		|| t == NifValue::tTriangle || t == NifValue::tShort || t == NifValue::tUInt || t == NifValue::tULittle32
@@ -234,6 +234,7 @@ void ValueEdit::setValue( const NifValue & v )
 		break;
 	case NifValue::tText:
 	case NifValue::tSizedString:
+	case NifValue::tSizedString16:
 		{
 			TextEdit * te = new TextEdit( v.toString(), this );
 			te->resize( size() );
@@ -417,6 +418,7 @@ NifValue ValueEdit::getValue() const
 			val.setFromString( qobject_cast<QLineEdit *>( edit )->text(), nullptr, nullptr );
 			break;
 		case NifValue::tSizedString:
+		case NifValue::tSizedString16:
 		case NifValue::tText:
 			val.setFromString( qobject_cast<QTextEdit *>( edit )->toPlainText(), nullptr, nullptr );
 			break;
@@ -485,6 +487,7 @@ void ValueEdit::resizeEditor()
 
 		switch ( typ ) {
 		case NifValue::tSizedString:
+		case NifValue::tSizedString16:
 		case NifValue::tText:
 			{
 				TextEdit * te = (TextEdit *)edit;
@@ -509,6 +512,7 @@ void ValueEdit::childResized( QResizeEvent * e )
 {
 	switch ( typ ) {
 	case NifValue::tSizedString:
+	case NifValue::tSizedString16:
 	case NifValue::tText:
 		{
 			//edit->move( QPoint( 1, 0 ) );

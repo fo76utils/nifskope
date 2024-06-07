@@ -101,6 +101,7 @@ public:
 		tFloat,
 		// all string types should come between tSizedString and tChar8String
 		tSizedString,
+		tSizedString16,
 		tText,
 		tShortString,
 		tHeaderString,

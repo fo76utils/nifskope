@@ -38,7 +38,7 @@ public:
 	static bool is_Applicable( const NifModel * nif, const NifItem * item )
 	{
 		NifValue::Type	vt = item->valueType();
-		if ( vt != NifValue::tStringIndex && vt != NifValue::tSizedString ) {
+		if ( vt != NifValue::tStringIndex && vt != NifValue::tSizedString && vt != NifValue::tSizedString16 ) {
 			if ( !( nif->checkVersion( 0x14010003, 0 ) && ( vt == NifValue::tString || vt == NifValue::tFilePath ) ) )
 				return false;
 		}

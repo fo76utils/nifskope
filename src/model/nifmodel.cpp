@@ -2831,6 +2831,7 @@ bool NifModel::assignString( NifItem * item, const QString & string, bool replac
 			iOldStrIndex = itemIndex->get<int>();
 			break;
 		case NifValue::tSizedString:
+		case NifValue::tSizedString16:
 			if ( item->hasStrType("string") ) {
 				itemIndex = item;
 				iOldStrIndex = -1;
