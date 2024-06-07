@@ -239,6 +239,93 @@ static void removeWasteVertices( NifModel * nif, const QModelIndex & iData, cons
 	}
 }
 
+//! Removes waste vertices from the specified BSTriShape
+
+static void removeWasteVertices( NifModel * nif, const QModelIndex & iShape )
+{
+	try
+	{
+		// read the data
+		quint32	numTriangles = nif->get<quint32>( iShape, "Num Triangles" );
+		quint32	numVertices = nif->get<quint32>( iShape, "Num Vertices" );
+		QModelIndex	iVertexData = nif->getIndex( iShape, "Vertex Data" );
+		QModelIndex	iTriangleData = nif->getIndex( iShape, "Triangles" );
+		if ( !numTriangles || !iTriangleData.isValid() )
+			throw QString( Spell::tr( "No triangles" ) );
+		if ( !numVertices || !iVertexData.isValid() )
+			throw QString( Spell::tr( "No vertices" ) );
+		if ( nif->getBlockIndex( nif->getLink( iShape, "Skin" ) ).isValid() )
+			throw QString( Spell::tr( "Skinned meshes are not supported yet" ) );
+		if ( int(numVertices) != nif->rowCount( iVertexData ) )
+			throw QString( Spell::tr( "Vertex array size differs" ) );
+
+		// detect unused vertices
+
+		QMap<quint16, quint16> used;
+
+		QVector<Triangle> tris = nif->getArray<Triangle>( iShape, "Triangles" );
+		for ( const Triangle& tri : tris ) {
+			for ( int t = 0; t < 3; t++ ) {
+				used.insert( tri[t], 0 );
+			}
+		}
+
+		// remove them
+
+		Message::info( nullptr, Spell::tr( "Removed %1 vertices" ).arg( qsizetype(numVertices) - used.count() ) );
+
+		if ( qsizetype(numVertices) == used.count() )
+			return;
+
+		quint16	n = 0;
+		for ( auto i = used.begin(); i != used.end(); i++, n++ )
+			i.value() = n;
+
+		int	firstRow = 0;
+		int	removeCnt = 0;
+		for ( size_t i = numVertices; i-- > 0; ) {
+			if ( used.contains(quint16(i)) ) {
+				if ( removeCnt )
+					nif->removeRows( firstRow, removeCnt, iVertexData );
+				removeCnt = 0;
+			} else {
+				firstRow = int(i);
+				removeCnt++;
+			}
+		}
+		if ( removeCnt )
+			nif->removeRows( firstRow, removeCnt, iVertexData );
+		nif->updateArraySize( iVertexData );
+		nif->set<quint32>( iShape, "Num Vertices", quint32(used.count()) );
+
+		// adjust the faces
+
+		QMutableVectorIterator<Triangle> itri( tris );
+
+		while ( itri.hasNext() ) {
+			Triangle & tri = itri.next();
+
+			for ( int t = 0; t < 3; t++ ) {
+				if ( used.contains( tri[t] ) )
+					tri[t] = used[ tri[t] ];
+			}
+
+		}
+
+		// write back the data
+
+		nif->setArray<Triangle>( iShape, "Triangles", tris );
+
+		// TODO: process NiSkinData
+
+		// TODO: process NiSkinPartition
+	}
+	catch ( QString & e )
+	{
+		Message::warning( nullptr, Spell::tr( "There were errors during the operation" ), e );
+	}
+}
+
 //! Flip texture UV coordinates
 class spFlipTexCoords final : public Spell
 {
@@ -602,15 +689,21 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
+		if ( nif && nif->blockInherits( index, "BSTriShape" ) && nif->getIndex( index, "Vertex Data" ).isValid() )
+			return true;
 		return getShape( nif, index ).isValid();
 	}
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
 	{
-		QModelIndex iShape = getShape( nif, index );
-		QModelIndex iData  = nif->getBlockIndex( nif->getLink( iShape, "Data" ) );
+		if ( nif->blockInherits( index, "BSTriShape" ) ) {
+			removeWasteVertices( nif, index );
+		} else {
+			QModelIndex iShape = getShape( nif, index );
+			QModelIndex iData  = nif->getBlockIndex( nif->getLink( iShape, "Data" ) );
 
-		removeWasteVertices( nif, iData, iShape );
+			removeWasteVertices( nif, iData, iShape );
+		}
 
 		return index;
 	}
