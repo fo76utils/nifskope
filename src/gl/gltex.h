@@ -114,6 +114,7 @@ public:
 	static bool isSupported( const QString & file );
 
 	//! Number of texture units
+	enum	{ maxTextureUnits = 32 };
 	static int	num_texture_units;	// for glActiveTexture()
 	static int	num_txtunits_client;	// for glClientActiveTexture()
 	static int	pbrCubeMapResolution;	// setting bit 0 disables importance sampling
@@ -139,7 +140,7 @@ protected:
 void initializeTextureUnits( const QOpenGLContext * );
 
 bool activateTextureUnit( int x, bool noClient = false );
-void resetTextureUnits( int numTex = 32 );
+void resetTextureUnits( int numTex = TexCache::maxTextureUnits );
 
 float get_max_anisotropy();
 

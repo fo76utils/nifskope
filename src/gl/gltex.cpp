@@ -78,7 +78,7 @@ void initializeTextureUnits( const QOpenGLContext * context )
 	if ( context->hasExtension( "GL_ARB_multitexture" ) ) {
 		GLint	tmp = 0;
 		glGetIntegerv( GL_MAX_TEXTURE_IMAGE_UNITS, &tmp );
-		tmp = std::min( std::max( tmp, GLint(1) ), GLint(32) );
+		tmp = std::min( std::max( tmp, GLint(1) ), GLint(TexCache::maxTextureUnits) );
 		TexCache::num_texture_units = tmp;
 		glGetIntegerv( GL_MAX_TEXTURE_COORDS, &tmp );
 		TexCache::num_txtunits_client = std::max( tmp, GLint(1) );
