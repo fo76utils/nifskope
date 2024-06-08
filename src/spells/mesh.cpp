@@ -335,6 +335,8 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
+		if ( nif->blockInherits( index, "BSTriShape" ) && nif->getIndex( index, "Vertex Data" ).isValid() )
+			return true;
 		return nif->itemStrType( index ).toLower() == "texcoord" || nif->blockInherits( index, "NiTriBasedGeomData" );
 	}
 
@@ -342,7 +344,9 @@ public:
 	{
 		QModelIndex idx = index;
 
-		if ( nif->itemStrType( index ).toLower() != "texcoord" ) {
+		if ( nif->blockInherits( index, "BSTriShape" ) ) {
+			idx = nif->getIndex( index, "Vertex Data" );
+		} else if ( nif->itemStrType( index ).toLower() != "texcoord" ) {
 			idx = nif->getIndex( nif->getBlockIndex( index ), "UV Sets" );
 		}
 
@@ -368,7 +372,21 @@ public:
 	//! Flips UV data in a model index
 	void flip( NifModel * nif, const QModelIndex & index, int f )
 	{
-		if ( nif->isArray( index ) ) {
+		if ( nif->itemStrType( index ) == "BSVertexData" ) {
+			// BSTriShape vertex data
+			int	n = nif->rowCount( index );
+			for ( int i = 0; i < n; i++ ) {
+				auto	v = QModelIndex_child( index, i );
+				if ( !v.isValid() )
+					continue;
+				auto	iUV = nif->getIndex( v, "UV" );
+				if ( !iUV.isValid() )
+					continue;
+				HalfVector2	uv = nif->get<HalfVector2>( iUV );
+				flip( uv, f );
+				nif->set<HalfVector2>( iUV, uv );
+			}
+		} else if ( nif->isArray( index ) ) {
 			QModelIndex idx = QModelIndex_child( index );
 
 			if ( idx.isValid() ) {
