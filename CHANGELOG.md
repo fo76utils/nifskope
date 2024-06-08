@@ -1,5 +1,6 @@
  == CHANGELOG ==
 
+* The UV editor now supports exporting Starfield .mesh files. Note: currently only the first available LOD can be edited, and to be able to render the model with the modifications, the file needs to be saved to a path where it is found by NifSkope as a resource, and the NIF reloaded (Alt+X) after closing resources (Alt+Q).
 * Fixed the "Search Other Games if no match" resource setting, and the edit and browse path widgets not being enabled/disabled according to the game status.
 * Implemented the "Remove Unused Vertices" spell for BSTriShape geometry. Note that skinned meshes are not supported yet.
 * SizedString16 data fields are now shown and can be edited as strings.

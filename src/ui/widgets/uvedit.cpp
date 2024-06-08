@@ -40,6 +40,8 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ui/settingsdialog.h"
 #include "qtcompat.h"
 
+#include "libfo76utils/src/fp32vec4.hpp"
+#include "libfo76utils/src/filebuf.hpp"
 #include "libfo76utils/src/material.hpp"
 #include "lib/nvtristripwrapper.h"
 #include "io/MeshFile.h"
@@ -57,6 +59,8 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QOpenGLFunctions>
 #include <QPushButton>
 #include <QSettings>
+#include <QMessageBox>
+#include <QFileDialog>
 
 // TODO: Determine the necessity of this
 // Appears to be used solely for gluErrorString
@@ -884,6 +888,7 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 	nif = nifModel;
 	iShape = nifIndex;
 	isDataOnSkin = false;
+	sfMeshPath.clear();
 
 	auto newTitle = tr("UV Editor");
 	if (nif)
@@ -969,6 +974,7 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 		if ( !meshes.isValid() )
 			return false;
 
+		int	lodDiff = 255;
 		for ( int i = 0; i <= 3; i++ ) {
 			auto mesh = QModelIndex_child( meshes, i );
 			if ( !mesh.isValid() )
@@ -979,18 +985,27 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 			mesh = nif->getIndex( mesh, "Mesh" );
 			if ( !mesh.isValid() )
 				continue;
-			QString	meshPath( nif->get<QString>( mesh, "Mesh Path" ) );
+			QString	meshPath( nif->findResourceFile( nif->get<QString>( mesh, "Mesh Path" ), "geometries/", ".mesh" ) );
 			if ( meshPath.isEmpty() )
 				continue;
-			MeshFile	meshFile( meshPath, nif );
-			if ( meshFile.isValid() && meshFile.coords.size() > 0 && meshFile.triangles.size() > 0 ) {
-				for ( qsizetype j = 0; j < meshFile.coords.size(); j++ )
-					texcoords << Vector2( meshFile.coords[j][0], meshFile.coords[j][1] );
-				if ( !setTexCoords( &(meshFile.triangles) ) )
-					return false;
-				break;
+			if ( std::abs( i - sfMeshLOD ) < lodDiff ) {
+				lodDiff = std::abs( i - sfMeshLOD );
+				sfMeshPath = meshPath;
 			}
 		}
+		if ( sfMeshPath.isEmpty() )
+			return false;
+		MeshFile	meshFile( sfMeshPath, nif );
+		if ( !( meshFile.isValid() && meshFile.coords.size() > 0 && meshFile.triangles.size() > 0 ) )
+			return false;
+		for ( qsizetype i = 0; i < meshFile.coords.size(); i++ )
+			texcoords << Vector2( meshFile.coords[i][0], meshFile.coords[i][1] );
+		if ( !setTexCoords( &(meshFile.triangles) ) )
+			return false;
+
+		QAction * aExportSFMesh = new QAction( tr( "Export Mesh File" ), this );
+		connect( aExportSFMesh, &QAction::triggered, this, &UVWidget::exportSFMesh );
+		addAction( aExportSFMesh );
 
 		// Fake index so that isValid() checks do not fail
 		iTexCoords = iShape;
@@ -1625,6 +1640,60 @@ void UVWidget::rotateSelection()
 	if ( ok ) {
 		undoStack->push( new UVWRotateCommand( this, rotateFactor ) );
 	}
+}
+
+void UVWidget::exportSFMesh()
+{
+	if ( !nif || nif->getBSVersion() < 170 || sfMeshPath.isEmpty() )
+		return;
+
+	QByteArray	sfMeshData;
+	if ( !nif->getResourceFile( sfMeshData, sfMeshPath, nullptr, nullptr ) )
+		return;
+	unsigned char *	meshData = reinterpret_cast< unsigned char * >( sfMeshData.data() );
+	size_t	meshDataSize = size_t( sfMeshData.size() );
+	size_t	numTexCoords;
+	unsigned char *	uvData;
+
+	// find position of UV data in the file
+	try {
+		FileBuffer	meshBuf( meshData, meshDataSize );
+		if ( ( meshBuf.readUInt32() - 1U ) & ~1U )
+			return;	// format version must be 1 or 2
+		size_t	numIndices = meshBuf.readUInt32();
+		meshBuf.setPosition( meshBuf.getPosition() + ( numIndices * 2 ) );
+		(void) meshBuf.readUInt64();	// skip vertex coordinate scale and number of weights per vertex
+		size_t	numVertices = meshBuf.readUInt32();
+		meshBuf.setPosition( meshBuf.getPosition() + ( numVertices * 6 ) );
+		numTexCoords = meshBuf.readUInt32();
+		if ( qsizetype(numTexCoords) != texcoords.size() ) {
+			QMessageBox::critical( this, "NifSkope error", tr( "Vertex count does not match .mesh file" ) );
+			return;
+		}
+		if ( ( meshBuf.getPosition() + ( numTexCoords * std::uint64_t(4) ) ) > meshBuf.size() )
+			return;
+		uvData = const_cast< unsigned char * >( meshBuf.getReadPtr() );
+	} catch ( FO76UtilsError & ) {
+		return;
+	}
+
+	// store new UV data
+	for ( size_t i = 0; i < numTexCoords; i++ ) {
+		const Vector2 &	v = texcoords.at( i );
+		std::uint32_t	tmp = std::uint32_t( FloatVector4( v[0], v[1], 0.0f, 0.0f ).convertToFloat16() );
+		FileBuffer::writeUInt32Fast( uvData + ( i * 4 ), tmp );
+	}
+
+	// select and write output file
+	QString	meshPath( QFileDialog::getSaveFileName( this, tr( "Select Mesh File" ), sfMeshPath, QString( "Mesh Files (*.mesh)" ) ) );
+	if ( meshPath.isEmpty() )
+		return;
+	QFile	outFile( meshPath );
+	if ( !outFile.open( QIODevice::WriteOnly ) ) {
+		QMessageBox::critical( this, "NifSkope error", tr( "Error opening .mesh file" ) );
+		return;
+	}
+	outFile.write( sfMeshData.data(), sfMeshData.size() );
 }
 
 void UVWidget::getTexSlots()

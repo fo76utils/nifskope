@@ -132,6 +132,8 @@ public slots:
 	void scaleSelection();
 	//! Rotate the selection
 	void rotateSelection();
+	//! Export Starfield .mesh file
+	void exportSFMesh();
 
 	void updateSettings();
 
@@ -243,6 +245,9 @@ private:
 	friend class UVWRotateCommand;
 
 	QAction * aTextureBlend;
+
+	int	sfMeshLOD = 0;	// TODO: implement choosing LOD
+	QString	sfMeshPath;
 
 	struct Settings
 	{
