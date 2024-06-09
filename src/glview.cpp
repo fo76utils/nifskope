@@ -1924,7 +1924,7 @@ void GLView::mouseReleaseEvent( QMouseEvent * event )
 void GLView::wheelEvent( QWheelEvent * event )
 {
 	if ( view == ViewWalk )
-		mouseMov += Vector3( 0, 0, double( event->angleDelta().y() ) / 480.0 ) * scale();
+		mouseMov += Vector3( 0, 0, double( event->angleDelta().y() ) / 8.0 ) * scale();
 	else
 	{
 		if (event->angleDelta().y() < 0)

@@ -1,5 +1,7 @@
  == CHANGELOG ==
 
+* Fixed mouse wheel sensitivity in walk mode and in the UV editor.
+
 #### NifSkope-2.0.dev9-20240608
 
 * The UV editor now supports exporting Starfield .mesh files. Note: currently only the first available LOD can be edited, and to be able to render the model with the modifications, the file needs to be saved to a path where it is found by NifSkope as a resource, and the NIF reloaded (Alt+X) after closing resources (Alt+Q).

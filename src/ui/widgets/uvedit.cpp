@@ -749,7 +749,7 @@ void UVWidget::wheelEvent( QWheelEvent * e )
 {
 	switch ( e->modifiers() ) {
 	case Qt::NoModifier:
-		zoom *= 1.0 + ( double( e->angleDelta().y() ) / 960.0 ) / ZOOMUNIT;
+		zoom *= 1.0 + ( double( e->angleDelta().y() ) / 16.0 ) / ZOOMUNIT;
 
 		if ( zoom < MINZOOM ) {
 			zoom = MINZOOM;
