@@ -916,6 +916,12 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 	if ( !bsprop->bind( pbr_lut_sf, true, TexClampMode::CLAMP_S_CLAMP_T ) )
 		return false;
 	texunit++;
+
+	CE2Material::UVStream	defaultUVStream;
+	defaultUVStream.scaleAndOffset = FloatVector4( 1.0f, 1.0f, 0.0f, 0.0f );
+	defaultUVStream.textureAddressMode = 0;	// "Wrap"
+	defaultUVStream.channel = 1;	// "One"
+
 	prog->uni1b_l( prog->uniLocation("isWireframe"), false );
 	prog->uni1i( HAS_SPECULAR, int(scene->hasOption(Scene::DoSpecular)) );
 	prog->uni1i_l( prog->uniLocation("lm.shaderModel"), mat->shaderModel );
@@ -923,6 +929,8 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 	prog->uni1b_l( prog->uniLocation("lm.isTwoSided"), bool(mat->flags & CE2Material::Flag_TwoSided) );
 	prog->uni1b_l( prog->uniLocation("lm.hasOpacityComponent"), bool(mat->flags & CE2Material::Flag_HasOpacityComponent) );
 	prog->uni2f_l( prog->uniLocation("parallaxOcclusionSettings"), float(cfg.sfParallaxMaxSteps), cfg.sfParallaxScale );
+
+	// emissive settings
 	if ( mat->flags & CE2Material::Flag_LayeredEmissivity && scene->hasOption(Scene::DoGlow) ) {
 		prog->uni1b_l( prog->uniLocation("lm.layeredEmissivity.isEnabled"), mat->layeredEmissiveSettings->isEnabled );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.firstLayerIndex"), mat->layeredEmissiveSettings->layer1Index );
@@ -963,6 +971,8 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 	}	else {
 		prog->uni1b_l( prog->uniLocation("lm.emissiveSettings.isEnabled"), false );
 	}
+
+	// decal settings
 	if ( mat->flags & CE2Material::Flag_IsDecal ) {
 		prog->uni1b_l( prog->uniLocation("lm.decalSettings.isDecal"), mat->decalSettings->isDecal );
 		prog->uni1f_l( prog->uniLocation("lm.decalSettings.materialOverallAlpha"), mat->decalSettings->decalAlpha );
@@ -981,6 +991,8 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 	} else {
 		prog->uni1b_l( prog->uniLocation("lm.decalSettings.isDecal"), false );
 	}
+
+	// effect settings
 	if ( isEffect ) {
 		prog->uni1b_l( prog->uniLocation("lm.effectSettings.useFallOff"), bool(mat->effectSettings->flags & CE2Material::EffectFlag_UseFalloff) );
 		prog->uni1b_l( prog->uniLocation("lm.effectSettings.useRGBFallOff"), bool(mat->effectSettings->flags & CE2Material::EffectFlag_UseRGBFalloff) );
@@ -1016,6 +1028,8 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 		prog->uni1b_l( prog->uniLocation("lm.effectSettings.forceRenderBeforeOIT"), bool(mat->effectSettings->flags & CE2Material::EffectFlag_RenderBeforeOIT) );
 		prog->uni1i_l( prog->uniLocation("lm.effectSettings.depthBiasInUlp"), mat->effectSettings->depthBias );
 	}
+
+	// alpha settings
 	if ( mat->flags & CE2Material::Flag_HasOpacity ) {
 		prog->uni1b_l( prog->uniLocation("lm.alphaSettings.hasOpacity"), true );
 		prog->uni1f_l( prog->uniLocation("lm.alphaSettings.alphaTestThreshold"), mat->alphaThreshold );
@@ -1025,17 +1039,11 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 		prog->uni1b_l( prog->uniLocation("lm.alphaSettings.useVertexColor"), bool(mat->flags & CE2Material::Flag_AlphaVertexColor) );
 		prog->uni1i_l( prog->uniLocation("lm.alphaSettings.vertexColorChannel"), mat->alphaVertexColorChannel );
 		const CE2Material::UVStream *	uvStream = mat->alphaUVStream;
-		if ( !uvStream && (mat->layerMask & (1 << mat->alphaSourceLayer)) )
-			uvStream = mat->layers[mat->alphaSourceLayer]->uvStream;
-		FloatVector4	scaleAndOffset(1.0f, 1.0f, 0.0f, 0.0f);
-		bool	useChannelTwo = false;
-		if ( uvStream ) {
-			scaleAndOffset = uvStream->scaleAndOffset;
-			useChannelTwo = bool(uvStream->channel > 1);
-		}
-		prog->uni2f_l( prog->uniLocation("lm.alphaSettings.opacityUVstream.scale"), scaleAndOffset[0], scaleAndOffset[1] );
-		prog->uni2f_l( prog->uniLocation("lm.alphaSettings.opacityUVstream.offset"), scaleAndOffset[2], scaleAndOffset[3] );
-		prog->uni1b_l( prog->uniLocation("lm.alphaSettings.opacityUVstream.useChannelTwo"), useChannelTwo );
+		if ( !uvStream )
+			uvStream = &defaultUVStream;
+		prog->uni2f_l( prog->uniLocation("lm.alphaSettings.opacityUVstream.scale"), uvStream->scaleAndOffset[0], uvStream->scaleAndOffset[1] );
+		prog->uni2f_l( prog->uniLocation("lm.alphaSettings.opacityUVstream.offset"), uvStream->scaleAndOffset[2], uvStream->scaleAndOffset[3] );
+		prog->uni1b_l( prog->uniLocation("lm.alphaSettings.opacityUVstream.useChannelTwo"), (uvStream->channel > 1) );
 		prog->uni1f_l( prog->uniLocation("lm.alphaSettings.heightBlendThreshold"), mat->alphaHeightBlendThreshold );
 		prog->uni1f_l( prog->uniLocation("lm.alphaSettings.heightBlendFactor"), mat->alphaHeightBlendFactor );
 		prog->uni1f_l( prog->uniLocation("lm.alphaSettings.position"), mat->alphaPosition );
@@ -1045,6 +1053,7 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 		prog->uni1b_l( prog->uniLocation("lm.alphaSettings.hasOpacity"), false );
 	}
 
+	// material layers
 	for ( int i = 0; i < 4 && i < CE2Material::maxLayers; i++ ) {
 		bool	layerEnabled = bool(mat->layerMask & (1 << i));
 		prog->uni1b_l( prog->uniLocation("lm.layersEnabled[%d]", i), layerEnabled );
@@ -1096,24 +1105,19 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 				prog->uniSampler_l( bsprop, texunit, prog->uniLocation("lm.layers[%d].material.textureSet.textures[%d]", i, j), prog->uniLocation("lm.layers[%d].material.textureSet.textureReplacements[%d]", i, j), nullptr, defaultSFTextureSet[j], int(j < 6), layer->uvStream );
 			}
 		}
-		FloatVector4	scaleAndOffset(1.0f, 1.0f, 0.0f, 0.0f);
-		bool	useChannelTwo = false;
-		if ( layer->uvStream ) {
-			scaleAndOffset = layer->uvStream->scaleAndOffset;
-			useChannelTwo = (layer->uvStream->channel > 1);
-		}
-		prog->uni2f_l( prog->uniLocation("lm.layers[%d].uvStream.scale", i), scaleAndOffset[0], scaleAndOffset[1] );
-		prog->uni2f_l( prog->uniLocation("lm.layers[%d].uvStream.offset", i), scaleAndOffset[2], scaleAndOffset[3] );
-		prog->uni1b_l( prog->uniLocation("lm.layers[%d].uvStream.useChannelTwo", i), useChannelTwo );
+		const CE2Material::UVStream *	uvStream = layer->uvStream;
+		if ( !uvStream )
+			uvStream = &defaultUVStream;
+		prog->uni2f_l( prog->uniLocation("lm.layers[%d].uvStream.scale", i), uvStream->scaleAndOffset[0], uvStream->scaleAndOffset[1] );
+		prog->uni2f_l( prog->uniLocation("lm.layers[%d].uvStream.offset", i), uvStream->scaleAndOffset[2], uvStream->scaleAndOffset[3] );
+		prog->uni1b_l( prog->uniLocation("lm.layers[%d].uvStream.useChannelTwo", i), (uvStream->channel > 1) );
 		if ( blender ) {
-			const CE2Material::UVStream *	uvStream = blender->uvStream;
-			if ( uvStream ) {
-				scaleAndOffset = uvStream->scaleAndOffset;
-				useChannelTwo = (uvStream->channel > 1);
-			}
-			prog->uni2f_l( prog->uniLocation("lm.blenders[%d].uvStream.scale", i - 1), scaleAndOffset[0], scaleAndOffset[1] );
-			prog->uni2f_l( prog->uniLocation("lm.blenders[%d].uvStream.offset", i - 1), scaleAndOffset[2], scaleAndOffset[3] );
-			prog->uni1b_l( prog->uniLocation("lm.blenders[%d].uvStream.useChannelTwo", i - 1), useChannelTwo );
+			uvStream = blender->uvStream;
+			if ( !uvStream )
+				uvStream = &defaultUVStream;
+			prog->uni2f_l( prog->uniLocation("lm.blenders[%d].uvStream.scale", i - 1), uvStream->scaleAndOffset[0], uvStream->scaleAndOffset[1] );
+			prog->uni2f_l( prog->uniLocation("lm.blenders[%d].uvStream.offset", i - 1), uvStream->scaleAndOffset[2], uvStream->scaleAndOffset[3] );
+			prog->uni1b_l( prog->uniLocation("lm.blenders[%d].uvStream.useChannelTwo", i - 1), (uvStream->channel > 1) );
 			prog->uniSampler_l( bsprop, texunit, prog->uniLocation("lm.blenders[%d].maskTexture", i - 1), prog->uniLocation("lm.blenders[%d].maskTextureReplacement", i - 1), blender->texturePath, blender->textureReplacement, int(blender->textureReplacementEnabled), uvStream );
 			prog->uni1i_l( prog->uniLocation("lm.blenders[%d].blendMode", i - 1), int(blender->blendMode) );
 			prog->uni1i_l( prog->uniLocation("lm.blenders[%d].colorChannel", i - 1), int(blender->colorChannel) );
@@ -1123,6 +1127,7 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 				prog->uni1b_l( prog->uniLocation("lm.blenders[%d].boolParams[%d]", i - 1, j), blender->boolParams[j]);
 		}
 	}
+
 	prog->uniSampler_l( prog->uniLocation("textureUnits"), 2, texunit - 2, TexCache::num_texture_units - 2 );
 
 	prog->uni4m( MAT_VIEW, mesh->viewTrans().toMatrix4() );
