@@ -6635,7 +6635,7 @@
 
     <struct name="BSTextureSet" abstract="true" module="BSMain" versions="#STF#">
         <field name="Name" type="SizedString" />
-        <field name="Float Param" type="float" default="0.5" />
+        <field name="Normal Intensity" type="float" default="1.0" />
         <field name="Resolution Hint" type="BSTextureResolutionHint" />
         <field name="Enable Mask" type="uint" />
         <field name="Texture 0" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x000001">Color Texture</field>
@@ -6708,19 +6708,19 @@
         <field name="Mask Texture" type="BSTextureWithReplacement" />
         <field name="Blend Mode" type="BSBlenderMode" />
         <field name="Vertex Color Channel" type="BSColorChannel" />
-        <field name="Float Param 0" type="float" />
-        <field name="Float Param 1" type="float" />
-        <field name="Float Param 2" type="float" />
-        <field name="Float Param 3" type="float" />
-        <field name="Float Param 4" type="float" />
-        <field name="Bool Param 0" type="bool" />
-        <field name="Bool Param 1" type="bool" />
-        <field name="Bool Param 2" type="bool" />
-        <field name="Bool Param 3" type="bool" />
-        <field name="Bool Param 4" type="bool" />
-        <field name="Bool Param 5" type="bool" />
-        <field name="Bool Param 6" type="bool" />
-        <field name="Bool Param 7" type="bool" />
+        <field name="Height Blend Threshold" type="float" />
+        <field name="Height Blend Factor" type="float" />
+        <field name="Position" type="float" />
+        <field name="Contrast" type="float" />
+        <field name="Mask Intensity" type="float" />
+        <field name="Blend Color" type="bool" />
+        <field name="Blend Metalness" type="bool" />
+        <field name="Blend Roughness" type="bool" />
+        <field name="Blend Normals" type="bool" />
+        <field name="Blend Normals Additively" type="bool" />
+        <field name="Use Vertex Color" type="bool" />
+        <field name="Blend Ambient Occlusion" type="bool" />
+        <field name="Use Dual Blend Mask" type="bool" />
     </struct>
 
     <enum name="BSAlphaBlendMode" storage="byte" versions="#STF#">
@@ -7178,7 +7178,7 @@
 
     <niobject name="BSLightingShaderProperty" inherit="BSShaderProperty" module="BSMain" versions="#SKY_AND_LATER#">
         Bethesda shader property for Skyrim and later.
-        <field name="Material" type="BSLayeredMaterial" abstract="true" vercond="#BS_GTE_STF#">Starfield material (.mat).</field>
+        <field name="Material" type="BSLayeredMaterial" abstract="true" vercond="#BS_GTE_STF#" cond="$Name">Starfield material (.mat).</field>
         <field name="Shader Property Data" type="BSLightingShaderPropertyDataLTFO76" arg="Shader Type" vercond="#NI_BS_LTE_FO4#" />
         <field name="Shader Property Data" type="BSLightingShaderPropertyDataGTEFO76" vercond="#BS_F76#" cond="!$Name" />
         <field name="Material" type="BSShaderMaterialDataFO76" abstract="true" vercond="#BS_F76#" cond="$Name" />
