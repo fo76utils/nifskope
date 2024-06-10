@@ -524,8 +524,6 @@ private:
 	{
 		f->seek( p + CHUNKHEADERSIZE + dl );
 
-		int n = sizeof( dc );
-
 		f->read( (char *)( &dc ), sizeof( dc ) );
 
 		dl += ( sizeof( ChunkDataCount ) + ( dc * _dl ) );

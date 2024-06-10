@@ -4,14 +4,13 @@
 #include "spells/mesh.h"
 #include "spells/tangentspace.h"
 #include "spells/transform.h"
+#include "qtcompat.h"
 
 #include <QBuffer>
 #include <QMessageBox>
 
 #include <algorithm> // std::sort
 #include <functional> //std::greater
-
-#include "gamemanager.h"
 
 // Brief description is deliberately not autolinked to class Spell
 /*! \file optimize.cpp

@@ -2,6 +2,7 @@
 
 #include "gl/gltools.h"
 #include "spells/blocks.h"
+#include "qtcompat.h"
 
 #include "lib/nvtristripwrapper.h"
 #include "lib/qhull.h"
@@ -15,8 +16,6 @@
 #include <QPushButton>
 
 #include <algorithm> // std::sort
-
-#include "gamemanager.h"
 
 // Brief description is deliberately not autolinked to class Spell
 /*! \file havok.cpp

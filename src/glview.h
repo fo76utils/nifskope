@@ -34,6 +34,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define GLVIEW
 
 #include "gl/glscene.h"
+#include "model/nifmodel.h"
 
 #include <QGLWidget> // Inherited
 #include <QGraphicsView>
@@ -46,7 +47,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //! @file glview.h GLView, GLGraphicsView
 
 class NifSkope;
-class NifModel;
 class GLGraphicsView;
 
 class QGLFormat;
@@ -147,7 +147,7 @@ public:
 
 	void setDebugMode( DebugMode );
 
-	float scale() { return (scene->game == Game::STARFIELD) ? 1.0 / 32.0 : 1.0; };
+	float scale() { return (scene->nifModel && scene->nifModel->getBSVersion() >= 170) ? 1.0 / 32.0 : 1.0; };
 
 	QColor clearColor() const;
 

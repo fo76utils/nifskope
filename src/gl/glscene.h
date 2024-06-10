@@ -38,8 +38,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "gltools.h"
 #include "gltex.h"
 
-#include "gamemanager.h"
-
 #include <QFlags>
 #include <QObject>
 #include <QHash>
@@ -89,7 +87,7 @@ public:
 	Property * getProperty( const NifModel * nif, const QModelIndex & iProperty );
 	Property * getProperty( const NifModel * nif, const QModelIndex & iParentBlock, const QString & itemName, const QString & mustInherit );
 
-	Game::GameMode game = Game::OTHER;
+	const NifModel *	nifModel = nullptr;
 
 	enum SceneOption
 	{
@@ -122,14 +120,14 @@ public:
 	inline int bindTexture( const QString & fname, bool useSecondTexture = false, bool forceTexturing = false )
 	{
 		if ( ( forceTexturing || hasOption(DoTexturing) ) && !fname.isEmpty() ) [[likely]]
-			return textures->bind( fname, game, useSecondTexture );
+			return textures->bind( fname, nifModel, useSecondTexture );
 		return 0;
 	}
 
 	inline int bindTexture( const QModelIndex & iSource )
 	{
 		if ( hasOption(DoTexturing) && iSource.isValid() ) [[likely]]
-			return textures->bind( iSource, game );
+			return textures->bind( iSource );
 		return 0;
 	}
 

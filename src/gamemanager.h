@@ -1,19 +1,16 @@
 #ifndef GAMEMANAGER_H
 #define GAMEMANAGER_H
 
-#include <cstdint>
-#include <memory>
+#include "libfo76utils/src/common.hpp"
 
-#include <QMap>
+#include <unordered_map>
 #include <QString>
-#include <QStringBuilder>
-#include <QMutex>
-#include <QAbstractItemModel>
-
-#include "ba2file.hpp"
-#include "material.hpp"
+#include <QStringList>
 
 class QProgressDialog;
+class NifModel;
+class BA2File;
+class CE2MaterialDB;
 
 namespace Game
 {
@@ -32,63 +29,6 @@ enum GameMode : int
 	STARFIELD,
 
 	NUM_GAMES
-};
-
-using GameMap = QMap<GameMode, QString>;
-using GameEnabledMap = QMap<GameMode, bool>;
-using ResourceListMap = QMap<GameMode, QStringList>;
-
-using namespace std::string_literals;
-
-static const auto beth = QString("HKEY_LOCAL_MACHINE\\SOFTWARE\\Bethesda Softworks\\%1");
-static const auto msft = QString("HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\%1");
-
-
-static const GameMap STRING = {
-	{MORROWIND, "Morrowind"},
-	{OBLIVION, "Oblivion"},
-	{FALLOUT_3NV, "Fallout 3 / New Vegas"},
-	{SKYRIM, "Skyrim"},
-	{SKYRIM_SE, "Skyrim SE"},
-	{FALLOUT_4, "Fallout 4"},
-	{FALLOUT_76, "Fallout 76"},
-	{STARFIELD, "Starfield"},
-	{OTHER, "Other Games"}
-};
-
-static const GameMap KEY = {
-	{MORROWIND, beth.arg("Morrowind")},
-	{OBLIVION, beth.arg("Oblivion")},
-	{FALLOUT_3NV, beth.arg("FalloutNV")},
-	{SKYRIM, beth.arg("Skyrim")},
-	{SKYRIM_SE, beth.arg("Skyrim Special Edition")},
-	{FALLOUT_4, beth.arg("Fallout4")},
-	{FALLOUT_76, msft.arg("Fallout 76")},
-	{OTHER, ""}
-};
-
-static const GameMap DATA = {
-	{MORROWIND, "Data Files"},
-	{OBLIVION, "Data"},
-	{FALLOUT_3NV, "Data"},
-	{SKYRIM, "Data"},
-	{SKYRIM_SE, "Data"},
-	{FALLOUT_4, "Data"},
-	{FALLOUT_76, "Data"},
-	{STARFIELD, "Data"},
-	{OTHER, ""}
-};
-
-static const ResourceListMap FOLDERS = {
-	{MORROWIND, {"."}},
-	{OBLIVION, {"."}},
-	{FALLOUT_3NV, {"."}},
-	{SKYRIM, {"."}},
-	{SKYRIM_SE, {"."}},
-	{FALLOUT_4, {".", "Textures"}},
-	{FALLOUT_76, {".", "Textures"}},
-	{STARFIELD, {".", "Textures"}},
-	{OTHER, {}}
 };
 
 enum BSVersion
@@ -130,158 +70,191 @@ class GameManager
 {
 	GameManager();
 public:
-	GameManager(const GameManager&) = delete;
-	GameManager& operator= (const GameManager) = delete;
+	GameManager( const GameManager & ) = delete;
+	GameManager & operator= ( const GameManager ) = delete;
 
-	static GameMode get_game(uint32_t version, uint32_t user, uint32_t bsver);
+	// OTHER is returned if 'nif' is nullptr
+	static GameMode get_game( const NifModel * nif );
 
-	static GameManager* get();
-
-	//! Game installation path
-	static QString path(const GameMode game);
-	//! Game data path
-	static QString data(const GameMode game);
-	//! Game folders managed by the GameManager
-	static QStringList folders(const GameMode game);
-	//! Game enabled status in the GameManager
-	static bool status(const GameMode game);
-
-	//! Convert 'name' to lower case, replace backslashes with forward slashes, and make sure that the path begins with 'archive_folder' and ends with 'extension' (e.g. "textures" and ".dds").
-	static std::string get_full_path(const QString& name, const char* archive_folder, const char* extension);
-	//! Search for file 'path' in the resource archives and folders, and return the full path if the file is found, or an empty string otherwise.
-	static QString find_file(const GameMode game, const QString& path, const char* archiveFolder, const char* extension);
-	//! Find and load resource file to 'data'. The return value is true on success.
-	static bool get_file(QByteArray& data, const GameMode game, const std::string_view& fullPath);
-	static bool get_file(QByteArray& data, const GameMode game, const QString& path, const char* archiveFolder, const char* extension);
-	//! Return pointer to Starfield material database, loading it first if necessary. On error, nullptr is returned.
-	static CE2MaterialDB* materials(const GameMode game);
-	//! Returns a non-zero ID unique to the currently loaded material database. Previously returned material pointers become invalid when this value changes.
-	static std::uintptr_t get_material_db_id();
-	//! Close all currently opened resource archives and files.
-	static void close_archives(bool tempPathsFirst = false);
-	//! Deallocate Starfield material database if it is currently loaded.
-	static void close_materials();
-	//! Open a folder or archive without adding it to the list of data paths.
-	static bool set_temp_path(const GameMode game, const char* pathName, bool ignoreErrors);
-	//! List resource files available for 'game' on the archive filesystem, as a set of null-terminated strings.
-	// The file list can be optionally filtered by a function that returns false if the file should be excluded.
-	static void list_files(std::set< std::string_view >& fileSet, const GameMode game, bool (*fileListFilterFunc)(void* p, const std::string_view& fileName) = nullptr, void* fileListFilterFuncData = nullptr);
-
-	//! Find applicable data folders at the game installation path
-	static QStringList find_folders(const GameMode game);
+	static GameManager * get();
 
 	//! Game installation path
-	static inline QString path(const QString& game);
+	static QString path( const GameMode game );
 	//! Game data path
-	static inline QString data(const QString& game);
+	static QString data( const GameMode game );
 	//! Game folders managed by the GameManager
-	static inline QStringList folders(const QString& game);
+	static QStringList folders( const GameMode game );
 	//! Game enabled status in the GameManager
-	static inline bool status(const QString& game);
-	//! Find applicable data folders at the game installation path
-	static inline QStringList find_folders(const QString& game);
+	static bool status( const GameMode game );
 
-	static inline void update_game(const GameMode game, const QString& path);
-	static inline void update_game(const QString& game, const QString& path);
-	static inline void update_folders(const GameMode game, const QStringList& list);
-	static inline void update_folders(const QString& game, const QStringList& list);
-	static inline void update_status(const GameMode game, bool status);
-	static inline void update_status(const QString& game, bool status);
-
-	void init_settings(int& manager_version, QProgressDialog* dlg = nullptr) const;
-	void update_settings(int& manager_version, QProgressDialog* dlg = nullptr) const;
-
-	//! Save the manager to settings
-	void save() const;
-	//! Load the manager from settings
-	void load();
-	//! Reset the manager
-	void clear();
-
-	struct GameInfo
+	struct GameResources
 	{
-		GameMode id = OTHER;
-		QString name;
-		QString path;
-		bool status = false;
+		GameMode	game = OTHER;
+		std::int32_t	refCnt = 0;
+		BA2File *	ba2File = nullptr;
+		CE2MaterialDB *	sfMaterials = nullptr;
+		std::uint64_t	sfMaterialDB_ID = 0;
+		GameResources *	parent = nullptr;
+		// list of data paths, empty for archived NIFs
+		QStringList	dataPaths;
+		~GameResources();
+		void init_archives();
+		CE2MaterialDB * init_materials();
+		void close_archives();
+		void close_materials();
+		QString find_file( const std::string_view & fullPath );
+		bool get_file( QByteArray & data, const std::string_view & fullPath );
+		void list_files(
+			std::set< std::string_view > & fileSet,
+			bool (*fileListFilterFunc)( void * p, const std::string_view & fileName ), void * fileListFilterFuncData );
 	};
 
+	static GameResources * addNIFResourcePath( const NifModel * nif, const QString & dataPath );
+	static void removeNIFResourcePath( const NifModel * nif );
+	static inline GameResources & getNIFResources( const NifModel * nif );
+
+	//! Convert 'name' to lower case, replace backslashes with forward slashes, and make sure that the path
+	// begins with 'archive_folder' and ends with 'extension' (e.g. "textures" and ".dds").
+	static std::string get_full_path( const QString & name, const char * archive_folder, const char * extension );
+	//! Search for file 'path' in the resource archives and folders, and return the full path if the file is found,
+	// or an empty string otherwise.
+	static QString find_file(
+		const GameMode game, const QString & path, const char * archiveFolder, const char * extension );
+	//! Find and load resource file to 'data'. The return value is true on success.
+	static bool get_file( QByteArray & data, const GameMode game, const std::string_view & fullPath );
+	static bool get_file(
+		QByteArray & data, const GameMode game,
+		const QString & path, const char * archiveFolder, const char * extension );
+	//! Return pointer to Starfield material database, loading it first if necessary.
+	// On error, nullptr is returned.
+	static CE2MaterialDB * materials( const GameMode game );
+	//! Returns a unique ID for the currently loaded material database (0 if none).
+	// Previously returned material pointers become invalid when this value changes.
+	static std::uint64_t get_material_db_id( const GameMode game );
+	//! Close all currently opened resource archives, files and materials. If 'nifResourcesFirst' is true,
+	// then only the resources associated with loose NIF files are closed, if there are any.
+	static void close_resources( bool nifResourcesFirst = false );
+	//! List resource files available for 'game' on the archive filesystem, as a set of null-terminated strings.
+	// The file list can be optionally filtered by a function that returns false if the file should be excluded.
+	static void list_files(
+		std::set< std::string_view > & fileSet, const GameMode game,
+		bool (*fileListFilterFunc)( void * p, const std::string_view & fileName ) = nullptr,
+		void * fileListFilterFuncData = nullptr );
+
+	//! Find applicable data folders at the game installation path
+	static QStringList find_folders( const GameMode game );
+
+	//! Game installation path
+	static inline QString path( const QString & game );
+	//! Game data path
+	static inline QString data( const QString & game );
+	//! Game folders managed by the GameManager
+	static inline QStringList folders( const QString & game );
+	//! Game enabled status in the GameManager
+	static inline bool status( const QString & game );
+	//! Find applicable data folders at the game installation path
+	static inline QStringList find_folders( const QString & game );
+
+	static inline void update_game( const GameMode game, const QString & path );
+	static inline void update_game( const QString & game, const QString & path );
+	static inline void update_folders( const GameMode game, const QStringList & list );
+	static inline void update_folders( const QString & game, const QStringList & list );
+	static inline void update_status( const GameMode game, bool status );
+	static inline void update_status( const QString & game, bool status );
+	static inline void update_other_games_fallback( bool status );
+
+	static void init_settings( int & manager_version, QProgressDialog * dlg = nullptr );
+	static void update_settings( int & manager_version, QProgressDialog * dlg = nullptr );
+
+	//! Save the manager to settings
+	static void save();
+	//! Load the manager from settings
+	static void load();
+	//! Reset the manager
+	static void clear();
+
 private:
-	void insert_game(const GameMode game, const QString& path);
-	void insert_folders(const GameMode game, const QStringList& list);
-	void insert_status(const GameMode game, bool status);
+	static void insert_game( const GameMode game, const QString & path );
+	static void insert_folders( const GameMode game, const QStringList & list );
+	static void insert_status( const GameMode game, bool status );
 
-	mutable QMutex mutex;
-
-	GameMap game_paths;
-	GameEnabledMap game_status;
-	ResourceListMap game_folders;
+	static GameResources	archives[NUM_GAMES];
+	// resources associated with loose NIF files
+	static std::unordered_map< const NifModel *, GameResources * >	nifResourceMap;
+	static std::uint64_t	material_db_prv_id;
+	static QString	gamePaths[NUM_GAMES];
+	static bool	gameStatus[NUM_GAMES];
+	static bool	otherGamesFallback;
 };
 
-QString GameManager::path(const QString& game)
+inline GameManager::GameResources & GameManager::getNIFResources( const NifModel * nif )
 {
-	return path(ModeForString(game));
+	auto	i = nifResourceMap.find( nif );
+	if ( i != nifResourceMap.end() ) [[likely]]
+		return *(i->second);
+	return archives[get_game(nif)];
 }
 
-QString GameManager::data(const QString& game)
+QString GameManager::path( const QString & game )
 {
-	return data(ModeForString(game));
+	return path( ModeForString(game) );
 }
 
-QStringList GameManager::folders(const QString& game)
+QString GameManager::data( const QString & game )
 {
-	return folders(ModeForString(game));
+	return data( ModeForString(game) );
 }
 
-bool GameManager::status(const QString& game)
+QStringList GameManager::folders( const QString & game )
 {
-	return status(ModeForString(game));
+	return folders( ModeForString(game) );
 }
 
-QStringList GameManager::find_folders(const QString & game)
+bool GameManager::status( const QString & game )
 {
-	return find_folders(ModeForString(game));
+	return status( ModeForString(game) );
 }
 
-void GameManager::update_game(const GameMode game, const QString & path)
+QStringList GameManager::find_folders( const QString & game )
 {
-	get()->insert_game(game, path);
+	return find_folders( ModeForString(game) );
 }
 
-void GameManager::update_game(const QString& game, const QString& path)
+void GameManager::update_game( const GameMode game, const QString & path )
 {
-	update_game(ModeForString(game), path);
+	insert_game( game, path );
 }
 
-void GameManager::update_folders(const GameMode game, const QStringList & list)
+void GameManager::update_game( const QString & game, const QString & path )
 {
-	get()->insert_folders(game, list);
+	update_game( ModeForString(game), path );
 }
 
-void GameManager::update_folders(const QString& game, const QStringList& list)
+void GameManager::update_folders( const GameMode game, const QStringList & list )
 {
-	update_folders(ModeForString(game), list);
+	insert_folders( game, list );
 }
 
-void GameManager::update_status(const GameMode game, bool status)
+void GameManager::update_folders( const QString & game, const QStringList & list )
 {
-	get()->insert_status(game, status);
+	update_folders( ModeForString(game), list );
 }
 
-void GameManager::update_status(const QString& game, bool status)
+void GameManager::update_status( const GameMode game, bool status )
 {
-	update_status(ModeForString(game), status);
+	insert_status( game, status );
+}
+
+void GameManager::update_status( const QString & game, bool status )
+{
+	update_status( ModeForString(game), status );
+}
+
+void GameManager::update_other_games_fallback( bool status )
+{
+	otherGamesFallback = status;
 }
 
 } // end namespace Game
-
-template < typename T >
-static inline QModelIndex QModelIndex_child( const T & m, int arow = 0, int acolumn = 0 )
-{
-	const QAbstractItemModel *	model = m.model();
-	if ( !model )
-		return QModelIndex();
-	return model->index( arow, acolumn, m );
-}
 
 #endif // GAMEMANAGER_H

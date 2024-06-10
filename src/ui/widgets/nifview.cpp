@@ -36,6 +36,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "model/basemodel.h"
 #include "model/nifproxymodel.h"
 #include "model/undocommands.h"
+#include "qtcompat.h"
 
 #include <QApplication>
 #include <QMimeData>
@@ -43,8 +44,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QKeyEvent>
 
 #include <vector>
-
-#include "gamemanager.h"
 
 NifTreeView::NifTreeView( QWidget * parent, Qt::WindowFlags flags ) : QTreeView()
 {
@@ -226,6 +225,7 @@ void NifTreeView::pasteTo( const QModelIndex iDest, const NifValue & srcValue )
 		break;
 	case NifValue::tString:
 	case NifValue::tSizedString:
+	case NifValue::tSizedString16:
 	case NifValue::tText:
 	case NifValue::tShortString:
 	case NifValue::tHeaderString:

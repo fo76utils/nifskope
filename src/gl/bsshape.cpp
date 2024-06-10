@@ -5,8 +5,7 @@
 #include "gl/renderer.h"
 #include "io/material.h"
 #include "model/nifmodel.h"
-
-#include "gamemanager.h"
+#include "qtcompat.h"
 
 void BSShape::updateImpl( const NifModel * nif, const QModelIndex & index )
 {

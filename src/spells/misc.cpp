@@ -1,6 +1,6 @@
 #include "misc.h"
 #include "model/undocommands.h"
-#include "gamemanager.h"
+#include "qtcompat.h"
 
 #include <QFileDialog>
 

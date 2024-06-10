@@ -132,6 +132,8 @@ public slots:
 	void scaleSelection();
 	//! Rotate the selection
 	void rotateSelection();
+	//! Export Starfield .mesh file
+	void exportSFMesh();
 
 	void updateSettings();
 
@@ -185,8 +187,8 @@ private:
 
 	void setupViewport( int width, int height );
 	void updateViewRect( int width, int height );
-	bool bindTexture( const QString & filename, const Game::GameMode game );
-	bool bindTexture( const QModelIndex & iSource, const Game::GameMode game );
+	bool bindTexture( const QString & filename );
+	bool bindTexture( const QModelIndex & iSource );
 
 	QVector<int> indices( const QPoint & p ) const;
 	QVector<int> indices( const QRegion & r ) const;
@@ -244,14 +246,15 @@ private:
 
 	QAction * aTextureBlend;
 
+	int	sfMeshLOD = 0;	// TODO: implement choosing LOD
+	QString	sfMeshPath;
+
 	struct Settings
 	{
 		QColor background;
 		QColor highlight;
 		QColor wireframe;
 	} cfg;
-
-	Game::GameMode game;
 };
 
 //! Dialog for getting scaling factors

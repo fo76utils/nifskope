@@ -90,6 +90,7 @@ void NifValue::initialize()
 	typeMap.insert( "Ptr",    NifValue::tUpLink );
 	typeMap.insert( "float",  NifValue::tFloat );
 	typeMap.insert( "SizedString", NifValue::tSizedString );
+	typeMap.insert( "SizedString16", NifValue::tSizedString16 );
 	typeMap.insert( "Text",        NifValue::tText );
 	typeMap.insert( "ExportString", NifValue::tShortString );
 	typeMap.insert( "Color3",      NifValue::tColor3 );
@@ -394,6 +395,7 @@ void NifValue::clear()
 		break;
 	case tString:
 	case tSizedString:
+	case tSizedString16:
 	case tText:
 	case tShortString:
 	case tHeaderString:
@@ -463,6 +465,7 @@ void NifValue::changeType( Type t )
 		return;
 	case tString:
 	case tSizedString:
+	case tSizedString16:
 	case tText:
 	case tShortString:
 	case tHeaderString:
@@ -531,6 +534,7 @@ void NifValue::operator=( const NifValue & other )
 		return;
 	case tString:
 	case tSizedString:
+	case tSizedString16:
 	case tText:
 	case tShortString:
 	case tHeaderString:
@@ -603,6 +607,7 @@ bool NifValue::operator==( const NifValue & other ) const
 		return val.f32 == other.val.f32;
 	case tString:
 	case tSizedString:
+	case tSizedString16:
 	case tText:
 	case tShortString:
 	case tHeaderString:
@@ -845,6 +850,7 @@ bool NifValue::setFromString( const QString & s, const BaseModel * model, const 
 		break;
 	case tString:
 	case tSizedString:
+	case tSizedString16:
 	case tText:
 	case tShortString:
 	case tHeaderString:
@@ -928,6 +934,7 @@ QString NifValue::toString() const
 		return QString::number( val.f32, 'f', 4 );
 	case tString:
 	case tSizedString:
+	case tSizedString16:
 	case tText:
 	case tShortString:
 	case tHeaderString:
@@ -1129,6 +1136,7 @@ QString NifValue::getTypeDebugStr( NifValue::Type t )
 	case tUpLink:           typeStr = "UpLink"; break;
 	case tFloat:            typeStr = "Float"; break;
 	case tSizedString:      typeStr = "SizedString"; break;
+	case tSizedString16:    typeStr = "SizedString16"; break;
 	case tText:             typeStr = "Text"; break;
 	case tShortString:      typeStr = "ShortString"; break;
 	case tHeaderString:     typeStr = "HeaderString"; break;

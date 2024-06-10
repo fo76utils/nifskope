@@ -31,7 +31,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***** END LICENCE BLOCK *****/
 
 #include "bsamodel.h"
-#include "gamemanager.h"
+#include "qtcompat.h"
 
 #include <QByteArray>
 #include <QDateTime>

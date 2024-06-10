@@ -2,6 +2,7 @@
 
 #include "ui/widgets/nifeditors.h"
 #include "gl/gltools.h"
+#include "qtcompat.h"
 
 #include <QApplication>
 #include <QBuffer>
@@ -15,8 +16,6 @@
 #include <QMimeData>
 #include <QPushButton>
 #include <QSettings>
-
-#include "gamemanager.h"
 
 /* XPM */
 static char const * transform_xpm[] = {

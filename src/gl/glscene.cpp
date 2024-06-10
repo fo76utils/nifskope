@@ -123,13 +123,15 @@ void Scene::clear( [[maybe_unused]] bool flushTextures )
 
 	sceneBoundsValid = timeBoundsValid = false;
 
-	game = Game::OTHER;
+	nifModel = nullptr;
 }
 
 void Scene::update( const NifModel * nif, const QModelIndex & index )
 {
 	if ( !nif )
 		return;
+
+	nifModel = nif;
 
 	if ( index.isValid() ) {
 		QModelIndex block = nif->getBlockIndex( index );
@@ -198,7 +200,7 @@ void Scene::updateSelectMode( QAction * action )
 
 void Scene::updateLodLevel( int level )
 {
-	if ( game != Game::STARFIELD )
+	if ( Game::GameManager::get_game( nifModel ) != Game::STARFIELD )
 		level = std::min( level, 2 );
 	lodLevel = LodLevel( level );
 }
@@ -209,8 +211,6 @@ void Scene::make( NifModel * nif, bool flushTextures )
 
 	if ( !nif )
 		return;
-
-	game = Game::GameManager::get_game(nif->getVersionNumber(), nif->getUserVersion(), nif->getBSVersion());
 
 	update( nif, QModelIndex() );
 

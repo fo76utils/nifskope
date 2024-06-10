@@ -4,6 +4,7 @@
 #include "model/kfmmodel.h"
 #include "model/nifmodel.h"
 #include "ui/widgets/fileselect.h"
+#include "qtcompat.h"
 
 #include "spells/sanitize.h"
 
@@ -25,8 +26,6 @@
 #include <QToolButton>
 #include <QComboBox>
 #include <QQueue>
-
-#include "gamemanager.h"
 
 #define NUM_THREADS 4
 

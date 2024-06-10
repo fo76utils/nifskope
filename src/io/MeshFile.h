@@ -2,25 +2,19 @@
 
 #include "data/niftypes.h"
 #include "gl/gltools.h"
-#include "gamemanager.h"
 
 #include <QByteArray>
 #include <QDataStream>
 #include <QVector>
 
-#include <string>
+class NifModel;
 
 
 class MeshFile
 {
 
 public:
-	MeshFile(const QString& path);
-
-	static inline bool readBytes(const QString& path, QByteArray& data)
-	{
-		return Game::GameManager::get_file(data, Game::STARFIELD, path, "geometries", ".mesh");
-	}
+	MeshFile( const QString & path, const NifModel * nif );
 
 	bool isValid();
 
@@ -46,8 +40,6 @@ public:
 	QVector<Triangle> triangles;
 	//! Skeletal Mesh LOD
 	QVector<QVector<Triangle>> lods;
-
-	std::string path;
 
 private:
 	QByteArray data;

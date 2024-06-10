@@ -1,6 +1,6 @@
 #include "spellbook.h"
-#include "gamemanager.h"
 #include "libfo76utils/src/material.hpp"
+#include "model/nifmodel.h"
 
 #include <QClipboard>
 
@@ -19,7 +19,7 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
-		if ( nif && nif->getBSVersion() >= 160 ) {
+		if ( nif && nif->getBSVersion() >= 170 ) {
 			const NifItem * item = nif->getItem( index );
 			if ( item && item->parent() && item->name() == "Name" && item->parent()->name() == "BSLightingShaderProperty" ) {
 				return true;
@@ -35,7 +35,7 @@ public:
 			std::string	matFilePath( Game::GameManager::get_full_path( materialPath, "materials/", ".mat" ) );
 			std::string	matFileData;
 			try {
-				CE2MaterialDB *	materials = Game::GameManager::materials( Game::STARFIELD );
+				CE2MaterialDB *	materials = nif->getCE2Materials();
 				if ( materials ) {
 					(void) materials->loadMaterial( matFilePath );
 					materials->getJSONMaterial( matFileData, matFilePath );

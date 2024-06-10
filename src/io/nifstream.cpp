@@ -36,6 +36,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "model/nifmodel.h"
 
 #include "fp32vec4.hpp"
+#include "filebuf.hpp"
 #include "lib/half.h"
 
 #include <QDataStream>
@@ -295,22 +296,9 @@ bool NifIStream::read( NifValue & val )
 		return device->read( (char *)static_cast<Color3 *>(val.val.data)->rgb, 12 ) == 12;
 	case NifValue::tByteColor4:
 		{
-			Color4 * c = static_cast<Color4 *>(val.val.data);
-#if ENABLE_X86_64_AVX
 			std::uint32_t	rgba;
 			*dataStream >> rgba;
-			FloatVector4	rgba_f(rgba);
-			rgba_f /= 255.0f;
-			c->setRGBA( rgba_f[0], rgba_f[1], rgba_f[2], rgba_f[3] );
-#else
-			quint8	r, g, b, a;
-			*dataStream >> r;
-			*dataStream >> g;
-			*dataStream >> b;
-			*dataStream >> a;
-
-			c->setRGBA( (float)r / 255.0, (float)g / 255.0, (float)b / 255.0, (float)a / 255.0 );
-#endif
+			(void) new( static_cast<ByteColor4 *>(val.val.data) ) ByteColor4( rgba );
 			return (dataStream->status() == QDataStream::Ok);
 		}
 	case NifValue::tColor4:
@@ -320,10 +308,16 @@ bool NifIStream::read( NifValue & val )
 			return (dataStream->status() == QDataStream::Ok);
 		}
 	case NifValue::tSizedString:
+	case NifValue::tSizedString16:
 		{
-			int len;
-			//device->read( (char *) &len, 4 );
-			*dataStream >> len;
+			std::int32_t	len;
+			if ( val.type() == NifValue::tSizedString16 ) [[unlikely]] {
+				std::uint16_t	len16;
+				*dataStream >> len16;
+				len = len16;
+			} else {
+				*dataStream >> len;
+			}
 
 			if ( len > maxLength || len < 0 ) {
 				*static_cast<QString *>(val.val.data) = tr( "<string too long (0x%1)>" ).arg( len, 0, 16 ); return false;
@@ -745,33 +739,26 @@ bool NifOStream::write( const NifValue & val )
 		return device->write( (char *)static_cast<Color3 *>(val.val.data)->rgb, 12 ) == 12;
 	case NifValue::tByteColor4:
 		{
-			Color4 * color = static_cast<Color4 *>(val.val.data);
+			ByteColor4 * color = static_cast<ByteColor4 *>(val.val.data);
 			if ( !color )
 				return false;
-
-#if ENABLE_X86_64_AVX
-			uint32_t	c[1];
-			c[0] = std::uint32_t( FloatVector4( color->rgba[0], color->rgba[1], color->rgba[2], color->rgba[3] ) * 255.0f );
-#else
-			quint8	c[4];
-
-			auto cF = color->rgba;
-			for ( int i = 0; i < 4; i++ ) {
-				c[i] = round( cF[i] * 255.0f );
-			}
-#endif
-			return device->write( (char*)c, 4 ) == 4;
+			char	c[4];
+			FileBuffer::writeUInt32Fast( c, std::uint32_t(*color) );
+			return device->write( c, 4 ) == 4;
 		}
 	case NifValue::tColor4:
 		return device->write( (char *)static_cast<Color4 *>(val.val.data)->rgba, 16 ) == 16;
 	case NifValue::tSizedString:
+	case NifValue::tSizedString16:
 		{
 			QByteArray string = static_cast<QString *>(val.val.data)->toLatin1();
 			//string.replace( "\\r", "\r" );
 			//string.replace( "\\n", "\n" );
-			int len = string.size();
+			char	len[4];
+			FileBuffer::writeUInt32Fast( len, std::uint32_t(string.size()) );
+			int	lenSize = ( val.type() == NifValue::tSizedString16 ? 2 : 4 );
 
-			if ( device->write( (char *)&len, 4 ) != 4 )
+			if ( device->write( len, lenSize ) != lenSize )
 				return false;
 
 			return device->write( string.constData(), string.size() ) == string.size();
@@ -990,11 +977,12 @@ int NifSStream::size( const NifValue & val )
 	case NifValue::tColor4:
 		return 16;
 	case NifValue::tSizedString:
+	case NifValue::tSizedString16:
 		{
 			QByteArray string = static_cast<QString *>(val.val.data)->toLatin1();
 			//string.replace( "\\r", "\r" );
 			//string.replace( "\\n", "\n" );
-			return 4 + string.size();
+			return string.size() + ( val.type() == NifValue::tSizedString16 ? 2 : 4 );
 		}
 	case NifValue::tShortString:
 		{

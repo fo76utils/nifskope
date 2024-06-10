@@ -1,4 +1,5 @@
 #include "blocks.h"
+#include "qtcompat.h"
 
 #include <QApplication>
 #include <QBuffer>
@@ -11,8 +12,6 @@
 #include <QSettings>
 
 #include <algorithm> // std::stable_sort
-
-#include "gamemanager.h"
 
 // Brief description is deliberately not autolinked to class Spell
 /*! \file blocks.cpp

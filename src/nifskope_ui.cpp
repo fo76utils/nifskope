@@ -51,7 +51,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ui/widgets/xmlcheck.h"
 #include "ui/about_dialog.h"
 #include "ui/settingsdialog.h"
-#include "gamemanager.h"
+#include "qtcompat.h"
 
 #include <QAction>
 #include <QApplication>
@@ -1399,7 +1399,7 @@ void NifSkope::overrideViewFont()
 
 void NifSkope::on_aCloseArchives_triggered()
 {
-	Game::GameManager::close_archives( true );
+	Game::GameManager::close_resources( true );
 }
 
 void NifSkope::on_aUpdateView_triggered()

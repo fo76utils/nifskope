@@ -39,6 +39,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "io/material.h"
 #include "io/nifstream.h"
 #include "model/nifmodel.h"
+#include "qtcompat.h"
 
 #include <QBuffer>
 #include <QDebug>

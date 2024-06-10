@@ -26,12 +26,14 @@ All installed MSYS2 packages can be updated anytime later by running the command
 
     git clone --recurse-submodules https://github.com/fo76utils/nifskope.git
 
-Finally, run '**qmake**' and then '**make**' to build the source code (the -j 8 option sets the number of processes to run in parallel). The resulting binaries and required DLL files and resources are placed under '**release**'.
+Finally, run '**qmake**' and then '**make**' in MSYS2-UCRT64 to build the source code (the -j 8 option sets the number of processes to run in parallel). The resulting binaries and required DLL files and resources are placed under '**release**'.
 
     qmake NifSkope.pro
     make -j 8
 
-By default, code is generated for Intel Haswell or compatible CPUs, including the AMD Zen series or newer. Running qmake with the **noavx2=1** option reduces the requirement to Intel Ivy Bridge or AMD FX CPUs, to build for even older hardware, edit the compiler flags in NifSkope.pro.
+By default, code is generated for Intel Haswell or compatible CPUs, including the AMD Zen series or newer. Running qmake with the **noavx2=1** option reduces the requirement to Intel Ivy Bridge or AMD FX CPUs, and **nof16c=1** to Sandy Bridge. To build for even older hardware, edit the compiler flags in NifSkope.pro.
+
+Adding the **debug=1** option to the qmake command enables compiling a debug build of NifSkope.
 
 ### Issues
 

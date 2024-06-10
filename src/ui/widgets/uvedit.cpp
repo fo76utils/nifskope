@@ -32,14 +32,17 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "uvedit.h"
 
-#include "gamemanager.h"
 #include "message.h"
 #include "nifskope.h"
 #include "gl/gltex.h"
 #include "gl/gltools.h"
 #include "model/nifmodel.h"
 #include "ui/settingsdialog.h"
+#include "qtcompat.h"
 
+#include "libfo76utils/src/fp32vec4.hpp"
+#include "libfo76utils/src/filebuf.hpp"
+#include "libfo76utils/src/material.hpp"
 #include "lib/nvtristripwrapper.h"
 #include "io/MeshFile.h"
 
@@ -56,6 +59,8 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QOpenGLFunctions>
 #include <QPushButton>
 #include <QSettings>
+#include <QMessageBox>
+#include <QFileDialog>
 
 // TODO: Determine the necessity of this
 // Appears to be used solely for gluErrorString
@@ -125,8 +130,6 @@ UVWidget::UVWidget( QWidget * parent )
 	pos = QPoint( 0, 0 );
 
 	mousePos = QPoint( -1000, -1000 );
-
-	game = Game::OTHER;
 
 	setCursor( QCursor( Qt::CrossCursor ) );
 	setMouseTracking( true );
@@ -228,9 +231,9 @@ void UVWidget::initializeGL()
 	qglClearColor( cfg.background );
 
 	if ( currentTexSlot < texfiles.size() && !texfiles[currentTexSlot].isEmpty() )
-		bindTexture( texfiles[currentTexSlot], game );
+		bindTexture( texfiles[currentTexSlot] );
 	else
-		bindTexture( texsource, game );
+		bindTexture( texsource );
 
 	glEnableClientState( GL_VERTEX_ARRAY );
 	glVertexPointer( 2, GL_SHORT, 0, vertArray );
@@ -284,9 +287,9 @@ void UVWidget::paintGL()
 		glDisable( GL_BLEND );
 
 	if ( currentTexSlot < texfiles.size() && !texfiles[currentTexSlot].isEmpty() )
-		bindTexture( texfiles[currentTexSlot], game );
+		bindTexture( texfiles[currentTexSlot] );
 	else
-		bindTexture( texsource, game );
+		bindTexture( texsource );
 
 	glTranslatef( -0.5f, -0.5f, 0.0f );
 
@@ -532,10 +535,10 @@ QVector<int> UVWidget::indices( const QRegion & region ) const
 	return hits.toVector();
 }
 
-bool UVWidget::bindTexture( const QString & filename, const Game::GameMode game )
+bool UVWidget::bindTexture( const QString & filename )
 {
 	GLuint mipmaps = 0;
-	mipmaps = textures->bind( filename, game );
+	mipmaps = textures->bind( filename, nif );
 
 	if ( mipmaps ) {
 		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
@@ -554,10 +557,10 @@ bool UVWidget::bindTexture( const QString & filename, const Game::GameMode game 
 	return false;
 }
 
-bool UVWidget::bindTexture( const QModelIndex & iSource, const Game::GameMode game )
+bool UVWidget::bindTexture( const QModelIndex & iSource )
 {
 	GLuint mipmaps = 0;
-	mipmaps = textures->bind( iSource, game );
+	mipmaps = textures->bind( iSource );
 
 	if ( mipmaps ) {
 		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
@@ -746,7 +749,7 @@ void UVWidget::wheelEvent( QWheelEvent * e )
 {
 	switch ( e->modifiers() ) {
 	case Qt::NoModifier:
-		zoom *= 1.0 + ( double( e->angleDelta().y() ) / 960.0 ) / ZOOMUNIT;
+		zoom *= 1.0 + ( double( e->angleDelta().y() ) / 16.0 ) / ZOOMUNIT;
 
 		if ( zoom < MINZOOM ) {
 			zoom = MINZOOM;
@@ -808,14 +811,14 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 			for ( int texSlot = 0; texSlot <= 9; texSlot++ ) {
 				if ( texSlot >= texfiles.size() )
 					texfiles.append( QString() );
-				texfiles[texSlot] = TexCache::find( nif->get<QString>( iTexPropData, QString( "Texture %1" ).arg( texSlot ) ), game );
+				texfiles[texSlot] = TexCache::find( nif->get<QString>( iTexPropData, QString( "Texture %1" ).arg( texSlot ) ), nif );
 			}
 		} else {
 			// Starfield
 			std::string	matPath = Game::GameManager::get_full_path( nif->get<QString>( iTexProp, "Name" ), "materials/", ".mat" );
 			if ( matPath.empty() )
 				return;
-			CE2MaterialDB *	sfMaterials = Game::GameManager::materials( game );
+			CE2MaterialDB *	sfMaterials = nif->getCE2Materials();
 			if ( !sfMaterials )
 				return;
 			const CE2Material *	matData = sfMaterials->loadMaterial( matPath );
@@ -834,7 +837,7 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 					if ( texSlot >= texfiles.size() )
 						texfiles.append( QString() );
 					if ( ( texPathMask & 1 ) && !txtSet->texturePaths[texSlot]->empty() )
-						texfiles[texSlot] = TexCache::find( QString::fromStdString( *(txtSet->texturePaths[texSlot]) ), game );
+						texfiles[texSlot] = TexCache::find( QString::fromStdString( *(txtSet->texturePaths[texSlot]) ), nif );
 				}
 				break;
 			}
@@ -854,7 +857,7 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 				for ( int texSlot = 0; texSlot <= 9; texSlot++ ) {
 					if ( texSlot >= texfiles.size() )
 						texfiles.append( QString() );
-					texfiles[texSlot] = TexCache::find( nif->get<QString>( QModelIndex_child( iTextures, texSlot ) ), game );
+					texfiles[texSlot] = TexCache::find( nif->get<QString>( QModelIndex_child( iTextures, texSlot ) ), nif );
 				}
 			}
 		}
@@ -865,7 +868,7 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 				continue;
 			while ( texSlot >= texfiles.size() )
 				texfiles.append( QString() );
-			texfiles[texSlot] = TexCache::find( nif->get<QString>( iTexturePath ), game );
+			texfiles[texSlot] = TexCache::find( nif->get<QString>( iTexturePath ), nif );
 		}
 	}
 }
@@ -885,13 +888,12 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 	nif = nifModel;
 	iShape = nifIndex;
 	isDataOnSkin = false;
+	sfMeshPath.clear();
 
 	auto newTitle = tr("UV Editor");
 	if (nif)
 		newTitle += tr(" - ") + nif->getFileInfo().fileName();
 	setWindowTitle(newTitle);
-
-	game = Game::GameManager::get_game(nif->getVersionNumber(), nif->getUserVersion(), nif->getBSVersion());
 
 	// Version dependent actions
 	if ( nif && nif->getVersionNumber() != 0x14020007 ) {
@@ -972,6 +974,7 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 		if ( !meshes.isValid() )
 			return false;
 
+		int	lodDiff = 255;
 		for ( int i = 0; i <= 3; i++ ) {
 			auto mesh = QModelIndex_child( meshes, i );
 			if ( !mesh.isValid() )
@@ -982,18 +985,27 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 			mesh = nif->getIndex( mesh, "Mesh" );
 			if ( !mesh.isValid() )
 				continue;
-			QString	meshPath( nif->get<QString>( mesh, "Mesh Path" ) );
+			QString	meshPath( nif->findResourceFile( nif->get<QString>( mesh, "Mesh Path" ), "geometries/", ".mesh" ) );
 			if ( meshPath.isEmpty() )
 				continue;
-			MeshFile	meshFile( meshPath );
-			if ( meshFile.isValid() && meshFile.coords.size() > 0 && meshFile.triangles.size() > 0 ) {
-				for ( qsizetype j = 0; j < meshFile.coords.size(); j++ )
-					texcoords << Vector2( meshFile.coords[j][0], meshFile.coords[j][1] );
-				if ( !setTexCoords( &(meshFile.triangles) ) )
-					return false;
-				break;
+			if ( std::abs( i - sfMeshLOD ) < lodDiff ) {
+				lodDiff = std::abs( i - sfMeshLOD );
+				sfMeshPath = meshPath;
 			}
 		}
+		if ( sfMeshPath.isEmpty() )
+			return false;
+		MeshFile	meshFile( sfMeshPath, nif );
+		if ( !( meshFile.isValid() && meshFile.coords.size() > 0 && meshFile.triangles.size() > 0 ) )
+			return false;
+		for ( qsizetype i = 0; i < meshFile.coords.size(); i++ )
+			texcoords << Vector2( meshFile.coords[i][0], meshFile.coords[i][1] );
+		if ( !setTexCoords( &(meshFile.triangles) ) )
+			return false;
+
+		QAction * aExportSFMesh = new QAction( tr( "Export Mesh File" ), this );
+		connect( aExportSFMesh, &QAction::triggered, this, &UVWidget::exportSFMesh );
+		addAction( aExportSFMesh );
 
 		// Fake index so that isValid() checks do not fail
 		iTexCoords = iShape;
@@ -1058,7 +1070,7 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 
 						if ( iTextures.isValid() ) {
 							for ( int i = 0; i <= 1; i++ )
-								texfiles.append( TexCache::find( nif->get<QString>( QModelIndex_child( iTextures, i ) ), game ) );
+								texfiles.append( TexCache::find( nif->get<QString>( QModelIndex_child( iTextures, i ) ), nif ) );
 							return true;
 						}
 					}
@@ -1628,6 +1640,60 @@ void UVWidget::rotateSelection()
 	if ( ok ) {
 		undoStack->push( new UVWRotateCommand( this, rotateFactor ) );
 	}
+}
+
+void UVWidget::exportSFMesh()
+{
+	if ( !nif || nif->getBSVersion() < 170 || sfMeshPath.isEmpty() )
+		return;
+
+	QByteArray	sfMeshData;
+	if ( !nif->getResourceFile( sfMeshData, sfMeshPath, nullptr, nullptr ) )
+		return;
+	unsigned char *	meshData = reinterpret_cast< unsigned char * >( sfMeshData.data() );
+	size_t	meshDataSize = size_t( sfMeshData.size() );
+	size_t	numTexCoords;
+	unsigned char *	uvData;
+
+	// find position of UV data in the file
+	try {
+		FileBuffer	meshBuf( meshData, meshDataSize );
+		if ( ( meshBuf.readUInt32() - 1U ) & ~1U )
+			return;	// format version must be 1 or 2
+		size_t	numIndices = meshBuf.readUInt32();
+		meshBuf.setPosition( meshBuf.getPosition() + ( numIndices * 2 ) );
+		(void) meshBuf.readUInt64();	// skip vertex coordinate scale and number of weights per vertex
+		size_t	numVertices = meshBuf.readUInt32();
+		meshBuf.setPosition( meshBuf.getPosition() + ( numVertices * 6 ) );
+		numTexCoords = meshBuf.readUInt32();
+		if ( qsizetype(numTexCoords) != texcoords.size() ) {
+			QMessageBox::critical( this, "NifSkope error", tr( "Vertex count does not match .mesh file" ) );
+			return;
+		}
+		if ( ( meshBuf.getPosition() + ( numTexCoords * std::uint64_t(4) ) ) > meshBuf.size() )
+			return;
+		uvData = const_cast< unsigned char * >( meshBuf.getReadPtr() );
+	} catch ( FO76UtilsError & ) {
+		return;
+	}
+
+	// store new UV data
+	for ( size_t i = 0; i < numTexCoords; i++ ) {
+		const Vector2 &	v = texcoords.at( i );
+		std::uint32_t	tmp = std::uint32_t( FloatVector4( v[0], v[1], 0.0f, 0.0f ).convertToFloat16() );
+		FileBuffer::writeUInt32Fast( uvData + ( i * 4 ), tmp );
+	}
+
+	// select and write output file
+	QString	meshPath( QFileDialog::getSaveFileName( this, tr( "Select Mesh File" ), sfMeshPath, QString( "Mesh Files (*.mesh)" ) ) );
+	if ( meshPath.isEmpty() )
+		return;
+	QFile	outFile( meshPath );
+	if ( !outFile.open( QIODevice::WriteOnly ) ) {
+		QMessageBox::critical( this, "NifSkope error", tr( "Error opening .mesh file" ) );
+		return;
+	}
+	outFile.write( sfMeshData.data(), sfMeshData.size() );
 }
 
 void UVWidget::getTexSlots()

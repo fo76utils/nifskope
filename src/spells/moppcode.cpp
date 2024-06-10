@@ -1,5 +1,5 @@
 #include "spellbook.h"
-#include "gamemanager.h"
+#include "qtcompat.h"
 
 
 // Brief description is deliberately not autolinked to class Spell

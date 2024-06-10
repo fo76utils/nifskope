@@ -34,6 +34,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "gl/gltex.h"
 #include "gl/glscene.h"
 #include "model/nifmodel.h"
+#include "qtcompat.h"
 
 #include "lib/nvtristripwrapper.h"
 
@@ -47,8 +48,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QRegularExpression>
 #include <QSettings>
 #include <QTextStream>
-
-#include "gamemanager.h"
 
 #define tr( x ) QApplication::tr( x )
 

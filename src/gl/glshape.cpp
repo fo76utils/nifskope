@@ -207,7 +207,7 @@ void Shape::updateShader()
 	else if ( bssp ) {
 		if ( bssp->bsVersion >= 160 ) {
 			const CE2Material *	sfMat = nullptr;
-			bssp->getSFMaterial( sfMat );
+			bssp->getSFMaterial( sfMat, scene->nifModel );
 			if ( sfMat && ( sfMat->shaderRoute != 0 || (sfMat->flags & CE2Material::Flag_IsDecal) ) )
 				drawInSecondPass = true;
 		} else {
