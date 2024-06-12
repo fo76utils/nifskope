@@ -490,7 +490,7 @@ protected:
 	template <typename T> bool setValue( const NifItem * itemParent, const char * itemName, const T & val );
 
 	// load item values from external .mat/.bgsm/.bgem/.mesh file
-	void loadSFBlender( NifItem * parent, const void * o, const void * layerUVStream = nullptr );
+	void loadSFBlender( NifItem * parent, const void * o );
 	void loadSFLayer( NifItem * parent, const void * o );
 	void loadSFMaterial( NifItem * parent, const void * o );
 	void loadSFTextureWithReplacement( NifItem * parent, const char * texturePath, bool replacementEnabled, std::uint32_t replacementColor );

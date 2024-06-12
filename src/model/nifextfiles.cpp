@@ -47,13 +47,13 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QSettings>
 #include <QStringBuilder>
 
-void NifModel::loadSFBlender( NifItem * parent, const void * o, const void * layerUVStream )
+void NifModel::loadSFBlender( NifItem * parent, const void * o )
 {
 	const char *	name = "";
 	const char *	maskTexture = "";
 	bool	maskTextureReplacementEnabled = false;
 	std::uint32_t	maskTextureReplacement = 0xFFFFFFFFU;
-	const CE2Material::UVStream *	maskUVStream = reinterpret_cast< const CE2Material::UVStream * >(layerUVStream);
+	const CE2Material::UVStream *	maskUVStream = nullptr;
 	unsigned char	blendMode = 0;
 	unsigned char	vertexColorChannel = 0;
 	float	floatParams[5];
@@ -68,8 +68,7 @@ void NifModel::loadSFBlender( NifItem * parent, const void * o, const void * lay
 		maskTexture = blender->texturePath->c_str();
 		maskTextureReplacementEnabled = blender->textureReplacementEnabled;
 		maskTextureReplacement = blender->textureReplacement;
-		if ( blender->uvStream )
-			maskUVStream = blender->uvStream;
+		maskUVStream = blender->uvStream;
 		blendMode = blender->blendMode;
 		vertexColorChannel = blender->colorChannel;
 		for ( int i = 0; i < 5; i++ )
@@ -83,10 +82,19 @@ void NifModel::loadSFBlender( NifItem * parent, const void * o, const void * lay
 		loadSFTextureWithReplacement( getItem( itemToIndex( parent ), "Mask Texture" ), maskTexture, maskTextureReplacementEnabled, maskTextureReplacement );
 		setValue<quint8>( parent, "Blend Mode", blendMode );
 		setValue<quint8>( parent, "Vertex Color Channel", vertexColorChannel );
-		for ( int i = 0; i < 5; i++ )
-			setValue<float>( parent, QString("Float Param %1").arg(i), floatParams[i] );
-		for ( int i = 0; i < 8; i++ )
-			setValue<bool>( parent, QString("Bool Param %1").arg(i), boolParams[i] );
+		setValue<float>( parent, "Height Blend Threshold", floatParams[0] );
+		setValue<float>( parent, "Height Blend Factor", floatParams[1] );
+		setValue<float>( parent, "Position", floatParams[2] );
+		setValue<float>( parent, "Contrast", floatParams[3] );
+		setValue<float>( parent, "Mask Intensity", floatParams[4] );
+		setValue<bool>( parent, "Blend Color", boolParams[0] );
+		setValue<bool>( parent, "Blend Metalness", boolParams[1] );
+		setValue<bool>( parent, "Blend Roughness", boolParams[2] );
+		setValue<bool>( parent, "Blend Normals", boolParams[3] );
+		setValue<bool>( parent, "Blend Normals Additively", boolParams[4] );
+		setValue<bool>( parent, "Use Vertex Color", boolParams[5] );
+		setValue<bool>( parent, "Blend Ambient Occlusion", boolParams[6] );
+		setValue<bool>( parent, "Use Dual Blend Mask", boolParams[7] );
 	}
 }
 
@@ -156,7 +164,7 @@ void NifModel::loadSFTextureSet( NifItem * parent, const void * o )
 	if ( !parent )
 		return;
 	const char *	name = "";
-	float	floatParam = 0.5f;
+	float	floatParam = 1.0f;
 	unsigned char	resolutionHint = 0;
 	std::uint32_t	texturePathMask = 0;
 	std::uint32_t	textureReplacementMask = 0;
@@ -170,7 +178,7 @@ void NifModel::loadSFTextureSet( NifItem * parent, const void * o )
 	}
 	std::uint32_t	textureEnableMask = texturePathMask | textureReplacementMask;
 	setValue<QString>( parent, "Name", name );
-	setValue<float>( parent, "Float Param", floatParam );
+	setValue<float>( parent, "Normal Intensity", floatParam );
 	setValue<quint8>( parent, "Resolution Hint", resolutionHint );
 	setValue<quint32>( parent, "Enable Mask", textureEnableMask );
 	for ( int i = 0; textureEnableMask; i++, textureEnableMask = textureEnableMask >> 1 ) {
@@ -270,7 +278,7 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, const void *matPtr, i
 			if ( l == material->alphaSourceLayer && material->layers[l] )
 				alphaLayerUVStream = material->layers[l]->uvStream;
 			if ( l > 0 && material->blenders[l - 1] )
-				loadSFBlender( getItem( itemToIndex( m ), QString("Blender %1").arg(l - 1) ), material->blenders[l - 1], material->layers[l]->uvStream );
+				loadSFBlender( getItem( itemToIndex( m ), QString("Blender %1").arg(l - 1) ), material->blenders[l - 1] );
 		}
 	}
 	setValue<QString>( m, "Shader Model", QString( material ? CE2Material::shaderModelNames[material->shaderModel] : "BaseMaterial" ) );

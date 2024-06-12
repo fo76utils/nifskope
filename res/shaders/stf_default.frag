@@ -326,9 +326,9 @@ float getBlenderMask(int n)
 			r = texture(textureUnits[lm.blenders[n].maskTexture], offset).r;
 		}
 	}
-	if ( lm.blenders[n].colorChannel >= 0 )
+	if ( lm.blenders[n].boolParams[5] )
 		r *= C[lm.blenders[n].colorChannel];
-	return r;
+	return r * lm.blenders[n].floatParams[4];	// mask intensity
 }
 
 // parallax occlusion mapping based on code from
@@ -383,13 +383,16 @@ void getLayer(int n, vec2 offset, inout vec4 baseMap, inout vec3 normalMap, inou
 	if ( lm.layers[n].material.textureSet.textures[0] != 0 )
 		baseMap.rgb = getLayerTexture(n, 0, offset).rgb;
 	if ( n == 0 || lm.layers[n].material.textureSet.textures[0] != 0 ) {
-		baseMap.rgb *= lm.layers[n].material.color.rgb;
+		if ( (lm.layers[n].material.flags & 1) == 0 )
+			baseMap.rgb *= lm.layers[n].material.color.rgb;
+		else
+			baseMap.rgb = mix( baseMap.rgb, lm.layers[n].material.color.rgb, lm.layers[n].material.color.a );
 		if ( (lm.layers[n].material.flags & 2) != 0 )
 			baseMap.rgb *= C.rgb;
 	}
 	// _normal.dds
 	if ( lm.layers[n].material.textureSet.textures[1] != 0 ) {
-		normalMap.rg = getLayerTexture(n, 1, offset).rg;
+		normalMap.rg = getLayerTexture(n, 1, offset).rg * lm.layers[n].material.textureSet.floatParam;
 		// Calculate missing blue channel
 		normalMap.b = sqrt(max(1.0 - dot(normalMap.rg, normalMap.rg), 0.0));
 	}
@@ -445,16 +448,32 @@ void main(void)
 			getLayer( i, offset, layerBaseMap, layerNormal, layerPBRMap );
 
 			float	layerMask = getBlenderMask(i - 1);
-			switch ( lm.blenders[i - 1].blendMode) {
-				case 0:		// Linear
-					baseMap.rgb = mix(baseMap.rgb, layerBaseMap.rgb, layerMask);
-					normal = normalize(mix(normal, layerNormal, layerMask));
-					pbrMap = mix(pbrMap, layerPBRMap, layerMask);
-					break;
-				case 1:		// Additive (TODO)
-					break;
-				case 2:		// PositionContrast (TODO)
-					break;
+			if ( lm.blenders[i - 1].blendMode == 0 || lm.blenders[i - 1].blendMode == 2 ) {
+				// Linear or PositionContrast
+				// TODO: implement additive blending
+				if ( lm.blenders[i - 1].blendMode == 2 ) {
+					float	blendPosition = lm.blenders[i - 1].floatParams[2];
+					float	blendContrast = lm.blenders[i - 1].floatParams[3];
+					blendContrast = max( (1.0 - blendContrast) * min(blendPosition, 1.0 - blendPosition), 0.001 );
+					blendPosition = ( blendPosition - 0.5 ) * 3.65 + 0.5;
+					float	maskMin = blendPosition - blendContrast;
+					float	maskMax = blendPosition + blendContrast;
+					layerMask = clamp( (layerMask - maskMin) / (maskMax - maskMin), 0.0, 1.0 );
+				}
+				if ( lm.blenders[i - 1].boolParams[0] )
+					baseMap.rgb = mix( baseMap.rgb, layerBaseMap.rgb, layerMask );	// blend color
+				if ( lm.blenders[i - 1].boolParams[1] )
+					pbrMap.g = mix( pbrMap.g, layerPBRMap.g, layerMask );	// blend metalness
+				if ( lm.blenders[i - 1].boolParams[2] )
+					pbrMap.r = mix( pbrMap.r, layerPBRMap.r, layerMask );	// blend roughness
+				if ( lm.blenders[i - 1].boolParams[3] ) {
+					if ( lm.blenders[i - 1].boolParams[4] )
+						normal = normalize( normal + (layerNormal * layerMask) );	// blend normals additively
+					else
+						normal = normalize( mix(normal, layerNormal, layerMask) );
+				}
+				if ( lm.blenders[i - 1].boolParams[6] )
+					pbrMap.b = mix( pbrMap.b, layerPBRMap.b, layerMask );	// blend ambient occlusion
 			}
 		}
 
@@ -468,7 +487,8 @@ void main(void)
 					baseMap.a *= getLayerTexture( i, 2, getTexCoord(lm.alphaSettings.opacityUVstream) ).r;
 				else
 					baseMap.a *= getLayerTexture( i, 2, offset ).r;
-				alpha = lm.layers[i].material.color.a;
+				if ( (lm.layers[i].material.flags & 1) == 0 )
+					alpha = lm.layers[i].material.color.a;
 			}
 		}
 
