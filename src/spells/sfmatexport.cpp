@@ -8,7 +8,7 @@
 class spStarfieldMaterialExport final : public Spell
 {
 public:
-	QString name() const override final { return Spell::tr( "Export Starfield Material" ); }
+	QString name() const override final { return Spell::tr( "Copy JSON Material to Clipboard" ); }
 	QString page() const override final { return Spell::tr( "" ); }
 	QIcon icon() const override final
 	{

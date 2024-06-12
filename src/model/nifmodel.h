@@ -495,7 +495,7 @@ protected:
 	void loadSFMaterial( NifItem * parent, const void * o );
 	void loadSFTextureWithReplacement( NifItem * parent, const char * texturePath, bool replacementEnabled, std::uint32_t replacementColor );
 	void loadSFTextureSet( NifItem * parent, const void * o );
-	void loadSFUVStream( NifItem * parent, const void * o, const void * p = nullptr );
+	void loadSFUVStream( NifItem * parent, const void * o );
 public:
 	void loadSFMaterial( const QModelIndex & parent, const void * matPtr, int lodLevel = 0 );
 	void loadFO76Material( const QModelIndex & parent, const void * material );

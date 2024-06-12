@@ -2,8 +2,7 @@
 #extension GL_ARB_shader_texture_lod : require
 
 struct UVStream {
-	vec2	scale;
-	vec2	offset;
+	vec4	scaleAndOffset;
 	bool	useChannelTwo;
 };
 
@@ -196,6 +195,13 @@ struct TerrainSettingsComponent {
 	float	displacementMidpoint;
 };
 
+struct DetailBlenderSettings {
+	bool	detailBlendMaskSupported;
+	int	maskTexture;
+	vec4	maskTextureReplacement;
+	UVStream	uvStream;
+};
+
 struct LayeredMaterial {
 	// shader model IDs are defined in lib/libfo76utils/src/mat_dump.cpp
 	int	shaderModel;
@@ -213,6 +219,7 @@ struct LayeredMaterial {
 	AlphaSettingsComponent	alphaSettings;
 	TranslucencySettingsComponent	translucencySettings;
 	TerrainSettingsComponent	terrainSettings;
+	DetailBlenderSettings	detailBlender;
 };
 
 uniform samplerCube	CubeMap;
@@ -304,15 +311,24 @@ vec2 getTexCoord(in UVStream uvStream)
 		offset = gl_TexCoord[0].pq;	// this may be incorrect
 	else
 		offset = gl_TexCoord[0].st;
-	return offset * uvStream.scale + uvStream.offset;
+	return offset * uvStream.scaleAndOffset.xy + uvStream.scaleAndOffset.zw;
 }
 
 vec4 getLayerTexture(int layerNum, int textureNum, vec2 offset)
 {
 	int	n = lm.layers[layerNum].material.textureSet.textures[textureNum];
-	if ( n < 1 )
+	if ( n < 0 )
 		return lm.layers[layerNum].material.textureSet.textureReplacements[textureNum];
 	return texture(textureUnits[n], offset);
+}
+
+float getDetailBlendMask()
+{
+	if ( !( lm.detailBlender.detailBlendMaskSupported && lm.detailBlender.maskTexture != 0 ) )
+		return 1.0;
+	if ( lm.detailBlender.maskTexture < 0 )
+		return lm.detailBlender.maskTextureReplacement.r;
+	return texture( textureUnits[lm.detailBlender.maskTexture], getTexCoord( lm.detailBlender.uvStream ) ).r;
 }
 
 float getBlenderMask(int n)
@@ -328,6 +344,8 @@ float getBlenderMask(int n)
 	}
 	if ( lm.blenders[n].boolParams[5] )
 		r *= C[lm.blenders[n].colorChannel];
+	if ( lm.blenders[n].boolParams[7] )
+		r *= getDetailBlendMask();
 	return r * lm.blenders[n].floatParams[4];	// mask intensity
 }
 
@@ -407,7 +425,7 @@ void getLayer(int n, vec2 offset, inout vec4 baseMap, inout vec3 normalMap, inou
 		pbrMap.b = getLayerTexture(n, 5, offset).r;
 }
 
-void main(void)
+void main()
 {
 	if ( isWireframe ) {
 		fragColor = solidColor;
@@ -527,9 +545,6 @@ void main(void)
 	vec3	reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(R, 0.0)));
 	vec3	normalWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(normal, 0.0)));
 
-	if ( lm.alphaSettings.hasOpacity && lm.alphaSettings.useVertexColor )
-		alpha *= C[lm.alphaSettings.vertexColorChannel];
-
 	if ( lm.isEffect ) {
 		if ( lm.effectSettings.useFallOff || lm.effectSettings.useRGBFallOff ) {
 			float	startAngle = cos(radians(lm.effectSettings.falloffStartAngle));
@@ -550,6 +565,11 @@ void main(void)
 		if ( lm.effectSettings.vertexColorBlend )
 			baseMap *= C;
 		alpha = lm.effectSettings.materialOverallAlpha;
+	} else if ( lm.alphaSettings.hasOpacity ) {
+		if ( lm.alphaSettings.useDetailBlendMask )
+			alpha *= getDetailBlendMask();
+		if ( lm.alphaSettings.useVertexColor )
+			alpha *= C[lm.alphaSettings.vertexColorChannel];
 	}
 
 	if ( lm.decalSettings.isDecal )

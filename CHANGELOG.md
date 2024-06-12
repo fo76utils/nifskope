@@ -1,6 +1,7 @@
  == CHANGELOG ==
 
 * Starfield material rendering improvements, including support for layered materials with PositionContrast blend mode.
+* Implemented support for Starfield detail blend mask settings.
 * Fixed mouse wheel sensitivity in walk mode and in the UV editor.
 * Updates for Starfield version 1.12.30.
 

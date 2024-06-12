@@ -837,7 +837,7 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 					if ( texSlot >= texfiles.size() )
 						texfiles.append( QString() );
 					if ( ( texPathMask & 1 ) && !txtSet->texturePaths[texSlot]->empty() )
-						texfiles[texSlot] = TexCache::find( QString::fromStdString( *(txtSet->texturePaths[texSlot]) ), nif );
+						texfiles[texSlot] = TexCache::find( QString::fromLatin1( txtSet->texturePaths[texSlot]->data(), qsizetype(txtSet->texturePaths[texSlot]->length()) ), nif );
 				}
 				break;
 			}
