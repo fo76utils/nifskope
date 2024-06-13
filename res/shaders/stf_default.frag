@@ -234,7 +234,7 @@ uniform vec4 solidColor;
 uniform bool isWireframe;
 uniform bool isSkinned;
 uniform mat4 worldMatrix;
-uniform vec2 parallaxOcclusionSettings;	// max. steps, height scale
+uniform vec4 parallaxOcclusionSettings;	// min. steps, max. steps, height scale, height offset
 
 uniform	LayeredMaterial	lm;
 
@@ -352,18 +352,18 @@ float getBlenderMask(int n)
 // parallax occlusion mapping based on code from
 // https://web.archive.org/web/20150419215321/http://sunandblackcat.com/tipFullView.php?l=eng&topicid=28
 
-vec2 parallaxMapping(int n, vec3 V, vec2 offset, float parallaxScale, float maxLayers)
+vec2 parallaxMapping( int n, vec3 V, vec2 offset )
 {
 	// determine optimal height of each layer
-	float	layerHeight = 1.0 / mix( maxLayers, 8.0, abs(V.z) );
+	float	layerHeight = 1.0 / mix( parallaxOcclusionSettings.y, parallaxOcclusionSettings.x, abs(V.z) );
 
 	// current height of the layer
 	float	curLayerHeight = 1.0;
-	// shift of texture coordinates for each layer
-	vec2	dtex = parallaxScale * V.xy * layerHeight / max( abs(V.z), 0.02 );
-
+	vec2	dtex = parallaxOcclusionSettings.z * V.xy / max( abs(V.z), 0.02 );
 	// current texture coordinates
-	vec2	currentTextureCoords = offset;
+	vec2	currentTextureCoords = offset + ( dtex * parallaxOcclusionSettings.w );
+	// shift of texture coordinates for each layer
+	dtex *= layerHeight;
 
 	// height from heightmap
 	float	heightFromTexture = texture( textureUnits[n], currentTextureCoords ).r;
@@ -396,7 +396,7 @@ void getLayer(int n, vec2 offset, inout vec4 baseMap, inout vec3 normalMap, inou
 {
 	// _height.dds
 	if ( lm.layers[n].material.textureSet.textures[6] >= 1 )
-		offset = parallaxMapping( lm.layers[n].material.textureSet.textures[6], normalize( ViewDir_norm * btnMatrix_norm ), offset, parallaxOcclusionSettings.y, parallaxOcclusionSettings.x );
+		offset = parallaxMapping( lm.layers[n].material.textureSet.textures[6], normalize( ViewDir_norm * btnMatrix_norm ), offset );
 	// _color.dds
 	if ( lm.layers[n].material.textureSet.textures[0] != 0 )
 		baseMap.rgb = getLayerTexture(n, 0, offset).rgb;

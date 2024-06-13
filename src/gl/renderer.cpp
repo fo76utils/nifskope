@@ -441,8 +441,9 @@ void Renderer::updateSettings()
 	QSettings settings;
 
 	cfg.useShaders = settings.value( "Settings/Render/General/Use Shaders", true ).toBool();
-	cfg.sfParallaxMaxSteps = short( settings.value( "Settings/Render/General/Sf Parallax Steps", 120 ).toInt() );
-	cfg.sfParallaxScale = settings.value( "Settings/Render/General/Sf Parallax Scale", 0.04f).toFloat();
+	cfg.sfParallaxMaxSteps = short( settings.value( "Settings/Render/General/Sf Parallax Steps", 200 ).toInt() );
+	cfg.sfParallaxScale = settings.value( "Settings/Render/General/Sf Parallax Scale", 0.033f).toFloat();
+	cfg.sfParallaxOffset = settings.value( "Settings/Render/General/Sf Parallax Offset", 0.5f).toFloat();
 	cfg.cubeMapPathFO76 = settings.value( "Settings/Render/General/Cube Map Path FO 76", "textures/shared/cubemaps/mipblur_defaultoutside1.dds" ).toString();
 	cfg.cubeMapPathSTF = settings.value( "Settings/Render/General/Cube Map Path STF", "textures/cubemaps/cell_cityplazacube.dds" ).toString();
 	int	tmp = settings.value( "Settings/Render/General/Pbr Cube Map Resolution", 1 ).toInt();
@@ -912,7 +913,7 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 	prog->uni1b_l( prog->uniLocation("lm.isEffect"), isEffect );
 	prog->uni1b_l( prog->uniLocation("lm.isTwoSided"), bool(mat->flags & CE2Material::Flag_TwoSided) );
 	prog->uni1b_l( prog->uniLocation("lm.hasOpacityComponent"), bool(mat->flags & CE2Material::Flag_HasOpacityComponent) );
-	prog->uni2f_l( prog->uniLocation("parallaxOcclusionSettings"), float(cfg.sfParallaxMaxSteps), cfg.sfParallaxScale );
+	prog->uni4f_l( prog->uniLocation("parallaxOcclusionSettings"), FloatVector4( 8.0f, float(cfg.sfParallaxMaxSteps), cfg.sfParallaxScale, cfg.sfParallaxOffset ) );
 
 	// emissive settings
 	if ( mat->flags & CE2Material::Flag_LayeredEmissivity && scene->hasOption(Scene::DoGlow) ) {
@@ -1064,15 +1065,14 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 	// material layers
 	int	texUniforms[11];
 	FloatVector4	replUniforms[11];
-	for ( int i = 0; i < 4 && i < CE2Material::maxLayers; i++ ) {
-		bool	layerEnabled = bool(mat->layerMask & (1 << i));
-		prog->uni1b_l( prog->uniLocation("lm.layersEnabled[%d]", i), layerEnabled );
-		if ( !layerEnabled )
+	std::uint32_t	layerMask = mat->layerMask & 0x0F;	// limit the number of layers to 4
+	for ( int i = 0; i < 4; i++ )
+		texUniforms[i] = int( (layerMask >> i) & 1 );
+	prog->uni1iv_l( prog->uniLocation("lm.layersEnabled"), texUniforms, 4 );
+	for ( int i = 0; layerMask; i++, layerMask = layerMask >> 1 ) {
+		if ( !( layerMask & 1 ) )
 			continue;
 		const CE2Material::Layer *	layer = mat->layers[i];
-		const CE2Material::Blender *	blender = nullptr;
-		if ( i > 0 && i <= 3 && i <= CE2Material::maxBlenders )
-			blender = mat->blenders[i - 1];
 		if ( layer->material ) {
 			prog->uni4srgb_l( prog->uniLocation("lm.layers[%d].material.color", i), layer->material->color );
 			int	materialFlags = layer->material->colorModeFlags & 3;
@@ -1126,23 +1126,25 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 			uvStream = &defaultUVStream;
 		prog->uni4f_l( prog->uniLocation("lm.layers[%d].uvStream.scaleAndOffset", i), uvStream->scaleAndOffset );
 		prog->uni1b_l( prog->uniLocation("lm.layers[%d].uvStream.useChannelTwo", i), (uvStream->channel > 1) );
-		if ( blender ) {
-			uvStream = blender->uvStream;
-			if ( !uvStream )
-				uvStream = &defaultUVStream;
-			prog->uni4f_l( prog->uniLocation("lm.blenders[%d].uvStream.scaleAndOffset", i - 1), uvStream->scaleAndOffset );
-			prog->uni1b_l( prog->uniLocation("lm.blenders[%d].uvStream.useChannelTwo", i - 1), (uvStream->channel > 1) );
-			int	texUniform = 0;
-			FloatVector4	replUniform( 0.0f );
-			bsprop->getSFTexture( texunit, texUniform, &replUniform, blender->texturePath, blender->textureReplacement, int(blender->textureReplacementEnabled), uvStream );
-			prog->uni1i_l( prog->uniLocation("lm.blenders[%d].maskTexture", i - 1), texUniform );
-			if ( texUniform < 0 )
-				prog->uni4f_l( prog->uniLocation("lm.blenders[%d].maskTextureReplacement", i - 1), replUniform );
-			prog->uni1i_l( prog->uniLocation("lm.blenders[%d].blendMode", i - 1), int(blender->blendMode) );
-			prog->uni1i_l( prog->uniLocation("lm.blenders[%d].colorChannel", i - 1), int(blender->colorChannel) );
-			prog->uni1fv_l( prog->uniLocation("lm.blenders[%d].floatParams", i - 1), blender->floatParams, CE2Material::Blender::maxFloatParams );
-			prog->uni1bv_l( prog->uniLocation("lm.blenders[%d].boolParams", i - 1), blender->boolParams, CE2Material::Blender::maxBoolParams );
-		}
+
+		const CE2Material::Blender *	blender;
+		if ( !( i > 0 && i <= CE2Material::maxBlenders && ( blender = mat->blenders[i - 1] ) != nullptr ) )
+			continue;
+		uvStream = blender->uvStream;
+		if ( !uvStream )
+			uvStream = &defaultUVStream;
+		prog->uni4f_l( prog->uniLocation("lm.blenders[%d].uvStream.scaleAndOffset", i - 1), uvStream->scaleAndOffset );
+		prog->uni1b_l( prog->uniLocation("lm.blenders[%d].uvStream.useChannelTwo", i - 1), (uvStream->channel > 1) );
+		int	texUniform = 0;
+		FloatVector4	replUniform( 0.0f );
+		bsprop->getSFTexture( texunit, texUniform, &replUniform, blender->texturePath, blender->textureReplacement, int(blender->textureReplacementEnabled), uvStream );
+		prog->uni1i_l( prog->uniLocation("lm.blenders[%d].maskTexture", i - 1), texUniform );
+		if ( texUniform < 0 )
+			prog->uni4f_l( prog->uniLocation("lm.blenders[%d].maskTextureReplacement", i - 1), replUniform );
+		prog->uni1i_l( prog->uniLocation("lm.blenders[%d].blendMode", i - 1), int(blender->blendMode) );
+		prog->uni1i_l( prog->uniLocation("lm.blenders[%d].colorChannel", i - 1), int(blender->colorChannel) );
+		prog->uni1fv_l( prog->uniLocation("lm.blenders[%d].floatParams", i - 1), blender->floatParams, CE2Material::Blender::maxFloatParams );
+		prog->uni1bv_l( prog->uniLocation("lm.blenders[%d].boolParams", i - 1), blender->boolParams, CE2Material::Blender::maxBoolParams );
 	}
 
 	prog->uniSampler_l( prog->uniLocation("textureUnits"), 2, texunit - 2, TexCache::num_texture_units - 2 );
