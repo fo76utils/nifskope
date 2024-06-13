@@ -273,7 +273,7 @@ float emissiveIntensity( bool useAdaptive, bool adaptiveLimits, vec4 luminancePa
 	return l * 0.0025;
 }
 
-vec3 LightingFuncGGX_REF(float NdotL, float LdotR, float NdotV, float roughness)
+float LightingFuncGGX_REF( float LdotR, float NdotL, float NdotV, float roughness )
 {
 	float alpha = roughness * roughness;
 	// D (GGX normal distribution)
@@ -284,10 +284,10 @@ vec3 LightingFuncGGX_REF(float NdotL, float LdotR, float NdotV, float roughness)
 	float D = alphaSqr / (denom * denom);
 	// no pi because BRDF -> lighting
 	// G (remapped hotness, see Unreal Shading)
-	float	k = (alpha + 2 * roughness + 1) / 8.0;
-	float	G = NdotL / (mix(NdotL, 1, k) * mix(NdotV, 1, k));
+	float	k = ( alpha + 2.0 * roughness + 1.0 ) / 8.0;
+	float	G = NdotL / ( mix(NdotL, 1.0, k) * mix(NdotV, 1.0, k) );
 
-	return vec3(D * G);
+	return D * G;
 }
 
 vec3 tonemap(vec3 x, float y)
@@ -485,10 +485,12 @@ void main()
 				if ( lm.blenders[i - 1].boolParams[2] )
 					pbrMap.r = mix( pbrMap.r, layerPBRMap.r, layerMask );	// blend roughness
 				if ( lm.blenders[i - 1].boolParams[3] ) {
-					if ( lm.blenders[i - 1].boolParams[4] )
-						normal = normalize( normal + (layerNormal * layerMask) );	// blend normals additively
-					else
+					if ( lm.blenders[i - 1].boolParams[4] ) {
+						normal.rg = normal.rg + ( layerNormal.rg * layerMask );	// blend normals additively
+						normal.b = sqrt( max( 1.0 - dot(normal.rg, normal.rg), 0.0 ) );
+					} else {
 						normal = normalize( mix(normal, layerNormal, layerMask) );
+					}
 				}
 				if ( lm.blenders[i - 1].boolParams[6] )
 					pbrMap.b = mix( pbrMap.b, layerPBRMap.b, layerMask );	// blend ambient occlusion
@@ -505,8 +507,6 @@ void main()
 					baseMap.a *= getLayerTexture( i, 2, getTexCoord(lm.alphaSettings.opacityUVstream) ).r;
 				else
 					baseMap.a *= getLayerTexture( i, 2, offset ).r;
-				if ( (lm.layers[i].material.flags & 1) == 0 )
-					alpha = lm.layers[i].material.color.a;
 			}
 		}
 
@@ -590,12 +590,12 @@ void main()
 
 	// Specular
 	float	roughness = pbrMap.r;
-	vec3	spec = LightingFuncGGX_REF(NdotL0, LdotR, NdotV, max(roughness, 0.02)) * D.rgb;
+	vec3	spec = D.rgb * LightingFuncGGX_REF( LdotR, NdotL0, NdotV, max(roughness, 0.02) );
 
 	// Diffuse
 	vec3	diffuse = vec3(NdotL0);
-	float	LdotH = sqrt(max(LdotV * 0.5 + 0.5, 0.0));
 	// Fresnel
+	float	LdotH = sqrt( max(LdotV * 0.5 + 0.5, 0.0) );
 	vec2	fDirect = textureLod(textureUnits[0], vec2(LdotH, NdotL0), 0.0).ba;
 	spec *= mix(f0, vec3(1.0), fDirect.x);
 	vec4	envLUT = textureLod(textureUnits[0], vec2(NdotV, roughness), 0.0);
@@ -628,14 +628,7 @@ void main()
 	float	ao = pbrMap.b;
 	refl *= f * envLUT.g * ao;
 
-	//vec3 soft = vec3(0.0);
-	//float wrap = NdotL;
-	//if ( hasSoftlight || subsurfaceRolloff > 0.0 ) {
-	//	wrap = (wrap + subsurfaceRolloff) / (1.0 + subsurfaceRolloff);
-	//	soft = albedo * max(0.0, wrap) * smoothstep(1.0, 0.0, sqrt(NdotL0));
-	//
-	//	diffuse += soft;
-	//}
+	// TODO: translucency
 
 	// Diffuse
 	color.rgb = diffuse * albedo * D.rgb;
