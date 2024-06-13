@@ -455,6 +455,7 @@ void main()
 			offset = ( offset + vec2( float(n % w), float(n / w) ) ) / vec2( float(w), float(h) );
 		}
 
+		float	layerMask = 1.0;
 		if ( i == 0 ) {
 			if ( lm.decalSettings.isDecal && lm.layers[0].material.textureSet.textures[0] == 0 )
 				discard;
@@ -465,10 +466,11 @@ void main()
 			vec3	layerPBRMap = pbrMap;
 			getLayer( i, offset, layerBaseMap, layerNormal, layerPBRMap );
 
-			float	layerMask = getBlenderMask(i - 1);
-			if ( lm.blenders[i - 1].blendMode == 0 || lm.blenders[i - 1].blendMode == 2 ) {
+			layerMask = getBlenderMask( i - 1 );
+			if ( (lm.blenders[i - 1].blendMode & -3) == 0 ) {
 				// Linear or PositionContrast
-				// TODO: implement additive blending
+				// TODO: implement Additive, CharacterCombine and Skin blending
+				float	srcMask = layerMask;
 				if ( lm.blenders[i - 1].blendMode == 2 ) {
 					float	blendPosition = lm.blenders[i - 1].floatParams[2];
 					float	blendContrast = lm.blenders[i - 1].floatParams[3];
@@ -476,37 +478,62 @@ void main()
 					blendPosition = ( blendPosition - 0.5 ) * 3.65 + 0.5;
 					float	maskMin = blendPosition - blendContrast;
 					float	maskMax = blendPosition + blendContrast;
-					layerMask = clamp( (layerMask - maskMin) / (maskMax - maskMin), 0.0, 1.0 );
+					srcMask = clamp( (srcMask - maskMin) / (maskMax - maskMin), 0.0, 1.0 );
 				}
 				if ( lm.blenders[i - 1].boolParams[0] )
-					baseMap.rgb = mix( baseMap.rgb, layerBaseMap.rgb, layerMask );	// blend color
+					baseMap.rgb = mix( baseMap.rgb, layerBaseMap.rgb, srcMask );	// blend color
 				if ( lm.blenders[i - 1].boolParams[1] )
-					pbrMap.g = mix( pbrMap.g, layerPBRMap.g, layerMask );	// blend metalness
+					pbrMap.g = mix( pbrMap.g, layerPBRMap.g, srcMask );	// blend metalness
 				if ( lm.blenders[i - 1].boolParams[2] )
-					pbrMap.r = mix( pbrMap.r, layerPBRMap.r, layerMask );	// blend roughness
+					pbrMap.r = mix( pbrMap.r, layerPBRMap.r, srcMask );	// blend roughness
 				if ( lm.blenders[i - 1].boolParams[3] ) {
 					if ( lm.blenders[i - 1].boolParams[4] ) {
-						normal.rg = normal.rg + ( layerNormal.rg * layerMask );	// blend normals additively
+						normal.rg = normal.rg + ( layerNormal.rg * srcMask );	// blend normals additively
 						normal.b = sqrt( max( 1.0 - dot(normal.rg, normal.rg), 0.0 ) );
 					} else {
-						normal = normalize( mix(normal, layerNormal, layerMask) );
+						normal = normalize( mix(normal, layerNormal, srcMask) );
 					}
 				}
 				if ( lm.blenders[i - 1].boolParams[6] )
-					pbrMap.b = mix( pbrMap.b, layerPBRMap.b, layerMask );	// blend ambient occlusion
+					pbrMap.b = mix( pbrMap.b, layerPBRMap.b, srcMask );	// blend ambient occlusion
 			}
 		}
 
 		if ( lm.layers[i].material.textureSet.textures[2] != 0 ) {
 			// _opacity.dds
 			if ( lm.isEffect ) {
-				if ( i == (lm.hasOpacityComponent ? lm.opacity.firstLayerIndex : 0) )
-					baseMap.a *= getLayerTexture( i, 2, offset ).r;
+				float	a = getLayerTexture( i, 2, offset ).r;
+				if ( lm.hasOpacityComponent ) {
+					int	opacityBlendMode = -1;
+					// FIXME: this assumes blender index = layer index - 1
+					if ( i == lm.opacity.firstLayerIndex )
+						baseMap.a = a;
+					else if ( lm.opacity.secondLayerActive && i == lm.opacity.secondLayerIndex )
+						opacityBlendMode = lm.opacity.firstBlenderMode;
+					else if ( lm.opacity.thirdLayerActive && i == lm.opacity.thirdLayerIndex )
+						opacityBlendMode = lm.opacity.secondBlenderMode;
+					switch ( opacityBlendMode ) {
+					case 0:
+						baseMap.a = mix( baseMap.a, a, layerMask );
+						break;
+					case 1:
+						baseMap.a += a * layerMask;
+						break;
+					case 2:
+						baseMap.a -= a * layerMask;
+						break;
+					case 3:
+						baseMap.a *= a * layerMask;
+						break;
+					}
+				} else if ( i == 0 ) {
+					baseMap.a = a;
+				}
 			} else if ( lm.alphaSettings.hasOpacity && i == lm.alphaSettings.opacitySourceLayer ) {
 				if ( (lm.layers[i].material.flags & 0xFFFC) == 0 )
-					baseMap.a *= getLayerTexture( i, 2, getTexCoord(lm.alphaSettings.opacityUVstream) ).r;
+					baseMap.a = getLayerTexture( i, 2, getTexCoord(lm.alphaSettings.opacityUVstream) ).r;
 				else
-					baseMap.a *= getLayerTexture( i, 2, offset ).r;
+					baseMap.a = getLayerTexture( i, 2, offset ).r;
 			}
 		}
 

@@ -910,9 +910,7 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 	prog->uni1b_l( prog->uniLocation("isWireframe"), false );
 	prog->uni1i( HAS_SPECULAR, int(scene->hasOption(Scene::DoSpecular)) );
 	prog->uni1i_l( prog->uniLocation("lm.shaderModel"), mat->shaderModel );
-	prog->uni1b_l( prog->uniLocation("lm.isEffect"), isEffect );
 	prog->uni1b_l( prog->uniLocation("lm.isTwoSided"), bool(mat->flags & CE2Material::Flag_TwoSided) );
-	prog->uni1b_l( prog->uniLocation("lm.hasOpacityComponent"), bool(mat->flags & CE2Material::Flag_HasOpacityComponent) );
 	prog->uni4f_l( prog->uniLocation("parallaxOcclusionSettings"), FloatVector4( 8.0f, float(cfg.sfParallaxMaxSteps), cfg.sfParallaxScale, cfg.sfParallaxOffset ) );
 
 	// emissive settings
@@ -983,6 +981,8 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 	}
 
 	// effect settings
+	prog->uni1b_l( prog->uniLocation("lm.isEffect"), isEffect );
+	prog->uni1b_l( prog->uniLocation("lm.hasOpacityComponent"), ( isEffect && (mat->flags & CE2Material::Flag_HasOpacityComponent) ) );
 	if ( isEffect ) {
 		const CE2Material::EffectSettings *	sp = mat->effectSettings;
 		prog->uni1b_l( prog->uniLocation("lm.effectSettings.useFallOff"), bool(sp->flags & CE2Material::EffectFlag_UseFalloff) );
@@ -1018,6 +1018,23 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 		prog->uni1b_l( prog->uniLocation("lm.effectSettings.depthMVFixupEdgesOnly"), bool(sp->flags & CE2Material::EffectFlag_MVFixupEdgesOnly) );
 		prog->uni1b_l( prog->uniLocation("lm.effectSettings.forceRenderBeforeOIT"), bool(sp->flags & CE2Material::EffectFlag_RenderBeforeOIT) );
 		prog->uni1i_l( prog->uniLocation("lm.effectSettings.depthBiasInUlp"), sp->depthBias );
+		// opacity component
+		if ( mat->flags & CE2Material::Flag_HasOpacityComponent ) {
+			prog->uni1i_l( prog->uniLocation("lm.opacity.firstLayerIndex"), mat->opacityLayer1 );
+			prog->uni1b_l( prog->uniLocation("lm.opacity.secondLayerActive"), bool(mat->flags & CE2Material::Flag_OpacityLayer2Active) );
+			if ( mat->flags & CE2Material::Flag_OpacityLayer2Active ) {
+				prog->uni1i_l( prog->uniLocation("lm.opacity.secondLayerIndex"), mat->opacityLayer2 );
+				prog->uni1i_l( prog->uniLocation("lm.opacity.firstBlenderIndex"), mat->opacityBlender1 );
+				prog->uni1i_l( prog->uniLocation("lm.opacity.firstBlenderMode"), mat->opacityBlender1Mode );
+			}
+			prog->uni1b_l( prog->uniLocation("lm.opacity.thirdLayerActive"), bool(mat->flags & CE2Material::Flag_OpacityLayer3Active) );
+			if ( mat->flags & CE2Material::Flag_OpacityLayer3Active ) {
+				prog->uni1i_l( prog->uniLocation("lm.opacity.thirdLayerIndex"), mat->opacityLayer3 );
+				prog->uni1i_l( prog->uniLocation("lm.opacity.secondBlenderIndex"), mat->opacityBlender2 );
+				prog->uni1i_l( prog->uniLocation("lm.opacity.secondBlenderMode"), mat->opacityBlender2Mode );
+			}
+			prog->uni1f_l( prog->uniLocation("lm.opacity.specularOpacityOverride"), mat->specularOpacityOverride );
+		}
 	}
 
 	// alpha settings
