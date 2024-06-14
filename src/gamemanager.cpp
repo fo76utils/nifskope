@@ -316,6 +316,10 @@ bool GameManager::GameResources::get_file( QByteArray & data, const std::string_
 	try {
 		ba2File->extractFile( &data, &byteArrayAllocFunc, *fd );
 	} catch ( FO76UtilsError & e ) {
+		if ( std::string_view(e.what()).starts_with( "BA2File: unexpected change to size of loose file" ) ) {
+			close_archives();
+			return get_file( data, fullPath );
+		}
 		QMessageBox::critical( nullptr, "NifSkope error", QString("Error loading resource file '%1': %2").arg( QLatin1String( fullPath.data(), qsizetype(fullPath.length()) ) ).arg( e.what() ) );
 		data.resize( 0 );
 		return false;

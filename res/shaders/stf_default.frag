@@ -467,9 +467,9 @@ void main()
 			getLayer( i, offset, layerBaseMap, layerNormal, layerPBRMap );
 
 			layerMask = getBlenderMask( i - 1 );
-			if ( (lm.blenders[i - 1].blendMode & -3) == 0 ) {
-				// Linear or PositionContrast
-				// TODO: implement Additive, CharacterCombine and Skin blending
+			if ( (lm.blenders[i - 1].blendMode & -7) == 0 ) {
+				// Linear, PositionContrast or CharacterCombine (interpreted as linear)
+				// TODO: implement Additive and Skin blending
 				float	srcMask = layerMask;
 				if ( lm.blenders[i - 1].blendMode == 2 ) {
 					float	blendPosition = lm.blenders[i - 1].floatParams[2];
@@ -502,32 +502,9 @@ void main()
 		if ( lm.layers[i].material.textureSet.textures[2] != 0 ) {
 			// _opacity.dds
 			if ( lm.isEffect ) {
-				float	a = getLayerTexture( i, 2, offset ).r;
-				if ( lm.hasOpacityComponent ) {
-					int	opacityBlendMode = -1;
-					// FIXME: this assumes blender index = layer index - 1
-					if ( i == lm.opacity.firstLayerIndex )
-						baseMap.a = a;
-					else if ( lm.opacity.secondLayerActive && i == lm.opacity.secondLayerIndex )
-						opacityBlendMode = lm.opacity.firstBlenderMode;
-					else if ( lm.opacity.thirdLayerActive && i == lm.opacity.thirdLayerIndex )
-						opacityBlendMode = lm.opacity.secondBlenderMode;
-					switch ( opacityBlendMode ) {
-					case 0:
-						baseMap.a = mix( baseMap.a, a, layerMask );
-						break;
-					case 1:
-						baseMap.a += a * layerMask;
-						break;
-					case 2:
-						baseMap.a -= a * layerMask;
-						break;
-					case 3:
-						baseMap.a *= a * layerMask;
-						break;
-					}
-				} else if ( i == 0 ) {
-					baseMap.a = a;
+				if ( i == ( lm.hasOpacityComponent ? lm.opacity.firstLayerIndex : 0 ) ) {
+					// FIXME: additional opacity layers are ignored, but they do not seem to work in the Creation Kit
+					baseMap.a = getLayerTexture( i, 2, offset ).r;
 				}
 			} else if ( lm.alphaSettings.hasOpacity && i == lm.alphaSettings.opacitySourceLayer ) {
 				if ( (lm.layers[i].material.flags & 0xFFFC) == 0 )
