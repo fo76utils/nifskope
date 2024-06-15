@@ -2,8 +2,7 @@
 #extension GL_ARB_shader_texture_lod : require
 
 struct UVStream {
-	vec2	scale;
-	vec2	offset;
+	vec4	scaleAndOffset;
 	bool	useChannelTwo;
 };
 
@@ -196,6 +195,13 @@ struct TerrainSettingsComponent {
 	float	displacementMidpoint;
 };
 
+struct DetailBlenderSettings {
+	bool	detailBlendMaskSupported;
+	int	maskTexture;
+	vec4	maskTextureReplacement;
+	UVStream	uvStream;
+};
+
 struct LayeredMaterial {
 	// shader model IDs are defined in lib/libfo76utils/src/mat_dump.cpp
 	int	shaderModel;
@@ -213,6 +219,7 @@ struct LayeredMaterial {
 	AlphaSettingsComponent	alphaSettings;
 	TranslucencySettingsComponent	translucencySettings;
 	TerrainSettingsComponent	terrainSettings;
+	DetailBlenderSettings	detailBlender;
 };
 
 uniform samplerCube	CubeMap;
@@ -227,7 +234,7 @@ uniform vec4 solidColor;
 uniform bool isWireframe;
 uniform bool isSkinned;
 uniform mat4 worldMatrix;
-uniform vec2 parallaxOcclusionSettings;	// max. steps, height scale
+uniform vec4 parallaxOcclusionSettings;	// min. steps, max. steps, height scale, height offset
 
 uniform	LayeredMaterial	lm;
 
@@ -266,7 +273,7 @@ float emissiveIntensity( bool useAdaptive, bool adaptiveLimits, vec4 luminancePa
 	return l * 0.0025;
 }
 
-vec3 LightingFuncGGX_REF(float NdotL, float LdotR, float NdotV, float roughness)
+float LightingFuncGGX_REF( float LdotR, float NdotL, float NdotV, float roughness )
 {
 	float alpha = roughness * roughness;
 	// D (GGX normal distribution)
@@ -277,10 +284,10 @@ vec3 LightingFuncGGX_REF(float NdotL, float LdotR, float NdotV, float roughness)
 	float D = alphaSqr / (denom * denom);
 	// no pi because BRDF -> lighting
 	// G (remapped hotness, see Unreal Shading)
-	float	k = (alpha + 2 * roughness + 1) / 8.0;
-	float	G = NdotL / (mix(NdotL, 1, k) * mix(NdotV, 1, k));
+	float	k = ( alpha + 2.0 * roughness + 1.0 ) / 8.0;
+	float	G = NdotL / ( mix(NdotL, 1.0, k) * mix(NdotV, 1.0, k) );
 
-	return vec3(D * G);
+	return D * G;
 }
 
 vec3 tonemap(vec3 x, float y)
@@ -304,15 +311,24 @@ vec2 getTexCoord(in UVStream uvStream)
 		offset = gl_TexCoord[0].pq;	// this may be incorrect
 	else
 		offset = gl_TexCoord[0].st;
-	return offset * uvStream.scale + uvStream.offset;
+	return offset * uvStream.scaleAndOffset.xy + uvStream.scaleAndOffset.zw;
 }
 
 vec4 getLayerTexture(int layerNum, int textureNum, vec2 offset)
 {
 	int	n = lm.layers[layerNum].material.textureSet.textures[textureNum];
-	if ( n < 1 )
+	if ( n < 0 )
 		return lm.layers[layerNum].material.textureSet.textureReplacements[textureNum];
 	return texture(textureUnits[n], offset);
+}
+
+float getDetailBlendMask()
+{
+	if ( !( lm.detailBlender.detailBlendMaskSupported && lm.detailBlender.maskTexture != 0 ) )
+		return 1.0;
+	if ( lm.detailBlender.maskTexture < 0 )
+		return lm.detailBlender.maskTextureReplacement.r;
+	return texture( textureUnits[lm.detailBlender.maskTexture], getTexCoord( lm.detailBlender.uvStream ) ).r;
 }
 
 float getBlenderMask(int n)
@@ -328,24 +344,26 @@ float getBlenderMask(int n)
 	}
 	if ( lm.blenders[n].boolParams[5] )
 		r *= C[lm.blenders[n].colorChannel];
+	if ( lm.blenders[n].boolParams[7] )
+		r *= getDetailBlendMask();
 	return r * lm.blenders[n].floatParams[4];	// mask intensity
 }
 
 // parallax occlusion mapping based on code from
 // https://web.archive.org/web/20150419215321/http://sunandblackcat.com/tipFullView.php?l=eng&topicid=28
 
-vec2 parallaxMapping(int n, vec3 V, vec2 offset, float parallaxScale, float maxLayers)
+vec2 parallaxMapping( int n, vec3 V, vec2 offset )
 {
 	// determine optimal height of each layer
-	float	layerHeight = 1.0 / mix( maxLayers, 8.0, abs(V.z) );
+	float	layerHeight = 1.0 / mix( parallaxOcclusionSettings.y, parallaxOcclusionSettings.x, abs(V.z) );
 
 	// current height of the layer
 	float	curLayerHeight = 1.0;
-	// shift of texture coordinates for each layer
-	vec2	dtex = parallaxScale * V.xy * layerHeight / max( abs(V.z), 0.02 );
-
+	vec2	dtex = parallaxOcclusionSettings.z * V.xy / max( abs(V.z), 0.02 );
 	// current texture coordinates
-	vec2	currentTextureCoords = offset;
+	vec2	currentTextureCoords = offset + ( dtex * parallaxOcclusionSettings.w );
+	// shift of texture coordinates for each layer
+	dtex *= layerHeight;
 
 	// height from heightmap
 	float	heightFromTexture = texture( textureUnits[n], currentTextureCoords ).r;
@@ -378,7 +396,7 @@ void getLayer(int n, vec2 offset, inout vec4 baseMap, inout vec3 normalMap, inou
 {
 	// _height.dds
 	if ( lm.layers[n].material.textureSet.textures[6] >= 1 )
-		offset = parallaxMapping( lm.layers[n].material.textureSet.textures[6], normalize( ViewDir_norm * btnMatrix_norm ), offset, parallaxOcclusionSettings.y, parallaxOcclusionSettings.x );
+		offset = parallaxMapping( lm.layers[n].material.textureSet.textures[6], normalize( ViewDir_norm * btnMatrix_norm ), offset );
 	// _color.dds
 	if ( lm.layers[n].material.textureSet.textures[0] != 0 )
 		baseMap.rgb = getLayerTexture(n, 0, offset).rgb;
@@ -407,7 +425,7 @@ void getLayer(int n, vec2 offset, inout vec4 baseMap, inout vec3 normalMap, inou
 		pbrMap.b = getLayerTexture(n, 5, offset).r;
 }
 
-void main(void)
+void main()
 {
 	if ( isWireframe ) {
 		fragColor = solidColor;
@@ -437,6 +455,7 @@ void main(void)
 			offset = ( offset + vec2( float(n % w), float(n / w) ) ) / vec2( float(w), float(h) );
 		}
 
+		float	layerMask = 1.0;
 		if ( i == 0 ) {
 			if ( lm.decalSettings.isDecal && lm.layers[0].material.textureSet.textures[0] == 0 )
 				discard;
@@ -447,10 +466,11 @@ void main(void)
 			vec3	layerPBRMap = pbrMap;
 			getLayer( i, offset, layerBaseMap, layerNormal, layerPBRMap );
 
-			float	layerMask = getBlenderMask(i - 1);
-			if ( lm.blenders[i - 1].blendMode == 0 || lm.blenders[i - 1].blendMode == 2 ) {
-				// Linear or PositionContrast
-				// TODO: implement additive blending
+			layerMask = getBlenderMask( i - 1 );
+			if ( (lm.blenders[i - 1].blendMode & -7) == 0 ) {
+				// Linear, PositionContrast or CharacterCombine (interpreted as linear)
+				// TODO: implement Additive and Skin blending
+				float	srcMask = layerMask;
 				if ( lm.blenders[i - 1].blendMode == 2 ) {
 					float	blendPosition = lm.blenders[i - 1].floatParams[2];
 					float	blendContrast = lm.blenders[i - 1].floatParams[3];
@@ -458,37 +478,39 @@ void main(void)
 					blendPosition = ( blendPosition - 0.5 ) * 3.65 + 0.5;
 					float	maskMin = blendPosition - blendContrast;
 					float	maskMax = blendPosition + blendContrast;
-					layerMask = clamp( (layerMask - maskMin) / (maskMax - maskMin), 0.0, 1.0 );
+					srcMask = clamp( (srcMask - maskMin) / (maskMax - maskMin), 0.0, 1.0 );
 				}
 				if ( lm.blenders[i - 1].boolParams[0] )
-					baseMap.rgb = mix( baseMap.rgb, layerBaseMap.rgb, layerMask );	// blend color
+					baseMap.rgb = mix( baseMap.rgb, layerBaseMap.rgb, srcMask );	// blend color
 				if ( lm.blenders[i - 1].boolParams[1] )
-					pbrMap.g = mix( pbrMap.g, layerPBRMap.g, layerMask );	// blend metalness
+					pbrMap.g = mix( pbrMap.g, layerPBRMap.g, srcMask );	// blend metalness
 				if ( lm.blenders[i - 1].boolParams[2] )
-					pbrMap.r = mix( pbrMap.r, layerPBRMap.r, layerMask );	// blend roughness
+					pbrMap.r = mix( pbrMap.r, layerPBRMap.r, srcMask );	// blend roughness
 				if ( lm.blenders[i - 1].boolParams[3] ) {
-					if ( lm.blenders[i - 1].boolParams[4] )
-						normal = normalize( normal + (layerNormal * layerMask) );	// blend normals additively
-					else
-						normal = normalize( mix(normal, layerNormal, layerMask) );
+					if ( lm.blenders[i - 1].boolParams[4] ) {
+						normal.rg = normal.rg + ( layerNormal.rg * srcMask );	// blend normals additively
+						normal.b = sqrt( max( 1.0 - dot(normal.rg, normal.rg), 0.0 ) );
+					} else {
+						normal = normalize( mix(normal, layerNormal, srcMask) );
+					}
 				}
 				if ( lm.blenders[i - 1].boolParams[6] )
-					pbrMap.b = mix( pbrMap.b, layerPBRMap.b, layerMask );	// blend ambient occlusion
+					pbrMap.b = mix( pbrMap.b, layerPBRMap.b, srcMask );	// blend ambient occlusion
 			}
 		}
 
 		if ( lm.layers[i].material.textureSet.textures[2] != 0 ) {
 			// _opacity.dds
 			if ( lm.isEffect ) {
-				if ( i == (lm.hasOpacityComponent ? lm.opacity.firstLayerIndex : 0) )
-					baseMap.a *= getLayerTexture( i, 2, offset ).r;
+				if ( i == ( lm.hasOpacityComponent ? lm.opacity.firstLayerIndex : 0 ) ) {
+					// FIXME: additional opacity layers are ignored, but they do not seem to work in the Creation Kit
+					baseMap.a = getLayerTexture( i, 2, offset ).r;
+				}
 			} else if ( lm.alphaSettings.hasOpacity && i == lm.alphaSettings.opacitySourceLayer ) {
 				if ( (lm.layers[i].material.flags & 0xFFFC) == 0 )
-					baseMap.a *= getLayerTexture( i, 2, getTexCoord(lm.alphaSettings.opacityUVstream) ).r;
+					baseMap.a = getLayerTexture( i, 2, getTexCoord(lm.alphaSettings.opacityUVstream) ).r;
 				else
-					baseMap.a *= getLayerTexture( i, 2, offset ).r;
-				if ( (lm.layers[i].material.flags & 1) == 0 )
-					alpha = lm.layers[i].material.color.a;
+					baseMap.a = getLayerTexture( i, 2, offset ).r;
 			}
 		}
 
@@ -527,9 +549,6 @@ void main(void)
 	vec3	reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(R, 0.0)));
 	vec3	normalWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(normal, 0.0)));
 
-	if ( lm.alphaSettings.hasOpacity && lm.alphaSettings.useVertexColor )
-		alpha *= C[lm.alphaSettings.vertexColorChannel];
-
 	if ( lm.isEffect ) {
 		if ( lm.effectSettings.useFallOff || lm.effectSettings.useRGBFallOff ) {
 			float	startAngle = cos(radians(lm.effectSettings.falloffStartAngle));
@@ -550,6 +569,11 @@ void main(void)
 		if ( lm.effectSettings.vertexColorBlend )
 			baseMap *= C;
 		alpha = lm.effectSettings.materialOverallAlpha;
+	} else if ( lm.alphaSettings.hasOpacity ) {
+		if ( lm.alphaSettings.useDetailBlendMask )
+			alpha *= getDetailBlendMask();
+		if ( lm.alphaSettings.useVertexColor )
+			alpha *= C[lm.alphaSettings.vertexColorChannel];
 	}
 
 	if ( lm.decalSettings.isDecal )
@@ -570,12 +594,12 @@ void main(void)
 
 	// Specular
 	float	roughness = pbrMap.r;
-	vec3	spec = LightingFuncGGX_REF(NdotL0, LdotR, NdotV, max(roughness, 0.02)) * D.rgb;
+	vec3	spec = D.rgb * LightingFuncGGX_REF( LdotR, NdotL0, NdotV, max(roughness, 0.02) );
 
 	// Diffuse
 	vec3	diffuse = vec3(NdotL0);
-	float	LdotH = sqrt(max(LdotV * 0.5 + 0.5, 0.0));
 	// Fresnel
+	float	LdotH = sqrt( max(LdotV * 0.5 + 0.5, 0.0) );
 	vec2	fDirect = textureLod(textureUnits[0], vec2(LdotH, NdotL0), 0.0).ba;
 	spec *= mix(f0, vec3(1.0), fDirect.x);
 	vec4	envLUT = textureLod(textureUnits[0], vec2(NdotV, roughness), 0.0);
@@ -608,14 +632,7 @@ void main(void)
 	float	ao = pbrMap.b;
 	refl *= f * envLUT.g * ao;
 
-	//vec3 soft = vec3(0.0);
-	//float wrap = NdotL;
-	//if ( hasSoftlight || subsurfaceRolloff > 0.0 ) {
-	//	wrap = (wrap + subsurfaceRolloff) / (1.0 + subsurfaceRolloff);
-	//	soft = albedo * max(0.0, wrap) * smoothstep(1.0, 0.0, sqrt(NdotL0));
-	//
-	//	diffuse += soft;
-	//}
+	// TODO: translucency
 
 	// Diffuse
 	color.rgb = diffuse * albedo * D.rgb;

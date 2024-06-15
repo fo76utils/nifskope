@@ -709,6 +709,8 @@ public:
 		m = sf_material;
 		return sf_material_valid;
 	}
+	// textureReplacementMode <= 0: disabled, > 0: enabled, 1: linear, 2: sRGB, 3: normal map (-1.0 to 1.0)
+	bool getSFTexture( int & texunit, int & texUniform, FloatVector4 * replUniform, const std::string_view * texturePath, std::uint32_t textureReplacement, int textureReplacementMode, const CE2Material::UVStream * uvStream );
 
 protected:
 	ShaderFlags::SF1 flags1 = ShaderFlags::SLSF1_ZBuffer_Test;

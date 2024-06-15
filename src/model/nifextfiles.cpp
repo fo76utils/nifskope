@@ -65,7 +65,7 @@ void NifModel::loadSFBlender( NifItem * parent, const void * o )
 	if ( o ) {
 		const CE2Material::Blender *	blender = reinterpret_cast< const CE2Material::Blender * >(o);
 		name = blender->name;
-		maskTexture = blender->texturePath->c_str();
+		maskTexture = blender->texturePath->data();
 		maskTextureReplacementEnabled = blender->textureReplacementEnabled;
 		maskTextureReplacement = blender->textureReplacement;
 		maskUVStream = blender->uvStream;
@@ -189,21 +189,19 @@ void NifModel::loadSFTextureSet( NifItem * parent, const void * o )
 		bool	replacementEnabled = bool( textureReplacementMask & (1 << i) );
 		std::uint32_t	replacementColor = 0;
 		if ( texturePathMask & (1 << i) )
-			texturePath = textureSet->texturePaths[i]->c_str();
+			texturePath = textureSet->texturePaths[i]->data();
 		if ( replacementEnabled )
 			replacementColor = textureSet->textureReplacements[i];
 		loadSFTextureWithReplacement( t, texturePath, replacementEnabled, replacementColor );
 	}
 }
 
-void NifModel::loadSFUVStream( NifItem * parent, const void * o, const void * p )
+void NifModel::loadSFUVStream( NifItem * parent, const void * o )
 {
 	const char *	name = "";
 	FloatVector4	scaleAndOffset( 1.0f, 1.0f, 0.0f, 0.0f );
 	unsigned char	textureAddressMode = 0;
 	unsigned char	channel = 1;
-	if ( !o )
-		o = p;
 	if ( o ) {
 		const CE2Material::UVStream *	uvStream = reinterpret_cast< const CE2Material::UVStream * >(o);
 		name = uvStream->name;
@@ -267,7 +265,6 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, const void *matPtr, i
 	}
 
 	setValue<QString>( m, "Name", ( material ? material->name : "" ) );
-	const CE2Material::UVStream *	alphaLayerUVStream = nullptr;
 	for ( int l = 0; l < 6; l++ ) {
 		bool	layerEnabled = false;
 		if ( material )
@@ -275,8 +272,6 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, const void *matPtr, i
 		setValue<bool>( m, QString("Layer %1 Enabled").arg(l), layerEnabled );
 		if ( layerEnabled ) {
 			loadSFLayer( getItem( itemToIndex( m ), QString("Layer %1").arg(l) ), material->layers[l] );
-			if ( l == material->alphaSourceLayer && material->layers[l] )
-				alphaLayerUVStream = material->layers[l]->uvStream;
 			if ( l > 0 && material->blenders[l - 1] )
 				loadSFBlender( getItem( itemToIndex( m ), QString("Blender %1").arg(l - 1) ), material->blenders[l - 1] );
 		}
@@ -314,13 +309,22 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, const void *matPtr, i
 			setValue<bool>( o, "Use Vertex Color", bool(material->flags & CE2Material::Flag_AlphaVertexColor) );
 			if ( material->flags & CE2Material::Flag_AlphaVertexColor )
 				setValue<quint8>( o, "Vertex Color Channel", material->alphaVertexColorChannel );
-			loadSFUVStream( getItem( itemToIndex(o), "Opacity UV Stream" ), material->alphaUVStream, alphaLayerUVStream );
+			loadSFUVStream( getItem( itemToIndex(o), "Opacity UV Stream" ), material->alphaUVStream );
 			setValue<float>( o, "Height Blend Threshold", material->alphaHeightBlendThreshold );
 			setValue<float>( o, "Height Blend Factor", material->alphaHeightBlendFactor );
 			setValue<float>( o, "Position", material->alphaPosition );
 			setValue<float>( o, "Contrast", material->alphaContrast );
 			setValue<bool>( o, "Use Dithered Transparency", bool(material->flags & CE2Material::Flag_DitheredTransparency) );
 		}
+	}
+	bool	useDetailBlendMask = false;
+	if ( material )
+		useDetailBlendMask = bool( material->flags & CE2Material::Flag_UseDetailBlender );
+	setValue<bool>( m, "Detail Blend Mask Supported", useDetailBlendMask );
+	if ( useDetailBlendMask && ( o = getItem( itemToIndex(m), "Detail Blender Settings" ) ) != nullptr ) {
+		const CE2Material::DetailBlenderSettings *	sp = material->detailBlenderSettings;
+		loadSFTextureWithReplacement( getItem( itemToIndex(o), "Texture" ), sp->texturePath->data(), sp->textureReplacementEnabled, sp->textureReplacement );
+		loadSFUVStream( getItem( itemToIndex(o), "UV Stream" ), sp->uvStream );
 	}
 	bool	isEffect = false;
 	if ( material )
@@ -381,7 +385,7 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, const void *matPtr, i
 		setValue<bool>( o, "Is Projected", sp->isProjected );
 		if ( sp->isProjected ) {
 			setValue<bool>( o, "Use Parallax Occlusion Mapping", sp->useParallaxMapping );
-			setValue<QString>( o, "Surface Height Map", sp->surfaceHeightMap->c_str() );
+			setValue<QString>( o, "Surface Height Map", sp->surfaceHeightMap->data() );
 			setValue<float>( o, "Parallax Occlusion Scale", sp->parallaxOcclusionScale );
 			setValue<bool>( o, "Parallax Occlusion Shadows", sp->parallaxOcclusionShadows );
 			setValue<quint8>( o, "Max Parralax Occlusion Steps", sp->maxParallaxSteps );

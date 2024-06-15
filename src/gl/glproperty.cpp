@@ -39,6 +39,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "io/material.h"
 #include "gamemanager.h"
 #include "qtcompat.h"
+#include "libfo76utils/src/ddstxt16.hpp"
 
 #include <QOpenGLContext>
 
@@ -897,6 +898,43 @@ void BSShaderLightingProperty::clear()
 	sfMaterialDB_ID = std::uint64_t(-1);
 	sf_material_valid = false;
 	sfMaterialPath.clear();
+}
+
+bool BSShaderLightingProperty::getSFTexture( int & texunit, int & texUniform, FloatVector4 * replUniform, const std::string_view * texturePath, std::uint32_t textureReplacement, int textureReplacementMode, const CE2Material::UVStream * uvStream )
+{
+	FloatVector4	c( textureReplacement );
+	c *= 1.0f / 255.0f;
+	if ( textureReplacementMode >= 2 ) {
+		if ( textureReplacementMode == 2 )
+			c = DDSTexture16::srgbExpand( c );	// SRGB
+		else
+			c = c + c - 1.0f;					// SNORM
+	}
+	if ( texturePath && !texturePath->empty() && texunit >= 3 && texunit < TexCache::num_texture_units && activateTextureUnit(texunit, true) ) {
+		TexClampMode	clampMode = TexClampMode::WRAP_S_WRAP_T;
+		if ( uvStream && uvStream->textureAddressMode ) {
+			if ( uvStream->textureAddressMode == 3 ) {
+				// this may be incorrect
+				glTexParameterfv( GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, &(c.v[0]) );
+				clampMode = TexClampMode::BORDER_S_BORDER_T;
+			} else if ( uvStream->textureAddressMode == 2 )
+				clampMode = TexClampMode::MIRRORED_S_MIRRORED_T;
+			else
+				clampMode = TexClampMode::CLAMP_S_CLAMP_T;
+		}
+		if ( bind( QString::fromLatin1(texturePath->data(), qsizetype(texturePath->length())), false, clampMode ) ) {
+			texUniform = texunit - 2;
+			texunit++;
+			return true;
+		}
+	}
+	if ( textureReplacementMode > 0 && replUniform ) {
+		texUniform = -1;
+		*replUniform = c;
+		return true;
+	}
+	texUniform = 0;
+	return false;
 }
 
 void BSShaderLightingProperty::setMaterial( Material * newMaterial )

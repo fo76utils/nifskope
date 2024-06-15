@@ -354,8 +354,11 @@ private:
 			const char *	fmt;
 			std::uint32_t	args;
 			int	l;
-			inline UniformLocationMapItem();
-			inline UniformLocationMapItem( const char *s, int arg1, int arg2 );
+			inline UniformLocationMapItem()
+				: fmt( nullptr ), args( 0 ), l( -1 )
+			{
+			}
+			inline UniformLocationMapItem( const char *s, int argsX16Y16 );
 			inline bool operator==( const UniformLocationMapItem & r ) const;
 			inline std::uint32_t hashFunction() const;
 		};
@@ -377,19 +380,23 @@ public:
 							int & texunit, const QString & alternate, uint clamp, const QString & forced = {} );
 		bool uniSamplerBlank( UniformType var, int & texunit );
 
-		// fmt must be a string literal, with at most two %d format
-		// integer arguments in the range 0 to 99
-		int uniLocation( const char * fmt, int arg1 = 0, int arg2 = 0 );
+		// fmt must be a string literal, with at most two %d format integer arguments in the range 0 to 99
+		int uniLocation( const char * fmt, int argsX16Y16 = 0 );
+		inline int uniLocation( const char * fmt, int arg1, int arg2 )
+		{
+			return uniLocation( fmt, arg1 | ( arg2 << 16 ) );
+		}
 		void uni1b_l( int l, bool x );
 		void uni1i_l( int l, int x );
 		void uni1f_l( int l, float x );
 		void uni2f_l( int l, float x, float y );
-		void uni4f_l( int l, FloatVector4 x, bool isSRGB = false );
+		void uni4f_l( int l, FloatVector4 x );
+		void uni4srgb_l( int l, FloatVector4 x );
 		void uni4c_l( int l, std::uint32_t c, bool isSRGB = false );
-		// l1 = texture unit variable location, l2 = texture replacement location
-		// textureReplacementMode <= 0: disabled, > 0: enabled
-		// 1: linear, 2: sRGB, 3: normal map (-1.0 to 1.0)
-		bool uniSampler_l( BSShaderLightingProperty * bsprop, int & texunit, int l1, int l2, const std::string * texturePath, std::uint32_t textureReplacement, int textureReplacementMode, const CE2Material::UVStream * uvStream );
+		void uni1bv_l( int l, const bool * x, size_t n );
+		void uni1iv_l( int l, const int * x, size_t n );
+		void uni1fv_l( int l, const float * x, size_t n );
+		void uni4fv_l( int l, const FloatVector4 * x, size_t n );
 		void uniSampler_l( int l, int firstTextureUnit, int textureCnt, int arraySize );
 	};
 
@@ -403,8 +410,9 @@ public:
 	struct Settings
 	{
 		bool	useShaders = true;
-		short	sfParallaxMaxSteps = 120;
-		float	sfParallaxScale = 0.04f;
+		short	sfParallaxMaxSteps = 200;
+		float	sfParallaxScale = 0.033f;
+		float	sfParallaxOffset = 0.5f;
 		QString	cubeMapPathFO76;
 		QString	cubeMapPathSTF;
 	} cfg;

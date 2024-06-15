@@ -1,7 +1,9 @@
  == CHANGELOG ==
 
 * Starfield material rendering improvements, including support for layered materials with PositionContrast blend mode.
+* Implemented support for Starfield detail blend mask settings.
 * Fixed mouse wheel sensitivity in walk mode and in the UV editor.
+* Added render setting for Starfield parallax mapping height offset.
 * Updates for Starfield version 1.12.30.
 
 #### NifSkope-2.0.dev9-20240608

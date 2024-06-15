@@ -6745,6 +6745,11 @@
         <field name="Use Dithered Transparency" type="bool" />
     </struct>
 
+    <struct name="BSDetailBlenderSettings" abstract="true" module="BSMain" versions="#STF#">
+        <field name="Texture" type="BSTextureWithReplacement" />
+        <field name="UV Stream" type="BSUVStream" />
+    </struct>
+
     <enum name="BSOpacityBlenderMode" storage="byte" versions="#STF#">
         <option name="Lerp" value="0" />
         <option name="Additive" value="1" />
@@ -6961,6 +6966,8 @@
         <field name="Physics Material Type" type="BSPhysicsMaterialType" />
         <field name="Has Opacity" type="bool" cond="Shader Route #NEQ# 1" />
         <field name="Alpha Settings" type="BSAlphaSettingsComponent" cond="(Shader Route #NEQ# 1) #AND# Has Opacity" />
+        <field name="Detail Blend Mask Supported" type="bool" />
+        <field name="Detail Blender Settings" type="BSDetailBlenderSettings" cond="Detail Blend Mask Supported" />
         <field name="Has Opacity Component" type="bool" cond="Shader Route #EQ# 1" />
         <field name="Opacity Settings" type="BSOpacityComponent" cond="(Shader Route #EQ# 1) #AND# Has Opacity Component" />
         <field name="Is Effect" type="bool" />
