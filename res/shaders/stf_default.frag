@@ -545,10 +545,10 @@ void main()
 						baseMap.a = mix( baseMap.a, a, layerMask );
 						break;
 					case 1:
-						baseMap.a += a * layerMask;
+						baseMap.a = min( baseMap.a + a * layerMask, 1.0 );
 						break;
 					case 2:
-						baseMap.a -= a * layerMask;
+						baseMap.a = max( baseMap.a - a * layerMask, 0.0 );
 						break;
 					case 3:
 						baseMap.a *= a * layerMask;

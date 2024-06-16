@@ -918,15 +918,15 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 		const CE2Material::LayeredEmissiveSettings *	sp = mat->layeredEmissiveSettings;
 		prog->uni1b_l( prog->uniLocation("lm.layeredEmissivity.isEnabled"), sp->isEnabled );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.firstLayerIndex"), sp->layer1Index );
-		prog->uni4c_l( prog->uniLocation("lm.layeredEmissivity.firstLayerTint"), sp->layer1Tint );
+		prog->uni4c_l( prog->uniLocation("lm.layeredEmissivity.firstLayerTint"), sp->layer1Tint, true );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.firstLayerMaskIndex"), sp->layer1MaskIndex );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.secondLayerIndex"), ( sp->layer2Active ? int(sp->layer2Index) : -1 ) );
-		prog->uni4c_l( prog->uniLocation("lm.layeredEmissivity.secondLayerTint"), sp->layer2Tint );
+		prog->uni4c_l( prog->uniLocation("lm.layeredEmissivity.secondLayerTint"), sp->layer2Tint, true );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.secondLayerMaskIndex"), sp->layer2MaskIndex );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.firstBlenderIndex"), sp->blender1Index );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.firstBlenderMode"), sp->blender1Mode );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.thirdLayerIndex"), ( sp->layer3Active ? int(sp->layer3Index) : -1 ) );
-		prog->uni4c_l( prog->uniLocation("lm.layeredEmissivity.thirdLayerTint"), sp->layer3Tint );
+		prog->uni4c_l( prog->uniLocation("lm.layeredEmissivity.thirdLayerTint"), sp->layer3Tint, true );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.thirdLayerMaskIndex"), sp->layer3MaskIndex );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.secondBlenderIndex"), sp->blender2Index );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.secondBlenderMode"), sp->blender2Mode );
@@ -944,7 +944,7 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 		const CE2Material::EmissiveSettings *	sp = mat->emissiveSettings;
 		prog->uni1b_l( prog->uniLocation("lm.emissiveSettings.isEnabled"), sp->isEnabled );
 		prog->uni1i_l( prog->uniLocation("lm.emissiveSettings.emissiveSourceLayer"), sp->sourceLayer );
-		prog->uni4f_l( prog->uniLocation("lm.emissiveSettings.emissiveTint"), sp->emissiveTint );
+		prog->uni4srgb_l( prog->uniLocation("lm.emissiveSettings.emissiveTint"), sp->emissiveTint );
 		prog->uni1i_l( prog->uniLocation("lm.emissiveSettings.emissiveMaskSourceBlender"), sp->maskSourceBlender );
 		prog->uni1f_l( prog->uniLocation("lm.emissiveSettings.emissiveClipThreshold"), sp->clipThreshold );
 		prog->uni1b_l( prog->uniLocation("lm.emissiveSettings.adaptiveEmittance"), sp->adaptiveEmittance );
