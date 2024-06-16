@@ -58,13 +58,13 @@ For information about development:
 Refer to these other documents in your installation folder or at the links provided:
 
 
-## [GLTF IMPORT/EXPORT](https://github.com/hexabits/nifskope/blob/develop/README_GLTF.md)
+## [GLTF IMPORT/EXPORT](https://github.com/fo76utils/nifskope/blob/develop/README_GLTF.md)
 
-## [TROUBLESHOOTING](https://github.com/niftools/nifskope/blob/develop/TROUBLESHOOTING.md)
+## [TROUBLESHOOTING](https://github.com/fo76utils/nifskope/blob/develop/TROUBLESHOOTING.md)
 
-## [CHANGELOG](https://github.com/niftools/nifskope/blob/develop/CHANGELOG.md)
+## [CHANGELOG](https://github.com/fo76utils/nifskope/blob/develop/CHANGELOG.md)
 
-## [CONTRIBUTORS](https://github.com/niftools/nifskope/blob/develop/CONTRIBUTORS.md)
+## [CONTRIBUTORS](https://github.com/fo76utils/nifskope/blob/develop/CONTRIBUTORS.md)
 
-## [LICENSE](https://github.com/niftools/nifskope/blob/develop/LICENSE.md)
+## [LICENSE](https://github.com/fo76utils/nifskope/blob/develop/LICENSE.md)
 
