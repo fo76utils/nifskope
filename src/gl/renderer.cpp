@@ -983,14 +983,11 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 	// effect settings
 	prog->uni1b_l( prog->uniLocation("lm.isEffect"), isEffect );
 	prog->uni1b_l( prog->uniLocation("lm.hasOpacityComponent"), ( isEffect && (mat->flags & CE2Material::Flag_HasOpacityComponent) ) );
+	int	layeredEdgeFalloffFlags = 0;
 	if ( isEffect ) {
 		const CE2Material::EffectSettings *	sp = mat->effectSettings;
-		prog->uni1b_l( prog->uniLocation("lm.effectSettings.useFallOff"), bool(sp->flags & CE2Material::EffectFlag_UseFalloff) );
-		prog->uni1b_l( prog->uniLocation("lm.effectSettings.useRGBFallOff"), bool(sp->flags & CE2Material::EffectFlag_UseRGBFalloff) );
-		prog->uni1f_l( prog->uniLocation("lm.effectSettings.falloffStartAngle"), sp->falloffStartAngle );
-		prog->uni1f_l( prog->uniLocation("lm.effectSettings.falloffStopAngle"), sp->falloffStopAngle );
-		prog->uni1f_l( prog->uniLocation("lm.effectSettings.falloffStartOpacity"), sp->falloffStartOpacity );
-		prog->uni1f_l( prog->uniLocation("lm.effectSettings.falloffStopOpacity"), sp->falloffStopOpacity );
+		if ( mat->flags & CE2Material::Flag_LayeredEdgeFalloff )
+			layeredEdgeFalloffFlags = mat->layeredEdgeFalloff->activeLayersMask & 0x07;
 		prog->uni1b_l( prog->uniLocation("lm.effectSettings.vertexColorBlend"), bool(sp->flags & CE2Material::EffectFlag_VertexColorBlend) );
 		prog->uni1b_l( prog->uniLocation("lm.effectSettings.isAlphaTested"), bool(sp->flags & CE2Material::EffectFlag_IsAlphaTested) );
 		prog->uni1f_l( prog->uniLocation("lm.effectSettings.alphaTestThreshold"), sp->alphaThreshold );
@@ -1036,6 +1033,16 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 			prog->uni1f_l( prog->uniLocation("lm.opacity.specularOpacityOverride"), mat->specularOpacityOverride );
 		}
 	}
+	if ( layeredEdgeFalloffFlags ) {
+		const CE2Material::LayeredEdgeFalloff *	sp = mat->layeredEdgeFalloff;
+		prog->uni1fv_l( prog->uniLocation("lm.layeredEdgeFalloff.falloffStartAngles"), sp->falloffStartAngles, 3 );
+		prog->uni1fv_l( prog->uniLocation("lm.layeredEdgeFalloff.falloffStopAngles"), sp->falloffStopAngles, 3 );
+		prog->uni1fv_l( prog->uniLocation("lm.layeredEdgeFalloff.falloffStartOpacities"), sp->falloffStartOpacities, 3 );
+		prog->uni1fv_l( prog->uniLocation("lm.layeredEdgeFalloff.falloffStopOpacities"), sp->falloffStopOpacities, 3 );
+		if ( sp->useRGBFalloff )
+			layeredEdgeFalloffFlags = layeredEdgeFalloffFlags | 0x80;
+	}
+	prog->uni1i_l( prog->uniLocation("lm.layeredEdgeFalloff.flags"), layeredEdgeFalloffFlags );
 
 	// alpha settings
 	if ( mat->flags & CE2Material::Flag_HasOpacity ) {

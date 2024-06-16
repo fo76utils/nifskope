@@ -105,12 +105,7 @@ struct DecalSettingsComponent {
 };
 
 struct EffectSettingsComponent {
-	bool	useFallOff;
-	bool	useRGBFallOff;
-	float	falloffStartAngle;
-	float	falloffStopAngle;
-	float	falloffStartOpacity;
-	float	falloffStopOpacity;
+	// NOTE: the falloff settings here are deprecated and have been replaced by LayeredEdgeFalloffComponent
 	bool	vertexColorBlend;
 	bool	isAlphaTested;
 	float	alphaTestThreshold;
@@ -138,6 +133,15 @@ struct EffectSettingsComponent {
 	bool	depthMVFixupEdgesOnly;
 	bool	forceRenderBeforeOIT;
 	int	depthBiasInUlp;
+};
+
+struct LayeredEdgeFalloffComponent {
+	float	falloffStartAngles[3];
+	float	falloffStopAngles[3];
+	float	falloffStartOpacities[3];
+	float	falloffStopOpacities[3];
+	// bits 0 to 2: active layers mask, bit 7: use RGB falloff
+	int	flags;
 };
 
 struct OpacityComponent {	// for shader route = Effect
@@ -215,6 +219,7 @@ struct LayeredMaterial {
 	EmissiveSettingsComponent	emissiveSettings;
 	DecalSettingsComponent	decalSettings;
 	EffectSettingsComponent	effectSettings;
+	LayeredEdgeFalloffComponent	layeredEdgeFalloff;
 	OpacityComponent	opacity;
 	AlphaSettingsComponent	alphaSettings;
 	TranslucencySettingsComponent	translucencySettings;
@@ -456,18 +461,37 @@ void main()
 		}
 
 		float	layerMask = 1.0;
+		float	f = 1.0;
+		if ( ( lm.layeredEdgeFalloff.flags & ( 1 << i ) ) != 0 ) {
+			float	startAngle = cos( radians(lm.layeredEdgeFalloff.falloffStartAngles[i]) );
+			float	stopAngle = cos( radians(lm.layeredEdgeFalloff.falloffStopAngles[i]) );
+			float	startOpacity = lm.layeredEdgeFalloff.falloffStartOpacities[i];
+			float	stopOpacity = lm.layeredEdgeFalloff.falloffStopOpacities[i];
+			float	NdotV = abs( dot(btnMatrix_norm[2], ViewDir_norm) );
+			f = 0.5;
+			if ( stopAngle > (startAngle + 0.000001) )
+				f = smoothstep( startAngle, stopAngle, NdotV );
+			else if ( startAngle > (stopAngle + 0.000001) )
+				f = 1.0 - smoothstep( stopAngle, startAngle, NdotV );
+			f = clamp( mix(startOpacity, stopOpacity, f), 0.0, 1.0 );
+		}
 		if ( i == 0 ) {
 			if ( lm.decalSettings.isDecal && lm.layers[0].material.textureSet.textures[0] == 0 )
 				discard;
 			getLayer( 0, offset, baseMap, normal, pbrMap );
+			if ( (lm.layeredEdgeFalloff.flags & 0x80) != 0 )
+				baseMap.rgb *= f;
+			alpha = f;
 		} else {
 			vec4	layerBaseMap = baseMap;
 			vec3	layerNormal = normal;
 			vec3	layerPBRMap = pbrMap;
 			getLayer( i, offset, layerBaseMap, layerNormal, layerPBRMap );
+			if ( (lm.layeredEdgeFalloff.flags & 0x80) != 0 )
+				layerBaseMap.rgb *= f;
 
 			layerMask = getBlenderMask( i - 1 );
-			if ( (lm.blenders[i - 1].blendMode & -7) == 0 ) {
+			if ( (lm.blenders[i - 1].blendMode & -7) == 0 && !( lm.isEffect && lm.effectSettings.isGlass ) ) {
 				// Linear, PositionContrast or CharacterCombine (interpreted as linear)
 				// TODO: implement Additive and Skin blending
 				float	srcMask = layerMask;
@@ -475,11 +499,13 @@ void main()
 					float	blendPosition = lm.blenders[i - 1].floatParams[2];
 					float	blendContrast = lm.blenders[i - 1].floatParams[3];
 					blendContrast = max( (1.0 - blendContrast) * min(blendPosition, 1.0 - blendPosition), 0.001 );
-					blendPosition = ( blendPosition - 0.5 ) * 3.65 + 0.5;
+					blendPosition = ( blendPosition - 0.5 ) * 3.17;
+					blendPosition = ( blendPosition * blendPosition + 1.0 ) * blendPosition + 0.5;
 					float	maskMin = blendPosition - blendContrast;
 					float	maskMax = blendPosition + blendContrast;
 					srcMask = clamp( (srcMask - maskMin) / (maskMax - maskMin), 0.0, 1.0 );
 				}
+				srcMask *= f;
 				if ( lm.blenders[i - 1].boolParams[0] )
 					baseMap.rgb = mix( baseMap.rgb, layerBaseMap.rgb, srcMask );	// blend color
 				if ( lm.blenders[i - 1].boolParams[1] )
@@ -502,9 +528,34 @@ void main()
 		if ( lm.layers[i].material.textureSet.textures[2] != 0 ) {
 			// _opacity.dds
 			if ( lm.isEffect ) {
-				if ( i == ( lm.hasOpacityComponent ? lm.opacity.firstLayerIndex : 0 ) ) {
-					// FIXME: additional opacity layers are ignored, but they do not seem to work in the Creation Kit
-					baseMap.a = getLayerTexture( i, 2, offset ).r;
+				float	a = getLayerTexture( i, 2, offset ).r;
+				if ( lm.hasOpacityComponent ) {
+					int	opacityBlendMode = -1;
+					if ( i == lm.opacity.firstLayerIndex ) {
+						baseMap.a = a;
+					} else if ( !lm.effectSettings.isGlass ) {
+						// FIXME: this assumes blender index = layer index - 1
+						if ( lm.opacity.secondLayerActive && i == lm.opacity.secondLayerIndex )
+							opacityBlendMode = lm.opacity.firstBlenderMode;
+						else if ( lm.opacity.thirdLayerActive && i == lm.opacity.thirdLayerIndex )
+							opacityBlendMode = lm.opacity.secondBlenderMode;
+					}
+					switch ( opacityBlendMode ) {
+					case 0:
+						baseMap.a = mix( baseMap.a, a, layerMask );
+						break;
+					case 1:
+						baseMap.a += a * layerMask;
+						break;
+					case 2:
+						baseMap.a -= a * layerMask;
+						break;
+					case 3:
+						baseMap.a *= a * layerMask;
+						break;
+					}
+				} else if ( i == 0 ) {
+					baseMap.a = a;
 				}
 			} else if ( lm.alphaSettings.hasOpacity && i == lm.alphaSettings.opacitySourceLayer ) {
 				if ( (lm.layers[i].material.flags & 0xFFFC) == 0 )
@@ -550,25 +601,9 @@ void main()
 	vec3	normalWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(normal, 0.0)));
 
 	if ( lm.isEffect ) {
-		if ( lm.effectSettings.useFallOff || lm.effectSettings.useRGBFallOff ) {
-			float	startAngle = cos(radians(lm.effectSettings.falloffStartAngle));
-			float	stopAngle = cos(radians(lm.effectSettings.falloffStopAngle));
-			float	startOpacity = lm.effectSettings.falloffStartOpacity;
-			float	stopOpacity = lm.effectSettings.falloffStopOpacity;
-			float	f = 0.5;
-			if ( stopAngle > (startAngle + 0.000001) )
-				f = smoothstep(startAngle, stopAngle, NdotV);
-			else if ( startAngle > (stopAngle + 0.000001) )
-				f = 1.0 - smoothstep(stopAngle, startAngle, NdotV);
-			f = clamp(mix(startOpacity, stopOpacity, f), 0.0, 1.0);
-			if ( lm.effectSettings.useRGBFallOff )
-				baseMap.rgb *= f;
-			if ( lm.effectSettings.useFallOff )
-				baseMap.a *= f;
-		}
 		if ( lm.effectSettings.vertexColorBlend )
 			baseMap *= C;
-		alpha = lm.effectSettings.materialOverallAlpha;
+		alpha *= lm.effectSettings.materialOverallAlpha;
 	} else if ( lm.alphaSettings.hasOpacity ) {
 		if ( lm.alphaSettings.useDetailBlendMask )
 			alpha *= getDetailBlendMask();
@@ -650,3 +685,5 @@ void main()
 
 	fragColor = color;
 }
+
+// vim: set syntax=gdshader noexpandtab ts=4 :
