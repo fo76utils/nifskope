@@ -94,7 +94,7 @@ void NifModel::loadSFBlender( NifItem * parent, const void * o )
 		setValue<bool>( parent, "Blend Normals Additively", boolParams[4] );
 		setValue<bool>( parent, "Use Vertex Color", boolParams[5] );
 		setValue<bool>( parent, "Blend Ambient Occlusion", boolParams[6] );
-		setValue<bool>( parent, "Use Dual Blend Mask", boolParams[7] );
+		setValue<bool>( parent, "Use Detail Blend Mask", boolParams[7] );
 	}
 }
 
@@ -332,13 +332,16 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, const void *matPtr, i
 	setValue<bool>( m, "Is Effect", isEffect );
 	if ( isEffect && ( o = getItem( itemToIndex(m), "Effect Settings" ) ) != nullptr ) {
 		const CE2Material::EffectSettings *	sp = material->effectSettings;
-		setValue<bool>( o, "Use Falloff", bool(sp->flags & CE2Material::EffectFlag_UseFalloff) );
-		setValue<bool>( o, "Use RGB Falloff", bool(sp->flags & CE2Material::EffectFlag_UseRGBFalloff) );
-		if ( sp->flags & ( CE2Material::EffectFlag_UseFalloff | CE2Material::EffectFlag_UseRGBFalloff ) ) {
-			setValue<float>( o, "Falloff Start Angle", sp->falloffStartAngle );
-			setValue<float>( o, "Falloff Stop Angle", sp->falloffStopAngle );
-			setValue<float>( o, "Falloff Start Opacity", sp->falloffStartOpacity );
-			setValue<float>( o, "Falloff Stop Opacity", sp->falloffStopOpacity );
+		for ( NifItem * q = getItem( itemToIndex(o), "Falloff Settings (Deprecated)" ); q; ) {
+			setValue<bool>( q, "Use Falloff", bool(sp->flags & CE2Material::EffectFlag_UseFalloff) );
+			setValue<bool>( q, "Use RGB Falloff", bool(sp->flags & CE2Material::EffectFlag_UseRGBFalloff) );
+			if ( sp->flags & ( CE2Material::EffectFlag_UseFalloff | CE2Material::EffectFlag_UseRGBFalloff ) ) {
+				setValue<float>( q, "Falloff Start Angle", sp->falloffStartAngle );
+				setValue<float>( q, "Falloff Stop Angle", sp->falloffStopAngle );
+				setValue<float>( q, "Falloff Start Opacity", sp->falloffStartOpacity );
+				setValue<float>( q, "Falloff Stop Opacity", sp->falloffStopOpacity );
+			}
+			break;
 		}
 		setValue<bool>( o, "Vertex Color Blend", bool(sp->flags & CE2Material::EffectFlag_VertexColorBlend) );
 		setValue<bool>( o, "Is Alpha Tested", bool(sp->flags & CE2Material::EffectFlag_IsAlphaTested) );
@@ -372,6 +375,20 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, const void *matPtr, i
 		setValue<bool>( o, "Depth MV Fixup Edges Only", bool(sp->flags & CE2Material::EffectFlag_MVFixupEdgesOnly) );
 		setValue<bool>( o, "Force Render Before OIT", bool(sp->flags & CE2Material::EffectFlag_RenderBeforeOIT) );
 		setValue<quint16>( o, "Depth Bias In Ulp", quint16(sp->depthBias) );
+	}
+	bool	layeredEdgeFalloff = false;
+	if ( isEffect ) {
+		layeredEdgeFalloff = ( material && material->layeredEdgeFalloff );
+		setValue<bool>( m, "Use Layered Edge Falloff", layeredEdgeFalloff );
+	}
+	if ( layeredEdgeFalloff && ( o = getItem( itemToIndex(m), "Layered Edge Falloff" ) ) != nullptr ) {
+		const CE2Material::LayeredEdgeFalloff *	sp = material->layeredEdgeFalloff;
+		setValue<Vector3>( o, "Falloff Start Angles", Vector3( sp->falloffStartAngles[0], sp->falloffStartAngles[1], sp->falloffStartAngles[2] ) );
+		setValue<Vector3>( o, "Falloff Stop Angles", Vector3( sp->falloffStopAngles[0], sp->falloffStopAngles[1], sp->falloffStopAngles[2] ) );
+		setValue<Vector3>( o, "Falloff Start Opacities", Vector3( sp->falloffStartOpacities[0], sp->falloffStartOpacities[1], sp->falloffStartOpacities[2] ) );
+		setValue<Vector3>( o, "Falloff Stop Opacities", Vector3( sp->falloffStopOpacities[0], sp->falloffStopOpacities[1], sp->falloffStopOpacities[2] ) );
+		setValue<quint8>( o, "Active Layers Mask", sp->activeLayersMask );
+		setValue<bool>( o, "Use RGB Falloff", sp->useRGBFalloff );
 	}
 	bool	isDecal = false;
 	if ( material )

@@ -1,9 +1,13 @@
  == CHANGELOG ==
 
-* Starfield material rendering improvements, including support for layered materials with PositionContrast blend mode.
-* Implemented support for Starfield detail blend mask settings.
+#### NifSkope-2.0.dev9-20240616
+
+* Starfield material rendering improvements, including support for layered materials with PositionContrast blend mode. CharacterCombine mode is also rendered, but it is interpreted as linear blending.
+* Implemented support for Starfield detail blend mask settings, layered edge falloff and opacity component.
 * Fixed mouse wheel sensitivity in walk mode and in the UV editor.
 * Added render setting for Starfield parallax mapping height offset.
+* The game manager no longer displays "unexpected change to size of loose file" error messages, if such change is detected, resources are now automatically closed and reloaded instead.
+* Fixes to reading JSON format Starfield materials, import support, and workaround to invalid parent objects.
 * Updates for Starfield version 1.12.30.
 
 #### NifSkope-2.0.dev9-20240608

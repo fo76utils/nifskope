@@ -30,12 +30,19 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 CREDITS
 
 The Windows build of NifSkope uses Havok(R) for the generation of MOPP code.
-Copyright (c) 1999-2014 Havok.com Inc. (and its Licensors). 
+Copyright (c) 1999-2014 Havok.com Inc. (and its Licensors).
 All Rights Reserved.  See www.havok.com for details.
 
 NifSkope uses Qhull for the generation of convex hulls, from http://www.qhull.org.
 Copyright (c) 1993-2012 C.B. Barber and The Geometry Center.
 See Qhull_COPYING.txt for details and http://gitorious.org/qhull/ for the source.
+
+NifSkope uses [OpenGL Image (GLI)](http://gli.g-truc.net/):
+MIT License, Copyright (c) 2010 - 2016 G-Truc Creation.
+
+For bounding sphere calculation, NifSkope uses [Miniball](https://github.com/hbf/miniball)
+by Kaspar Fischer, Bernd Gärtner and Martin Kutz, the code is available under the
+[Apache 2 License](http://www.apache.org/licenses/LICENSE-2.0.html).
 
 NOTICE
 

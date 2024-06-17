@@ -918,15 +918,15 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 		const CE2Material::LayeredEmissiveSettings *	sp = mat->layeredEmissiveSettings;
 		prog->uni1b_l( prog->uniLocation("lm.layeredEmissivity.isEnabled"), sp->isEnabled );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.firstLayerIndex"), sp->layer1Index );
-		prog->uni4c_l( prog->uniLocation("lm.layeredEmissivity.firstLayerTint"), sp->layer1Tint );
+		prog->uni4c_l( prog->uniLocation("lm.layeredEmissivity.firstLayerTint"), sp->layer1Tint, true );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.firstLayerMaskIndex"), sp->layer1MaskIndex );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.secondLayerIndex"), ( sp->layer2Active ? int(sp->layer2Index) : -1 ) );
-		prog->uni4c_l( prog->uniLocation("lm.layeredEmissivity.secondLayerTint"), sp->layer2Tint );
+		prog->uni4c_l( prog->uniLocation("lm.layeredEmissivity.secondLayerTint"), sp->layer2Tint, true );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.secondLayerMaskIndex"), sp->layer2MaskIndex );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.firstBlenderIndex"), sp->blender1Index );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.firstBlenderMode"), sp->blender1Mode );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.thirdLayerIndex"), ( sp->layer3Active ? int(sp->layer3Index) : -1 ) );
-		prog->uni4c_l( prog->uniLocation("lm.layeredEmissivity.thirdLayerTint"), sp->layer3Tint );
+		prog->uni4c_l( prog->uniLocation("lm.layeredEmissivity.thirdLayerTint"), sp->layer3Tint, true );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.thirdLayerMaskIndex"), sp->layer3MaskIndex );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.secondBlenderIndex"), sp->blender2Index );
 		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.secondBlenderMode"), sp->blender2Mode );
@@ -944,7 +944,7 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 		const CE2Material::EmissiveSettings *	sp = mat->emissiveSettings;
 		prog->uni1b_l( prog->uniLocation("lm.emissiveSettings.isEnabled"), sp->isEnabled );
 		prog->uni1i_l( prog->uniLocation("lm.emissiveSettings.emissiveSourceLayer"), sp->sourceLayer );
-		prog->uni4f_l( prog->uniLocation("lm.emissiveSettings.emissiveTint"), sp->emissiveTint );
+		prog->uni4srgb_l( prog->uniLocation("lm.emissiveSettings.emissiveTint"), sp->emissiveTint );
 		prog->uni1i_l( prog->uniLocation("lm.emissiveSettings.emissiveMaskSourceBlender"), sp->maskSourceBlender );
 		prog->uni1f_l( prog->uniLocation("lm.emissiveSettings.emissiveClipThreshold"), sp->clipThreshold );
 		prog->uni1b_l( prog->uniLocation("lm.emissiveSettings.adaptiveEmittance"), sp->adaptiveEmittance );
@@ -983,14 +983,11 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 	// effect settings
 	prog->uni1b_l( prog->uniLocation("lm.isEffect"), isEffect );
 	prog->uni1b_l( prog->uniLocation("lm.hasOpacityComponent"), ( isEffect && (mat->flags & CE2Material::Flag_HasOpacityComponent) ) );
+	int	layeredEdgeFalloffFlags = 0;
 	if ( isEffect ) {
 		const CE2Material::EffectSettings *	sp = mat->effectSettings;
-		prog->uni1b_l( prog->uniLocation("lm.effectSettings.useFallOff"), bool(sp->flags & CE2Material::EffectFlag_UseFalloff) );
-		prog->uni1b_l( prog->uniLocation("lm.effectSettings.useRGBFallOff"), bool(sp->flags & CE2Material::EffectFlag_UseRGBFalloff) );
-		prog->uni1f_l( prog->uniLocation("lm.effectSettings.falloffStartAngle"), sp->falloffStartAngle );
-		prog->uni1f_l( prog->uniLocation("lm.effectSettings.falloffStopAngle"), sp->falloffStopAngle );
-		prog->uni1f_l( prog->uniLocation("lm.effectSettings.falloffStartOpacity"), sp->falloffStartOpacity );
-		prog->uni1f_l( prog->uniLocation("lm.effectSettings.falloffStopOpacity"), sp->falloffStopOpacity );
+		if ( mat->flags & CE2Material::Flag_LayeredEdgeFalloff )
+			layeredEdgeFalloffFlags = mat->layeredEdgeFalloff->activeLayersMask & 0x07;
 		prog->uni1b_l( prog->uniLocation("lm.effectSettings.vertexColorBlend"), bool(sp->flags & CE2Material::EffectFlag_VertexColorBlend) );
 		prog->uni1b_l( prog->uniLocation("lm.effectSettings.isAlphaTested"), bool(sp->flags & CE2Material::EffectFlag_IsAlphaTested) );
 		prog->uni1f_l( prog->uniLocation("lm.effectSettings.alphaTestThreshold"), sp->alphaThreshold );
@@ -1036,6 +1033,16 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 			prog->uni1f_l( prog->uniLocation("lm.opacity.specularOpacityOverride"), mat->specularOpacityOverride );
 		}
 	}
+	if ( layeredEdgeFalloffFlags ) {
+		const CE2Material::LayeredEdgeFalloff *	sp = mat->layeredEdgeFalloff;
+		prog->uni1fv_l( prog->uniLocation("lm.layeredEdgeFalloff.falloffStartAngles"), sp->falloffStartAngles, 3 );
+		prog->uni1fv_l( prog->uniLocation("lm.layeredEdgeFalloff.falloffStopAngles"), sp->falloffStopAngles, 3 );
+		prog->uni1fv_l( prog->uniLocation("lm.layeredEdgeFalloff.falloffStartOpacities"), sp->falloffStartOpacities, 3 );
+		prog->uni1fv_l( prog->uniLocation("lm.layeredEdgeFalloff.falloffStopOpacities"), sp->falloffStopOpacities, 3 );
+		if ( sp->useRGBFalloff )
+			layeredEdgeFalloffFlags = layeredEdgeFalloffFlags | 0x80;
+	}
+	prog->uni1i_l( prog->uniLocation("lm.layeredEdgeFalloff.flags"), layeredEdgeFalloffFlags );
 
 	// alpha settings
 	if ( mat->flags & CE2Material::Flag_HasOpacity ) {

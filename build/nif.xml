@@ -6720,7 +6720,7 @@
         <field name="Blend Normals Additively" type="bool" />
         <field name="Use Vertex Color" type="bool" />
         <field name="Blend Ambient Occlusion" type="bool" />
-        <field name="Use Dual Blend Mask" type="bool" />
+        <field name="Use Detail Blend Mask" type="bool" />
     </struct>
 
     <enum name="BSAlphaBlendMode" storage="byte" versions="#STF#">
@@ -6781,13 +6781,17 @@
         <option name="None" value="7" />
     </enum>
 
-    <struct name="BSEffectSettingsComponent" abstract="true" module="BSMain" versions="#STF#">
+    <struct name="BSFalloffSettings" abstract="true" module="BSMain" versions="#STF#">
         <field name="Use Falloff" type="bool" />
         <field name="Use RGB Falloff" type="bool" />
         <field name="Falloff Start Angle" type="float" cond="Use Falloff #OR# Use RGB Falloff" />
         <field name="Falloff Stop Angle" type="float" cond="Use Falloff #OR# Use RGB Falloff" />
         <field name="Falloff Start Opacity" type="float" cond="Use Falloff #OR# Use RGB Falloff" />
         <field name="Falloff Stop Opacity" type="float" cond="Use Falloff #OR# Use RGB Falloff" />
+    </struct>
+
+    <struct name="BSEffectSettingsComponent" abstract="true" module="BSMain" versions="#STF#">
+        <field name="Falloff Settings (Deprecated)" type="BSFalloffSettings" />
         <field name="Vertex Color Blend" type="bool" />
         <field name="Is Alpha Tested" type="bool" />
         <field name="Alpha Test Threshold" type="float" cond="Is Alpha Tested" />
@@ -6815,6 +6819,15 @@
         <field name="Depth MV Fixup Edges Only" type="bool" />
         <field name="Force Render Before OIT" type="bool" />
         <field name="Depth Bias In Ulp" type="ushort" />
+    </struct>
+
+    <struct name="BSLayeredEdgeFalloffComponent" abstract="true" module="BSMain" versions="#STF#">
+        <field name="Falloff Start Angles" type="Vector3" />
+        <field name="Falloff Stop Angles" type="Vector3" />
+        <field name="Falloff Start Opacities" type="Vector3" />
+        <field name="Falloff Stop Opacities" type="Vector3" />
+        <field name="Active Layers Mask" type="byte" />
+        <field name="Use RGB Falloff" type="bool" />
     </struct>
 
     <enum name="BSProjectedDecalRenderLayer" storage="byte" versions="#STF#">
@@ -6972,6 +6985,8 @@
         <field name="Opacity Settings" type="BSOpacityComponent" cond="(Shader Route #EQ# 1) #AND# Has Opacity Component" />
         <field name="Is Effect" type="bool" />
         <field name="Effect Settings" type="BSEffectSettingsComponent" cond="Is Effect" />
+        <field name="Use Layered Edge Falloff" type="bool" cond="Is Effect" />
+        <field name="Layered Edge Falloff" type="BSLayeredEdgeFalloffComponent" cond="Is Effect #AND# Use Layered Edge Falloff" />
         <field name="Is Decal" type="bool" />
         <field name="Decal Settings" type="BSDecalSettingsComponent" cond="Is Decal" />
         <field name="Is Water" type="bool" />
