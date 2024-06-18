@@ -1,8 +1,17 @@
-﻿# NifSkope 2.0.dev9
+﻿# NifSkope 2.0.dev9 Meshageddon Edition
 
 NifSkope is a tool for opening and editing the NetImmerse file format (NIF). NIF is used by video games such as Morrowind, Oblivion, Skyrim, Fallout 3/NV/4/76, Starfield, Civilization IV, and more.
 
 This is an experimental fork of 2.0.dev9 with partial support for Starfield materials, and improvements and fixes to Fallout 76 rendering.
+
+### Meshageddon Edition
+
+This is an extra experimental fork of the experimental fo76tools fork of NifSkope
+with some extra spells, too specialized (and ugly) to upstream. Thei tools are intended for modders to repair mods broken with the 1.11.36 Starfield update.
+
+* Using the included spells (plugins), it is possible to fix custom Starfield nifs that reference vanilla meshes when Bethesda performs a mass
+* nifs can be fixed individually or in bulk
+* (WIP) Extract and rename vanilla mesh references, avoiding issues in the future
 
 ### Download
 
