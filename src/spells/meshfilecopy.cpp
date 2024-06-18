@@ -130,13 +130,15 @@ void spResourceCopy::copyPaths(NifModel* nif, NifItem* item, const QString& auth
 					QString oldPath = QDir(nifFolder).filePath("geometries/" + meshPath + ".mesh");
 					QString newPath = QDir(nifFolder).filePath("geometries/" + newMeshPath + ".mesh");
 
+					// Create the directory for the new path if it doesn't exist
+					QDir newDir = QFileInfo(newPath).absoluteDir();
+					newDir.mkpath(newDir.absolutePath());
+
 					// Copy the file (platform-independent with the slashes)
 					QFile::copy(QDir::fromNativeSeparators(oldPath), QDir::fromNativeSeparators(newPath));
 
 					// Update the value in the nif
                     findChildByName(mesh,"Mesh Path")->setValueFromString(newMeshPath);
-                    //nif->set<QString>(mesh,"Mesh Path",newMeshPath);
-					//mesh->setValueFromString(newMeshPath);
                 }
             }
         }
