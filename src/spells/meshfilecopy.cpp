@@ -208,4 +208,3 @@ QModelIndex spResourceCopy::cast(NifModel* nif, const QModelIndex& index)
 }
 
 REGISTER_SPELL( spResourceCopy )
-
