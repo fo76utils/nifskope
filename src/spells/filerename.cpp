@@ -20,7 +20,7 @@ class spResourceRename final : public Spell
 {
 public:
 	QString name() const override final { return Spell::tr( "Search/Replace Resource Paths" ); }
-	QString page() const override final { return Spell::tr( "" ); }
+	QString page() const override final { return Spell::tr( "Batch" ); }
 	QIcon icon() const override final
 	{
 		return QIcon();

@@ -1,5 +1,7 @@
  == CHANGELOG ==
 
+* Added new spell (Batch/Copy and Rename all Meshes) by 1OfAKindMods to copy and rename all .mesh files used by a Starfield model. Note that the spell expects a loose NIF file, if the model is from an archive, the renamed mesh files are written under the NifSkope installation directory.
+
 #### NifSkope-2.0.dev9-20240616
 
 * Starfield material rendering improvements, including support for layered materials with PositionContrast blend mode. CharacterCombine mode is also rendered, but it is interpreted as linear blending.
