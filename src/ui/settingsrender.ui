@@ -275,7 +275,7 @@
                 <double>0.001</double>
                </property>
                <property name="value">
-                <double>0.033</double>
+                <double>0.0</double>
                </property>
               </widget>
              </item>

@@ -359,6 +359,9 @@ float getBlenderMask(int n)
 
 vec2 parallaxMapping( int n, vec3 V, vec2 offset )
 {
+	if ( parallaxOcclusionSettings.z < 0.0005 )
+		return offset;	// disabled
+
 	// determine optimal height of each layer
 	float	layerHeight = 1.0 / mix( parallaxOcclusionSettings.y, parallaxOcclusionSettings.x, abs(V.z) );
 

@@ -411,7 +411,7 @@ public:
 	{
 		bool	useShaders = true;
 		short	sfParallaxMaxSteps = 200;
-		float	sfParallaxScale = 0.033f;
+		float	sfParallaxScale = 0.0f;
 		float	sfParallaxOffset = 0.5f;
 		QString	cubeMapPathFO76;
 		QString	cubeMapPathSTF;
