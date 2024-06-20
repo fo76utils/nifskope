@@ -449,6 +449,7 @@ void main()
 	vec3	pbrMap = vec3(0.75, 0.0, 1.0);	// roughness, metalness, AO
 	float	alpha = 1.0;
 	vec3	emissive = vec3(0.0);
+	vec3	transmissive = vec3(0.0);
 
 	for (int i = 0; i < 4; i++) {
 		if ( !lm.layersEnabled[i] )
@@ -584,6 +585,12 @@ void main()
 				continue;
 			emissive += getLayerTexture( i, 7, offset ).rgb * tmp.rgb * tmp.a;
 		}
+
+		if ( lm.layers[i].material.textureSet.textures[8] != 0 ) {
+			// _transmissive.dds
+			if ( lm.translucencySettings.isEnabled && i == lm.translucencySettings.transmittanceSourceLayer )
+				transmissive = vec3( getLayerTexture( i, 8, offset ).r * lm.translucencySettings.transmissiveScale );
+		}
 	}
 
 	normal = normalize( btnMatrix_norm * normal );
@@ -670,8 +677,6 @@ void main()
 	float	ao = pbrMap.b;
 	refl *= f * envLUT.g * ao;
 
-	// TODO: translucency
-
 	// Diffuse
 	color.rgb = diffuse * albedo * D.rgb;
 	// Ambient
@@ -682,6 +687,17 @@ void main()
 
 	// Emissive
 	color.rgb += emissive;
+
+	// Transmissive
+	if ( lm.translucencySettings.isEnabled && lm.translucencySettings.isThin ) {
+		transmissive *= albedo * ( vec3(1.0) - f );
+		// TODO: implement flipBackFaceNormalsInViewSpace
+		color.rgb += transmissive * D.rgb * max( -NdotL, 0.0 );
+		if ( hasCubeMap )
+			color.rgb += textureLod( CubeMap2, -normalWS, 0.0 ).rgb * transmissive * A.rgb * ao;
+		else
+			color.rgb += transmissive * A.rgb * ( ao * 0.08 );
+	}
 
 	color.rgb = tonemap(color.rgb * D.a, A.a);
 	color.a = baseMap.a * alpha;
