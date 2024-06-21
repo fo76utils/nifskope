@@ -502,7 +502,7 @@ void main()
 				if ( lm.blenders[i - 1].blendMode == 2 ) {
 					float	blendPosition = lm.blenders[i - 1].floatParams[2];
 					float	blendContrast = lm.blenders[i - 1].floatParams[3];
-					blendContrast = max( (1.0 - blendContrast) * min(blendPosition, 1.0 - blendPosition), 0.001 );
+					blendContrast = max( blendContrast * min(blendPosition, 1.0 - blendPosition), 0.001 );
 					blendPosition = ( blendPosition - 0.5 ) * 3.17;
 					blendPosition = ( blendPosition * blendPosition + 1.0 ) * blendPosition + 0.5;
 					float	maskMin = blendPosition - blendContrast;

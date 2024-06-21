@@ -3,6 +3,7 @@
 * Added new spell (Batch/Copy and Rename all Meshes) by 1OfAKindMods to copy and rename all .mesh files used by a Starfield model. Note that the spell expects a loose NIF file, if the model is from an archive, the renamed mesh files are written under the NifSkope installation directory.
 * The right click menu on header strings that end with .bgsm, .bgem or .mat has a new option to browse materials. Updating the view (Alt+U) may be needed for material path changes to take effect.
 * Added limited support for rendering translucent Starfield materials.
+* Fixed the contrast parameter of Starfield blenders that is inverted in the material data.
 * The default height scale for Starfield parallax occlusion mapping is now 0.0 in the render settings, as height textures do not actually work in the game.
 
 #### NifSkope-2.0.dev9-20240616
