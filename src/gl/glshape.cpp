@@ -205,7 +205,7 @@ void Shape::updateShader()
 	else if ( alphaProperty && alphaProperty->hasAlphaBlend() )
 		drawInSecondPass = true;
 	else if ( bssp ) {
-		if ( bssp->bsVersion >= 160 ) {
+		if ( bssp->bsVersion >= 170 ) {
 			const CE2Material *	sfMat = nullptr;
 			bssp->getSFMaterial( sfMat, scene->nifModel );
 			if ( sfMat && ( sfMat->shaderRoute != 0 || (sfMat->flags & CE2Material::Flag_IsDecal) ) )

@@ -42,7 +42,7 @@ quint32 MeshFile::readMesh()
 
 		quint32 magic;
 		in >> magic;
-		if ( magic != 1 && magic != 2 )
+		if ( magic > 2U )
 			return 0;
 
 		quint32 indicesSize;
@@ -173,18 +173,20 @@ quint32 MeshFile::readMesh()
 			weights[i] = BoneWeightsUNorm(weightsUNORM, i);
 		}
 
-		quint32 numLODs;
-		in >> numLODs;
-		lods.resize(numLODs);
-		for ( quint32 i = 0; i < numLODs; i++ ) {
-			quint32 indicesSize2;
-			in >> indicesSize2;
-			lods[i].resize(indicesSize2 / 3);
+		if ( magic ) {
+			quint32 numLODs;
+			in >> numLODs;
+			lods.resize(numLODs);
+			for ( quint32 i = 0; i < numLODs; i++ ) {
+				quint32 indicesSize2;
+				in >> indicesSize2;
+				lods[i].resize(indicesSize2 / 3);
 
-			for ( quint32 j = 0; j < indicesSize2 / 3; j++ ) {
-				Triangle tri;
-				in >> tri;
-				lods[i][j] = tri;
+				for ( quint32 j = 0; j < indicesSize2 / 3; j++ ) {
+					Triangle tri;
+					in >> tri;
+					lods[i][j] = tri;
+				}
 			}
 		}
 

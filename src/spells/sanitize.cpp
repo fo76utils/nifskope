@@ -448,7 +448,7 @@ public:
 			}
 
 			// Fix "Root Material" field
-			if ( nif->getBSVersion() < 172 && isProp && nif->getIndex(iBlock, "Root Material").isValid() ) {
+			if ( nif->getBSVersion() < 170 && isProp && nif->getIndex(iBlock, "Root Material").isValid() ) {
 				auto rootIdx = nif->get<int>(iBlock, "Root Material");
 				auto rootString = nif->get<QString>(iBlock, "Root Material");
 
@@ -665,7 +665,7 @@ QModelIndex spErrorInvalidPaths::cast( NifModel * nif, const QModelIndex & )
 		auto iBSLSP = nif->getBlockIndex( i, "BSLightingShaderProperty" );
 		if ( iBSLSP.isValid() ) {
 			checkPath( nif, iBSLSP, "Name", P_NO_EXT );
-			if ( nif->getBSVersion() < 172 )
+			if ( nif->getBSVersion() < 170 )
 				checkPath( nif, iBSLSP, "Root Material", P_NO_EXT );
 		}
 

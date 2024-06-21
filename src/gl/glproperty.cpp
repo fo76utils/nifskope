@@ -851,7 +851,7 @@ void BSShaderLightingProperty::updateImpl( const NifModel * nif, const QModelInd
 
 	if ( index == iBlock ) {
 		bsVersion = (unsigned short) nif->getBSVersion();
-		if ( bsVersion >= 160 ) {
+		if ( bsVersion >= 170 ) {
 			setSFMaterial( name );
 		} else {
 			if ( bsVersion < 83 )
@@ -1072,7 +1072,7 @@ enum
 QString BSShaderLightingProperty::fileName( int id ) const
 {
 	// Starfield (not implemented here)
-	if ( bsVersion >= 160 )
+	if ( bsVersion >= 170 )
 		return QString();
 
 	// Fallout 4 or 76 BGSM file
@@ -1241,7 +1241,7 @@ void BSLightingShaderProperty::updateImpl( const NifModel * nif, const QModelInd
 	BSShaderLightingProperty::updateImpl( nif, index );
 
 	if ( index == iBlock ) {
-		if ( name.endsWith(".bgsm", Qt::CaseInsensitive) && bsVersion < 160 ) {
+		if ( name.endsWith(".bgsm", Qt::CaseInsensitive) && bsVersion < 170 ) {
 			setMaterial( new ShaderMaterial( name, nif ) );
 			if ( bsVersion >= 151 )
 				const_cast< NifModel * >(nif)->loadFO76Material( index, material );
@@ -1307,7 +1307,7 @@ void BSLightingShaderProperty::updateParams( const NifModel * nif )
 {
 	resetParams();
 
-	if ( bsVersion >= 172 ) {
+	if ( bsVersion >= 170 ) {
 		setSFMaterial( nif->get<QString>( iBlock, "Name" ) );
 		return;
 	}
@@ -1482,7 +1482,7 @@ void BSEffectShaderProperty::updateImpl( const NifModel * nif, const QModelIndex
 	BSShaderLightingProperty::updateImpl( nif, index );
 
 	if ( index == iBlock ) {
-		if ( name.endsWith(".bgem", Qt::CaseInsensitive) && bsVersion < 160 ) {
+		if ( name.endsWith(".bgem", Qt::CaseInsensitive) && bsVersion < 170 ) {
 			setMaterial( new EffectMaterial( name, nif ) );
 			if ( bsVersion >= 151 )
 				const_cast< NifModel * >(nif)->loadFO76Material( index, material );

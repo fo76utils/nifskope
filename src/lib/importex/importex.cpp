@@ -69,9 +69,9 @@ struct ImportExportOption
 
 
 QVector<ImportExportOption> impexOptions{
-	ImportExportOption{ ".OBJ", importObj, exportObj, 0, 171 },
-	ImportExportOption{ ".OBJ as Collision", importObjAsCollision, nullptr, 0, 171 },
-	ImportExportOption{ ".glTF", nullptr, exportGltf, 172 },
+	ImportExportOption{ ".OBJ", importObj, exportObj, 0, 169 },
+	ImportExportOption{ ".OBJ as Collision", importObjAsCollision, nullptr, 0, 169 },
+	ImportExportOption{ ".glTF", nullptr, exportGltf, 170 },
 };
 
 
