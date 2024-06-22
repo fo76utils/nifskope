@@ -442,7 +442,7 @@ void Renderer::updateSettings()
 
 	cfg.useShaders = settings.value( "Settings/Render/General/Use Shaders", true ).toBool();
 	cfg.sfParallaxMaxSteps = short( settings.value( "Settings/Render/General/Sf Parallax Steps", 200 ).toInt() );
-	cfg.sfParallaxScale = settings.value( "Settings/Render/General/Sf Parallax Scale", 0.033f).toFloat();
+	cfg.sfParallaxScale = settings.value( "Settings/Render/General/Sf Parallax Scale", 0.0f).toFloat();
 	cfg.sfParallaxOffset = settings.value( "Settings/Render/General/Sf Parallax Offset", 0.5f).toFloat();
 	cfg.cubeMapPathFO76 = settings.value( "Settings/Render/General/Cube Map Path FO 76", "textures/shared/cubemaps/mipblur_defaultoutside1.dds" ).toString();
 	cfg.cubeMapPathSTF = settings.value( "Settings/Render/General/Cube Map Path STF", "textures/cubemaps/cell_cityplazacube.dds" ).toString();
@@ -955,6 +955,24 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 		prog->uni1f_l( prog->uniLocation("lm.emissiveSettings.minOffsetEmittance"), sp->minOffset );
 	}	else {
 		prog->uni1b_l( prog->uniLocation("lm.emissiveSettings.isEnabled"), false );
+	}
+
+	// translucency settings
+	if ( mat->flags & CE2Material::Flag_Translucency ) {
+		const CE2Material::TranslucencySettings *	sp = mat->translucencySettings;
+		prog->uni1b_l( prog->uniLocation("lm.translucencySettings.isEnabled"), sp->isEnabled );
+		prog->uni1b_l( prog->uniLocation("lm.translucencySettings.isThin"), sp->isThin );
+		prog->uni1b_l( prog->uniLocation("lm.translucencySettings.flipBackFaceNormalsInViewSpace"), sp->flipBackFaceNormalsInVS );
+		prog->uni1b_l( prog->uniLocation("lm.translucencySettings.useSSS"), sp->useSSS );
+		prog->uni1f_l( prog->uniLocation("lm.translucencySettings.sssWidth"), sp->sssWidth );
+		prog->uni1f_l( prog->uniLocation("lm.translucencySettings.sssStrength"), sp->sssStrength );
+		prog->uni1f_l( prog->uniLocation("lm.translucencySettings.transmissiveScale"), sp->transmissiveScale );
+		prog->uni1f_l( prog->uniLocation("lm.translucencySettings.transmittanceWidth"), sp->transmittanceWidth );
+		prog->uni1f_l( prog->uniLocation("lm.translucencySettings.specLobe0RoughnessScale"), sp->specLobe0RoughnessScale );
+		prog->uni1f_l( prog->uniLocation("lm.translucencySettings.specLobe1RoughnessScale"), sp->specLobe1RoughnessScale );
+		prog->uni1i_l( prog->uniLocation("lm.translucencySettings.transmittanceSourceLayer"), sp->sourceLayer );
+	} else {
+		prog->uni1b_l( prog->uniLocation("lm.translucencySettings.isEnabled"), false );
 	}
 
 	// decal settings

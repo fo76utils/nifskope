@@ -96,6 +96,7 @@ public:
 		return false;
 	}
 
+	static QString browseMaterial( const NifModel * nif, const QString & matPath );
 	void browseMaterial( QLineEdit * le, const NifModel * nif );
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
@@ -170,7 +171,7 @@ static bool bgsmFileNameFilterFunc( [[maybe_unused]] void * p, const std::string
 	return ( s.starts_with( "materials/" ) && ( s.ends_with( ".bgsm" ) || s.ends_with( ".bgem" ) ) );
 }
 
-void spEditStringIndex::browseMaterial( QLineEdit * le, const NifModel * nif )
+QString spEditStringIndex::browseMaterial( const NifModel * nif, const QString & matPath )
 {
 	std::set< std::string_view >	materials;
 	AllocBuffers	stringBuf;
@@ -184,16 +185,69 @@ void spEditStringIndex::browseMaterial( QLineEdit * le, const NifModel * nif )
 	}
 
 	std::string	prvPath;
-	if ( !le->text().isEmpty() )
-		prvPath = Game::GameManager::get_full_path( le->text(), "materials", ( bsVersion >= 170 ? ".mat" : nullptr ) );
+	if ( !matPath.isEmpty() )
+		prvPath = Game::GameManager::get_full_path( matPath, "materials", ( bsVersion >= 170 ? ".mat" : nullptr ) );
 
 	FileBrowserWidget	fileBrowser( 800, 600, "Select Material", materials, prvPath );
 	if ( fileBrowser.exec() == QDialog::Accepted ) {
 		const std::string_view *	s = fileBrowser.getItemSelected();
 		if ( s )
-			le->setText( QString::fromUtf8( s->data(), qsizetype(s->length()) ) );
+			return QString::fromUtf8( s->data(), qsizetype(s->length()) );
 	}
+	return QString();
+}
+
+void spEditStringIndex::browseMaterial( QLineEdit * le, const NifModel * nif )
+{
+	QString	newPath( browseMaterial( nif, le->text() ) );
+	if ( !newPath.isEmpty() )
+		le->setText( newPath );
 }
 
 REGISTER_SPELL( spEditStringIndex )
 
+//! Browse a material path stored as header string
+class spBrowseHeaderMaterialPath final : public Spell
+{
+public:
+	QString name() const override final { return Spell::tr( "Browse Material" ); }
+	QString page() const override final { return Spell::tr( "" ); }
+	QIcon icon() const override final
+	{
+		if ( !txt_xpm_icon )
+			txt_xpm_icon = QIconPtr( new QIcon(QPixmap( txt_xpm )) );
+
+		return *txt_xpm_icon;
+	}
+	bool constant() const override final { return true; }
+	bool instant() const override final { return true; }
+
+	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
+	{
+		if ( !( nif && nif->getBSVersion() >= 130 ) )
+			return false;
+		auto block = nif->getTopItem( index );
+		if ( !( block && block == nif->getHeaderItem() ) )
+			return false;
+		const NifItem *	item = nif->getItem( index );
+		if ( !( item && item->valueType() == NifValue::tSizedString ) )
+			return false;
+		QString	s( item->getValueAsString() );
+		return ( s.endsWith( ".bgsm", Qt::CaseInsensitive ) || s.endsWith( ".bgem", Qt::CaseInsensitive ) || s.endsWith( ".mat", Qt::CaseInsensitive ) );
+	}
+
+	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
+	{
+		NifItem *	item = nif->getItem( index );
+		if ( !( item && item->valueType() == NifValue::tSizedString ) )
+			return index;
+
+		QString	newPath( spEditStringIndex::browseMaterial( nif, item->getValueAsString() ) );
+		if ( !newPath.isEmpty() )
+			item->setValueFromString( newPath );
+
+		return index;
+	}
+};
+
+REGISTER_SPELL( spBrowseHeaderMaterialPath )

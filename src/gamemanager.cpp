@@ -430,6 +430,7 @@ GameMode GameManager::get_game( const NifModel * nif )
 		return FALLOUT_4;
 	case BSSTREAM_155:
 		return FALLOUT_76;
+	case BSSTREAM_170:
 	case BSSTREAM_172:
 	case BSSTREAM_173:
 		return STARFIELD;

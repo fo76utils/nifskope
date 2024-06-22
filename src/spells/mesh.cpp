@@ -825,7 +825,7 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
-		if ( nif->getBSVersion() >= 172 && nif->blockInherits( index, "BSGeometry" ) )
+		if ( nif->getBSVersion() >= 170 && nif->blockInherits( index, "BSGeometry" ) )
 			return true;
 		return nif->blockInherits( index, "BSTriShape" ) && nif->getIndex( index, "Vertex Data" ).isValid();
 	}
@@ -834,7 +834,7 @@ public:
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
 	{
-		if ( nif->getBSVersion() >= 172 && nif->blockInherits( index, "BSGeometry" ) )
+		if ( nif->getBSVersion() >= 170 && nif->blockInherits( index, "BSGeometry" ) )
 			return cast_Starfield( nif, index );
 
 		auto vertData = nif->getIndex( index, "Vertex Data" );

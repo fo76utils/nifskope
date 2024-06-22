@@ -359,6 +359,9 @@ float getBlenderMask(int n)
 
 vec2 parallaxMapping( int n, vec3 V, vec2 offset )
 {
+	if ( parallaxOcclusionSettings.z < 0.0005 )
+		return offset;	// disabled
+
 	// determine optimal height of each layer
 	float	layerHeight = 1.0 / mix( parallaxOcclusionSettings.y, parallaxOcclusionSettings.x, abs(V.z) );
 
@@ -446,6 +449,7 @@ void main()
 	vec3	pbrMap = vec3(0.75, 0.0, 1.0);	// roughness, metalness, AO
 	float	alpha = 1.0;
 	vec3	emissive = vec3(0.0);
+	vec3	transmissive = vec3(0.0);
 
 	for (int i = 0; i < 4; i++) {
 		if ( !lm.layersEnabled[i] )
@@ -498,7 +502,7 @@ void main()
 				if ( lm.blenders[i - 1].blendMode == 2 ) {
 					float	blendPosition = lm.blenders[i - 1].floatParams[2];
 					float	blendContrast = lm.blenders[i - 1].floatParams[3];
-					blendContrast = max( (1.0 - blendContrast) * min(blendPosition, 1.0 - blendPosition), 0.001 );
+					blendContrast = max( blendContrast * min(blendPosition, 1.0 - blendPosition), 0.001 );
 					blendPosition = ( blendPosition - 0.5 ) * 3.17;
 					blendPosition = ( blendPosition * blendPosition + 1.0 ) * blendPosition + 0.5;
 					float	maskMin = blendPosition - blendContrast;
@@ -580,6 +584,12 @@ void main()
 			else
 				continue;
 			emissive += getLayerTexture( i, 7, offset ).rgb * tmp.rgb * tmp.a;
+		}
+
+		if ( lm.layers[i].material.textureSet.textures[8] != 0 ) {
+			// _transmissive.dds
+			if ( lm.translucencySettings.isEnabled && i == lm.translucencySettings.transmittanceSourceLayer )
+				transmissive = vec3( getLayerTexture( i, 8, offset ).r * lm.translucencySettings.transmissiveScale );
 		}
 	}
 
@@ -667,8 +677,6 @@ void main()
 	float	ao = pbrMap.b;
 	refl *= f * envLUT.g * ao;
 
-	// TODO: translucency
-
 	// Diffuse
 	color.rgb = diffuse * albedo * D.rgb;
 	// Ambient
@@ -679,6 +687,17 @@ void main()
 
 	// Emissive
 	color.rgb += emissive;
+
+	// Transmissive
+	if ( lm.translucencySettings.isEnabled && lm.translucencySettings.isThin ) {
+		transmissive *= albedo * ( vec3(1.0) - f );
+		// TODO: implement flipBackFaceNormalsInViewSpace
+		color.rgb += transmissive * D.rgb * max( -NdotL, 0.0 );
+		if ( hasCubeMap )
+			color.rgb += textureLod( CubeMap2, -normalWS, 0.0 ).rgb * transmissive * A.rgb * ao;
+		else
+			color.rgb += transmissive * A.rgb * ( ao * 0.08 );
+	}
 
 	color.rgb = tonemap(color.rgb * D.a, A.a);
 	color.a = baseMap.a * alpha;

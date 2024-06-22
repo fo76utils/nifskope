@@ -85,7 +85,7 @@ void NifModel::loadSFBlender( NifItem * parent, const void * o )
 		setValue<float>( parent, "Height Blend Threshold", floatParams[0] );
 		setValue<float>( parent, "Height Blend Factor", floatParams[1] );
 		setValue<float>( parent, "Position", floatParams[2] );
-		setValue<float>( parent, "Contrast", floatParams[3] );
+		setValue<float>( parent, "Contrast", 1.0f - floatParams[3] );
 		setValue<float>( parent, "Mask Intensity", floatParams[4] );
 		setValue<bool>( parent, "Blend Color", boolParams[0] );
 		setValue<bool>( parent, "Blend Metalness", boolParams[1] );

@@ -20,7 +20,7 @@
         <verexpr token="#BS_GTE_SKY#" string="(#BSVER# #GTE# 83)">Skyrim and later.</verexpr>
         <verexpr token="#BS_GTE_SSE#" string="(#BSVER# #GTE# 100)">SSE and later.</verexpr>
         <verexpr token="#BS_GTE_F76#" string="(#BSVER# #GTE# 155)">Fallout 76 and later.</verexpr>
-        <verexpr token="#BS_GTE_STF#" string="(#BSVER# #GTE# 172)">Starfield and later.</verexpr>
+        <verexpr token="#BS_GTE_STF#" string="(#BSVER# #GTE# 170)">Starfield and later.</verexpr>
         <verexpr token="#BS_SSE#" string="(#BSVER# #EQ# 100)">SSE only.</verexpr>
         <verexpr token="#BS_FO4#" string="(#BSVER# #EQ# 130)">Fallout 4 strictly, excluding stream 132 and 139 in dev files.</verexpr>
         <verexpr token="#BS_FO4_2#" string="((#BSVER# #GTE# 130) #AND# (#BSVER# #LTE# 139))">Fallout 4/76 including dev files.</verexpr>
@@ -29,7 +29,7 @@
         <verexpr token="#BS_GTE_132#" string="(#BSVER# #GTE# 132)">Bethesda 132 and later.</verexpr>
         <verexpr token="#BS_GTE_152#" string="(#BSVER# #GTE# 152)">Bethesda 152 and later.</verexpr>
         <verexpr token="#BS_F76#" string="(#BSVER# #EQ# 155)">Fallout 76 stream 155 only.</verexpr>
-        <verexpr token="#BS_SSE_FO4_FO76#" string="((#BSVER# #GTE# 100) #AND# (#BSVER# #LT# 172))">SSE, FO4, FO76</verexpr>
+        <verexpr token="#BS_SSE_FO4_FO76#" string="((#BSVER# #GTE# 100) #AND# (#BSVER# #LT# 170))">SSE, FO4, FO76</verexpr>
         <verexpr token="#BS_FO4_F76#" string="((#BSVER# #GTE# 130) #AND# (#BSVER# #LTE# 159))">FO4, FO76</verexpr>
         <verexpr token="#BS202#" string="((#VER# #EQ# 20.2.0.7) #AND# (#BSVER# #GT# 0))">Bethesda 20.2 only.</verexpr>
         <verexpr token="#DIVINITY2#" string="((#USER# #EQ# 0x20000) #OR# (#USER# #EQ# 0x30000))">Divinity 2</verexpr>
@@ -215,7 +215,7 @@
     <version id="V20_2_0_7_FO4" num="20.2.0.7" user="12" bsver="130" ext="bto btr">{{Fallout 4}}</version>
     <version id="V20_2_0_7_FO4_2" num="20.2.0.7" user="12" bsver="132 139" ext="bto btr" supported="false">Fallout 4 (LS_Mirelurk.nif, Screen.nif)</version>
     <version id="V20_2_0_7_F76" num="20.2.0.7" user="12" bsver="155" ext="bto">{{Fallout 76}}</version>
-    <version id="V20_2_0_7_STF" num="20.2.0.7" user="12" bsver="172 173">{{Starfield}}</version>
+    <version id="V20_2_0_7_STF" num="20.2.0.7" user="12" bsver="170 172 173">{{Starfield}}</version>
     <version id="V20_2_0_8" num="20.2.0.8" ext="nifcache">{{Empire Earth III}}, {{FFT Online}}, Atlantica Online, IRIS Online, Wizard101</version>
     <version id="V20_2_4_7" num="20.2.4.7">QQSpeed</version>
     <version id="V20_3_0_1" num="20.3.0.1">Emerge</version>
@@ -1967,8 +1967,8 @@
         <field name="Unknown Int" type="uint" cond="BS Version #GT# 130" />
         <field name="Process Script" type="ExportString"  cond="BS Version #LT# 131" />
         <field name="Export Script" type="ExportString" />
-        <field name="Max Filepath" type="ExportString" cond="(BS Version #GTE# 103) #AND# (BS Version #LT# 172)" />
-        <field name="Unknown Data" type="ExportDataSF" cond="BS Version #GTE# 172" />
+        <field name="Max Filepath" type="ExportString" cond="(BS Version #GTE# 103) #AND# (BS Version #LT# 170)" />
+        <field name="Unknown Data" type="ExportDataSF" cond="BS Version #GTE# 170" />
     </struct>
 
     <!-- Don't use vercond in Header, it breaks niflib -->
