@@ -883,10 +883,7 @@ QModelIndex spUpdateBounds::cast_Starfield( NifModel * nif, const QModelIndex & 
 		mesh = nif->getIndex( mesh, "Mesh" );
 		if ( !mesh.isValid() )
 			continue;
-		QString	meshPath( nif->get<QString>( mesh, "Mesh Path" ) );
-		if ( meshPath.isEmpty() )
-			continue;
-		MeshFile	meshFile( meshPath, nif );
+		MeshFile	meshFile( nif, mesh );
 		quint32	indicesSize = 0;
 		quint32	numVerts = 0;
 		if ( meshFile.isValid() ) {
@@ -901,6 +898,7 @@ QModelIndex spUpdateBounds::cast_Starfield( NifModel * nif, const QModelIndex & 
 			bounds = BoundSphere( meshFile.positions, true );
 			calculateBoundingBox( bndCenter, bndDims, meshFile.positions );
 			boundsCalculated = true;
+			// TODO: update bounds in internal geometry data
 		}
 	}
 

@@ -1728,6 +1728,14 @@
         <field name="a" type="byte">Alpha color component.</field>
     </struct>
 
+    <struct name="ByteColor4BGRA" size="4" convertible="Color4" module="NiMain">
+        A color with alpha (blue, green, red, alpha).
+        <field name="b" type="byte">Blue color component.</field>
+        <field name="g" type="byte">Green color component.</field>
+        <field name="r" type="byte">Red color component.</field>
+        <field name="a" type="byte">Alpha color component.</field>
+    </struct>
+
     <struct name="FilePath" module="NiMain">
         A string that contains the path to a file.
         <field name="String" type="SizedString" until="20.0.0.5">The normal string.</field>
@@ -1767,6 +1775,13 @@
         <field name="z" type="hfloat">Third coordinate.</field>
     </struct>
 
+    <struct name="ShortVector3" size="6" convertible="Vector3" module="NiMain">
+        A vector in 3D space (x,y,z).
+        <field name="x" type="short">First coordinate.</field>
+        <field name="y" type="short">Second coordinate.</field>
+        <field name="z" type="short">Third coordinate.</field>
+    </struct>
+
     <struct name="UshortVector3" size="6" convertible="Vector3" module="NiMain">
         A vector in 3D space (x,y,z).
         <field name="x" type="ushort">First coordinate.</field>
@@ -1787,6 +1802,21 @@
         <field name="y" type="float">Second coordinate.</field>
         <field name="z" type="float">Third coordinate.</field>
         <field name="w" type="float">Fourth coordinate.</field>
+    </struct>
+
+    <struct name="ByteVector4" size="4" convertible="Vector4" module="NiMain">
+        A 4-dimensional vector.
+        <field name="x" type="normbyte">First coordinate.</field>
+        <field name="y" type="normbyte">Second coordinate.</field>
+        <field name="z" type="normbyte">Third coordinate.</field>
+        <field name="w" type="normbyte">Fourth coordinate.</field>
+    </struct>
+
+    <struct name="UDecVector4" size="4" convertible="Vector4" module="NiMain">
+        <field name="x" type="byte">First coordinate.</field>
+        <field name="y" type="byte">Second coordinate.</field>
+        <field name="z" type="byte">Third coordinate.</field>
+        <field name="w" type="byte">Fourth coordinate.</field>
     </struct>
 
     <struct name="Quaternion" size="16" module="NiMain">
@@ -9184,16 +9214,69 @@
         <field name="Unknown Structs" type="UnknownWeakReferenceStruct" length="Num Unknown 1" />
     </niobject>
 
+    <struct name="BSMeshTriangles" module="BSMain" versions="#STF#">
+        <field name="Indices Size" type="uint" />
+        <field name="Triangles" type="Triangle" length="Indices Size #DIV# 3" />
+    </struct>
+
+    <struct name="BSMeshlet" module="BSMain" versions="#STF#">
+        <field name="Vertex Count" type="uint" />
+        <field name="Vertex Offset" type="uint" />
+        <field name="Triangle Count" type="uint" />
+        <field name="Triangle Offset" type="uint" />
+    </struct>
+
+    <struct name="BSCullData" module="BSMain" versions="#STF#">
+        <field name="Bounding Sphere" type="NiBound" cond="#ARG# #LT# 2" />
+        <field name="Normal Cone" type="ByteVector4" cond="#ARG# #LT# 2" />
+        <field name="Apex Offset" type="float" cond="#ARG# #LT# 2" />
+        <field name="Bound Min Max" type="float" length="6" cond="#ARG# #GTE# 2" />
+    </struct>
+
+    <struct name="BSBoneWeight" module="BSMain" versions="#STF#">
+        <field name="Bone" type="ushort" />
+        <field name="Weight" type="ushort" />
+    </struct>
+
+    <struct name="BSMeshData" module="BSMain" versions="#STF#">
+        <field name="Version" type="uint" />
+        <field name="Indices Size" type="uint" />
+        <field name="Triangles" type="Triangle" length="Indices Size #DIV# 3" />
+        <field name="Scale" type="float">Vertex coordinate scale * 32767.0</field>
+        <field name="Weights Per Vertex" type="uint" />
+        <field name="Num Verts" type="uint" />
+        <field name="Vertices" type="ShortVector3" length="Num Verts" />
+        <field name="Num UVs" type="uint" />
+        <field name="UVs" type="HalfTexCoord" length="Num UVs" />
+        <field name="Num UVs 2" type="uint" />
+        <field name="UVs 2" type="HalfTexCoord" length="Num UVs 2" cond="Num UVs 2 #GT# 0" />
+        <field name="Num Vertex Colors" type="uint" />
+        <field name="Vertex Colors" type="ByteColor4BGRA" length="Num Vertex Colors" cond="Num Vertex Colors #GT# 0" />
+        <field name="Num Normals" type="uint" />
+        <field name="Normals" type="UDecVector4" length="Num Normals" />
+        <field name="Num Tangents" type="uint" />
+        <field name="Tangents" type="UDecVector4" length="Num Tangents" />
+        <field name="Num Weights" type="uint" />
+        <field name="Weights" type="BSBoneWeight" length="Num Weights" cond="Num Weights #GT# 0" />
+        <field name="Num LODs" type="uint" cond="Version #GTE# 1" />
+        <field name="LODs" type="BSMeshTriangles" length="Num LODs" cond="(Version #GTE# 1) #AND# (Num LODs #GT# 0)" />
+        <field name="Num Meshlets" type="uint" />
+        <field name="Meshlets" type="BSMeshlet" length="Num Meshlets" cond="Num Meshlets #GT# 0" />
+        <field name="Num Cull Data" type="uint" />
+        <field name="Cull Data" type="BSCullData" arg="Version" length="Num Cull Data" cond="Num Cull Data #GT# 0" />
+    </struct>
+
     <struct name="BSMesh" module="BSMain" versions="#STF#">
         <field name="Indices Size" type="uint" />
         <field name="Num Verts" type="uint" />
         <field name="Flags" type="uint" />
-        <field name="Mesh Path" type="SizedString" />
+        <field name="Mesh Path" type="SizedString" cond="#ARG# #EQ# 0" />
+        <field name="Mesh Data" type="BSMeshData" cond="#ARG# #NEQ# 0" />
     </struct>
 
     <struct name="BSMeshArray" module="BSMain" versions="#STF#">
         <field name="Has Mesh" type="byte" />
-        <field name="Mesh" type="BSMesh" cond="Has Mesh #EQ# 1" />
+        <field name="Mesh" type="BSMesh" arg="#ARG# #BITAND# 512" cond="Has Mesh #EQ# 1" />
     </struct>
 
     <niobject name="BSGeometry" inherit="NiAVObject" module="BSMain" versions="#STF#">
@@ -9202,7 +9285,7 @@
         <field name="Skin" type="Ref" template="NiObject" />
         <field name="Shader Property" type="Ref" template="BSShaderProperty" />
         <field name="Alpha Property" type="Ref" template="NiAlphaProperty" />
-        <field name="Meshes" type="BSMeshArray" length="4" />
+        <field name="Meshes" type="BSMeshArray" arg="Flags" length="4" />
     </niobject>
 
     <niobject name="SkinAttach" inherit="NiExtraData" module="BSMain" versions="#STF#">

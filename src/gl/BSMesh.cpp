@@ -194,25 +194,6 @@ QString BSMesh::textStats() const
 	return QString();
 }
 
-void BSMesh::forMeshIndex(const NifModel* nif, std::function<void(const QString&, int)>& f)
-{
-	for ( int i = 0; i < 4; i++ ) {
-		auto meshArray = QModelIndex_child( iMeshes, i );
-		bool hasMesh = nif->get<bool>( QModelIndex_child( meshArray ) );
-		auto mesh = QModelIndex_child( meshArray, 1 );
-		if ( hasMesh ) {
-			auto meshPath = nif->get<QString>(mesh, "Mesh Path");
-			if ( !meshPath.startsWith("geometries", Qt::CaseInsensitive) ) {
-				meshPath = "geometries\\" + meshPath;
-			}
-			if ( !meshPath.endsWith(".mesh") ) {
-				meshPath += ".mesh";
-			}
-			f(meshPath, i);
-		}
-	}
-}
-
 int BSMesh::meshCount()
 {
 	return meshes.size();
@@ -250,16 +231,18 @@ void BSMesh::updateImpl(const NifModel* nif, const QModelIndex& index)
 	iData = index;
 	iMeshes = nif->getIndex(index, "Meshes");
 	meshes.clear();
-	std::function<void(const QString&, int)> createMeshFile = [&](const QString& meshPath, int lodLevel) {
-		auto mesh = std::make_shared<MeshFile>(meshPath, nif);
-		if ( mesh->isValid() ) {
-			meshes.append(mesh);
-			if ( lodLevel > 0 || mesh->lods.size() > 0 )
-				emit nif->lodSliderChanged(true);
+	for ( int i = 0; i < 4; i++ ) {
+		auto meshArray = QModelIndex_child( iMeshes, i );
+		bool hasMesh = nif->get<bool>( QModelIndex_child( meshArray ) );
+		if ( hasMesh ) {
+			auto mesh = std::make_shared<MeshFile>( nif, QModelIndex_child( meshArray, 1 ) );
+			if ( mesh->isValid() ) {
+				meshes.append(mesh);
+				if ( lodLevel > 0 || mesh->lods.size() > 0 )
+					emit nif->lodSliderChanged(true);
+			}
 		}
-	};
-
-	forMeshIndex(nif, createMeshFile);
+	}
 }
 
 void BSMesh::updateData(const NifModel* nif)
@@ -310,8 +293,8 @@ void BSMesh::updateData(const NifModel* nif)
 		transColors = mesh->colors;
 		hasVertexColors = !transColors.empty();
 		transNorms = mesh->normals;
-		transTangents = mesh->bitangents;
 		transBitangents = mesh->tangents;
+		mesh->calculateBitangents( transTangents );
 		weightsUNORM = mesh->weights;
 		gpuLODs = mesh->lods;
 

@@ -974,6 +974,7 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 		if ( !meshes.isValid() )
 			return false;
 
+		QModelIndex	sfMeshIndex;
 		int	lodDiff = 255;
 		for ( int i = 0; i <= 3; i++ ) {
 			auto mesh = QModelIndex_child( meshes, i );
@@ -985,17 +986,16 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 			mesh = nif->getIndex( mesh, "Mesh" );
 			if ( !mesh.isValid() )
 				continue;
-			QString	meshPath( nif->findResourceFile( nif->get<QString>( mesh, "Mesh Path" ), "geometries/", ".mesh" ) );
-			if ( meshPath.isEmpty() )
-				continue;
 			if ( std::abs( i - sfMeshLOD ) < lodDiff ) {
 				lodDiff = std::abs( i - sfMeshLOD );
-				sfMeshPath = meshPath;
+				if ( nif->getIndex( mesh, "Mesh Path" ).isValid() )
+					sfMeshPath = nif->findResourceFile( nif->get<QString>( mesh, "Mesh Path" ), "geometries/", ".mesh" );
+				sfMeshIndex = mesh;
 			}
 		}
-		if ( sfMeshPath.isEmpty() )
+		if ( !sfMeshIndex.isValid() )
 			return false;
-		MeshFile	meshFile( sfMeshPath, nif );
+		MeshFile	meshFile( nif, sfMeshIndex );
 		if ( !( meshFile.isValid() && meshFile.coords.size() > 0 && meshFile.triangles.size() > 0 ) )
 			return false;
 		for ( qsizetype i = 0; i < meshFile.coords.size(); i++ )

@@ -7,6 +7,7 @@
 #include "io/MeshFile.h"
 #include "model/nifmodel.h"
 #include "message.h"
+#include "libfo76utils/src/filebuf.hpp"
 
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
@@ -285,6 +286,32 @@ bool exportCreateNodes(const NifModel* nif, const Scene* scene, tinygltf::Model&
 	return true;
 }
 
+static inline void exportFloats( QByteArray & bin, const float * data, size_t n )
+{
+	char	buf[16];
+	qsizetype	nBytes = 0;
+
+	switch ( n ) {
+	case 4:
+		FileBuffer::writeUInt32Fast( &(buf[12]), std::bit_cast< std::uint32_t >(data[3]) );
+		nBytes += 4;
+		[[fallthrough]];
+	case 3:
+		FileBuffer::writeUInt32Fast( &(buf[8]), std::bit_cast< std::uint32_t >(data[2]) );
+		nBytes += 4;
+		[[fallthrough]];
+	case 2:
+		FileBuffer::writeUInt32Fast( &(buf[4]), std::bit_cast< std::uint32_t >(data[1]) );
+		nBytes += 4;
+		[[fallthrough]];
+	case 1:
+		FileBuffer::writeUInt32Fast( &(buf[0]), std::bit_cast< std::uint32_t >(data[0]) );
+		nBytes += 4;
+		break;
+	}
+
+	bin.append( buf, nBytes );
+}
 
 void exportCreatePrimitive(tinygltf::Model& model, QByteArray& bin, std::shared_ptr<MeshFile> mesh, tinygltf::Primitive& prim, std::string attr,
 							int count, int componentType, int type, quint32& attributeIndex, GltfStore& gltf)
@@ -363,39 +390,29 @@ void exportCreatePrimitive(tinygltf::Model& model, QByteArray& bin, std::shared_
 	// So, do this for now.
 	if ( attr == "POSITION" ) {
 		for ( const auto& v : mesh->positions ) {
-			bin.append(reinterpret_cast<const char*>(&v[0]), sizeof(v[0]));
-			bin.append(reinterpret_cast<const char*>(&v[1]), sizeof(v[1]));
-			bin.append(reinterpret_cast<const char*>(&v[2]), sizeof(v[2]));
+			exportFloats( bin, &(v[0]), 3 );
 		}
 	} else if ( attr == "NORMAL" ) {
 		for ( const auto& v : mesh->normals ) {
-			bin.append(reinterpret_cast<const char*>(&v[0]), sizeof(v[0]));
-			bin.append(reinterpret_cast<const char*>(&v[1]), sizeof(v[1]));
-			bin.append(reinterpret_cast<const char*>(&v[2]), sizeof(v[2]));
+			exportFloats( bin, &(v[0]), 3 );
 		}
 	} else if ( attr == "TANGENT" ) {
-		for ( const auto& v : mesh->tangentsBasis ) {
-			bin.append(reinterpret_cast<const char*>(&v[0]), sizeof(v[0]));
-			bin.append(reinterpret_cast<const char*>(&v[1]), sizeof(v[1]));
-			bin.append(reinterpret_cast<const char*>(&v[2]), sizeof(v[2]));
-			bin.append(reinterpret_cast<const char*>(&v[3]), sizeof(v[3]));
+		for ( const auto& v : mesh->tangents ) {
+			Vector4	tmp( v );
+			tmp[3] = mesh->bitangentsBasis.at( qsizetype(&v - mesh->tangents.data()) ) * -1.0f;
+			exportFloats( bin, &(tmp[0]), 4 );
 		}
 	} else if ( attr == "TEXCOORD_0" ) {
 		for ( const auto& v : mesh->coords ) {
-			bin.append(reinterpret_cast<const char*>(&v[0]), sizeof(v[0]));
-			bin.append(reinterpret_cast<const char*>(&v[1]), sizeof(v[1]));
+			exportFloats( bin, &(v[0]), 2 );
 		}
 	} else if ( attr == "TEXCOORD_1" && mesh->haveTexCoord2 ) {
 		for ( const auto& v : mesh->coords ) {
-			bin.append(reinterpret_cast<const char*>(&v[2]), sizeof(v[2]));
-			bin.append(reinterpret_cast<const char*>(&v[3]), sizeof(v[3]));
+			exportFloats( bin, &(v[2]), 2 );
 		}
 	} else if ( attr == "COLOR_0" ) {
 		for ( const auto& v : mesh->colors ) {
-			bin.append(reinterpret_cast<const char*>(&v[0]), sizeof(v[0]));
-			bin.append(reinterpret_cast<const char*>(&v[1]), sizeof(v[1]));
-			bin.append(reinterpret_cast<const char*>(&v[2]), sizeof(v[2]));
-			bin.append(reinterpret_cast<const char*>(&v[3]), sizeof(v[3]));
+			exportFloats( bin, &(v[0]), 4 );
 		}
 	} else if ( attr == "WEIGHTS_0" ) {
 		for ( const auto& v : mesh->weights ) {
@@ -450,7 +467,7 @@ bool exportCreatePrimitives(tinygltf::Model& model, QByteArray& bin, const BSMes
 
 	exportCreatePrimitive(model, bin, mesh, prim, "POSITION", mesh->positions.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC3, attributeIndex, gltf);
 	exportCreatePrimitive(model, bin, mesh, prim, "NORMAL", mesh->normals.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC3, attributeIndex, gltf);
-	exportCreatePrimitive(model, bin, mesh, prim, "TANGENT", mesh->tangentsBasis.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC4, attributeIndex, gltf);
+	exportCreatePrimitive(model, bin, mesh, prim, "TANGENT", mesh->tangents.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC4, attributeIndex, gltf);
 	if ( mesh->coords.size() > 0 ) {
 		exportCreatePrimitive(model, bin, mesh, prim, "TEXCOORD_0", mesh->coords.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC2, attributeIndex, gltf);
 	}
