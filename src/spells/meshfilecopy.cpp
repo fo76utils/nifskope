@@ -110,6 +110,10 @@ NifItem* spResourceCopy::findChildByName(NifItem* parent, const QString& name)
 void spResourceCopy::copyPaths(NifModel* nif, NifItem* item, const QString& author, const QString& project, const QString& nifFolder)
 {
 	if (item && item->name() == "BSGeometry") {
+		if (nif->get<quint32>(item, "Flags") & 0x0200) {
+			// Skip block if it uses internal geometry data
+			return;
+		}
 		QString objectName = nif->get<QString>(item, "Name");
 		NifItem* meshArrayItems = findChildByName(item, "Meshes");
 
@@ -121,13 +125,14 @@ void spResourceCopy::copyPaths(NifModel* nif, NifItem* item, const QString& auth
 				}
 				NifItem* mesh = findChildByName(meshArrayItem, "Mesh");
 				if (mesh) {
-					// The nif field doesn't include the .mesh extension, and always uses a forward slash
-					QString meshPath = nif->get<QString>(mesh, "Mesh Path");
+					// The nif field doesn't include the .mesh extension, and may use any type of separator
+					std::string	meshPathStr(Game::GameManager::get_full_path(nif->get<QString>(mesh, "Mesh Path"), "geometries/", ".mesh"));
+					QString	meshPath = QString::fromStdString(meshPathStr);
 					// Not using QDir because file as stored uses forward slashes and no extension
 					QString newMeshPath = author + "/" + project + "/" + sanitizeFileName(objectName) + "_lod" + QString::number(i + 1);
 
 					// Convert paths to absolute using nifFolder as root
-					QString oldPath = QDir(nifFolder).filePath("geometries/" + meshPath + ".mesh");
+					QString oldPath = QDir(nifFolder).filePath(meshPath);
 					QString newPath = QDir(nifFolder).filePath("geometries/" + newMeshPath + ".mesh");
 
 					// Create the directory for the new path if it doesn't exist
@@ -135,17 +140,17 @@ void spResourceCopy::copyPaths(NifModel* nif, NifItem* item, const QString& auth
 					newDir.mkpath(newDir.absolutePath());
 
 					// Copy the file (platform-independent with the slashes)
-					if ( !QFile::copy(QDir::fromNativeSeparators(oldPath), QDir::fromNativeSeparators(newPath)) ) {
+					if ( !QFile::copy(oldPath, newPath) ) {
 						QByteArray	meshData;
-						if ( nif->getResourceFile(meshData, meshPath, "geometries/", ".mesh") ) {
-							QFile	newFile( QDir::fromNativeSeparators(newPath) );
+						if ( nif->getResourceFile(meshData, meshPathStr) ) {
+							QFile	newFile( newPath );
 							if ( newFile.open(QIODevice::WriteOnly) )
 								(void) newFile.write( meshData );
 						}
 					}
 
 					// Update the value in the nif
-					findChildByName(mesh,"Mesh Path")->setValueFromString(newMeshPath);
+					findChildByName(mesh,"Mesh Path")->setValueFromString(newMeshPath.replace(QChar('/'), QChar('\\')));
 				}
 			}
 		}
@@ -169,7 +174,7 @@ QModelIndex spResourceCopy::cast(NifModel* nif, const QModelIndex& index)
 	QDialog dlg;
 	QLabel* lb = new QLabel(&dlg);
 	lb->setAlignment(Qt::AlignCenter);
-	lb->setText(tr("Copy and rename meshes to this format:\ngeometries/author/project/objectname_lod#"));
+	lb->setText(tr("Copy and rename meshes to this format:\n") + QDir::toNativeSeparators("geometries/author/project/objectname_lod#"));
 
 	QLabel* lb1 = new QLabel(&dlg);
 	lb1->setText(tr("Author Prefix:"));
