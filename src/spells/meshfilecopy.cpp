@@ -123,12 +123,12 @@ void spResourceCopy::copyPaths(NifModel* nif, NifItem* item, const QString& auth
 				if (mesh) {
 					// The nif field doesn't include the .mesh extension, and always uses a forward slash
 					QString meshPath = nif->get<QString>(mesh, "Mesh Path");
-					// Not using QDir because file as stored uses forward slashes and no extension
-					QString newMeshPath = author + "/" + project + "/" + sanitizeFileName(objectName) + "_lod" + QString::number(i + 1);
+					// Not using QDir because file as stored uses back slashes and no extension
+					QString newMeshPath = (author + "\\" + project + "\\" + sanitizeFileName(objectName) + "_lod" + QString::number(i + 1)).toLower();
 
 					// Convert paths to absolute using nifFolder as root
-					QString oldPath = QDir(nifFolder).filePath("geometries/" + meshPath + ".mesh");
-					QString newPath = QDir(nifFolder).filePath("geometries/" + newMeshPath + ".mesh");
+					QString oldPath = QDir(nifFolder).filePath("geometries\\" + meshPath + ".mesh");
+					QString newPath = QDir(nifFolder).filePath("geometries\\" + newMeshPath + ".mesh");
 
 					// Create the directory for the new path if it doesn't exist
 					QDir newDir = QFileInfo(newPath).absoluteDir();
@@ -169,7 +169,7 @@ QModelIndex spResourceCopy::cast(NifModel* nif, const QModelIndex& index)
 	QDialog dlg;
 	QLabel* lb = new QLabel(&dlg);
 	lb->setAlignment(Qt::AlignCenter);
-	lb->setText(tr("Copy and rename meshes to this format:\ngeometries/author/project/objectname_lod#"));
+	lb->setText(tr("Copy and rename meshes to this format:\ngeometries\\author\\project\\objectname_lod#"));
 
 	QLabel* lb1 = new QLabel(&dlg);
 	lb1->setText(tr("Author Prefix:"));
