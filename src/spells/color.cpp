@@ -35,6 +35,9 @@ public:
 		} else if ( typ == NifValue::tByteColor4 ) {
 			auto col = ColorWheel::choose( nif->get<ByteColor4>( index ) );
 			nif->set<ByteColor4>( index, *static_cast<ByteColor4 *>(&col) );
+		} else if ( typ == NifValue::tByteColor4BGRA ) {
+			auto col = ColorWheel::choose( nif->get<ByteColor4BGRA>( index ) );
+			nif->set<ByteColor4BGRA>( index, *static_cast<ByteColor4BGRA *>(&col) );
 		}
 
 

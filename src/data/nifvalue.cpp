@@ -96,6 +96,8 @@ void NifValue::initialize()
 	typeMap.insert( "Color3",      NifValue::tColor3 );
 	typeMap.insert( "Color4",      NifValue::tColor4 );
 	typeMap.insert( "Vector4",     NifValue::tVector4 );
+	typeMap.insert( "ByteVector4", NifValue::tByteVector4 );
+	typeMap.insert( "UDecVector4", NifValue::tUDecVector4 );
 	typeMap.insert( "Vector3",     NifValue::tVector3 );
 	typeMap.insert( "TBC",         NifValue::tVector3 );
 	typeMap.insert( "Quaternion",  NifValue::tQuat );
@@ -122,11 +124,13 @@ void NifValue::initialize()
 	typeMap.insert( "blob",     NifValue::tBlob );
 	typeMap.insert( "hfloat",   NifValue::tHfloat );
 	typeMap.insert( "HalfVector3", NifValue::tHalfVector3 );
+	typeMap.insert( "ShortVector3",  NifValue::tShortVector3 );
 	typeMap.insert( "UshortVector3",  NifValue::tUshortVector3 );
 	typeMap.insert( "ByteVector3", NifValue::tByteVector3 );
 	typeMap.insert( "HalfVector2", NifValue::tHalfVector2 );
 	typeMap.insert( "HalfTexCoord", NifValue::tHalfVector2 );
 	typeMap.insert( "ByteColor4", NifValue::tByteColor4 );
+	typeMap.insert( "ByteColor4BGRA", NifValue::tByteColor4BGRA );
 	//typeMap.insert( "BSVertexDesc", NifValue::tBSVertexDesc );
 
 	enumMap.clear();
@@ -361,10 +365,13 @@ void NifValue::clear()
 {
 	switch ( typ ) {
 	case tVector4:
+	case tByteVector4:
+	case tUDecVector4:
 		delete static_cast<Vector4 *>( val.data );
 		break;
 	case tVector3:
 	case tHalfVector3:
+	case tShortVector3:
 	case tUshortVector3:
 	case tByteVector3:
 		delete static_cast<Vector3 *>( val.data );
@@ -408,6 +415,7 @@ void NifValue::clear()
 		break;
 	case tColor4:
 	case tByteColor4:
+	case tByteColor4BGRA:
 		delete static_cast<Color4 *>( val.data );
 		break;
 	case tBSVertexDesc:
@@ -439,12 +447,17 @@ void NifValue::changeType( Type t )
 		return;
 	case tVector3:
 	case tHalfVector3:
+	case tShortVector3:
 	case tUshortVector3:
 	case tByteVector3:
 		val.data = new Vector3();
 		break;
 	case tVector4:
 		val.data = new Vector4();
+		return;
+	case tByteVector4:
+	case tUDecVector4:
+		val.data = new ByteVector4();
 		return;
 	case tMatrix:
 		val.data = new Matrix();
@@ -478,6 +491,7 @@ void NifValue::changeType( Type t )
 		return;
 	case tColor4:
 	case tByteColor4:
+	case tByteColor4BGRA:
 		val.data = new Color4();
 		return;
 	case tByteArray:
@@ -511,11 +525,14 @@ void NifValue::operator=( const NifValue & other )
 	switch ( typ ) {
 	case tVector3:
 	case tHalfVector3:
+	case tShortVector3:
 	case tUshortVector3:
 	case tByteVector3:
 		*static_cast<Vector3 *>( val.data ) = *static_cast<Vector3 *>( other.val.data );
 		return;
 	case tVector4:
+	case tByteVector4:
+	case tUDecVector4:
 		*static_cast<Vector4 *>( val.data ) = *static_cast<Vector4 *>( other.val.data );
 		return;
 	case tMatrix:
@@ -547,6 +564,7 @@ void NifValue::operator=( const NifValue & other )
 		return;
 	case tColor4:
 	case tByteColor4:
+	case tByteColor4BGRA:
 		*static_cast<Color4 *>( val.data ) = *static_cast<Color4 *>( other.val.data );
 		return;
 	case tByteArray:
@@ -637,6 +655,7 @@ bool NifValue::operator==( const NifValue & other ) const
 
 	case tColor4:
 	case tByteColor4:
+	case tByteColor4BGRA:
 	{
 		Color4 * c1 = static_cast<Color4 *>(val.data);
 		Color4 * c2 = static_cast<Color4 *>(other.val.data);
@@ -661,6 +680,7 @@ bool NifValue::operator==( const NifValue & other ) const
 
 	case tVector3:
 	case tHalfVector3:
+	case tShortVector3:
 	case tUshortVector3:
 	case tByteVector3:
 	{
@@ -674,6 +694,8 @@ bool NifValue::operator==( const NifValue & other ) const
 	}
 
 	case tVector4:
+	case tByteVector4:
+	case tUDecVector4:
 	{
 		Vector4 * vec1 = static_cast<Vector4 *>(val.data);
 		Vector4 * vec2 = static_cast<Vector4 *>(other.val.data);
@@ -865,6 +887,7 @@ bool NifValue::setFromString( const QString & s, const BaseModel * model, const 
 		break;
 	case tColor4:
 	case tByteColor4:
+	case tByteColor4BGRA:
 		static_cast<Color4 *>( val.data )->fromQColor( QColor( s ) );
 		ok = true;
 		break;
@@ -882,6 +905,8 @@ bool NifValue::setFromString( const QString & s, const BaseModel * model, const 
 		ok = true;
 		break;
 	case tVector4:
+	case tByteVector4:
+	case tUDecVector4:
 		static_cast<Vector4 *>( val.data )->fromString( s );
 		ok = true;
 		break;
@@ -957,6 +982,7 @@ QString NifValue::toString() const
 		}
 	case tColor4:
 	case tByteColor4:
+	case tByteColor4BGRA:
 		{
 			Color4 * col = static_cast<Color4 *>( val.data );
 			float r = col->red(), g = col->green(), b = col->blue(), a = col->alpha();
@@ -985,6 +1011,7 @@ QString NifValue::toString() const
 		}
 	case tVector3:
 	case tHalfVector3:
+	case tShortVector3:
 	case tUshortVector3:
 	case tByteVector3:
 		{
@@ -996,6 +1023,8 @@ QString NifValue::toString() const
 			       .arg( NumOrMinMax( (*v)[2], 'f', VECTOR_DECIMALS ) );
 		}
 	case tVector4:
+	case tByteVector4:
+	case tUDecVector4:
 		{
 			Vector4 * v = static_cast<Vector4 *>( val.data );
 
@@ -1151,6 +1180,8 @@ QString NifValue::getTypeDebugStr( NifValue::Type t )
 	case tMatrix4:          typeStr = "Matrix4"; break;
 	case tVector2:          typeStr = "Vector2"; break;
 	case tVector4:          typeStr = "Vector4"; break;
+	case tByteVector4:      typeStr = "ByteVector4"; break;
+	case tUDecVector4:      typeStr = "UDecVector4"; break;
 	case tTriangle:         typeStr = "Triangle"; break;
 	case tFileVersion:      typeStr = "FileVersion"; break;
 	case tByteArray:        typeStr = "ByteArray"; break;
@@ -1161,10 +1192,12 @@ QString NifValue::getTypeDebugStr( NifValue::Type t )
 	case tBlob:             typeStr = "Blob"; break;
 	case tHfloat:           typeStr = "Hfloat"; break;
 	case tHalfVector3:      typeStr = "HalfVector3"; break;
+	case tShortVector3:     typeStr = "ShortVector3"; break;
 	case tUshortVector3:    typeStr = "UshortVector3"; break;
 	case tByteVector3:      typeStr = "ByteVector3"; break;
 	case tHalfVector2:      typeStr = "HalfVector2"; break;
 	case tByteColor4:       typeStr = "ByteColor4"; break;
+	case tByteColor4BGRA:   typeStr = "ByteColor4BGRA"; break;
 	case tBSVertexDesc:     typeStr = "BSVertexDesc"; break;
 	case tNone:             typeStr = "None"; break;
 	default:                typeStr = "UNKNOWN"; break;
@@ -1180,6 +1213,7 @@ QColor NifValue::toColor( const BaseModel * model, const NifItem * item ) const
 		return static_cast<Color3 *>( val.data )->toQColor();
 	case tColor4:
 	case tByteColor4:
+	case tByteColor4BGRA:
 		return static_cast<Color4 *>( val.data )->toQColor();
 	default:
 		if ( model )

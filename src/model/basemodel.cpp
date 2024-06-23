@@ -383,13 +383,11 @@ QVariant BaseModel::data( const QModelIndex & index, int role ) const
 							return QString( "dec: %1<br>hex: 0x%2<br>bin: 0b%3" ).arg( f ).arg( f, 4, 16, QChar( '0' ) ).arg( f, 16, 2, QChar( '0' ) );
 						}
 					case NifValue::tVector3:
-						return item->get<Vector3>().toHtml();
+					case NifValue::tShortVector3:
 					case NifValue::tUshortVector3:
-						return item->get<UshortVector3>().toHtml();
 					case NifValue::tHalfVector3:
-						return item->get<HalfVector3>().toHtml();
 					case NifValue::tByteVector3:
-						return item->get<ByteVector3>().toHtml();
+						return item->get<Vector3>().toHtml();
 					case NifValue::tMatrix:
 						return item->get<Matrix>().toHtml();
 					case NifValue::tQuat:
@@ -400,12 +398,9 @@ QVariant BaseModel::data( const QModelIndex & index, int role ) const
 							Color3 c = item->get<Color3>();
 							return QString( "R %1<br>G %2<br>B %3" ).arg( c[0] ).arg( c[1] ).arg( c[2] );
 						}
-					case NifValue::tByteColor4:
-						{
-							Color4 c = item->get<ByteColor4>();
-							return QString( "R %1<br>G %2<br>B %3<br>A %4" ).arg( c[0] ).arg( c[1] ).arg( c[2] ).arg( c[3] );
-						}
 					case NifValue::tColor4:
+					case NifValue::tByteColor4:
+					case NifValue::tByteColor4BGRA:
 						{
 							Color4 c = item->get<Color4>();
 							return QString( "R %1<br>G %2<br>B %3<br>A %4" ).arg( c[0] ).arg( c[1] ).arg( c[2] ).arg( c[3] );

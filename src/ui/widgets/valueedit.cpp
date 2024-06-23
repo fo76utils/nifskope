@@ -56,16 +56,50 @@ ValueEdit::ValueEdit( QWidget * parent ) : QWidget( parent ), typ( NifValue::tNo
 
 bool ValueEdit::canEdit( NifValue::Type t )
 {
-	return t == NifValue::tByte || t == NifValue::tWord || t == NifValue::tInt || t == NifValue::tFlags
-		|| t == NifValue::tLink || t == NifValue::tUpLink || t == NifValue::tFloat || t == NifValue::tText
-		|| t == NifValue::tSizedString || t == NifValue::tSizedString16 || t == NifValue::tLineString
-		|| t == NifValue::tChar8String || t == NifValue::tShortString || t == NifValue::tStringIndex
-		|| t == NifValue::tString || t == NifValue::tVector4 || t == NifValue::tVector3 || t == NifValue::tVector2
-		|| t == NifValue::tColor3 || t == NifValue::tColor4 || t == NifValue::tByteColor4
-		|| t == NifValue::tMatrix || t == NifValue::tQuat || t == NifValue::tQuatXYZW
-		|| t == NifValue::tTriangle || t == NifValue::tShort || t == NifValue::tUInt || t == NifValue::tULittle32
-		|| t == NifValue::tHfloat || t == NifValue::tHalfVector3 || t == NifValue::tByteVector3
-		|| t == NifValue::tHalfVector2 || t == NifValue::tNormbyte;
+	switch ( t ) {
+	case NifValue::tByte:
+	case NifValue::tWord:
+	case NifValue::tInt:
+	case NifValue::tFlags:
+	case NifValue::tLink:
+	case NifValue::tUpLink:
+	case NifValue::tFloat:
+	case NifValue::tText:
+	case NifValue::tSizedString:
+	case NifValue::tSizedString16:
+	case NifValue::tLineString:
+	case NifValue::tChar8String:
+	case NifValue::tShortString:
+	case NifValue::tStringIndex:
+	case NifValue::tString:
+	case NifValue::tVector4:
+	case NifValue::tByteVector4:
+	case NifValue::tUDecVector4:
+	case NifValue::tVector3:
+	case NifValue::tVector2:
+	case NifValue::tColor3:
+	case NifValue::tColor4:
+	case NifValue::tByteColor4:
+	case NifValue::tByteColor4BGRA:
+	case NifValue::tMatrix:
+	case NifValue::tQuat:
+	case NifValue::tQuatXYZW:
+	case NifValue::tTriangle:
+	case NifValue::tShort:
+	case NifValue::tUInt:
+	case NifValue::tULittle32:
+	case NifValue::tHfloat:
+	case NifValue::tShortVector3:
+	case NifValue::tUshortVector3:
+	case NifValue::tHalfVector3:
+	case NifValue::tByteVector3:
+	case NifValue::tHalfVector2:
+	case NifValue::tNormbyte:
+		return true;
+	default:
+		break;
+	}
+	return false;
 }
 
 class CenterLabel final : public QLabel
@@ -258,14 +292,9 @@ void ValueEdit::setValue( const NifValue & v )
 	//	te->setBaseSize( width(), height() * 5);
 	//	edit = te;
 	//}	break;
-	case NifValue::tByteColor4:
-		{
-			ColorEdit * ce = new ColorEdit( this );
-			ce->setColor4( v.get<ByteColor4>( nullptr, nullptr ) );
-			edit = ce;
-		}
-		break;
 	case NifValue::tColor4:
+	case NifValue::tByteColor4:
+	case NifValue::tByteColor4BGRA:
 		{
 			ColorEdit * ce = new ColorEdit( this );
 			ce->setColor4( v.get<Color4>( nullptr, nullptr ) );
@@ -280,27 +309,19 @@ void ValueEdit::setValue( const NifValue & v )
 		}
 		break;
 	case NifValue::tVector4:
+	case NifValue::tByteVector4:
+	case NifValue::tUDecVector4:
 		{
 			VectorEdit * ve = new VectorEdit( this );
 			ve->setVector4( v.get<Vector4>( nullptr, nullptr ) );
 			edit = ve;
 		}
 		break;
-	case NifValue::tByteVector3:
-		{
-			VectorEdit * ve = new VectorEdit( this );
-			ve->setVector3( v.get<ByteVector3>( nullptr, nullptr ) );
-			edit = ve;
-		}
-		break;
-	case NifValue::tHalfVector3:
-		{
-			VectorEdit * ve = new VectorEdit( this );
-			ve->setVector3( v.get<HalfVector3>( nullptr, nullptr ) );
-			edit = ve;
-		}
-		break;
 	case NifValue::tVector3:
+	case NifValue::tHalfVector3:
+	case NifValue::tShortVector3:
+	case NifValue::tUshortVector3:
+	case NifValue::tByteVector3:
 		{
 			VectorEdit * ve = new VectorEdit( this );
 			ve->setVector3( v.get<Vector3>( nullptr, nullptr ) );
@@ -422,6 +443,12 @@ NifValue ValueEdit::getValue() const
 		case NifValue::tText:
 			val.setFromString( qobject_cast<QTextEdit *>( edit )->toPlainText(), nullptr, nullptr );
 			break;
+		case NifValue::tByteColor4BGRA:
+			{
+				auto col = qobject_cast<ColorEdit *>(edit)->getColor4();
+				val.set<ByteColor4BGRA>( *static_cast<ByteColor4BGRA *>(&col), nullptr, nullptr );
+				break;
+			}
 		case NifValue::tByteColor4:
 			{
 				auto col = qobject_cast<ColorEdit *>(edit)->getColor4();
@@ -437,6 +464,30 @@ NifValue ValueEdit::getValue() const
 		case NifValue::tVector4:
 			val.set<Vector4>( qobject_cast<VectorEdit *>( edit )->getVector4(), nullptr, nullptr );
 			break;
+		case NifValue::tByteVector4:
+			{
+				auto vec = qobject_cast<VectorEdit *>(edit)->getVector4();
+				val.set<ByteVector4>( *static_cast<ByteVector4 *>(&vec), nullptr, nullptr );
+				break;
+			}
+		case NifValue::tUDecVector4:
+			{
+				auto vec = qobject_cast<VectorEdit *>(edit)->getVector4();
+				val.set<UDecVector4>( *static_cast<UDecVector4 *>(&vec), nullptr, nullptr );
+				break;
+			}
+		case NifValue::tShortVector3:
+			{
+				auto vec = qobject_cast<VectorEdit *>(edit)->getVector3();
+				val.set<ShortVector3>( *static_cast<ShortVector3 *>(&vec), nullptr, nullptr );
+				break;
+			}
+		case NifValue::tUshortVector3:
+			{
+				auto vec = qobject_cast<VectorEdit *>(edit)->getVector3();
+				val.set<UshortVector3>( *static_cast<UshortVector3 *>(&vec), nullptr, nullptr );
+				break;
+			}
 		case NifValue::tByteVector3:
 			{
 				auto vec = qobject_cast<VectorEdit *>(edit)->getVector3();

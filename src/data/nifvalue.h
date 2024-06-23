@@ -108,15 +108,26 @@ public:
 		tLineString,
 		tChar8String,
 		// all string types should come between tSizedString and tChar8String
+		// all color types should come between tColor3 and tByteColor4BGRA
 		tColor3,
 		tColor4,
+		tByteColor4,
+		tByteColor4BGRA,
+		// all vector3 types should come between tVector3 and tByteVector3
 		tVector3,
+		tHalfVector3,
+		tShortVector3,
+		tUshortVector3,
+		tByteVector3,
 		tQuat,
 		tQuatXYZW,
 		tMatrix,
 		tMatrix4,
 		tVector2,
+		// all vector4 types should come between tVector4 and tUDecVector4
 		tVector4,
+		tByteVector4,
+		tUDecVector4,
 		tTriangle,
 		tFileVersion,
 		tByteArray,
@@ -126,11 +137,7 @@ public:
 		tByteMatrix,
 		tBlob,
 		tHfloat,
-		tHalfVector3,
-		tUshortVector3,
-		tByteVector3,
 		tHalfVector2,
-		tByteColor4,
 		tBSVertexDesc,
 		tNormbyte,
 		tNone= 0xff
@@ -227,7 +234,7 @@ public:
 	static QString enumOptionText( const QString & eid, quint32 oval );
 
 	/*! Get an option from an option string.
-	 * 
+	 *
 	 * @param eid	The name of the enum type.
 	 * @param oid	The name of the option.
 	 * @param ok	Is set to true if successful, is set to false if the option string was not found.
@@ -250,7 +257,7 @@ public:
 	//! Check if the type of the data is not tNone.
 	bool isValid() const { return typ != tNone; }
 	//! Check if the type of the data is a color type (Color3 or Color4 in xml).
-	bool isColor() const { return typ == tColor3 || typ == tColor4 || typ == tByteColor4; }
+	bool isColor() const { return typ >= tColor3 && typ <= tByteColor4BGRA; }
 	//! Check if the type of the data is a count.
 	bool isCount() const { return (typ >= tBool && typ <= tUInt); }
 	//! Check if the type of the data is a flag type (Flags in xml).
@@ -269,12 +276,18 @@ public:
 	bool isString() const { return (typ >= tSizedString && typ <= tChar8String) || typ == tString; }
 	//! Check if the type of the data is a Vector 4.
 	bool isVector4() const { return typ == tVector4; }
+	//! Check if the type of the data is ByteVector4.
+	bool isByteVector4() const { return typ == tByteVector4; }
+	//! Check if the type of the data is UDecVector4.
+	bool isUDecVector4() const { return typ == tUDecVector4; }
+	bool isAVector4() const { return typ >= tVector4 && typ <= tUDecVector4; }
 	//! Check if the type of the data is a Vector 3.
 	bool isVector3() const { return typ == tVector3; }
 	//! Check if the type of the data is a Half Vector3.
 	bool isHalfVector3() const { return typ == tHalfVector3; }
 	//! Check if the type of the data is a Byte Vector3.
 	bool isByteVector3() const { return typ == tByteVector3; }
+	bool isAVector3() const { return typ >= tVector3 && typ <= tByteVector3; }
 	//! Check if the type of the data is a HalfVector2.
 	bool isHalfVector2() const { return typ == tHalfVector2; }
 	//! Check if the type of the data is a Vector 2.
@@ -580,11 +593,24 @@ template <> inline Matrix4 NifValue::get( const BaseModel * model, const NifItem
 }
 template <> inline Vector4 NifValue::get( const BaseModel * model, const NifItem * item ) const
 {
-	return getType<Vector4>( tVector4, model, item );
+	if ( typ >= tVector4 && typ <= tUDecVector4 )
+		return *static_cast<Vector4 *>(val.data);
+
+	if ( model )
+		reportConvertToError( model, item, "a Vector4" );
+	return Vector4();
+}
+template <> inline ByteVector4 NifValue::get( const BaseModel * model, const NifItem * item ) const
+{
+	return getType<ByteVector4>( tByteVector4, model, item );
+}
+template <> inline UDecVector4 NifValue::get( const BaseModel * model, const NifItem * item ) const
+{
+	return getType<UDecVector4>( tUDecVector4, model, item );
 }
 template <> inline Vector3 NifValue::get( const BaseModel * model, const NifItem * item ) const
 {
-	if ( typ == tVector3 || typ == tHalfVector3 )
+	if ( typ >= tVector3 && typ <= tByteVector3 )
 		return *static_cast<Vector3 *>(val.data);
 
 	if ( model )
@@ -594,6 +620,10 @@ template <> inline Vector3 NifValue::get( const BaseModel * model, const NifItem
 template <> inline HalfVector3 NifValue::get( const BaseModel * model, const NifItem * item ) const
 {
 	return getType<HalfVector3>( tHalfVector3, model, item );
+}
+template <> inline ShortVector3 NifValue::get( const BaseModel * model, const NifItem * item ) const
+{
+	return getType<ShortVector3>( tShortVector3, model, item );
 }
 template <> inline UshortVector3 NifValue::get( const BaseModel * model, const NifItem * item ) const
 {
@@ -624,9 +654,18 @@ template <> inline ByteColor4 NifValue::get( const BaseModel * model, const NifI
 {
 	return getType<ByteColor4>( tByteColor4, model, item );
 }
+template <> inline ByteColor4BGRA NifValue::get( const BaseModel * model, const NifItem * item ) const
+{
+	return getType<ByteColor4BGRA>( tByteColor4BGRA, model, item );
+}
 template <> inline Color4 NifValue::get( const BaseModel * model, const NifItem * item ) const
 {
-	return getType<Color4>( tColor4, model, item );
+	if ( typ >= tColor4 && typ <= tByteColor4BGRA )
+		return *static_cast<Color4 *>(val.data);
+
+	if ( model )
+		reportConvertToError( model, item, "a Color4" );
+	return Color4();
 }
 template <> inline Triangle NifValue::get( const BaseModel * model, const NifItem * item ) const
 {
@@ -737,6 +776,16 @@ template <> inline bool NifValue::set( const Vector4 & x, const BaseModel * mode
 {
 	return setType( tVector4, x, model, item );
 }
+//! Set the data from a ByteVector4. Return true if successful.
+template <> inline bool NifValue::set( const ByteVector4 & x, const BaseModel * model, const NifItem * item )
+{
+	return setType( tByteVector4, x, model, item );
+}
+//! Set the data from a UDecVector4. Return true if successful.
+template <> inline bool NifValue::set( const UDecVector4 & x, const BaseModel * model, const NifItem * item )
+{
+	return setType( tUDecVector4, x, model, item );
+}
 //! Set the data from a Vector3. Return true if successful.
 template <> inline bool NifValue::set( const Vector3 & x, const BaseModel * model, const NifItem * item )
 {
@@ -746,6 +795,11 @@ template <> inline bool NifValue::set( const Vector3 & x, const BaseModel * mode
 template <> inline bool NifValue::set( const HalfVector3 & x, const BaseModel * model, const NifItem * item )
 {
 	return setType( tHalfVector3, x, model, item );
+}
+//! Set the data from a ShortVector3. Return true if successful.
+template <> inline bool NifValue::set( const ShortVector3 & x, const BaseModel * model, const NifItem * item )
+{
+	return setType( tShortVector3, x, model, item );
 }
 //! Set the data from a UshortVector3. Return true if successful.
 template <> inline bool NifValue::set( const UshortVector3 & x, const BaseModel * model, const NifItem * item )
@@ -776,6 +830,11 @@ template <> inline bool NifValue::set( const Color3 & x, const BaseModel * model
 template <> inline bool NifValue::set( const ByteColor4 & x, const BaseModel * model, const NifItem * item )
 {
 	return setType( tByteColor4, x, model, item );
+}
+//! Set the data from a ByteColor4BGRA. Return true if successful.
+template <> inline bool NifValue::set( const ByteColor4BGRA & x, const BaseModel * model, const NifItem * item )
+{
+	return setType( tByteColor4BGRA, x, model, item );
 }
 //! Set the data from a Color4. Return true if successful.
 template <> inline bool NifValue::set( const Color4 & x, const BaseModel * model, const NifItem * item )

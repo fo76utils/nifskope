@@ -1476,13 +1476,11 @@ QVariant NifModel::data( const QModelIndex & index, int role ) const
 						return QString( "0x%1" )
 						       .arg( item->getCountValue(), 8, 16, QChar( '0' ) );
 					case NifValue::tVector3:
-						return item->get<Vector3>().toHtml();
 					case NifValue::tHalfVector3:
-						return item->get<HalfVector3>().toHtml();
+					case NifValue::tShortVector3:
 					case NifValue::tUshortVector3:
-						return item->get<UshortVector3>().toHtml();
 					case NifValue::tByteVector3:
-						return item->get<ByteVector3>().toHtml();
+						return item->get<Vector3>().toHtml();
 					case NifValue::tMatrix:
 						return item->get<Matrix>().toHtml();
 					case NifValue::tMatrix4:
@@ -1498,23 +1496,16 @@ QVariant NifModel::data( const QModelIndex & index, int role ) const
 							       .arg( c[1] )
 							       .arg( c[2] );
 						}
-					case NifValue::tByteColor4:
-						{
-							Color4 c = item->get<ByteColor4>();
-							return QString( "R %1\nG %2\nB %3\nA %4" )
-								.arg( c[0] )
-								.arg( c[1] )
-								.arg( c[2] )
-								.arg( c[3] );
-						}
 					case NifValue::tColor4:
+					case NifValue::tByteColor4:
+					case NifValue::tByteColor4BGRA:
 						{
 							Color4 c = item->get<Color4>();
 							return QString( "R %1\nG %2\nB %3\nA %4" )
-							       .arg( c[0] )
-							       .arg( c[1] )
-							       .arg( c[2] )
-							       .arg( c[3] );
+									.arg( c[0] )
+									.arg( c[1] )
+									.arg( c[2] )
+									.arg( c[3] );
 						}
 					default:
 						break;
