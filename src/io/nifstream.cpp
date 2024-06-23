@@ -178,6 +178,24 @@ bool NifIStream::read( NifValue & val )
 
 			return (dataStream->status() == QDataStream::Ok);
 		}
+	case NifValue::tShortVector3:
+		{
+			int16_t x, y, z;
+			float xf, yf, zf;
+
+			*dataStream >> x;
+			*dataStream >> y;
+			*dataStream >> z;
+
+			xf = (float) x;
+			yf = (float) y;
+			zf = (float) z;
+
+			Vector3 * v = static_cast<Vector3 *>(val.val.data);
+			v->xyz[0] = xf; v->xyz[1] = yf; v->xyz[2] = zf;
+
+			return (dataStream->status() == QDataStream::Ok);
+		}
 	case NifValue::tUshortVector3:
 		{
 			uint16_t x, y, z;
@@ -265,6 +283,20 @@ bool NifIStream::read( NifValue & val )
 			*dataStream >> *v;
 			return (dataStream->status() == QDataStream::Ok);
 		}
+	case NifValue::tByteVector4:
+		{
+			std::uint32_t	v;
+			*dataStream >> v;
+			(void) new( static_cast<ByteVector4 *>(val.val.data) ) ByteVector4( v );
+			return (dataStream->status() == QDataStream::Ok);
+		}
+	case NifValue::tUDecVector4:
+		{
+			std::uint32_t	v;
+			*dataStream >> v;
+			(void) new( static_cast<UDecVector4 *>(val.val.data) ) UDecVector4( v );
+			return (dataStream->status() == QDataStream::Ok);
+		}
 	case NifValue::tTriangle:
 		{
 			Triangle * t = static_cast<Triangle *>(val.val.data);
@@ -299,6 +331,13 @@ bool NifIStream::read( NifValue & val )
 			std::uint32_t	rgba;
 			*dataStream >> rgba;
 			(void) new( static_cast<ByteColor4 *>(val.val.data) ) ByteColor4( rgba );
+			return (dataStream->status() == QDataStream::Ok);
+		}
+	case NifValue::tByteColor4BGRA:
+		{
+			std::uint32_t	bgra;
+			*dataStream >> bgra;
+			(void) new( static_cast<ByteColor4BGRA *>(val.val.data) ) ByteColor4BGRA( bgra );
 			return (dataStream->status() == QDataStream::Ok);
 		}
 	case NifValue::tColor4:
@@ -659,6 +698,19 @@ bool NifOStream::write( const NifValue & val )
 
 			return device->write( (char*)v, 3 ) == 3;
 		}
+	case NifValue::tShortVector3:
+		{
+			Vector3 * vec = static_cast<Vector3 *>(val.val.data);
+			if ( !vec )
+				return false;
+
+			int16_t v[3];
+			v[0] = (int16_t) round(vec->xyz[0]);
+			v[1] = (int16_t) round(vec->xyz[1]);
+			v[2] = (int16_t) round(vec->xyz[2]);
+
+			return device->write( (char*)v, 6 ) == 6;
+		}
 	case NifValue::tUshortVector3:
 		{
 			Vector3 * vec = static_cast<Vector3 *>(val.val.data);
@@ -720,6 +772,24 @@ bool NifOStream::write( const NifValue & val )
 		return device->write( (char *)static_cast<Vector3 *>(val.val.data)->xyz, 12 ) == 12;
 	case NifValue::tVector4:
 		return device->write( (char *)static_cast<Vector4 *>(val.val.data)->xyzw, 16 ) == 16;
+	case NifValue::tByteVector4:
+		{
+			ByteVector4 * vec = static_cast<ByteVector4 *>(val.val.data);
+			if ( !vec )
+				return false;
+			char	v[4];
+			FileBuffer::writeUInt32Fast( v, std::uint32_t( *vec ) );
+			return device->write( v, 4 ) == 4;
+		}
+	case NifValue::tUDecVector4:
+		{
+			UDecVector4 * vec = static_cast<UDecVector4 *>(val.val.data);
+			if ( !vec )
+				return false;
+			char	v[4];
+			FileBuffer::writeUInt32Fast( v, std::uint32_t( *vec ) );
+			return device->write( v, 4 ) == 4;
+		}
 	case NifValue::tTriangle:
 		return device->write( (char *)static_cast<Triangle *>(val.val.data)->v, 6 ) == 6;
 	case NifValue::tQuat:
@@ -740,6 +810,15 @@ bool NifOStream::write( const NifValue & val )
 	case NifValue::tByteColor4:
 		{
 			ByteColor4 * color = static_cast<ByteColor4 *>(val.val.data);
+			if ( !color )
+				return false;
+			char	c[4];
+			FileBuffer::writeUInt32Fast( c, std::uint32_t(*color) );
+			return device->write( c, 4 ) == 4;
+		}
+	case NifValue::tByteColor4BGRA:
+		{
+			ByteColor4BGRA * color = static_cast<ByteColor4BGRA *>(val.val.data);
 			if ( !color )
 				return false;
 			char	c[4];

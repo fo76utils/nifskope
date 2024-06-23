@@ -32,7 +32,6 @@ public:
 
 	QString textStats() const override; // TODO (Gavrant): move to Shape
 
-	void forMeshIndex(const NifModel* nif, std::function<void (const QString&, int)>& f);
 	int meshCount();
 
 	// end Node

@@ -482,6 +482,24 @@ public:
 	}
 };
 
+class ShortVector3 : public Vector3
+{
+public:
+	//! Default constructor
+	ShortVector3()
+	{
+		xyz[0] = xyz[1] = xyz[2] = 0.0;
+	}
+	//! Constructor
+	ShortVector3( float x, float y, float z ) : Vector3( x, y, z )
+	{
+	}
+
+	ShortVector3( Vector3 v ) : Vector3( v )
+	{
+	}
+};
+
 class UshortVector3 : public Vector3
 {
 public:
@@ -569,6 +587,14 @@ public:
 		xyzw[1] = v3[1];
 		xyzw[2] = v3[2];
 		xyzw[3] = w;
+	}
+	inline Vector4 & operator=( const FloatVector4 & v )
+	{
+		xyzw[0] = v[0];
+		xyzw[1] = v[1];
+		xyzw[2] = v[2];
+		xyzw[3] = v[3];
+		return *this;
 	}
 	//! Add-equals operator
 	Vector4 & operator+=( const Vector4 & v )
@@ -767,6 +793,44 @@ inline Vector3::Vector3( const Vector4 & v4 )
 	xyz[1] = v4[1];
 	xyz[2] = v4[2];
 }
+
+class ByteVector4 : public Vector4
+{
+public:
+	ByteVector4() : Vector4( FloatVector4( 0.0f, 0.0f, 1.0f, 1.0f ) )
+	{
+	}
+
+	ByteVector4( const std::uint32_t & v ) : Vector4( ( FloatVector4(v) - 127.5f ) / 127.5f )
+	{
+	}
+
+	inline operator std::uint32_t() const
+	{
+		return std::uint32_t( FloatVector4( *this ) * 127.5f + 127.5f );
+	}
+};
+
+class UDecVector4 : public Vector4
+{
+public:
+	UDecVector4() : Vector4( FloatVector4( 0.0f, 0.0f, 1.0f, 1.0f ) )
+	{
+	}
+
+	UDecVector4( const std::uint32_t & v ) : Vector4( FloatVector4::convertX10Y10Z10( v ) )
+	{
+		xyzw[3] = ( !(v & 0x80000000U) ? 1.0f : -1.0f );
+	}
+
+	inline operator std::uint32_t() const
+	{
+		std::uint32_t	v = FloatVector4( *this ).convertToX10Y10Z10();
+		if ( xyzw[3] < 0.0f )
+			v = v | 0x80000000U;
+		return v;
+	}
+};
 
 //! A quaternion
 class Quat
@@ -1535,6 +1599,21 @@ public:
 	}
 };
 
+class ByteColor4BGRA : public Color4
+{
+public:
+	//! Default constructor
+	ByteColor4BGRA() { rgba[0] = rgba[1] = rgba[2] = rgba[3] = 1.0; }
+	ByteColor4BGRA( const std::uint32_t & c )
+		: Color4( FloatVector4(c).shuffleValues(0xC6) / 255.0f )
+	{
+	}
+	inline operator std::uint32_t() const
+	{
+		return std::uint32_t( FloatVector4(*this).shuffleValues(0xC6) * 255.0f );
+	}
+};
+
 
 inline Color3::Color3( const Color4 & c4 )
 {
@@ -1971,12 +2050,16 @@ inline QDataStream & operator>>( QDataStream & ds, BSVertexDesc & d )
 Q_DECLARE_TYPEINFO( Vector2,     Q_MOVABLE_TYPE );
 Q_DECLARE_TYPEINFO( Vector3,     Q_MOVABLE_TYPE );
 Q_DECLARE_TYPEINFO( HalfVector3, Q_MOVABLE_TYPE );
+Q_DECLARE_TYPEINFO( ShortVector3, Q_MOVABLE_TYPE );
 Q_DECLARE_TYPEINFO( UshortVector3, Q_MOVABLE_TYPE );
 Q_DECLARE_TYPEINFO( ByteVector3, Q_MOVABLE_TYPE );
 Q_DECLARE_TYPEINFO( Vector4,     Q_MOVABLE_TYPE );
+Q_DECLARE_TYPEINFO( ByteVector4, Q_MOVABLE_TYPE );
+Q_DECLARE_TYPEINFO( UDecVector4, Q_MOVABLE_TYPE );
 Q_DECLARE_TYPEINFO( Color3,      Q_MOVABLE_TYPE );
 Q_DECLARE_TYPEINFO( Color4,      Q_MOVABLE_TYPE );
 Q_DECLARE_TYPEINFO( ByteColor4,  Q_MOVABLE_TYPE );
+Q_DECLARE_TYPEINFO( ByteColor4BGRA, Q_MOVABLE_TYPE );
 Q_DECLARE_TYPEINFO( Triangle,    Q_MOVABLE_TYPE );
 Q_DECLARE_TYPEINFO( Quat,        Q_MOVABLE_TYPE );
 Q_DECLARE_TYPEINFO( Matrix,      Q_MOVABLE_TYPE );
