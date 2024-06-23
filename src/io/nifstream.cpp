@@ -1030,8 +1030,12 @@ int NifSStream::size( const NifValue & val )
 	case NifValue::tByteVector3:
 		return 3;
 	case NifValue::tHalfVector3:
+	case NifValue::tShortVector3:
+	case NifValue::tUshortVector3:
 		return 6;
 	case NifValue::tHalfVector2:
+	case NifValue::tByteVector4:
+	case NifValue::tUDecVector4:
 		return 4;
 	case NifValue::tVector3:
 		return 12;
@@ -1052,6 +1056,7 @@ int NifSStream::size( const NifValue & val )
 	case NifValue::tColor3:
 		return 12;
 	case NifValue::tByteColor4:
+	case NifValue::tByteColor4BGRA:
 		return 4;
 	case NifValue::tColor4:
 		return 16;
