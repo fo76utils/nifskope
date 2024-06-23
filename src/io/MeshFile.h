@@ -33,7 +33,7 @@ public:
 	QVector<Color4> colors;
 	//! Tangents
 	QVector<Vector3> tangents;
-	//! Bitangents basis (bitangents[i] = cross(tangents[i] * bitangentsBasis[i], normals[i]))
+	//! Bitangents basis (bitangents[i] = cross(normals[i], tangents[i] * bitangentsBasis[i]))
 	QVector<float> bitangentsBasis;
 	//! UV coordinate sets
 	bool	haveTexCoord2 = false;

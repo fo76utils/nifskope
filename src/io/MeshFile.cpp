@@ -396,7 +396,7 @@ void MeshFile::calculateBitangents( QVector<Vector3> & bitangents ) const
 	qsizetype	i = 0;
 	for ( ; (i + 1) < m; i++ ) {
 		FloatVector4	t( &(srcT[i][0]) );
-		t = ( t * srcB[i] ).crossProduct3( FloatVector4( &(srcN[i][0]) ) );
+		t = FloatVector4( &(srcN[i][0]) ).crossProduct3( t * srcB[i] );
 		dstB[i] = Vector3( t[0], t[1], t[2] );
 	}
 	for ( ; i < n; i++ ) {
@@ -406,7 +406,7 @@ void MeshFile::calculateBitangents( QVector<Vector3> & bitangents ) const
 			normal = FloatVector4( srcN[i][0], srcN[i][1], srcN[i][2], 0.0f );
 		if ( i < bitangentsBasis.size() )
 			t *= srcB[i];
-		t = t.crossProduct3( normal );
+		t = normal.crossProduct3( t );
 		dstB[i] = Vector3( t[0], t[1], t[2] );
 	}
 }

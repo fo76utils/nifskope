@@ -399,7 +399,7 @@ void exportCreatePrimitive(tinygltf::Model& model, QByteArray& bin, std::shared_
 	} else if ( attr == "TANGENT" ) {
 		for ( const auto& v : mesh->tangents ) {
 			Vector4	tmp( v );
-			tmp[3] = mesh->bitangentsBasis.at( qsizetype(&v - mesh->tangents.data()) ) * -1.0f;
+			tmp[3] = mesh->bitangentsBasis.at( qsizetype(&v - mesh->tangents.data()) );
 			exportFloats( bin, &(tmp[0]), 4 );
 		}
 	} else if ( attr == "TEXCOORD_0" ) {

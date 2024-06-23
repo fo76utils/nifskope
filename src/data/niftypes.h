@@ -818,17 +818,13 @@ public:
 	{
 	}
 
-	UDecVector4( const std::uint32_t & v ) : Vector4( FloatVector4::convertX10Y10Z10( v ) )
+	UDecVector4( const std::uint32_t & v ) : Vector4( FloatVector4::convertX10Y10Z10W2( v ) )
 	{
-		xyzw[3] = ( !(v & 0x80000000U) ? 1.0f : -1.0f );
 	}
 
 	inline operator std::uint32_t() const
 	{
-		std::uint32_t	v = FloatVector4( *this ).convertToX10Y10Z10();
-		if ( xyzw[3] < 0.0f )
-			v = v | 0x80000000U;
-		return v;
+		return FloatVector4( *this ).convertToX10Y10Z10W2();
 	}
 };
 
