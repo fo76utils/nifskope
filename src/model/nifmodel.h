@@ -68,6 +68,8 @@ class NifModel final : public BaseModel
 	friend class NifModelEval;
 	friend class NifOStream;
 	friend class ArrayUpdateCommand;
+	friend class spMeshFileExport;
+	friend class spMeshFileImport;
 
 public:
 	NifModel( QObject * parent = 0 );

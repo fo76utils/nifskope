@@ -3,11 +3,16 @@
 #include <QDialog>
 #include <QFileDialog>
 #include <QSettings>
+#include <QIODevice>
+#include <QBuffer>
+#include <QCryptographicHash>
 
 #include "libfo76utils/src/common.hpp"
 #include "libfo76utils/src/filebuf.hpp"
 #include "libfo76utils/src/material.hpp"
 #include "model/nifmodel.h"
+#include "io/nifstream.h"
+#include "qtcompat.h"
 
 #ifdef Q_OS_WIN32
 #  include <direct.h>
@@ -58,7 +63,7 @@ public:
 
 	static std::string getNifItemFilePath( NifModel * nif, const NifItem * item );
 	static std::string getOutputDirectory();
-	static void writeFileWithPath( const char * fileName, const char * buf, qsizetype bufSize );
+	static void writeFileWithPath( const std::string & fileName, const char * buf, qsizetype bufSize );
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
@@ -121,13 +126,13 @@ std::string spResourceFileExtract::getOutputDirectory()
 	return fullPath;
 }
 
-void spResourceFileExtract::writeFileWithPath( const char * fileName, const char * buf, qsizetype bufSize )
+void spResourceFileExtract::writeFileWithPath( const std::string & fileName, const char * buf, qsizetype bufSize )
 {
 	if ( bufSize < 0 )
 		return;
 	OutputFile *	f = nullptr;
 	try {
-		f = new OutputFile( fileName, 0 );
+		f = new OutputFile( fileName.c_str(), 0 );
 	} catch ( ... ) {
 		std::string	pathName;
 		size_t	pathOffs = 0;
@@ -144,7 +149,7 @@ void spResourceFileExtract::writeFileWithPath( const char * fileName, const char
 			(void) mkdir( pathName.c_str(), 0755 );
 #endif
 		}
-		f = new OutputFile( fileName, 0 );
+		f = new OutputFile( fileName.c_str(), 0 );
 	}
 
 	try {
@@ -191,11 +196,11 @@ QModelIndex spResourceFileExtract::cast( NifModel * nif, const QModelIndex & ind
 
 		if ( !matFileData.empty() ) {
 			matFileData += '\n';
-			writeFileWithPath( fullPath.c_str(), matFileData.c_str(), qsizetype(matFileData.length()) );
+			writeFileWithPath( fullPath, matFileData.c_str(), qsizetype(matFileData.length()) );
 		} else {
 			QByteArray	fileData;
 			if ( nif->getResourceFile( fileData, filePath ) )
-				writeFileWithPath( fullPath.c_str(), fileData.data(), fileData.size() );
+				writeFileWithPath( fullPath, fileData.data(), fileData.size() );
 		}
 	} catch ( std::exception & e ) {
 		QMessageBox::critical( nullptr, "NifSkope error", QString("Error extracting file: %1" ).arg( e.what() ) );
@@ -281,9 +286,9 @@ QModelIndex spExtractAllResources::cast( NifModel * nif, const QModelIndex & ind
 			fullPath += *i;
 			if ( !matFileData.empty() ) {
 				matFileData += '\n';
-				spResourceFileExtract::writeFileWithPath( fullPath.c_str(), matFileData.c_str(), qsizetype(matFileData.length()) );
+				spResourceFileExtract::writeFileWithPath( fullPath, matFileData.c_str(), qsizetype(matFileData.length()) );
 			} else if ( nif->getResourceFile( fileData, *i ) ) {
-				spResourceFileExtract::writeFileWithPath( fullPath.c_str(), fileData.data(), fileData.size() );
+				spResourceFileExtract::writeFileWithPath( fullPath, fileData.data(), fileData.size() );
 			}
 		}
 	} catch ( std::exception & e ) {
@@ -293,4 +298,212 @@ QModelIndex spExtractAllResources::cast( NifModel * nif, const QModelIndex & ind
 }
 
 REGISTER_SPELL( spExtractAllResources )
+
+//! Convert Starfield BSGeometry block(s) to use external geometry data
+class spMeshFileExport final : public Spell
+{
+public:
+	QString name() const override final { return Spell::tr( "Convert to External Geometry" ); }
+	QString page() const override final { return Spell::tr( "Mesh" ); }
+	QIcon icon() const override final
+	{
+		return QIcon();
+	}
+	bool instant() const override final { return true; }
+
+	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
+	{
+		if ( !( nif && nif->getBSVersion() >= 170 ) )
+			return false;
+		const NifItem *	item = nif->getItem( index, false );
+		if ( !item )
+			return true;
+		return ( item->name() == "BSGeometry" && ( nif->get<quint32>(item, "Flags") & 0x0200 ) != 0 );
+	}
+
+	bool processItem( NifModel * nif, NifItem * item, const std::string & outputDirectory );
+	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final;
+};
+
+bool spMeshFileExport::processItem( NifModel * nif, NifItem * item, const std::string & outputDirectory )
+{
+	quint32	flags;
+	if ( !( item && item->name() == "BSGeometry" && ( (flags = nif->get<quint32>(item, "Flags")) & 0x0200 ) != 0 ) )
+		return false;
+
+	QString	meshPaths[4];
+	bool	haveMeshes = false;
+
+	auto	meshesIndex = nif->getIndex( item, "Meshes" );
+	if ( meshesIndex.isValid() ) {
+		for ( int l = 0; l < 4; l++ ) {
+			auto	meshIndex = QModelIndex_child( meshesIndex, l );
+			if ( !( meshIndex.isValid() && nif->get<bool>(meshIndex, "Has Mesh") ) )
+				continue;
+			auto	meshData = nif->getIndex( nif->getIndex( meshIndex, "Mesh" ), "Mesh Data" );
+			if ( !meshData.isValid() )
+				continue;
+			haveMeshes = true;
+
+			QBuffer	meshBuf;
+			meshBuf.open( QIODevice::WriteOnly );
+			{
+				NifOStream	nifStream( nif, &meshBuf );
+				nif->saveItem( nif->getItem( meshData, false ), nifStream );
+			}
+
+			QCryptographicHash	h( QCryptographicHash::Sha1 );
+			h.addData( meshBuf.data() );
+			meshPaths[l] = h.result().toHex();
+			meshPaths[l].insert( 20, QChar('\\') );
+
+			std::string	fullPath( outputDirectory );
+			fullPath += Game::GameManager::get_full_path( meshPaths[l], "geometries/", ".mesh" );
+			try {
+				spResourceFileExtract::writeFileWithPath( fullPath, meshBuf.data().data(), meshBuf.data().size() );
+			} catch ( std::exception & e ) {
+				QMessageBox::critical( nullptr, "NifSkope error", QString("Error extracting file: %1" ).arg( e.what() ) );
+			}
+		}
+	}
+
+	item->invalidateVersionCondition();
+	item->invalidateCondition();
+	nif->set<quint32>( item, "Flags", flags & ~0x0200U );
+
+	meshesIndex = nif->getIndex( item, "Meshes" );
+	for ( int l = 0; l < 4; l++ ) {
+		auto	meshIndex = QModelIndex_child( meshesIndex, l );
+		if ( !( meshIndex.isValid() && nif->get<bool>(meshIndex, "Has Mesh") ) )
+			continue;
+		nif->set<QString>( nif->getIndex( meshIndex, "Mesh" ), "Mesh Path", meshPaths[l] );
+	}
+
+	return haveMeshes;
+}
+
+QModelIndex spMeshFileExport::cast( NifModel * nif, const QModelIndex & index )
+{
+	if ( !( nif && nif->getBSVersion() >= 170 ) )
+		return index;
+
+	NifItem *	item = nif->getItem( index, false );
+	if ( item && !( item->name() == "BSGeometry" && (nif->get<quint32>(item, "Flags") & 0x0200) != 0 ) )
+		return index;
+
+	std::string	outputDirectory( spResourceFileExtract::getOutputDirectory() );
+	if ( outputDirectory.empty() )
+		return index;
+
+	bool	meshesConverted = false;
+	if ( item ) {
+		meshesConverted = processItem( nif, item, outputDirectory );
+	} else {
+		for ( int b = 0; b < nif->getBlockCount(); b++ )
+			meshesConverted |= processItem( nif, nif->getBlockItem( quint32(b) ), outputDirectory );
+	}
+	if ( meshesConverted )
+		Game::GameManager::close_resources();
+
+	return index;
+}
+
+REGISTER_SPELL( spMeshFileExport )
+
+//! Convert Starfield BSGeometry block(s) to use internal geometry data
+class spMeshFileImport final : public Spell
+{
+public:
+	QString name() const override final { return Spell::tr( "Convert to Internal Geometry" ); }
+	QString page() const override final { return Spell::tr( "Mesh" ); }
+	QIcon icon() const override final
+	{
+		return QIcon();
+	}
+	bool instant() const override final { return true; }
+
+	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
+	{
+		if ( !( nif && nif->getBSVersion() >= 170 ) )
+			return false;
+		const NifItem *	item = nif->getItem( index, false );
+		if ( !item )
+			return true;
+		return ( item->name() == "BSGeometry" && ( nif->get<quint32>(item, "Flags") & 0x0200 ) == 0 );
+	}
+
+	bool processItem( NifModel * nif, NifItem * item );
+	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final;
+};
+
+bool spMeshFileImport::processItem( NifModel * nif, NifItem * item )
+{
+	quint32	flags;
+	if ( !( item && item->name() == "BSGeometry" && ( (flags = nif->get<quint32>(item, "Flags")) & 0x0200 ) == 0 ) )
+		return false;
+
+	QByteArray	meshData[4];
+
+	auto	meshesIndex = nif->getIndex( item, "Meshes" );
+	if ( meshesIndex.isValid() ) {
+		for ( int l = 0; l < 4; l++ ) {
+			auto	meshIndex = QModelIndex_child( meshesIndex, l );
+			if ( !( meshIndex.isValid() && nif->get<bool>(meshIndex, "Has Mesh") ) )
+				continue;
+			QString	meshPath = nif->get<QString>( nif->getIndex( meshIndex, "Mesh" ), "Mesh Path" );
+			if ( meshPath.isEmpty() )
+				continue;
+			if ( !nif->getResourceFile( meshData[l], meshPath, "geometries/", ".mesh" ) ) {
+				QMessageBox::critical( nullptr, "NifSkope error", QString("Failed to load mesh file '%1'" ).arg( meshPath ) );
+				return false;
+			}
+		}
+	}
+
+	item->invalidateVersionCondition();
+	item->invalidateCondition();
+	nif->set<quint32>( item, "Flags", flags | 0x0200U );
+
+	meshesIndex = nif->getIndex( item, "Meshes" );
+	for ( int l = 0; l < 4; l++ ) {
+		auto	meshIndex = QModelIndex_child( meshesIndex, l );
+		if ( !( meshIndex.isValid() && nif->get<bool>(meshIndex, "Has Mesh") ) )
+			continue;
+
+		NifItem *	meshItem = nif->getItem( nif->getIndex( meshIndex, "Mesh" ), "Mesh Data" );
+		if ( !meshItem )
+			continue;
+
+		QBuffer	meshBuf;
+		meshBuf.setData( meshData[l] );
+		meshBuf.open( QIODevice::ReadOnly );
+		{
+			NifIStream	nifStream( nif, &meshBuf );
+			nif->loadItem( meshItem, nifStream );
+		}
+	}
+
+	return true;
+}
+
+QModelIndex spMeshFileImport::cast( NifModel * nif, const QModelIndex & index )
+{
+	if ( !( nif && nif->getBSVersion() >= 170 ) )
+		return index;
+
+	NifItem *	item = nif->getItem( index, false );
+	if ( item && !( item->name() == "BSGeometry" && (nif->get<quint32>(item, "Flags") & 0x0200) == 0 ) )
+		return index;
+
+	if ( item ) {
+		processItem( nif, item );
+	} else {
+		for ( int b = 0; b < nif->getBlockCount(); b++ )
+			processItem( nif, nif->getBlockItem( quint32(b) ) );
+	}
+
+	return index;
+}
+
+REGISTER_SPELL( spMeshFileImport )
 
