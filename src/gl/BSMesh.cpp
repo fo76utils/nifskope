@@ -106,10 +106,11 @@ void BSMesh::drawSelection() const
 	if ( scene->hasOption(Scene::ShowNodes) )
 		Node::drawSelection();
 
-	if ( isHidden() || !scene->isSelModeObject() )
+	auto& blk = scene->currentBlock;
+
+	if ( isHidden() || !( scene->isSelModeObject() && blk == iBlock ) )
 		return;
 
-	auto& blk = scene->currentBlock;
 	auto& idx = scene->currentIndex;
 	auto nif = NifModel::fromValidIndex(blk);
 
@@ -128,49 +129,141 @@ void BSMesh::drawSelection() const
 	glPushMatrix();
 	glMultMatrix(viewTrans());
 
-	if ( blk == iBlock ) {
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glEnable(GL_POLYGON_OFFSET_FILL);
+	glPolygonOffset(-1.0f, -2.0f);
 
-		glEnable(GL_POLYGON_OFFSET_FILL);
-		glPolygonOffset(-1.0f, -2.0f);
+	glPointSize(1.5f);
+	glLineWidth(1.6f);
+	glNormalColor();
 
-		glPointSize(1.5f);
-		glLineWidth(1.6f);
+	// Name of this index
+	auto n = idx.data( NifSkopeDisplayRole ).toString();
+	// Name of this index's parent
+	auto p = idx.parent().data( NifSkopeDisplayRole ).toString();
+
+	float	normalScale = std::max< float >( bounds().radius / 20.0f, 1.0f / 512.0f );
+
+	// Draw All Verts lambda
+	auto allv = [this]( float size ) {
+		glPointSize( size );
+		glBegin( GL_POINTS );
+
+		for ( int j = 0; j < transVerts.count(); j++ )
+			glVertex( transVerts.value( j ) );
+
+		glEnd();
+	};
+
+	// Draw Lines lambda
+	auto lines = [this, &normalScale, &allv]( const QVector<Vector3> & v, int s, bool isBitangent = false ) {
 		glNormalColor();
+		if ( !isBitangent ) {
+			allv( 7.0f );
 
-		// Name of this index
-		auto n = idx.data( NifSkopeDisplayRole ).toString();
-
-		if ( n == "Bounding Sphere" ) {
-			auto sph = BoundSphere( nif, idx );
-			if ( sph.radius > 0.0f ) {
-				glColor4f( 1, 1, 1, 0.33f );
-				drawSphereSimple( sph.center, sph.radius, 72 );
+			glLineWidth( 1.25f );
+			glBegin( GL_LINES );
+			for ( int j = 0; j < transVerts.count() && j < v.count(); j++ ) {
+				glVertex( transVerts.value( j ) );
+				glVertex( transVerts.value( j ) + v.value( j ) * normalScale );
+				glVertex( transVerts.value( j ) );
+				glVertex( transVerts.value( j ) - v.value( j ) * normalScale * 0.25f );
 			}
-		} else if ( n == "Bound Min Max" ) {
-			Vector3	boundsDims( nif->get<float>( idx, 3 ), nif->get<float>( idx, 4 ), nif->get<float>( idx, 5 ) );
-			if ( boundsDims[0] > 0.0f && boundsDims[1] > 0.0f && boundsDims[2] > 0.0f ) {
-				Vector3	boundsCenter( nif->get<float>( idx, 0 ), nif->get<float>( idx, 1 ), nif->get<float>( idx, 2 ) );
-				glColor4f( 1, 1, 1, 0.33f );
-				drawBox( boundsCenter - boundsDims, boundsCenter + boundsDims );
-			}
-		} else {
-			for ( const Triangle& tri : sortedTriangles ) {
-				glBegin(GL_TRIANGLES);
-				glVertex(transVerts.value(tri.v1()));
-				glVertex(transVerts.value(tri.v2()));
-				glVertex(transVerts.value(tri.v3()));
-				glEnd();
-			}
+			glEnd();
 		}
 
-		glDisable(GL_POLYGON_OFFSET_FILL);
+		if ( s >= 0 ) {
+			glDepthFunc( GL_ALWAYS );
+			if ( isBitangent ) {
+				Color4	c( cfg.highlight );
+				glColor4f( 1.0f - c[0], 1.0f - c[1], 1.0f - c[2], c[3] );
+			} else {
+				glHighlightColor();
+			}
+			glLineWidth( 3.0f );
+			glBegin( GL_LINES );
+			glVertex( transVerts.value( s ) );
+			glVertex( transVerts.value( s ) + v.value( s ) * normalScale * 2.0f );
+			glVertex( transVerts.value( s ) );
+			glVertex( transVerts.value( s ) - v.value( s ) * normalScale * 0.5f );
+			glEnd();
+		}
+		glLineWidth( 1.6f );
+	};
+
+	if ( n == "Bounding Sphere" ) {
+		auto sph = BoundSphere( nif, idx );
+		if ( sph.radius > 0.0f ) {
+			glColor4f( 1, 1, 1, 0.33f );
+			drawSphereSimple( sph.center, sph.radius, 72 );
+		}
+	} else if ( n == "Bound Min Max" ) {
+		Vector3	boundsDims( nif->get<float>( idx, 3 ), nif->get<float>( idx, 4 ), nif->get<float>( idx, 5 ) );
+		if ( boundsDims[0] > 0.0f && boundsDims[1] > 0.0f && boundsDims[2] > 0.0f ) {
+			Vector3	boundsCenter( nif->get<float>( idx, 0 ), nif->get<float>( idx, 1 ), nif->get<float>( idx, 2 ) );
+			glColor4f( 1, 1, 1, 0.33f );
+			drawBox( boundsCenter - boundsDims, boundsCenter + boundsDims );
+		}
+	} else if ( n == "Vertices" || n == "UVs" || n == "UVs 2" || n == "Vertex Colors" || n == "Weights" ) {
+		allv( 5.0f );
+
+		int	s;
+		if ( n == p && ( s = idx.row() ) >= 0 ) {
+			if ( n == "Weights" ) {
+				int	weightsPerVertex = int( nif->get<quint32>(idx.parent().parent(), "Weights Per Vertex") );
+				if ( weightsPerVertex > 1 )
+					s /= weightsPerVertex;
+			}
+			glPointSize( 10 );
+			glDepthFunc( GL_ALWAYS );
+			glHighlightColor();
+			glBegin( GL_POINTS );
+			glVertex( transVerts.value( s ) );
+			glEnd();
+		}
+	} else if ( n == "Normals" ) {
+		int	s = -1;
+		if ( n == p )
+			s = idx.row();
+		lines( transNorms, s );
+	} else if ( n == "Tangents" ) {
+		int	s = -1;
+		if ( n == p )
+			s = idx.row();
+		lines( transBitangents, s );
+		lines( transTangents, s, true );
+	} else {
+		// General wireframe
+		for ( const Triangle& tri : sortedTriangles ) {
+			glBegin(GL_TRIANGLES);
+			glVertex( transVerts.value(tri.v1()) );
+			glVertex( transVerts.value(tri.v2()) );
+			glVertex( transVerts.value(tri.v3()) );
+			glEnd();
+		}
+
+		int	s;
+		if ( n == "Triangles" && n == p && ( s = idx.row() ) >= 0 ) {
+			glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+			glHighlightColor();
+			glDepthFunc( GL_ALWAYS );
+
+			Triangle tri = sortedTriangles.value( s );
+			glBegin( GL_TRIANGLES );
+			glVertex( transVerts.value(tri.v1()) );
+			glVertex( transVerts.value(tri.v2()) );
+			glVertex( transVerts.value(tri.v3()) );
+			glEnd();
+			glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+		}
+	}
+
+	glDisable(GL_POLYGON_OFFSET_FILL);
 
 #if 0 && !defined(QT_NO_DEBUG)
-		drawSphereSimple(boundSphere.center, boundSphere.radius, 72);
+	drawSphereSimple(boundSphere.center, boundSphere.radius, 72);
 #endif
-	}
 
 	glPopMatrix();
 }
