@@ -351,8 +351,9 @@ void MeshFile::update( const NifModel * nif, const QModelIndex & index )
 		QVector<QPair<quint16, quint16>> weightsUNORM;
 		for ( quint32 j = 0; j < 8; j++ ) {
 			if ( j < numWeightsPerVertex ) {
-				quint16	b = nif->get<quint16>( QModelIndex_child( weightsIndex, k, 0 ) );
-				quint16	w = nif->get<quint16>( QModelIndex_child( weightsIndex, k, 1 ) );
+				auto	weightIndex = QModelIndex_child( weightsIndex, k );
+				quint16	b = nif->get<quint16>( QModelIndex_child( weightIndex, 0 ) );
+				quint16	w = nif->get<quint16>( QModelIndex_child( weightIndex, 1 ) );
 				weightsUNORM.append({ b, w });
 				k++;
 			} else {
