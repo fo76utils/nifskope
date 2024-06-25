@@ -38,6 +38,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QGLWidget> // Inherited
 #include <QDialog>   // Inherited
 #include <QModelIndex>
+#include <QPersistentModelIndex>
 #include <QPointer>
 
 #include <math.h>
@@ -247,7 +248,7 @@ private:
 	QAction * aTextureBlend;
 
 	int	sfMeshLOD = 0;	// TODO: implement choosing LOD
-	QString	sfMeshPath;
+	QPersistentModelIndex	sfMeshIndex;
 
 	struct Settings
 	{

@@ -888,7 +888,7 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 	nif = nifModel;
 	iShape = nifIndex;
 	isDataOnSkin = false;
-	sfMeshPath.clear();
+	sfMeshIndex = QModelIndex();
 
 	auto newTitle = tr("UV Editor");
 	if (nif)
@@ -974,7 +974,6 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 		if ( !meshes.isValid() )
 			return false;
 
-		QModelIndex	sfMeshIndex;
 		int	lodDiff = 255;
 		for ( int i = 0; i <= 3; i++ ) {
 			auto mesh = QModelIndex_child( meshes, i );
@@ -988,8 +987,6 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 				continue;
 			if ( std::abs( i - sfMeshLOD ) < lodDiff ) {
 				lodDiff = std::abs( i - sfMeshLOD );
-				if ( nif->getIndex( mesh, "Mesh Path" ).isValid() )
-					sfMeshPath = nif->findResourceFile( nif->get<QString>( mesh, "Mesh Path" ), "geometries/", ".mesh" );
 				sfMeshIndex = mesh;
 			}
 		}
@@ -1003,12 +1000,15 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 		if ( !setTexCoords( &(meshFile.triangles) ) )
 			return false;
 
-		QAction * aExportSFMesh = new QAction( tr( "Export Mesh File" ), this );
-		connect( aExportSFMesh, &QAction::triggered, this, &UVWidget::exportSFMesh );
-		addAction( aExportSFMesh );
-
-		// Fake index so that isValid() checks do not fail
-		iTexCoords = iShape;
+		if ( ( nif->get<quint32>(iShape, "Flags") & 0x0200 ) == 0 ) {
+			QAction * aExportSFMesh = new QAction( tr( "Export Mesh File" ), this );
+			connect( aExportSFMesh, &QAction::triggered, this, &UVWidget::exportSFMesh );
+			addAction( aExportSFMesh );
+			// Fake index so that isValid() checks do not fail
+			iTexCoords = iShape;
+		} else {
+			iTexCoords = nif->getIndex( nif->getIndex( sfMeshIndex, "Mesh Data" ), "UVs" );
+		}
 	}
 
 	texfiles.clear();
@@ -1145,7 +1145,15 @@ void UVWidget::updateNif()
 		disconnect( nif, &NifModel::dataChanged, this, &UVWidget::nifDataChanged );
 		nif->setState( BaseModel::Processing );
 
-		if ( nif->blockInherits( iShapeData, "NiTriBasedGeomData" ) ) {
+		if ( sfMeshIndex.isValid() ) {
+			int	numVerts = int( texcoords.size() );
+			for ( int i = 0; i < numVerts; i++ ) {
+				auto	j = QModelIndex_child( iTexCoords, i );
+				if ( !j.isValid() )
+					break;
+				nif->set<HalfVector2>( j, texcoords.at( i ) );
+			}
+		} else if ( nif->blockInherits( iShapeData, "NiTriBasedGeomData" ) ) {
 			nif->setArray<Vector2>( iTexCoords, texcoords );
 		} else if ( nif->blockInherits( iShape, "BSTriShape" ) ) {
 			int numVerts = 0;
@@ -1644,7 +1652,14 @@ void UVWidget::rotateSelection()
 
 void UVWidget::exportSFMesh()
 {
-	if ( !nif || nif->getBSVersion() < 170 || sfMeshPath.isEmpty() )
+	if ( !nif || nif->getBSVersion() < 170 || !sfMeshIndex.isValid() )
+		return;
+
+	QModelIndex	iMeshPath = nif->getIndex( sfMeshIndex, "Mesh Path" );
+	if ( !iMeshPath.isValid() )
+		return;
+	QString	sfMeshPath = nif->findResourceFile( nif->get<QString>( iMeshPath ), "geometries/", ".mesh" );
+	if ( sfMeshPath.isEmpty() )
 		return;
 
 	QByteArray	sfMeshData;
