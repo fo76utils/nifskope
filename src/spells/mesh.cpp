@@ -756,6 +756,7 @@ static void setBoundingBox( NifModel * nif, const QModelIndex & index, FloatVect
 	auto boundMinMax = nif->getIndex( index, "Bound Min Max" );
 	if ( !boundMinMax.isValid() )
 		return;
+	nif->updateArraySize( boundMinMax );
 	nif->set<float>( QModelIndex_child( boundMinMax, 0 ), bndCenter[0] );
 	nif->set<float>( QModelIndex_child( boundMinMax, 1 ), bndCenter[1] );
 	nif->set<float>( QModelIndex_child( boundMinMax, 2 ), bndCenter[2] );
@@ -863,6 +864,95 @@ public:
 	}
 };
 
+static void updateMeshlets( NifModel * nif, const QPersistentModelIndex & iMeshData, const MeshFile & meshFile )
+{
+	NifItem *	item = nif->getItem( iMeshData );
+	if ( !item )
+		return;
+	item->invalidateVersionCondition();
+	item->invalidateCondition();
+	nif->set<quint32>( iMeshData, "Version", 2 );
+
+	std::vector< int >	meshletData;
+	std::set< int >	meshletVertices;
+	int	vertexCount = 0;
+	int	vertexOffset = 0;
+	int	triangleCount = 0;
+	int	triangleOffset = 0;
+
+	int	numTriangles = int( meshFile.triangles.size() );
+	for ( int i = 0; i < numTriangles; ) {
+		Triangle	t = meshFile.triangles.at( i );
+		int	newVertices = 0;
+		for ( int j = 0; j < 3; j++ )
+			newVertices += int( meshletVertices.insert( int(t[j]) ).second );
+		if ( ( vertexCount + newVertices ) > 96 || ( triangleCount + 1 ) > 128 ) {
+			meshletData.push_back( vertexCount );
+			meshletData.push_back( vertexOffset );
+			meshletData.push_back( triangleCount );
+			meshletData.push_back( triangleOffset );
+			vertexOffset = vertexOffset + vertexCount;
+			triangleOffset = ( triangleOffset + ( triangleCount * 3 ) + 3 ) & ~3;
+			vertexCount = 0;
+			triangleCount = 0;
+			meshletVertices.clear();
+			continue;
+		}
+		vertexCount += newVertices;
+		triangleCount++;
+		i++;
+	}
+	if ( triangleCount > 0 ) {
+		meshletData.push_back( vertexCount );
+		meshletData.push_back( vertexOffset );
+		meshletData.push_back( triangleCount );
+		meshletData.push_back( triangleOffset );
+	}
+	int	meshletCount = int( meshletData.size() >> 2 );
+
+	nif->set<quint32>( iMeshData, "Num Meshlets", quint32(meshletCount) );
+	auto	iMeshlets = nif->getIndex( iMeshData, "Meshlets" );
+	nif->updateArraySize( iMeshlets );
+	nif->set<quint32>( iMeshData, "Num Cull Data", quint32(meshletCount) );
+	auto	iCullData = nif->getIndex( iMeshData, "Cull Data" );
+	nif->updateArraySize( iCullData );
+	int	j = 0;
+	int	k = 0;
+	for ( int i = 0; i < meshletCount; i++, j += 4 ) {
+		triangleCount = meshletData[j + 2];
+		auto	iMeshlet = QModelIndex_child( iMeshlets, i );
+		if ( iMeshlet.isValid() ) {
+			nif->set<quint32>( iMeshlet, "Vertex Count", meshletData[j] );
+			nif->set<quint32>( iMeshlet, "Vertex Offset", meshletData[j + 1] );
+			nif->set<quint32>( iMeshlet, "Triangle Count", triangleCount );
+			nif->set<quint32>( iMeshlet, "Triangle Offset", meshletData[j + 3] );
+		}
+		FloatVector4	bndMin( float(FLT_MAX) );
+		FloatVector4	bndMax( float(FLT_MIN) );
+		bool	haveBounds = false;
+		for ( int l = 0; l < triangleCount; l++, k++ ) {
+			Triangle	t = meshFile.triangles.at( k );
+			for ( int m = 0; m < 3; m++ ) {
+				int	n = t[m];
+				if ( !( n >= 0 && n < int(meshFile.positions.size()) ) )
+					continue;
+				const Vector3 &	v = meshFile.positions.at( n );
+				FloatVector4	xyz( v[0], v[1], v[2], 0.0f );
+				bndMin.minValues( xyz );
+				bndMax.maxValues( xyz );
+				haveBounds = true;
+			}
+		}
+		FloatVector4	bndCenter( 0.0f );
+		FloatVector4	bndDims( -1.0f );
+		if ( haveBounds ) {
+			bndCenter = ( bndMin + bndMax ) * 0.5f;
+			bndDims = ( bndMax - bndMin ) * 0.5f;
+		}
+		setBoundingBox( nif, QModelIndex_child( iCullData, i ), bndCenter, bndDims );
+	}
+}
+
 QModelIndex spUpdateBounds::cast_Starfield( NifModel * nif, const QModelIndex & index )
 {
 	auto meshes = nif->getIndex( index, "Meshes" );
@@ -898,8 +988,10 @@ QModelIndex spUpdateBounds::cast_Starfield( NifModel * nif, const QModelIndex & 
 			bounds = BoundSphere( meshFile.positions, true );
 			calculateBoundingBox( bndCenter, bndDims, meshFile.positions );
 			boundsCalculated = true;
-			// TODO: update bounds in internal geometry data
 		}
+		auto	meshData = nif->getIndex( mesh, "Mesh Data" );
+		if ( meshData.isValid() )
+			updateMeshlets( nif, meshData, meshFile );
 	}
 
 	bounds.update( nif, index );
