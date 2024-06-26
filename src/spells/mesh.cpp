@@ -9,6 +9,7 @@
 
 #include "libfo76utils/src/fp32vec4.hpp"
 #include "io/MeshFile.h"
+#include "meshlet.h"
 
 // Brief description is deliberately not autolinked to class Spell
 /*! \file mesh.cpp
@@ -873,42 +874,24 @@ static void updateMeshlets( NifModel * nif, const QPersistentModelIndex & iMeshD
 	item->invalidateCondition();
 	nif->set<quint32>( iMeshData, "Version", 2 );
 
-	std::vector< int >	meshletData;
-	std::set< int >	meshletVertices;
-	int	vertexCount = 0;
-	int	vertexOffset = 0;
-	int	triangleCount = 0;
-	int	triangleOffset = 0;
-
-	int	numTriangles = int( meshFile.triangles.size() );
-	for ( int i = 0; i < numTriangles; ) {
-		Triangle	t = meshFile.triangles.at( i );
-		int	newVertices = 0;
-		for ( int j = 0; j < 3; j++ )
-			newVertices += int( meshletVertices.insert( int(t[j]) ).second );
-		if ( ( vertexCount + newVertices ) > 96 || ( triangleCount + 1 ) > 128 ) {
-			meshletData.push_back( vertexCount );
-			meshletData.push_back( vertexOffset );
-			meshletData.push_back( triangleCount );
-			meshletData.push_back( triangleOffset );
-			vertexOffset = vertexOffset + vertexCount;
-			triangleOffset = ( triangleOffset + ( triangleCount * 3 ) + 3 ) & ~3;
-			vertexCount = 0;
-			triangleCount = 0;
-			meshletVertices.clear();
-			continue;
+	std::vector< DirectX::Meshlet >	meshletData;
+	std::vector< std::uint16_t >	newIndices;
+	if ( DirectX::ComputeMeshlets(
+			meshFile.triangles.data(), size_t(meshFile.triangles.size()),
+			meshFile.positions.data(), size_t(meshFile.positions.size()), meshletData, newIndices, 96, 128 ) == 0
+		&& newIndices.size() == size_t(meshFile.triangles.size() * 3) ) {
+		auto	iTriangles = nif->getIndex( iMeshData, "Triangles" );
+		int	numTriangles = int( meshFile.triangles.size() );
+		for ( int i = 0; i < numTriangles; i++ ) {
+			Triangle	t( newIndices[i * 3], newIndices[i * 3 + 1], newIndices[i * 3 + 2] );
+			nif->set<Triangle>( QModelIndex_child( iTriangles, i ), t );
 		}
-		vertexCount += newVertices;
-		triangleCount++;
-		i++;
+	} else {
+		meshletData.clear();
+		if ( meshFile.triangles.size() > 0 && meshFile.positions.size() > 0 )
+			QMessageBox::critical( nullptr, "NifSkope error", QString("Meshlet generation failed") );
 	}
-	if ( triangleCount > 0 ) {
-		meshletData.push_back( vertexCount );
-		meshletData.push_back( vertexOffset );
-		meshletData.push_back( triangleCount );
-		meshletData.push_back( triangleOffset );
-	}
-	int	meshletCount = int( meshletData.size() >> 2 );
+	int	meshletCount = int( meshletData.size() );
 
 	nif->set<quint32>( iMeshData, "Num Meshlets", quint32(meshletCount) );
 	auto	iMeshlets = nif->getIndex( iMeshData, "Meshlets" );
@@ -916,21 +899,24 @@ static void updateMeshlets( NifModel * nif, const QPersistentModelIndex & iMeshD
 	nif->set<quint32>( iMeshData, "Num Cull Data", quint32(meshletCount) );
 	auto	iCullData = nif->getIndex( iMeshData, "Cull Data" );
 	nif->updateArraySize( iCullData );
-	int	j = 0;
+	std::uint32_t	vertexOffset = 0;
+	std::uint32_t	triangleOffset = 0;
 	int	k = 0;
-	for ( int i = 0; i < meshletCount; i++, j += 4 ) {
-		triangleCount = meshletData[j + 2];
+	for ( int i = 0; i < meshletCount; i++ ) {
+		std::uint32_t	triangleCount = meshletData[i].PrimCount;
 		auto	iMeshlet = QModelIndex_child( iMeshlets, i );
 		if ( iMeshlet.isValid() ) {
-			nif->set<quint32>( iMeshlet, "Vertex Count", meshletData[j] );
-			nif->set<quint32>( iMeshlet, "Vertex Offset", meshletData[j + 1] );
+			nif->set<quint32>( iMeshlet, "Vertex Count", meshletData[i].VertCount );
+			nif->set<quint32>( iMeshlet, "Vertex Offset", vertexOffset );
 			nif->set<quint32>( iMeshlet, "Triangle Count", triangleCount );
-			nif->set<quint32>( iMeshlet, "Triangle Offset", meshletData[j + 3] );
+			nif->set<quint32>( iMeshlet, "Triangle Offset", triangleOffset );
 		}
+		vertexOffset = vertexOffset + meshletData[i].VertCount;
+		triangleOffset = ( triangleOffset + ( triangleCount * 3U) + 3U ) & ~3U;
 		FloatVector4	bndMin( float(FLT_MAX) );
 		FloatVector4	bndMax( float(FLT_MIN) );
 		bool	haveBounds = false;
-		for ( int l = 0; l < triangleCount; l++, k++ ) {
+		for ( int l = 0; l < int(triangleCount); l++, k++ ) {
 			Triangle	t = meshFile.triangles.at( k );
 			for ( int m = 0; m < 3; m++ ) {
 				int	n = t[m];

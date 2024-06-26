@@ -76,6 +76,9 @@ AboutDialog::AboutDialog( QWidget * parent )
 	
 	<p>For bounding sphere calculation, NifSkope uses <a href="https://github.com/hbf/miniball">Miniball</a> by Kaspar Fischer, Bernd Gärtner and Martin Kutz, the code is available under the <a href="http://www.apache.org/licenses/LICENSE-2.0.html">Apache 2 License</a>.
 	</p>
+	
+	<p>Starfield meshlet generation is based on code from <a href="https://github.com/microsoft/DirectXMesh">DirectXMesh</a>, MIT License, Copyright (c) by Microsoft Corporation.
+	</p>
 	)rhtml" );
 
 	ui.text->setText( text );

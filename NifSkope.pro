@@ -215,6 +215,7 @@ HEADERS += \
 	lib/dxgiformat.h \
 	lib/half.h \
 	lib/json.hpp \
+	lib/meshlet.h \
 	lib/stb_image.h \
 	lib/stb_image_write.h \
 	lib/tiny_gltf.h
@@ -313,7 +314,8 @@ SOURCES += \
 	src/nifskope_ui.cpp \
 	src/spellbook.cpp \
 	src/version.cpp \
-	lib/half.cpp
+	lib/half.cpp \
+	lib/meshlet.cpp
 
 RESOURCES += \
 	res/nifskope.qrc
