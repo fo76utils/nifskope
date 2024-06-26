@@ -446,7 +446,7 @@ namespace SEB_NAMESPACE {
 
 
   template<typename Float, class Pt, class PointAccessor>
-  const Float Smallest_enclosing_ball<Float, Pt, PointAccessor>::Eps = Float(1e-14);
+  const Float Smallest_enclosing_ball<Float, Pt, PointAccessor>::Eps = Float(1.0 / 2097152.0);
 
 } // namespace SEB_NAMESPACE
 
