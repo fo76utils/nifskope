@@ -832,7 +832,7 @@ public:
 		return nif->blockInherits( index, "BSTriShape" ) && nif->getIndex( index, "Vertex Data" ).isValid();
 	}
 
-	QModelIndex cast_Starfield( NifModel * nif, const QModelIndex & index );
+	static QModelIndex cast_Starfield( NifModel * nif, const QModelIndex & index );
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
 	{
@@ -865,6 +865,44 @@ public:
 	}
 };
 
+static void updateCullData( NifModel * nif, const QPersistentModelIndex & iMeshData, const MeshFile & meshFile )
+{
+	int	meshletCount = int( nif->get<quint32>( iMeshData, "Num Meshlets" ) );
+	auto	iMeshlets = nif->getIndex( iMeshData, "Meshlets" );
+	nif->set<quint32>( iMeshData, "Num Cull Data", quint32(meshletCount) );
+	auto	iCullData = nif->getIndex( iMeshData, "Cull Data" );
+	nif->updateArraySize( iCullData );
+	qsizetype	k = 0;
+	for ( int i = 0; i < meshletCount; i++ ) {
+		int	triangleCount = int( nif->get<quint32>( QModelIndex_child( iMeshlets, i ), "Triangle Count" ) );
+		FloatVector4	bndMin( float(FLT_MAX) );
+		FloatVector4	bndMax( float(FLT_MIN) );
+		bool	haveBounds = false;
+		for ( int j = 0; j < triangleCount; j++, k++ ) {
+			if ( k >= meshFile.triangles.size() ) [[unlikely]]
+				break;
+			Triangle	t = meshFile.triangles.at( k );
+			for ( int l = 0; l < 3; l++ ) {
+				int	m = t[l];
+				if ( !( m >= 0 && m < int(meshFile.positions.size()) ) )
+					continue;
+				const Vector3 &	v = meshFile.positions.at( m );
+				FloatVector4	xyz( v[0], v[1], v[2], 0.0f );
+				bndMin.minValues( xyz );
+				bndMax.maxValues( xyz );
+				haveBounds = true;
+			}
+		}
+		FloatVector4	bndCenter( 0.0f );
+		FloatVector4	bndDims( -1.0f );
+		if ( haveBounds ) {
+			bndCenter = ( bndMin + bndMax ) * 0.5f;
+			bndDims = ( bndMax - bndMin ) * 0.5f;
+		}
+		setBoundingBox( nif, QModelIndex_child( iCullData, i ), bndCenter, bndDims );
+	}
+}
+
 static void updateMeshlets( NifModel * nif, const QPersistentModelIndex & iMeshData, const MeshFile & meshFile )
 {
 	NifItem *	item = nif->getItem( iMeshData );
@@ -896,12 +934,8 @@ static void updateMeshlets( NifModel * nif, const QPersistentModelIndex & iMeshD
 	nif->set<quint32>( iMeshData, "Num Meshlets", quint32(meshletCount) );
 	auto	iMeshlets = nif->getIndex( iMeshData, "Meshlets" );
 	nif->updateArraySize( iMeshlets );
-	nif->set<quint32>( iMeshData, "Num Cull Data", quint32(meshletCount) );
-	auto	iCullData = nif->getIndex( iMeshData, "Cull Data" );
-	nif->updateArraySize( iCullData );
 	std::uint32_t	vertexOffset = 0;
 	std::uint32_t	triangleOffset = 0;
-	int	k = 0;
 	for ( int i = 0; i < meshletCount; i++ ) {
 		std::uint32_t	triangleCount = meshletData[i].PrimCount;
 		auto	iMeshlet = QModelIndex_child( iMeshlets, i );
@@ -913,30 +947,8 @@ static void updateMeshlets( NifModel * nif, const QPersistentModelIndex & iMeshD
 		}
 		vertexOffset = vertexOffset + meshletData[i].VertCount;
 		triangleOffset = ( triangleOffset + ( triangleCount * 3U) + 3U ) & ~3U;
-		FloatVector4	bndMin( float(FLT_MAX) );
-		FloatVector4	bndMax( float(FLT_MIN) );
-		bool	haveBounds = false;
-		for ( int l = 0; l < int(triangleCount); l++, k++ ) {
-			Triangle	t = meshFile.triangles.at( k );
-			for ( int m = 0; m < 3; m++ ) {
-				int	n = t[m];
-				if ( !( n >= 0 && n < int(meshFile.positions.size()) ) )
-					continue;
-				const Vector3 &	v = meshFile.positions.at( n );
-				FloatVector4	xyz( v[0], v[1], v[2], 0.0f );
-				bndMin.minValues( xyz );
-				bndMax.maxValues( xyz );
-				haveBounds = true;
-			}
-		}
-		FloatVector4	bndCenter( 0.0f );
-		FloatVector4	bndDims( -1.0f );
-		if ( haveBounds ) {
-			bndCenter = ( bndMin + bndMax ) * 0.5f;
-			bndDims = ( bndMax - bndMin ) * 0.5f;
-		}
-		setBoundingBox( nif, QModelIndex_child( iCullData, i ), bndCenter, bndDims );
 	}
+	updateCullData( nif, iMeshData, meshFile );
 }
 
 QModelIndex spUpdateBounds::cast_Starfield( NifModel * nif, const QModelIndex & index )
@@ -975,9 +987,12 @@ QModelIndex spUpdateBounds::cast_Starfield( NifModel * nif, const QModelIndex & 
 			calculateBoundingBox( bndCenter, bndDims, meshFile.positions );
 			boundsCalculated = true;
 		}
+		if ( ( nif->get<quint32>(index, "Flags") & 0x0200 ) == 0 )
+			continue;
 		auto	meshData = nif->getIndex( mesh, "Mesh Data" );
-		if ( meshData.isValid() )
-			updateMeshlets( nif, meshData, meshFile );
+		// update cull data for version 2 meshlets
+		if ( meshData.isValid() && nif->get<quint32>( meshData, "Version" ) >= 2U )
+			updateCullData( nif, meshData, meshFile );
 	}
 
 	bounds.update( nif, index );
@@ -1025,6 +1040,67 @@ public:
 };
 
 REGISTER_SPELL( spUpdateAllBounds )
+
+
+//! Generates Starfield meshlets
+class spGenerateMeshlets final : public Spell
+{
+public:
+	QString name() const override final { return Spell::tr( "Generate Meshlets and Update Bounds" ); }
+	QString page() const override final { return Spell::tr( "Mesh" ); }
+
+	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
+	{
+		if ( !( nif && nif->getBSVersion() >= 170 ) )
+			return false;
+		if ( !index.isValid() )
+			return true;
+		return ( nif->blockInherits( index, "BSGeometry" ) && ( nif->get<quint32>(index, "Flags") & 0x0200 ) != 0 );
+	}
+
+	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final;
+};
+
+QModelIndex spGenerateMeshlets::cast( NifModel * nif, const QModelIndex & index )
+{
+	if ( !( nif && nif->getBSVersion() >= 170 ) )
+		return index;
+	if ( !index.isValid() ) {
+		// process all shapes
+		for ( int n = 0; n < nif->getBlockCount(); n++ ) {
+			QModelIndex idx = nif->getBlockIndex( n );
+			if ( idx.isValid() )
+				cast( nif, idx );
+		}
+		return index;
+	}
+
+	if ( !nif->blockInherits( index, "BSGeometry" ) )
+		return index;
+
+	auto	meshes = nif->getIndex( index, "Meshes" );
+	if ( meshes.isValid() && ( nif->get<quint32>(index, "Flags") & 0x0200 ) != 0 ) {
+		for ( int i = 0; i <= 3; i++ ) {
+			auto mesh = QModelIndex_child( meshes, i );
+			if ( !mesh.isValid() )
+				continue;
+			auto hasMesh = nif->getIndex( mesh, "Has Mesh" );
+			if ( !hasMesh.isValid() || nif->get<quint8>( hasMesh ) == 0 )
+				continue;
+			mesh = nif->getIndex( mesh, "Mesh" );
+			if ( !mesh.isValid() )
+				continue;
+			MeshFile	meshFile( nif, mesh );
+			auto	meshData = nif->getIndex( mesh, "Mesh Data" );
+			if ( meshData.isValid() )
+				updateMeshlets( nif, meshData, meshFile );
+		}
+	}
+
+	return spUpdateBounds::cast_Starfield( nif, index );
+}
+
+REGISTER_SPELL( spGenerateMeshlets )
 
 
 //! Update Triangles on Data from Skin
