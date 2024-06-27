@@ -16,10 +16,10 @@ namespace SEB_NAMESPACE {
   template<typename Float, class Pt, class PointAccessor>
   void Smallest_enclosing_ball<Float, Pt, PointAccessor>::allocate_resources()
   {
-    center            = new Float[dim];
-    center_to_aff     = new Float[dim];
-    center_to_point   = new Float[dim];
-    lambdas           = new Float[dim+1];
+    center            = new double[dim];
+    center_to_aff     = new double[dim];
+    center_to_point   = new double[dim];
+    lambdas           = new double[dim+1];
   }
 
   template<typename Float, class Pt, class PointAccessor>
@@ -131,7 +131,7 @@ namespace SEB_NAMESPACE {
         for (unsigned int i = 0; i < dim; ++i)
           center_to_point[i] = S[j][i] - center[i];
 
-        const Float dir_point_prod
+        const double dir_point_prod
         = inner_product(center_to_aff,center_to_aff+dim,
                         center_to_point,Float(0));
 
@@ -146,7 +146,7 @@ namespace SEB_NAMESPACE {
         // we hit point S[i] on the boundary:
         // (Better don't try to understand this calculus from the code,
         //  it needs some pencil-and-paper work.)
-        Float bound = radius_square;
+        double  bound = radius_square;
         bound -= inner_product(center_to_point,center_to_point+dim,
                                center_to_point,Float(0));
         bound /= 2 * (dist_to_aff_square - dir_point_prod);
@@ -446,7 +446,7 @@ namespace SEB_NAMESPACE {
 
 
   template<typename Float, class Pt, class PointAccessor>
-  const Float Smallest_enclosing_ball<Float, Pt, PointAccessor>::Eps = Float(1.0 / 2097152.0);
+  const Float Smallest_enclosing_ball<Float, Pt, PointAccessor>::Eps = Float(1.0 / double(std::int64_t(1) << int(sizeof(Float) * 6 - 2)));
 
 } // namespace SEB_NAMESPACE
 

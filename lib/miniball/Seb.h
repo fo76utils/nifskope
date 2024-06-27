@@ -27,7 +27,7 @@ namespace SEB_NAMESPACE {
   {
   public: // iterator-type to iterate over the center coordinates of
 	  // the miniball (cf. center_begin() below):
-    typedef Float *Coordinate_iterator;
+    typedef double *Coordinate_iterator;
 
   public: // construction and destruction:
 
@@ -150,17 +150,17 @@ namespace SEB_NAMESPACE {
     const PointAccessor &S;           // set S of inserted points
     bool up_to_date;                  // whether the miniball has
                                       // already been computed
-    Float *center;                    // center of the miniball
+    double  *center;                  // center of the miniball
     Float radius_, radius_square;     // squared radius of the miniball
     Subspan<Float, Pt, PointAccessor> *support;          // the points that lie on the current
     // boundary and "support" the ball;
     // the essential structure for update()
 
   private: // member fields for temporary use:
-    Float *center_to_aff;
-    Float *center_to_point;
-    Float *lambdas;
-    Float  dist_to_aff, dist_to_aff_square;
+    double  *center_to_aff;
+    double  *center_to_point;
+    double  *lambdas;
+    double  dist_to_aff, dist_to_aff_square;
 
 #ifdef SEB_STATS_MODE
   private: // memeber fields for statistics
