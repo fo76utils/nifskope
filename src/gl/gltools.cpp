@@ -178,13 +178,44 @@ BoundSphere::BoundSphere( const NifModel * nif, const QModelIndex & index )
 	radius = nif->get<float>( idx, "Radius" );
 }
 
-BoundSphere::BoundSphere( const QVector<Vector3> & verts, bool useMiniball )
+struct BoundSphereVertexData
 {
-	if ( verts.isEmpty() ) {
+	const Vector3 *	startp;
+	const Vector3 *	endp;
+	inline BoundSphereVertexData( const Vector3 * verts, qsizetype vertexCnt )
+		: startp( verts ), endp( verts + vertexCnt )
+	{
+	}
+	inline size_t size() const
+	{
+		return size_t( endp - startp );
+	}
+	inline const Vector3 * data() const
+	{
+		return startp;
+	}
+	inline const Vector3 * begin() const
+	{
+		return startp;
+	}
+	inline const Vector3 * end() const
+	{
+		return endp;
+	}
+	inline const Vector3 & operator[]( size_t i ) const
+	{
+		return startp[i];
+	}
+};
+
+BoundSphere::BoundSphere( const Vector3 * vertexData, qsizetype vertexCnt, bool useMiniball )
+{
+	if ( vertexCnt < 1 ) {
 		center = Vector3();
 		radius = -1;
 		return;
 	}
+	BoundSphereVertexData	verts( vertexData, vertexCnt );
 
 	// old algorithm: center of bounding sphere = bounds1 = centroid of verts
 	FloatVector4	bounds1( 0.0f );
@@ -192,7 +223,7 @@ BoundSphere::BoundSphere( const QVector<Vector3> & verts, bool useMiniball )
 	FloatVector4	p0( verts[0][0], verts[0][1], verts[0][2], 0.0f );
 	FloatVector4	p1( p0 );
 	float	maxDistSqr = 0.0f;
-	for ( const Vector3& v : verts ) {
+	for ( const auto & v : verts ) {
 		FloatVector4	tmp( v[0], v[1], v[2], 1.0f );
 		bounds1 += tmp;
 		float	d = ( tmp - p0 ).dotProduct3( tmp - p0 );
@@ -204,14 +235,14 @@ BoundSphere::BoundSphere( const QVector<Vector3> & verts, bool useMiniball )
 	bounds1 /= bounds1[3];
 
 	FloatVector4	bounds2;
-	if ( verts.size() < 3 ) {
+	if ( vertexCnt < 3 ) {
 		// bounds2 = center of bounding sphere,
 		bounds2 = bounds1;
 	} else if ( !useMiniball ) {
 		// calculated with Ritter's algorithm,
 		maxDistSqr = 0.0f;
 		FloatVector4	p2( p1 );
-		for ( const Vector3& v : verts ) {
+		for ( const auto & v : verts ) {
 			FloatVector4	tmp( v[0], v[1], v[2], 0.0f );
 			float	d = ( tmp - p1 ).dotProduct3( tmp - p1 );
 			if ( d > maxDistSqr ) {
@@ -222,7 +253,7 @@ BoundSphere::BoundSphere( const QVector<Vector3> & verts, bool useMiniball )
 
 		bounds2 = ( p1 + p2 ) * 0.5f;
 		float	radiusSqr = maxDistSqr * 0.25f;
-		for ( const Vector3& v : verts ) {
+		for ( const auto & v : verts ) {
 			FloatVector4	tmp( v[0], v[1], v[2], 0.0f );
 			float	d = ( tmp - bounds2 ).dotProduct3( tmp - bounds2 );
 			if ( d > radiusSqr ) {
@@ -239,14 +270,14 @@ BoundSphere::BoundSphere( const QVector<Vector3> & verts, bool useMiniball )
 		}
 	} else {
 		// or Miniball
-		SEB_NAMESPACE::Smallest_enclosing_ball<float, Vector3, QVector<Vector3>>	mb( 3, verts );
+		SEB_NAMESPACE::Smallest_enclosing_ball<float, Vector3, BoundSphereVertexData>	mb( 3, verts );
 		auto	i = mb.center_begin();
-		bounds2 = FloatVector4( i[0], i[1], i[2], 0.0f );
+		bounds2 = FloatVector4( float(i[0]), float(i[1]), float(i[2]), 0.0f );
 	}
 
 	float	rSqr1 = 0.0f;
 	float	rSqr2 = 0.0f;
-	for ( const Vector3& v : verts ) {
+	for ( const auto & v : verts ) {
 		FloatVector4	tmp( v[0], v[1], v[2], 0.0f );
 		rSqr1 = std::max( rSqr1, ( tmp - bounds1 ).dotProduct3( tmp - bounds1 ) );
 		rSqr2 = std::max( rSqr2, ( tmp - bounds2 ).dotProduct3( tmp - bounds2 ) );

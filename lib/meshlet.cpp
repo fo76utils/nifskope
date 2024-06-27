@@ -554,8 +554,8 @@ namespace DirectX
 				}
 
 				// Compute new bounding sphere & normal axis
-				BoundSphere positionBounds(QVector<Vector3>(vertices.begin(), vertices.end()), false);
-				BoundSphere normalBounds(QVector<Vector3>(normals.begin(), normals.end()), false);
+				BoundSphere positionBounds(vertices.data(), qsizetype(vertices.size()), false);
+				BoundSphere normalBounds(normals.data(), qsizetype(normals.size()), false);
 
 				FloatVector4  psphere(positionBounds.center[0], positionBounds.center[1], positionBounds.center[2], positionBounds.radius);
 				FloatVector4  normal(normalBounds.center[0], normalBounds.center[1], normalBounds.center[2], normalBounds.radius);
