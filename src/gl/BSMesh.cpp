@@ -246,16 +246,35 @@ void BSMesh::drawSelection() const
 		}
 
 		int	s;
-		if ( n == "Triangles" && n == p && ( s = idx.row() ) >= 0 ) {
+		if ( ( n == "Triangles" || n == "Meshlets" ) && n == p && ( s = idx.row() ) >= 0 ) {
 			glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 			glHighlightColor();
 			glDepthFunc( GL_ALWAYS );
 
-			Triangle tri = sortedTriangles.value( s );
 			glBegin( GL_TRIANGLES );
-			glVertex( transVerts.value(tri.v1()) );
-			glVertex( transVerts.value(tri.v2()) );
-			glVertex( transVerts.value(tri.v3()) );
+			if ( n == "Triangles" ) {
+				Triangle tri = sortedTriangles.value( s );
+				glVertex( transVerts.value(tri.v1()) );
+				glVertex( transVerts.value(tri.v2()) );
+				glVertex( transVerts.value(tri.v3()) );
+			} else {
+				auto	iMeshlets = nif->getIndex( idx.parent().parent(), "Meshlets" );
+				if ( iMeshlets.isValid() ) {
+					quint32	triangleOffset = 0;
+					quint32	triangleCount = 0;
+					for ( int i = 0; i <= s; i++ ) {
+						triangleOffset += triangleCount;
+						triangleCount = nif->get<quint32>( QModelIndex_child( iMeshlets, i ), "Triangle Count" );
+					}
+					for ( ; triangleCount && triangleOffset < quint32(sortedTriangles.size()); triangleCount-- ) {
+						Triangle tri = sortedTriangles.value( qsizetype(triangleOffset) );
+						glVertex( transVerts.value(tri.v1()) );
+						glVertex( transVerts.value(tri.v2()) );
+						glVertex( transVerts.value(tri.v3()) );
+						triangleOffset++;
+					}
+				}
+			}
 			glEnd();
 			glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 		}
