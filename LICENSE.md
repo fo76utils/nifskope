@@ -44,8 +44,9 @@ For bounding sphere calculation, NifSkope uses [Miniball](https://github.com/hbf
 by Kaspar Fischer, Bernd Gärtner and Martin Kutz, the code is available under the
 [Apache 2 License](http://www.apache.org/licenses/LICENSE-2.0.html).
 
-Starfield meshlet generation is based on code from [DirectXMesh](https://github.com/microsoft/DirectXMesh),
-MIT License, Copyright (c) by Microsoft Corporation.
+Starfield meshlet generation is based on code from [meshoptimizer](https://github.com/zeux/meshoptimizer)
+(MIT License, Copyright (c) 2016-2024 Arseny Kapoulkine) and [DirectXMesh](https://github.com/microsoft/DirectXMesh)
+(MIT License, Copyright (c) by Microsoft Corporation).
 
 NOTICE
 

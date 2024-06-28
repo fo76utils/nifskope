@@ -4,12 +4,20 @@
 
 #include <QDialog>
 #include <QGridLayout>
-
 #include <cfloat>
 
 #include "libfo76utils/src/fp32vec4.hpp"
 #include "io/MeshFile.h"
-#include "meshlet.h"
+
+#define MESHLET_USE_MESHOPTIMIZER	1
+
+#if MESHLET_USE_MESHOPTIMIZER
+#  include "meshoptimizer/meshoptimizer.h"
+#  include "meshoptimizer/clusterizer.cpp"
+#else
+#  include "meshlet.h"
+#  include "meshlet.cpp"
+#endif
 
 // Brief description is deliberately not autolinked to class Spell
 /*! \file mesh.cpp
@@ -912,6 +920,52 @@ static void updateMeshlets( NifModel * nif, const QPersistentModelIndex & iMeshD
 	item->invalidateCondition();
 	nif->set<quint32>( iMeshData, "Version", 2 );
 
+#if MESHLET_USE_MESHOPTIMIZER
+	std::vector< meshopt_Meshlet >	meshletData;
+	int	meshletCount = 0;
+	if ( meshFile.positions.size() > 0 && meshFile.triangles.size() > 0 ) {
+		try {
+			size_t	vertexCnt = size_t( meshFile.positions.size() );
+			size_t	triangleCnt = size_t( meshFile.triangles.size() );
+			std::vector< unsigned int >	indices( triangleCnt * 3 );
+			size_t	k = 0;
+			for ( const auto & t : meshFile.triangles ) {
+				if ( t[0] >= vertexCnt || t[1] >= vertexCnt || t[2] >= vertexCnt )
+					throw FO76UtilsError( "vertex number is out of range" );
+				indices[k] = t[0];
+				indices[k + 1] = t[1];
+				indices[k + 2] = t[2];
+				k = k + 3;
+			}
+			size_t	maxMeshlets = meshopt_buildMeshletsBound( triangleCnt * 3, 96, 128 );
+			meshletData.resize( maxMeshlets );
+			std::vector< unsigned int >	meshletVertices( maxMeshlets * 96 );
+			std::vector< unsigned char >	meshletTriangles( maxMeshlets * 128 * 3 );
+			meshletCount =
+				int( meshopt_buildMeshlets( meshletData.data(), meshletVertices.data(), meshletTriangles.data(),
+											indices.data(), indices.size(), &( meshFile.positions.at(0)[0] ), vertexCnt,
+											sizeof( Vector3 ), 96, 128, 0.25f ) );
+			meshletData.resize( size_t(meshletCount) );
+			auto	iTriangles = nif->getIndex( iMeshData, "Triangles" );
+			k = 0;
+			for ( const auto & m : meshletData ) {
+				unsigned int	n = m.triangle_count;
+				const unsigned int *	v = meshletVertices.data() + m.vertex_offset;
+				const unsigned char *	p = meshletTriangles.data() + m.triangle_offset;
+				for ( ; n; n--, k++, p = p + 3 ) {
+					auto	iTriangle = QModelIndex_child( iTriangles, int(k) );
+					if ( !iTriangle.isValid() )
+						throw FO76UtilsError( "triangle number is out of range" );
+					nif->set<Triangle>( iTriangle, Triangle( quint16(v[p[0]]), quint16(v[p[1]]), quint16(v[p[2]]) ) );
+				}
+			}
+		} catch ( std::exception & e ) {
+			meshletData.clear();
+			QMessageBox::critical( nullptr, "NifSkope error", QString("Meshlet generation failed: %1").arg(e.what()) );
+			meshletCount = 0;
+		}
+	}
+#else
 	std::vector< DirectX::Meshlet >	meshletData;
 	std::vector< std::uint16_t >	newIndices;
 	if ( DirectX::ComputeMeshlets(
@@ -930,24 +984,39 @@ static void updateMeshlets( NifModel * nif, const QPersistentModelIndex & iMeshD
 			QMessageBox::critical( nullptr, "NifSkope error", QString("Meshlet generation failed") );
 	}
 	int	meshletCount = int( meshletData.size() );
+#endif
 
 	nif->set<quint32>( iMeshData, "Num Meshlets", quint32(meshletCount) );
 	auto	iMeshlets = nif->getIndex( iMeshData, "Meshlets" );
 	nif->updateArraySize( iMeshlets );
+#if MESHLET_USE_MESHOPTIMIZER
+	for ( int i = 0; i < meshletCount; i++ ) {
+		auto	iMeshlet = QModelIndex_child( iMeshlets, i );
+		if ( iMeshlet.isValid() ) {
+			nif->set<quint32>( iMeshlet, "Vertex Count", meshletData[i].vertex_count );
+			nif->set<quint32>( iMeshlet, "Vertex Offset", meshletData[i].vertex_offset );
+			nif->set<quint32>( iMeshlet, "Triangle Count", meshletData[i].triangle_count );
+			nif->set<quint32>( iMeshlet, "Triangle Offset", meshletData[i].triangle_offset );
+		}
+	}
+#else
 	std::uint32_t	vertexOffset = 0;
 	std::uint32_t	triangleOffset = 0;
 	for ( int i = 0; i < meshletCount; i++ ) {
+		std::uint32_t	vertexCount = meshletData[i].VertCount;
 		std::uint32_t	triangleCount = meshletData[i].PrimCount;
 		auto	iMeshlet = QModelIndex_child( iMeshlets, i );
 		if ( iMeshlet.isValid() ) {
-			nif->set<quint32>( iMeshlet, "Vertex Count", meshletData[i].VertCount );
+			nif->set<quint32>( iMeshlet, "Vertex Count", vertexCount );
 			nif->set<quint32>( iMeshlet, "Vertex Offset", vertexOffset );
 			nif->set<quint32>( iMeshlet, "Triangle Count", triangleCount );
 			nif->set<quint32>( iMeshlet, "Triangle Offset", triangleOffset );
 		}
-		vertexOffset = vertexOffset + meshletData[i].VertCount;
+		vertexOffset = vertexOffset + vertexCount;
 		triangleOffset = ( triangleOffset + ( triangleCount * 3U) + 3U ) & ~3U;
 	}
+#endif
+
 	updateCullData( nif, iMeshData, meshFile );
 }
 
