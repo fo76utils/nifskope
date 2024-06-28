@@ -521,6 +521,7 @@ namespace DirectX
 			}
 
 			// Create a new meshlet if necessary
+			bool  isNewMeshlet = false;
 			if (curr == nullptr)
 			{
 				vertices.clear();
@@ -528,6 +529,7 @@ namespace DirectX
 
 				meshlets.emplace_back();
 				curr = &meshlets.back();
+				isNewMeshlet = true;
 			}
 
 			// Try to add triangle to meshlet
@@ -536,7 +538,7 @@ namespace DirectX
 				// Success! Mark as added.
 				checklist[index - startIndex] = true;
 
-				// Add positions & normal to list
+				// Add new unique positions & normal to list
 				const Vector3 points[3] =
 				{
 					positions[tri[0]],
@@ -544,17 +546,20 @@ namespace DirectX
 					positions[tri[2]],
 				};
 
-				vertices.push_back(points[0]);
-				vertices.push_back(points[1]);
-				vertices.push_back(points[2]);
+				bool  newPositionBoundsNeeded = isNewMeshlet;
+				for (size_t i = vertices.size(); i < curr->UniqueVertexIndices.size(); i++)
+				{
+					vertices.push_back(positions[curr->UniqueVertexIndices[i]]);
+					newPositionBoundsNeeded = newPositionBoundsNeeded || !positionBounds.contains(vertices.back());
+				}
 
 				normals.emplace_back();
 				normals.back().fromFloatVector4(ComputeNormal(points));
 
 				// Compute new bounding sphere & normal axis
-				if (vertices.size() == 3 || !positionBounds.contains(points[0]) || !positionBounds.contains(points[1]) || !positionBounds.contains(points[2]))
+				if (newPositionBoundsNeeded)
 					positionBounds = BoundSphere(vertices.data(), qsizetype(vertices.size()), true);
-				if (normals.size() == 1 || !normalBounds.contains(normals.back()))
+				if (isNewMeshlet || !normalBounds.contains(normals.back()))
 					normalBounds = BoundSphere(normals.data(), qsizetype(normals.size()), true);
 
 				FloatVector4  psphere(positionBounds.center[0], positionBounds.center[1], positionBounds.center[2], positionBounds.radius);
