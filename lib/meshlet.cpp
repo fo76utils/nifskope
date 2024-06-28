@@ -486,6 +486,9 @@ namespace DirectX
 		std::vector<Vector3>  vertices;
 		std::vector<Vector3>  normals;
 
+		BoundSphere positionBounds;
+		BoundSphere normalBounds;
+
 		// Seed the candidate list with the first triangle of the subset
 		const uint32_t startIndex = static_cast<uint32_t>(subset.first);
 		const uint32_t endIndex = static_cast<uint32_t>(subset.first + subset.second);
@@ -549,8 +552,10 @@ namespace DirectX
 				normals.back().fromFloatVector4(ComputeNormal(points));
 
 				// Compute new bounding sphere & normal axis
-				BoundSphere positionBounds(vertices.data(), qsizetype(vertices.size()), false);
-				BoundSphere normalBounds(normals.data(), qsizetype(normals.size()), false);
+				if (vertices.size() == 3 || !positionBounds.contains(points[0]) || !positionBounds.contains(points[1]) || !positionBounds.contains(points[2]))
+					positionBounds = BoundSphere(vertices.data(), qsizetype(vertices.size()), true);
+				if (normals.size() == 1 || !normalBounds.contains(normals.back()))
+					normalBounds = BoundSphere(normals.data(), qsizetype(normals.size()), true);
 
 				FloatVector4  psphere(positionBounds.center[0], positionBounds.center[1], positionBounds.center[2], positionBounds.radius);
 				FloatVector4  normal(normalBounds.center[0], normalBounds.center[1], normalBounds.center[2], normalBounds.radius);
@@ -650,6 +655,12 @@ namespace DirectX
 			// Ran out of candidates; add a new seed candidate to start the next meshlet.
 			if (candidates.empty())
 			{
+				if (curr && curr->PrimitiveIndices.size() >= (maxPrims >> 2))
+				{
+					candidateCheck.clear();
+					curr = nullptr;
+				}
+
 				while (triIndex < endIndex && checklist[triIndex - startIndex])
 					++triIndex;
 
