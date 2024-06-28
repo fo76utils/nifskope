@@ -269,6 +269,23 @@ public:
 	 */
 	explicit Vector3( const class Vector4 & );
 
+	explicit Vector3( const FloatVector4 & v )
+	{
+		xyz[0] = v[0];
+		xyz[1] = v[1];
+		xyz[2] = v[2];
+	}
+
+	inline void fromFloatVector4( const FloatVector4 & v )
+	{
+		v.convertToVector3( xyz );
+	}
+
+	inline operator FloatVector4() const
+	{
+		return FloatVector4::convertVector3( xyz );
+	}
+
 	//! Add-equals operator
 	Vector3 & operator+=( const Vector3 & v )
 	{

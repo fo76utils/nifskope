@@ -220,11 +220,11 @@ BoundSphere::BoundSphere( const Vector3 * vertexData, qsizetype vertexCnt, bool 
 	// old algorithm: center of bounding sphere = bounds1 = centroid of verts
 	FloatVector4	bounds1( 0.0f );
 	// p1 and p2 are searched for Ritter's algorithm
-	FloatVector4	p0( verts[0][0], verts[0][1], verts[0][2], 0.0f );
+	FloatVector4	p0( verts[0] );
 	FloatVector4	p1( p0 );
 	float	maxDistSqr = 0.0f;
 	for ( const auto & v : verts ) {
-		FloatVector4	tmp( v[0], v[1], v[2], 1.0f );
+		FloatVector4	tmp( v );
 		bounds1 += tmp;
 		float	d = ( tmp - p0 ).dotProduct3( tmp - p0 );
 		if ( d > maxDistSqr ) {
@@ -232,7 +232,7 @@ BoundSphere::BoundSphere( const Vector3 * vertexData, qsizetype vertexCnt, bool 
 			maxDistSqr = d;
 		}
 	}
-	bounds1 /= bounds1[3];
+	bounds1 /= float( int(vertexCnt) );
 
 	FloatVector4	bounds2;
 	if ( vertexCnt < 3 ) {
@@ -243,7 +243,7 @@ BoundSphere::BoundSphere( const Vector3 * vertexData, qsizetype vertexCnt, bool 
 		maxDistSqr = 0.0f;
 		FloatVector4	p2( p1 );
 		for ( const auto & v : verts ) {
-			FloatVector4	tmp( v[0], v[1], v[2], 0.0f );
+			FloatVector4	tmp( v );
 			float	d = ( tmp - p1 ).dotProduct3( tmp - p1 );
 			if ( d > maxDistSqr ) {
 				p2 = tmp;
@@ -254,7 +254,7 @@ BoundSphere::BoundSphere( const Vector3 * vertexData, qsizetype vertexCnt, bool 
 		bounds2 = ( p1 + p2 ) * 0.5f;
 		float	radiusSqr = maxDistSqr * 0.25f;
 		for ( const auto & v : verts ) {
-			FloatVector4	tmp( v[0], v[1], v[2], 0.0f );
+			FloatVector4	tmp( v );
 			float	d = ( tmp - bounds2 ).dotProduct3( tmp - bounds2 );
 			if ( d > radiusSqr ) {
 				if ( radiusSqr > 0.0f ) {
@@ -278,7 +278,7 @@ BoundSphere::BoundSphere( const Vector3 * vertexData, qsizetype vertexCnt, bool 
 	float	rSqr1 = 0.0f;
 	float	rSqr2 = 0.0f;
 	for ( const auto & v : verts ) {
-		FloatVector4	tmp( v[0], v[1], v[2], 0.0f );
+		FloatVector4	tmp( v );
 		rSqr1 = std::max( rSqr1, ( tmp - bounds1 ).dotProduct3( tmp - bounds1 ) );
 		rSqr2 = std::max( rSqr2, ( tmp - bounds2 ).dotProduct3( tmp - bounds2 ) );
 	}
@@ -288,7 +288,7 @@ BoundSphere::BoundSphere( const Vector3 * vertexData, qsizetype vertexCnt, bool 
 	// use the result of whichever method gives a smaller radius
 	if ( bounds2[3] < bounds1[3] ) [[likely]]
 		bounds1 = bounds2;
-	center = Vector3( bounds1[0], bounds1[1], bounds1[2] );
+	center = Vector3( bounds1 );
 	radius = bounds1[3];
 }
 

@@ -95,9 +95,9 @@ namespace DirectX
 	//---------------------------------------------------------------------------------
 	inline FloatVector4 ComputeNormal(const Vector3* tri) noexcept
 	{
-		FloatVector4  p0(tri[0][0], tri[0][1], tri[0][2], 0.0f);
-		FloatVector4  p1(tri[1][0], tri[1][1], tri[1][2], 0.0f);
-		FloatVector4  p2(tri[2][0], tri[2][1], tri[2][2], 0.0f);
+		FloatVector4  p0(tri[0]);
+		FloatVector4  p1(tri[1]);
+		FloatVector4  p2(tri[2]);
 
 		FloatVector4  v01 = p0 - p1;
 		FloatVector4  v02 = p0 - p2;
@@ -371,7 +371,7 @@ namespace DirectX
 		float maxSq = 0;
 		for (size_t i = 0; i < 3u; ++i)
 		{
-			FloatVector4  pos(triVerts[i][0], triVerts[i][1], triVerts[i][2], 0.0f);
+			FloatVector4  pos(triVerts[i]);
 			FloatVector4  v = sphere - pos;
 
 			const float distSq = v.dotProduct3(v);
@@ -546,12 +546,7 @@ namespace DirectX
 				vertices.push_back(points[2]);
 
 				normals.emplace_back();
-				{
-					FloatVector4  normal = ComputeNormal(points);
-					normals.back()[0] = normal[0];
-					normals.back()[1] = normal[1];
-					normals.back()[2] = normal[2];
-				}
+				normals.back().fromFloatVector4(ComputeNormal(points));
 
 				// Compute new bounding sphere & normal axis
 				BoundSphere positionBounds(vertices.data(), qsizetype(vertices.size()), false);
@@ -918,7 +913,7 @@ namespace DirectX
 				{
 					pointRep[tailIndex] = tailIndex;
 
-					FloatVector4  outer(positions[tailIndex][0], positions[tailIndex][1], positions[tailIndex][2], 0.0f);
+					FloatVector4  outer(positions[tailIndex]);
 
 					for (uint32_t current = tail + 1; current < head; ++current)
 					{
@@ -928,7 +923,7 @@ namespace DirectX
 						// if the point is already assigned, ignore it
 						if (pointRep[curIndex] == UNUSED32)
 						{
-							FloatVector4  inner(positions[curIndex][0], positions[curIndex][1], positions[curIndex][2], 0.0f);
+							FloatVector4  inner(positions[curIndex]);
 
 							float   diff = (inner - outer).dotProduct3(inner - outer);
 
@@ -1109,9 +1104,9 @@ namespace DirectX
 					{
 						if ((current->v2 == vb) && (current->v1 == va))
 						{
-							FloatVector4  pB1(positions[vb][0], positions[vb][1], positions[vb][2], 0.0f);
-							FloatVector4  pB2(positions[va][0], positions[va][1], positions[va][2], 0.0f);
-							FloatVector4  pB3(positions[vOther][0], positions[vOther][1], positions[vOther][2], 0.0f);
+							FloatVector4  pB1(positions[vb]);
+							FloatVector4  pB2(positions[va]);
+							FloatVector4  pB3(positions[vOther]);
 
 							FloatVector4  v12 = pB1 - pB2;
 							FloatVector4  v13 = pB1 - pB3;
@@ -1120,9 +1115,9 @@ namespace DirectX
 
 							if (bestDiff == -2.f)
 							{
-								FloatVector4  pA1(positions[found->v1][0], positions[found->v1][1], positions[found->v1][2], 0.0f);
-								FloatVector4  pA2(positions[found->v2][0], positions[found->v2][1], positions[found->v2][2], 0.0f);
-								FloatVector4  pA3(positions[found->vOther][0], positions[found->vOther][1], positions[found->vOther][2], 0.0f);
+								FloatVector4  pA1(positions[found->v1]);
+								FloatVector4  pA2(positions[found->v2]);
+								FloatVector4  pA3(positions[found->vOther]);
 
 								v12 = pA1 - pA2;
 								v13 = pA1 - pA3;
@@ -1132,9 +1127,9 @@ namespace DirectX
 								bestDiff = anormal.dotProduct3(bnormal);
 							}
 
-							FloatVector4  pA1(positions[current->v1][0], positions[current->v1][1], positions[current->v1][2], 0.0f);
-							FloatVector4  pA2(positions[current->v2][0], positions[current->v2][1], positions[current->v2][2], 0.0f);
-							FloatVector4  pA3(positions[current->vOther][0], positions[current->vOther][1], positions[current->vOther][2], 0.0f);
+							FloatVector4  pA1(positions[current->v1]);
+							FloatVector4  pA2(positions[current->v2]);
+							FloatVector4  pA3(positions[current->vOther]);
 
 							v12 = pA1 - pA2;
 							v13 = pA1 - pA3;
