@@ -236,43 +236,81 @@ void BSMesh::drawSelection() const
 		lines( transBitangents, s );
 		lines( transTangents, s, true );
 	} else {
+		int	s = -1;
+		if ( n == p )
+			s = idx.row();
+
+		QModelIndex	iMeshlets;
+		if ( s < 0 && n == "Meshlets" && ( iMeshlets = nif->getIndex( idx.parent(), "Meshlets" ) ).isValid() ) {
+			// draw all meshlets
+			quint32	triangleOffset = 0;
+			quint32	triangleCount = 0;
+			glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+			int	numMeshlets = nif->rowCount( iMeshlets );
+			for ( int i = 0; i < numMeshlets && triangleOffset < quint32(sortedTriangles.size()); i++ ) {
+				triangleCount = nif->get<quint32>( QModelIndex_child( iMeshlets, i ), "Triangle Count" );
+				std::uint32_t	j = std::uint32_t(i);
+				j = ( ( j & 0x0001U ) << 7 ) | ( ( j & 0x0008U ) << 3 ) | ( ( j & 0x0040U ) >> 1 )
+					| ( ( j & 0x0200U ) >> 5 ) | ( ( j & 0x1000U ) >> 9 )
+					| ( ( j & 0x0002U ) << 14 ) | ( ( j & 0x0010U ) << 10 ) | ( ( j & 0x0080U ) << 6 )
+					| ( ( j & 0x0400U ) << 2 ) | ( ( j & 0x2000U ) >> 2 )
+					| ( ( j & 0x0004U ) << 21 ) | ( ( j & 0x0020U ) << 17 ) | ( ( j & 0x0100U ) << 13 )
+					| ( ( j & 0x0800U ) << 9 ) | ( ( j & 0x4000U ) << 5 );
+				j = ~j;
+				FloatVector4	meshletColor( j );
+				meshletColor /= 255.0f;
+				glColor4f( meshletColor[0], meshletColor[1], meshletColor[2], meshletColor[3] );
+				glBegin( GL_TRIANGLES );
+				for ( ; triangleCount && triangleOffset < quint32(sortedTriangles.size()); triangleCount-- ) {
+					Triangle tri = sortedTriangles.value( qsizetype(triangleOffset) );
+					glVertex( transVerts.value(tri.v1()) );
+					glVertex( transVerts.value(tri.v2()) );
+					glVertex( transVerts.value(tri.v3()) );
+					triangleOffset++;
+				}
+				glEnd();
+			}
+			glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+			Color4	wireframeColor( cfg.wireframe );
+			glColor4f( wireframeColor[0], wireframeColor[1], wireframeColor[2], 0.125f );
+			glDepthFunc( GL_LEQUAL );
+		}
+
 		// General wireframe
 		for ( const Triangle& tri : sortedTriangles ) {
-			glBegin(GL_TRIANGLES);
+			glBegin( GL_TRIANGLES );
 			glVertex( transVerts.value(tri.v1()) );
 			glVertex( transVerts.value(tri.v2()) );
 			glVertex( transVerts.value(tri.v3()) );
 			glEnd();
 		}
 
-		int	s;
-		if ( ( n == "Triangles" || n == "Meshlets" ) && n == p && ( s = idx.row() ) >= 0 ) {
+		if ( s >= 0 && ( n == "Triangles" || n == "Meshlets" ) ) {
 			glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 			glHighlightColor();
 			glDepthFunc( GL_ALWAYS );
 
 			glBegin( GL_TRIANGLES );
 			if ( n == "Triangles" ) {
+				// draw selected triangle
 				Triangle tri = sortedTriangles.value( s );
 				glVertex( transVerts.value(tri.v1()) );
 				glVertex( transVerts.value(tri.v2()) );
 				glVertex( transVerts.value(tri.v3()) );
-			} else {
-				auto	iMeshlets = nif->getIndex( idx.parent().parent(), "Meshlets" );
-				if ( iMeshlets.isValid() ) {
-					quint32	triangleOffset = 0;
-					quint32	triangleCount = 0;
-					for ( int i = 0; i <= s; i++ ) {
-						triangleOffset += triangleCount;
-						triangleCount = nif->get<quint32>( QModelIndex_child( iMeshlets, i ), "Triangle Count" );
-					}
-					for ( ; triangleCount && triangleOffset < quint32(sortedTriangles.size()); triangleCount-- ) {
-						Triangle tri = sortedTriangles.value( qsizetype(triangleOffset) );
-						glVertex( transVerts.value(tri.v1()) );
-						glVertex( transVerts.value(tri.v2()) );
-						glVertex( transVerts.value(tri.v3()) );
-						triangleOffset++;
-					}
+			} else if ( ( iMeshlets = nif->getIndex( idx.parent().parent(), "Meshlets" ) ).isValid() ) {
+				// draw selected meshlet
+				quint32	triangleOffset = 0;
+				quint32	triangleCount = 0;
+				for ( int i = 0; i <= s; i++ ) {
+					triangleOffset += triangleCount;
+					triangleCount = nif->get<quint32>( QModelIndex_child( iMeshlets, i ), "Triangle Count" );
+				}
+				for ( ; triangleCount && triangleOffset < quint32(sortedTriangles.size()); triangleCount-- ) {
+					Triangle tri = sortedTriangles.value( qsizetype(triangleOffset) );
+					glVertex( transVerts.value(tri.v1()) );
+					glVertex( transVerts.value(tri.v2()) );
+					glVertex( transVerts.value(tri.v3()) );
+					triangleOffset++;
 				}
 			}
 			glEnd();
