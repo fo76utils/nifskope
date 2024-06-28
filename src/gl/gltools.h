@@ -77,6 +77,13 @@ public:
 	BoundSphere & apply( const Transform & t );
 	BoundSphere & applyInv( const Transform & t );
 
+	inline bool contains( const Vector3 & v ) const
+	{
+		// assumes non-empty bounds (radius >= 0)
+		FloatVector4	d = FloatVector4( v ) - FloatVector4( center );
+		return ( d.dotProduct3( d ) <= ( radius * radius ) );
+	}
+
 	friend BoundSphere operator*( const Transform & t, const BoundSphere & s );
 };
 
