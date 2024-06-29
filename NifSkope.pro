@@ -315,7 +315,11 @@ SOURCES += \
 	src/nifskope_ui.cpp \
 	src/spellbook.cpp \
 	src/version.cpp \
-	lib/half.cpp
+	lib/half.cpp \
+	lib/meshlet.cpp \
+	lib/meshoptimizer/clusterizer.cpp \
+	lib/meshoptimizer/spatialorder.cpp \
+	lib/meshoptimizer/vcacheoptimizer.cpp
 
 RESOURCES += \
 	res/nifskope.qrc

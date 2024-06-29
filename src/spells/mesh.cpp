@@ -4,20 +4,13 @@
 
 #include <QDialog>
 #include <QGridLayout>
+#include <QSettings>
 #include <cfloat>
 
 #include "libfo76utils/src/fp32vec4.hpp"
 #include "io/MeshFile.h"
-
-#define MESHLET_USE_MESHOPTIMIZER	1
-
-#if MESHLET_USE_MESHOPTIMIZER
-#  include "meshoptimizer/meshoptimizer.h"
-#  include "meshoptimizer/clusterizer.cpp"
-#else
-#  include "meshlet.h"
-#  include "meshlet.cpp"
-#endif
+#include "meshoptimizer/meshoptimizer.h"
+#include "meshlet.h"
 
 // Brief description is deliberately not autolinked to class Spell
 /*! \file mesh.cpp
@@ -750,7 +743,7 @@ static bool calculateBoundingBox( FloatVector4 & bndCenter, FloatVector4 & bndDi
 	FloatVector4	tmpMin( float(FLT_MAX) );
 	FloatVector4	tmpMax( float(-FLT_MAX) );
 	for ( qsizetype i = 0; i < n; i++ ) {
-		FloatVector4	v( verts[i][0], verts[i][1], verts[i][2], 0.0f );
+		FloatVector4	v( verts[i] );
 		tmpMin.minValues( v );
 		tmpMax.maxValues( v );
 	}
@@ -884,7 +877,7 @@ static void updateCullData( NifModel * nif, const QPersistentModelIndex & iMeshD
 	for ( int i = 0; i < meshletCount; i++ ) {
 		int	triangleCount = int( nif->get<quint32>( QModelIndex_child( iMeshlets, i ), "Triangle Count" ) );
 		FloatVector4	bndMin( float(FLT_MAX) );
-		FloatVector4	bndMax( float(FLT_MIN) );
+		FloatVector4	bndMax( float(-FLT_MAX) );
 		bool	haveBounds = false;
 		for ( int j = 0; j < triangleCount; j++, k++ ) {
 			if ( k >= meshFile.triangles.size() ) [[unlikely]]
@@ -894,8 +887,7 @@ static void updateCullData( NifModel * nif, const QPersistentModelIndex & iMeshD
 				int	m = t[l];
 				if ( !( m >= 0 && m < int(meshFile.positions.size()) ) )
 					continue;
-				const Vector3 &	v = meshFile.positions.at( m );
-				FloatVector4	xyz( v[0], v[1], v[2], 0.0f );
+				FloatVector4	xyz( meshFile.positions.at( m ) );
 				bndMin.minValues( xyz );
 				bndMax.maxValues( xyz );
 				haveBounds = true;
@@ -911,115 +903,6 @@ static void updateCullData( NifModel * nif, const QPersistentModelIndex & iMeshD
 	}
 }
 
-static void updateMeshlets( NifModel * nif, const QPersistentModelIndex & iMeshData, const MeshFile & meshFile )
-{
-	NifItem *	item = nif->getItem( iMeshData );
-	if ( !item )
-		return;
-	item->invalidateVersionCondition();
-	item->invalidateCondition();
-	nif->set<quint32>( iMeshData, "Version", 2 );
-
-#if MESHLET_USE_MESHOPTIMIZER
-	std::vector< meshopt_Meshlet >	meshletData;
-	int	meshletCount = 0;
-	if ( meshFile.positions.size() > 0 && meshFile.triangles.size() > 0 ) {
-		try {
-			size_t	vertexCnt = size_t( meshFile.positions.size() );
-			size_t	triangleCnt = size_t( meshFile.triangles.size() );
-			std::vector< unsigned int >	indices( triangleCnt * 3 );
-			size_t	k = 0;
-			for ( const auto & t : meshFile.triangles ) {
-				if ( t[0] >= vertexCnt || t[1] >= vertexCnt || t[2] >= vertexCnt )
-					throw FO76UtilsError( "vertex number is out of range" );
-				indices[k] = t[0];
-				indices[k + 1] = t[1];
-				indices[k + 2] = t[2];
-				k = k + 3;
-			}
-			size_t	maxMeshlets = meshopt_buildMeshletsBound( triangleCnt * 3, 96, 128 );
-			meshletData.resize( maxMeshlets );
-			std::vector< unsigned int >	meshletVertices( maxMeshlets * 96 );
-			std::vector< unsigned char >	meshletTriangles( maxMeshlets * 128 * 3 );
-			meshletCount =
-				int( meshopt_buildMeshlets( meshletData.data(), meshletVertices.data(), meshletTriangles.data(),
-											indices.data(), indices.size(), &( meshFile.positions.at(0)[0] ), vertexCnt,
-											sizeof( Vector3 ), 96, 128, 0.25f ) );
-			meshletData.resize( size_t(meshletCount) );
-			auto	iTriangles = nif->getIndex( iMeshData, "Triangles" );
-			k = 0;
-			for ( const auto & m : meshletData ) {
-				unsigned int	n = m.triangle_count;
-				const unsigned int *	v = meshletVertices.data() + m.vertex_offset;
-				const unsigned char *	p = meshletTriangles.data() + m.triangle_offset;
-				for ( ; n; n--, k++, p = p + 3 ) {
-					auto	iTriangle = QModelIndex_child( iTriangles, int(k) );
-					if ( !iTriangle.isValid() )
-						throw FO76UtilsError( "triangle number is out of range" );
-					nif->set<Triangle>( iTriangle, Triangle( quint16(v[p[0]]), quint16(v[p[1]]), quint16(v[p[2]]) ) );
-				}
-			}
-		} catch ( std::exception & e ) {
-			meshletData.clear();
-			QMessageBox::critical( nullptr, "NifSkope error", QString("Meshlet generation failed: %1").arg(e.what()) );
-			meshletCount = 0;
-		}
-	}
-#else
-	std::vector< DirectX::Meshlet >	meshletData;
-	std::vector< std::uint16_t >	newIndices;
-	if ( DirectX::ComputeMeshlets(
-			meshFile.triangles.data(), size_t(meshFile.triangles.size()),
-			meshFile.positions.data(), size_t(meshFile.positions.size()), meshletData, newIndices, 96, 128 ) == 0
-		&& newIndices.size() == size_t(meshFile.triangles.size() * 3) ) {
-		auto	iTriangles = nif->getIndex( iMeshData, "Triangles" );
-		int	numTriangles = int( meshFile.triangles.size() );
-		for ( int i = 0; i < numTriangles; i++ ) {
-			Triangle	t( newIndices[i * 3], newIndices[i * 3 + 1], newIndices[i * 3 + 2] );
-			nif->set<Triangle>( QModelIndex_child( iTriangles, i ), t );
-		}
-	} else {
-		meshletData.clear();
-		if ( meshFile.triangles.size() > 0 && meshFile.positions.size() > 0 )
-			QMessageBox::critical( nullptr, "NifSkope error", QString("Meshlet generation failed") );
-	}
-	int	meshletCount = int( meshletData.size() );
-#endif
-
-	nif->set<quint32>( iMeshData, "Num Meshlets", quint32(meshletCount) );
-	auto	iMeshlets = nif->getIndex( iMeshData, "Meshlets" );
-	nif->updateArraySize( iMeshlets );
-#if MESHLET_USE_MESHOPTIMIZER
-	for ( int i = 0; i < meshletCount; i++ ) {
-		auto	iMeshlet = QModelIndex_child( iMeshlets, i );
-		if ( iMeshlet.isValid() ) {
-			nif->set<quint32>( iMeshlet, "Vertex Count", meshletData[i].vertex_count );
-			nif->set<quint32>( iMeshlet, "Vertex Offset", meshletData[i].vertex_offset );
-			nif->set<quint32>( iMeshlet, "Triangle Count", meshletData[i].triangle_count );
-			nif->set<quint32>( iMeshlet, "Triangle Offset", meshletData[i].triangle_offset );
-		}
-	}
-#else
-	std::uint32_t	vertexOffset = 0;
-	std::uint32_t	triangleOffset = 0;
-	for ( int i = 0; i < meshletCount; i++ ) {
-		std::uint32_t	vertexCount = meshletData[i].VertCount;
-		std::uint32_t	triangleCount = meshletData[i].PrimCount;
-		auto	iMeshlet = QModelIndex_child( iMeshlets, i );
-		if ( iMeshlet.isValid() ) {
-			nif->set<quint32>( iMeshlet, "Vertex Count", vertexCount );
-			nif->set<quint32>( iMeshlet, "Vertex Offset", vertexOffset );
-			nif->set<quint32>( iMeshlet, "Triangle Count", triangleCount );
-			nif->set<quint32>( iMeshlet, "Triangle Offset", triangleOffset );
-		}
-		vertexOffset = vertexOffset + vertexCount;
-		triangleOffset = ( triangleOffset + ( triangleCount * 3U) + 3U ) & ~3U;
-	}
-#endif
-
-	updateCullData( nif, iMeshData, meshFile );
-}
-
 QModelIndex spUpdateBounds::cast_Starfield( NifModel * nif, const QModelIndex & index )
 {
 	auto meshes = nif->getIndex( index, "Meshes" );
@@ -1030,6 +913,13 @@ QModelIndex spUpdateBounds::cast_Starfield( NifModel * nif, const QModelIndex & 
 	BoundSphere	bounds;
 	FloatVector4	bndCenter( 0.0f );
 	FloatVector4	bndDims( -1.0f );
+	if ( nif->getBlockIndex( nif->getLink( index, "Skin" ) ).isValid() ) {
+		bounds.center = Vector3( 0.0f, 0.0f, 0.0f );
+		bounds.radius = 0.0f;
+		bndCenter = FloatVector4( float(FLT_MAX) );
+		bndDims = FloatVector4( float(FLT_MAX) );
+		boundsCalculated = true;
+	}
 	for ( int i = 0; i <= 3; i++ ) {
 		auto mesh = QModelIndex_child( meshes, i );
 		if ( !mesh.isValid() )
@@ -1127,8 +1017,135 @@ public:
 		return ( nif->blockInherits( index, "BSGeometry" ) && ( nif->get<quint32>(index, "Flags") & 0x0200 ) != 0 );
 	}
 
+	static void updateMeshlets( NifModel * nif, const QPersistentModelIndex & iMeshData, const MeshFile & meshFile );
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final;
 };
+
+void spGenerateMeshlets::updateMeshlets(
+	NifModel * nif, const QPersistentModelIndex & iMeshData, const MeshFile & meshFile )
+{
+	int	meshletAlgorithm;
+	{
+		QSettings	settings;
+		meshletAlgorithm = settings.value( "Settings/Nif/Starfield Meshlet Algorithm", 0 ).toInt();
+		meshletAlgorithm = std::min< int >( std::max< int >( meshletAlgorithm, 0 ), 4 );
+	}
+
+	NifItem *	item = nif->getItem( iMeshData );
+	if ( !item )
+		return;
+	item->invalidateVersionCondition();
+	item->invalidateCondition();
+	nif->set<quint32>( iMeshData, "Version", 2 );
+
+	std::vector< meshopt_Meshlet >	meshletData;
+	if ( meshFile.positions.size() > 0 && meshFile.triangles.size() > 0 ) {
+		try {
+			size_t	vertexCnt = size_t( meshFile.positions.size() );
+			size_t	triangleCnt = size_t( meshFile.triangles.size() );
+			auto	iTriangles = nif->getIndex( iMeshData, "Triangles" );
+			if ( !iTriangles.isValid() || size_t( nif->rowCount( iTriangles ) ) != triangleCnt )
+				throw FO76UtilsError( "invalid triangle data" );
+			if ( meshletAlgorithm < 4 ) {
+				std::vector< unsigned int >	indices( triangleCnt * 3 );
+				size_t	k = 0;
+				for ( const auto & t : meshFile.triangles ) {
+					if ( t[0] >= vertexCnt || t[1] >= vertexCnt || t[2] >= vertexCnt )
+						throw FO76UtilsError( "vertex number is out of range" );
+					indices[k] = t[0];
+					indices[k + 1] = t[1];
+					indices[k + 2] = t[2];
+					k = k + 3;
+				}
+				size_t	maxMeshlets = meshopt_buildMeshletsBound( triangleCnt * 3, 96, 128 );
+				meshletData.resize( maxMeshlets );
+				std::vector< unsigned int >	meshletVertices( maxMeshlets * 96 );
+				std::vector< unsigned char >	meshletTriangles( maxMeshlets * 128 * 3 );
+				size_t	meshletCnt;
+				if ( meshletAlgorithm & 2 ) {
+					std::vector< unsigned int >	indicesOpt( triangleCnt * 3 );
+					meshopt_spatialSortTriangles( indicesOpt.data(), indices.data(), triangleCnt * 3,
+													&( meshFile.positions.at(0)[0] ), vertexCnt, sizeof( Vector3 ) );
+					meshopt_optimizeVertexCache( indices.data(), indicesOpt.data(), triangleCnt * 3, vertexCnt );
+					meshletCnt =
+						meshopt_buildMeshletsScan( meshletData.data(), meshletVertices.data(), meshletTriangles.data(),
+													indices.data(), triangleCnt * 3, vertexCnt, 96, 128 );
+				} else {
+					meshletCnt =
+						meshopt_buildMeshlets( meshletData.data(), meshletVertices.data(), meshletTriangles.data(),
+												indices.data(), triangleCnt * 3, &( meshFile.positions.at(0)[0] ),
+												vertexCnt, sizeof( Vector3 ), 96, 128, 0.25f );
+				}
+				meshletData.resize( meshletCnt );
+				if ( meshletAlgorithm & 1 ) {
+					for ( const auto & m : meshletData ) {
+						meshopt_optimizeMeshlet( meshletVertices.data() + m.vertex_offset,
+												meshletTriangles.data() + m.triangle_offset,
+												m.triangle_count, m.vertex_count );
+					}
+				}
+				k = 0;
+				for ( const auto & m : meshletData ) {
+					unsigned int	n = m.triangle_count;
+					const unsigned int *	v = meshletVertices.data() + m.vertex_offset;
+					const unsigned char *	p = meshletTriangles.data() + m.triangle_offset;
+					for ( ; n; n--, k++, p = p + 3 ) {
+						auto	iTriangle = QModelIndex_child( iTriangles, int(k) );
+						if ( !iTriangle.isValid() )
+							throw FO76UtilsError( "triangle number is out of range" );
+						Triangle	t( quint16(v[p[0]]), quint16(v[p[1]]), quint16(v[p[2]]) );
+						nif->set<Triangle>( iTriangle, t );
+					}
+				}
+			} else {
+				std::vector< DirectX::Meshlet >	tmpMeshlets;
+				std::vector< std::uint16_t >	newIndices;
+				int	err = DirectX::ComputeMeshlets( meshFile.triangles.data(), triangleCnt,
+													meshFile.positions.data(), vertexCnt,
+													tmpMeshlets, newIndices, 96, 128 );
+				if ( err ) {
+					throw FO76UtilsError( err == ERANGE ? "vertex number is out of range"
+														: ( err == ENOMEM ? "std::bad_alloc" : "invalid argument" ) );
+				}
+				meshletData.resize( tmpMeshlets.size() );
+				std::uint32_t	vertexOffset = 0;
+				std::uint32_t	triangleOffset = 0;
+				for ( const auto & m : tmpMeshlets ) {
+					meshopt_Meshlet &	o = meshletData[&m - tmpMeshlets.data()];
+					o.vertex_offset = vertexOffset;
+					o.triangle_offset = triangleOffset;
+					o.vertex_count = m.VertCount;
+					vertexOffset = vertexOffset + o.vertex_count;
+					o.triangle_count = m.PrimCount;
+					triangleOffset = ( triangleOffset + ( o.triangle_count * 3U ) + 3U ) & ~3U;
+				}
+				for ( int i = 0; i < int(triangleCnt); i++ ) {
+					Triangle	t( newIndices[i * 3], newIndices[i * 3 + 1], newIndices[i * 3 + 2] );
+					nif->set<Triangle>( QModelIndex_child( iTriangles, i ), t );
+				}
+			}
+		} catch ( std::exception & e ) {
+			meshletData.clear();
+			QMessageBox::critical( nullptr, "NifSkope error", QString("Meshlet generation failed: %1").arg(e.what()) );
+		}
+	}
+	int	meshletCount = int( meshletData.size() );
+
+	nif->set<quint32>( iMeshData, "Num Meshlets", quint32(meshletCount) );
+	auto	iMeshlets = nif->getIndex( iMeshData, "Meshlets" );
+	nif->updateArraySize( iMeshlets );
+	for ( int i = 0; i < meshletCount; i++ ) {
+		auto	iMeshlet = QModelIndex_child( iMeshlets, i );
+		if ( iMeshlet.isValid() ) {
+			nif->set<quint32>( iMeshlet, "Vertex Count", meshletData[i].vertex_count );
+			nif->set<quint32>( iMeshlet, "Vertex Offset", meshletData[i].vertex_offset );
+			nif->set<quint32>( iMeshlet, "Triangle Count", meshletData[i].triangle_count );
+			nif->set<quint32>( iMeshlet, "Triangle Offset", meshletData[i].triangle_offset );
+		}
+	}
+
+	updateCullData( nif, iMeshData, meshFile );
+}
 
 QModelIndex spGenerateMeshlets::cast( NifModel * nif, const QModelIndex & index )
 {
