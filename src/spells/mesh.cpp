@@ -833,6 +833,8 @@ public:
 		return nif->blockInherits( index, "BSTriShape" ) && nif->getIndex( index, "Vertex Data" ).isValid();
 	}
 
+	static void calculateSFBoneBounds(
+		NifModel * nif, const QPersistentModelIndex & iBoneList, int numBones, const MeshFile & meshFile );
 	static QModelIndex cast_Starfield( NifModel * nif, const QModelIndex & index );
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
@@ -865,6 +867,38 @@ public:
 		return index;
 	}
 };
+
+void spUpdateBounds::calculateSFBoneBounds(
+	NifModel * nif, const QPersistentModelIndex & iBoneList, int numBones, const MeshFile & meshFile )
+{
+	std::map< int, std::vector< Vector3 > >	boneVertexMap;
+	for ( const auto & w : meshFile.weights ) {
+		qsizetype	i = qsizetype( &w - meshFile.weights.data() );
+		if ( i >= meshFile.positions.size() ) [[unlikely]]
+			break;
+		for ( const auto & b : w.weightsUNORM ) {
+			if ( (unsigned int) b.bone < (unsigned int) numBones && b.weight > 0.0001f )
+				boneVertexMap[int(b.bone)].push_back( meshFile.positions.at(i) );
+		}
+	}
+	for ( int i = 0; i < numBones; i++ ) {
+		auto	iBone = QModelIndex_child( iBoneList, i );
+		if ( !iBone.isValid() )
+			continue;
+		std::vector< Vector3 > &	vertices = boneVertexMap[i];
+		Transform	t( nif, iBone );
+		for ( auto & v : vertices )
+			v = t * v;
+		BoundSphere	bounds;
+		if ( vertices.empty() ) {
+			bounds.center = Vector3( 0.0f, 0.0f, 0.0f );
+			bounds.radius = 0.0f;
+		} else {
+			bounds = BoundSphere( vertices.data(), qsizetype(vertices.size()), true );
+		}
+		bounds.update( nif, iBone );
+	}
+}
 
 static void updateCullData( NifModel * nif, const QPersistentModelIndex & iMeshData, const MeshFile & meshFile )
 {
@@ -913,12 +947,20 @@ QModelIndex spUpdateBounds::cast_Starfield( NifModel * nif, const QModelIndex & 
 	BoundSphere	bounds;
 	FloatVector4	bndCenter( 0.0f );
 	FloatVector4	bndDims( -1.0f );
-	if ( nif->getBlockIndex( nif->getLink( index, "Skin" ) ).isValid() ) {
+	QModelIndex	iBoneList;
+	int	numBones = 0;
+	for ( auto iSkin = nif->getBlockIndex( nif->getLink( index, "Skin" ) ); iSkin.isValid(); ) {
 		bounds.center = Vector3( 0.0f, 0.0f, 0.0f );
 		bounds.radius = 0.0f;
 		bndCenter = FloatVector4( float(FLT_MAX) );
 		bndDims = FloatVector4( float(FLT_MAX) );
-		boundsCalculated = true;
+		auto	iBoneData = nif->getBlockIndex( nif->getLink( iSkin, "Data" ) );
+		if ( iBoneData.isValid() ) {
+			iBoneList = nif->getIndex( iBoneData, "Bone List" );
+			if ( iBoneList.isValid() && nif->isArray( iBoneList ) )
+				numBones = nif->rowCount( iBoneList );
+		}
+		break;
 	}
 	for ( int i = 0; i <= 3; i++ ) {
 		auto mesh = QModelIndex_child( meshes, i );
@@ -941,9 +983,13 @@ QModelIndex spUpdateBounds::cast_Starfield( NifModel * nif, const QModelIndex & 
 		nif->set<quint32>( mesh, "Num Verts", numVerts );
 		// FIXME: mesh flags are not updated
 		if ( meshFile.isValid() && meshFile.positions.size() > 0 && !boundsCalculated ) {
-			// Creating a bounding sphere and bounding box from the verts
-			bounds = BoundSphere( meshFile.positions, true );
-			calculateBoundingBox( bndCenter, bndDims, meshFile.positions );
+			if ( numBones > 0 ) {
+				calculateSFBoneBounds( nif, iBoneList, numBones, meshFile );
+			} else {
+				// Creating a bounding sphere and bounding box from the verts
+				bounds = BoundSphere( meshFile.positions, true );
+				calculateBoundingBox( bndCenter, bndDims, meshFile.positions );
+			}
 			boundsCalculated = true;
 		}
 		if ( ( nif->get<quint32>(index, "Flags") & 0x0200 ) == 0 )

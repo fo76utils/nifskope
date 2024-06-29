@@ -1,8 +1,9 @@
  == CHANGELOG ==
 
-* Implemented support for Starfield BSGeometry blocks that use internal mesh data instead of .mesh files.
-* New spells for converting between external and internal Starfield geometry data.
-* The 'Generate Meshlets and Update Bounds' spell updates meshes (internal geometry only) to the new format introduced by Starfield 1.11.33.0, and generates meshlets using code from [meshoptimizer](https://github.com/zeux/meshoptimizer) or [DirectXMesh](https://github.com/microsoft/DirectXMesh).
+* Implemented support for Starfield BSGeometry blocks that use internal mesh data instead of .mesh files. This format allows for value editing and visualization of the data, including vertices, triangles, normals/tangents, and meshlets.
+* New mesh spells for converting between external and internal Starfield geometry data.
+* The 'Generate Meshlets and Update Bounds' spell updates meshes (internal geometry only) to the new version 2 format introduced by Starfield 1.11.33.0, and generates meshlets using code from [meshoptimizer](https://github.com/zeux/meshoptimizer) or [DirectXMesh](https://github.com/microsoft/DirectXMesh). The algorithm can be selected in the general settings.
+* Update Bounds now also updates the bone bounding spheres of Starfield skinned meshes, and the bounding boxes of meshlets (version 2 and internal geometry only).
 * Added new spell (Batch/Copy and Rename all Meshes) by 1OfAKindMods to copy and rename all .mesh files used by a Starfield model. Note that the spell expects a loose NIF file, if the model is from an archive, the renamed mesh files are written under the NifSkope installation directory.
 * The right click menu on header strings that end with .bgsm, .bgem or .mat has a new option to browse materials. Updating the view (Alt+U) may be needed for material path changes to take effect.
 * Added limited support for rendering translucent Starfield materials.
