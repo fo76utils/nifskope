@@ -250,11 +250,9 @@ void MeshFile::update( const NifModel * nif, const QModelIndex & index )
 	auto	trianglesIndex = nif->getIndex( meshData, "Triangles" );
 	if ( !trianglesIndex.isValid() )
 		indicesSize = 0;
-	triangles.resize( indicesSize / 3 );
+	triangles = nif->getArray<Triangle>( trianglesIndex );
+	triangles.resize( qsizetype(indicesSize / 3) );
 	haveData = true;
-
-	for ( int i = 0; i < int(indicesSize / 3); i++ )
-		triangles[i] = nif->get<Triangle>( QModelIndex_child( trianglesIndex, i ) );
 
 	float	scale = nif->get<float>( meshData, "Scale" );
 	if ( scale <= 0.0f ) {
@@ -271,15 +269,11 @@ void MeshFile::update( const NifModel * nif, const QModelIndex & index )
 		clear();
 		return;
 	}
-	positions.resize( numPositions );
+	positions = nif->getArray<Vector3>( verticesIndex );
+	positions.resize( qsizetype(numPositions) );
 
-	for ( int i = 0; i < int(numPositions); i++ ) {
-		Vector3	xyz = nif->get<Vector3>( QModelIndex_child( verticesIndex, i ) );
-		xyz /= 32767.0f;
-		xyz *= scale;
-
-		positions[i] = xyz;
-	}
+	for ( auto & xyz : positions )
+		xyz = ( xyz / 32767.0f ) * scale;
 
 	quint32 numCoord1 = nif->get<quint32>( meshData, "Num UVs" );
 	auto	uvIndex1 = nif->getIndex( meshData, "UVs" );
@@ -311,10 +305,10 @@ void MeshFile::update( const NifModel * nif, const QModelIndex & index )
 	auto	colorsIndex = nif->getIndex( meshData, "Vertex Colors" );
 	if ( !colorsIndex.isValid() )
 		numColor = 0;
-	if ( numColor > 0 )
-		colors.resize( numColor );
-	for ( int i = 0; i < int(numColor); i++ )
-		colors[i] = nif->get<Color4>( QModelIndex_child( colorsIndex, i ) );
+	if ( numColor > 0 ) {
+		colors = nif->getArray<Color4>( colorsIndex );
+		colors.resize( qsizetype(numColor) );
+	}
 
 	quint32 numNormal = nif->get<quint32>( meshData, "Num Normals" );
 	auto	normalsIndex = nif->getIndex( meshData, "Normals" );
