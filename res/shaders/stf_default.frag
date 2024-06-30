@@ -495,9 +495,8 @@ void main()
 				layerBaseMap.rgb *= f;
 
 			layerMask = getBlenderMask( i - 1 );
-			if ( (lm.blenders[i - 1].blendMode & -7) == 0 && !( lm.isEffect && lm.effectSettings.isGlass ) ) {
-				// Linear, PositionContrast or CharacterCombine (interpreted as linear)
-				// TODO: implement Additive and Skin blending
+			if ( lm.blenders[i - 1].blendMode != 3 && !( lm.isEffect && lm.effectSettings.isGlass ) ) {
+				// TODO: correctly implement CharacterCombine and Skin, instead of interpreting these as Linear
 				float	srcMask = layerMask;
 				if ( lm.blenders[i - 1].blendMode == 2 ) {
 					float	blendPosition = lm.blenders[i - 1].floatParams[2];
@@ -510,22 +509,23 @@ void main()
 					srcMask = clamp( (srcMask - maskMin) / (maskMax - maskMin), 0.0, 1.0 );
 				}
 				srcMask *= f;
+				float	dstMask = 1.0 - ( lm.blenders[i - 1].blendMode != 1 ? srcMask : 0.0 );
 				if ( lm.blenders[i - 1].boolParams[0] )
-					baseMap.rgb = mix( baseMap.rgb, layerBaseMap.rgb, srcMask );	// blend color
+					baseMap.rgb = baseMap.rgb * dstMask + layerBaseMap.rgb * srcMask;	// blend color
 				if ( lm.blenders[i - 1].boolParams[1] )
-					pbrMap.g = mix( pbrMap.g, layerPBRMap.g, srcMask );	// blend metalness
+					pbrMap.g = pbrMap.g * dstMask + layerPBRMap.g * srcMask;	// blend metalness
 				if ( lm.blenders[i - 1].boolParams[2] )
-					pbrMap.r = mix( pbrMap.r, layerPBRMap.r, srcMask );	// blend roughness
+					pbrMap.r = pbrMap.r * dstMask + layerPBRMap.r * srcMask;	// blend roughness
 				if ( lm.blenders[i - 1].boolParams[3] ) {
 					if ( lm.blenders[i - 1].boolParams[4] ) {
 						normal.rg = normal.rg + ( layerNormal.rg * srcMask );	// blend normals additively
 						normal.b = sqrt( max( 1.0 - dot(normal.rg, normal.rg), 0.0 ) );
 					} else {
-						normal = normalize( mix(normal, layerNormal, srcMask) );
+						normal = normalize( normal * dstMask + layerNormal * srcMask );
 					}
 				}
 				if ( lm.blenders[i - 1].boolParams[6] )
-					pbrMap.b = mix( pbrMap.b, layerPBRMap.b, srcMask );	// blend ambient occlusion
+					pbrMap.b = pbrMap.b * dstMask + layerPBRMap.b * srcMask;	// blend ambient occlusion
 			}
 		}
 
