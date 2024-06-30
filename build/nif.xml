@@ -1776,7 +1776,7 @@
     </struct>
 
     <struct name="ShortVector3" size="6" convertible="Vector3" module="NiMain">
-        A vector in 3D space (x,y,z).
+        A vector in 3D space (x,y,z), in signed normalized 16-bit format.
         <field name="x" type="short">First coordinate.</field>
         <field name="y" type="short">Second coordinate.</field>
         <field name="z" type="short">Third coordinate.</field>
@@ -1813,6 +1813,7 @@
     </struct>
 
     <struct name="UDecVector4" size="4" convertible="Vector4" module="NiMain">
+        A 4-dimensional vector, 10:10:10:2 bits normalized to the range -1.0 to 1.0.
         <field name="x" type="byte">First coordinate.</field>
         <field name="y" type="byte">Second coordinate.</field>
         <field name="z" type="byte">Third coordinate.</field>
