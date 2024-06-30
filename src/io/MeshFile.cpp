@@ -273,7 +273,7 @@ void MeshFile::update( const NifModel * nif, const QModelIndex & index )
 	positions.resize( qsizetype(numPositions) );
 
 	for ( auto & xyz : positions )
-		xyz = ( xyz / 32767.0f ) * scale;
+		xyz = xyz * scale;
 
 	quint32 numCoord1 = nif->get<quint32>( meshData, "Num UVs" );
 	auto	uvIndex1 = nif->getIndex( meshData, "UVs" );

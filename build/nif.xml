@@ -9242,7 +9242,7 @@
         <field name="Version" type="uint" />
         <field name="Indices Size" type="uint" />
         <field name="Triangles" type="Triangle" length="Indices Size #DIV# 3" />
-        <field name="Scale" type="float">Vertex coordinate scale * 32767.0</field>
+        <field name="Scale" type="float">Vertex coordinate scale</field>
         <field name="Weights Per Vertex" type="uint" />
         <field name="Num Verts" type="uint" />
         <field name="Vertices" type="ShortVector3" length="Num Verts" />

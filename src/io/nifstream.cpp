@@ -180,19 +180,17 @@ bool NifIStream::read( NifValue & val )
 		}
 	case NifValue::tShortVector3:
 		{
-			int16_t x, y, z;
-			float xf, yf, zf;
+			uint32_t xy;
+			uint16_t z;
 
-			*dataStream >> x;
-			*dataStream >> y;
+			*dataStream >> xy;
 			*dataStream >> z;
 
-			xf = (float) x;
-			yf = (float) y;
-			zf = (float) z;
+			FloatVector4 xyzw( FloatVector4::convertInt16( ( std::uint64_t(z) << 32 ) | xy ) );
+			xyzw /= 32767.0f;
 
 			Vector3 * v = static_cast<Vector3 *>(val.val.data);
-			v->xyz[0] = xf; v->xyz[1] = yf; v->xyz[2] = zf;
+			xyzw.convertToVector3( &(v->xyz[0]) );
 
 			return (dataStream->status() == QDataStream::Ok);
 		}
@@ -704,12 +702,15 @@ bool NifOStream::write( const NifValue & val )
 			if ( !vec )
 				return false;
 
-			int16_t v[3];
-			v[0] = (int16_t) round(vec->xyz[0]);
-			v[1] = (int16_t) round(vec->xyz[1]);
-			v[2] = (int16_t) round(vec->xyz[2]);
+			FloatVector4	xyz( FloatVector4::convertVector3( &(vec->xyz[0]) ) * 32767.0f );
+			xyz.maxValues( FloatVector4(-32768.0f) ).minValues( FloatVector4(32767.0f) ).roundValues();
 
-			return device->write( (char*)v, 6 ) == 6;
+			char	v[6];
+			FileBuffer::writeUInt16Fast( &(v[0]), std::uint16_t( std::int16_t(xyz[0]) ) );
+			FileBuffer::writeUInt16Fast( &(v[2]), std::uint16_t( std::int16_t(xyz[1]) ) );
+			FileBuffer::writeUInt16Fast( &(v[4]), std::uint16_t( std::int16_t(xyz[2]) ) );
+
+			return device->write( v, 6 ) == 6;
 		}
 	case NifValue::tUshortVector3:
 		{
