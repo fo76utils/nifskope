@@ -411,26 +411,17 @@ void spTangentSpace::tangentSpaceSFMesh( NifModel * nif, const QPersistentModelI
 				tangent -= normal * normal.dotProduct3( tangent );
 				r = tangent.dotProduct3( tangent );
 			}
-			if ( r > 0.0f )
-				tangent /= float( std::sqrt( r ) );
-			else
-				( tangent = normal ).shuffleValues( 0xC9 );	// 1, 2, 0, 3
-
-			FloatVector4	bTmp( tangent.crossProduct3( normal ) );
-
-			r = bitangent.dotProduct3( bitangent );
-			if ( r > 0.0f ) {
-				bitangent /= float( std::sqrt( r ) );
-				bitangent -= normal * normal.dotProduct3( bitangent );
-				bitangent -= tangent * tangent.dotProduct3( bitangent );
-				r = bitangent.dotProduct3( bitangent );
+			if ( !( r > 0.0f ) ) [[unlikely]] {
+				tangent = normal.crossProduct3( ( normal[2] * normal[2] ) > 0.5f ?
+												FloatVector4( 0.0f, -1.0f, 0.0f, 0.0f )
+												: FloatVector4( 0.0f, 0.0f, -1.0f, 0.0f ) );
+				r = tangent.dotProduct3( tangent );
 			}
 			if ( r > 0.0f )
-				bitangent /= float( std::sqrt( r ) );
-			else
-				bitangent = bTmp;
+				tangent /= float( std::sqrt( r ) );
 
-			tangent[3] = ( bTmp.dotProduct3( bitangent ) < 0.0f ? 1.0f : -1.0f );
+			tangent[3] = ( normal.crossProduct3( tangent ).dotProduct3( bitangent ) > 0.0f ? 1.0f : -1.0f );
+
 			tangent.convertToFloats( &(tangents[i][0]) );
 		}
 

@@ -384,11 +384,11 @@ public:
 		dist->setRange( 0, 1 );
 		dist->setDecimals( 4 );
 		if ( !isSFMesh ) {
-			dist->setSingleStep( 0.01 );
-			dist->setValue( 0.03 );
+			dist->setSingleStep( 0.001 );
+			dist->setValue( 0.035 );
 		} else {
 			dist->setSingleStep( 0.0001 );
-			dist->setValue( 0.001 );
+			dist->setValue( 0.0005 );
 		}
 
 		grid->addWidget( new QLabel( Spell::tr( "Max Vertex Distance" ) ), 1, 0 );
