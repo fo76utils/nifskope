@@ -1,5 +1,7 @@
  == CHANGELOG ==
 
+#### NifSkope-2.0.dev9-20240630
+
 * Implemented support for Starfield BSGeometry blocks that use internal mesh data instead of .mesh files. This format allows for value editing and visualization of the data, including vertices, triangles, normals/tangents, and meshlets.
 * New mesh spells for converting between external and internal Starfield geometry data.
 * The 'Generate Meshlets and Update Bounds' spell updates meshes (internal geometry only) to the new version 2 format introduced by Starfield 1.11.33.0, and generates meshlets using code from [meshoptimizer](https://github.com/zeux/meshoptimizer) or [DirectXMesh](https://github.com/microsoft/DirectXMesh). The algorithm can be selected in the general settings.
