@@ -17,6 +17,7 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final;
 	QModelIndex cast( NifModel * nif, const QModelIndex & iBlock ) override final;
+	static void tangentSpaceSFMesh( NifModel * nif, const QPersistentModelIndex & index );
 };
 
 

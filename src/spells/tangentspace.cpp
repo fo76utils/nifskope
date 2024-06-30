@@ -3,9 +3,13 @@
 
 #include "lib/nvtristripwrapper.h"
 
+#include <QMessageBox>
 
 bool spTangentSpace::isApplicable( const NifModel * nif, const QModelIndex & index )
 {
+	if ( nif->getBSVersion() >= 170 && nif->isNiBlock( index, "BSGeometry" ) )
+		return ( ( nif->get<quint32>(index, "Flags") & 0x0200 ) != 0 );
+
 	QModelIndex iData = nif->getBlockIndex( nif->getLink( index, "Data" ) );
 
 	if ( nif->isNiBlock( index, "BSTriShape" ) || nif->isNiBlock( index, "BSSubIndexTriShape" )
@@ -42,6 +46,12 @@ bool spTangentSpace::isApplicable( const NifModel * nif, const QModelIndex & ind
 QModelIndex spTangentSpace::cast( NifModel * nif, const QModelIndex & iBlock )
 {
 	QPersistentModelIndex iShape = iBlock;
+
+	if ( nif->getBSVersion() >= 170 && nif->isNiBlock( iBlock, "BSGeometry" ) ) {
+		tangentSpaceSFMesh( nif, iShape );
+		return iShape;
+	}
+
 	QModelIndex iData;
 	QModelIndex iPartBlock;
 	if ( nif->getBSVersion() < 100 ) {
@@ -134,8 +144,6 @@ QModelIndex spTangentSpace::cast( NifModel * nif, const QModelIndex & iBlock )
 
 	QVector<Vector3> tan( verts.count() );
 	QVector<Vector3> bin( verts.count() );
-
-	QMultiHash<int, int> vmap;
 
 	//int skptricnt = 0;
 
@@ -299,6 +307,135 @@ QModelIndex spTangentSpace::cast( NifModel * nif, const QModelIndex & iBlock )
 	}
 
 	return iShape;
+}
+
+void spTangentSpace::tangentSpaceSFMesh( NifModel * nif, const QPersistentModelIndex & index )
+{
+	if ( ( nif->get<quint32>(index, "Flags") & 0x0200 ) == 0 )
+		return;
+
+	auto	iMeshes = nif->getIndex( index, "Meshes" );
+	if ( !iMeshes.isValid() )
+		return;
+	for ( int i = 0; i <= 3; i++ ) {
+		if ( !nif->get<bool>( QModelIndex_child( iMeshes, i ), "Has Mesh" ) )
+			continue;
+		QModelIndex	iMesh = nif->getIndex( QModelIndex_child( iMeshes, i ), "Mesh" );
+		if ( !iMesh.isValid() )
+			continue;
+		QModelIndex	iMeshData = nif->getIndex( iMesh, "Mesh Data" );
+		if ( !iMeshData.isValid() )
+			continue;
+
+		QModelIndex	iTriangles = nif->getIndex( iMeshData, "Triangles" );
+		QModelIndex	iVertices = nif->getIndex( iMeshData, "Vertices" );
+		QModelIndex	iUVs = nif->getIndex( iMeshData, "UVs" );
+		QModelIndex	iNormals = nif->getIndex( iMeshData, "Normals" );
+		int	numVerts;
+		if ( !( iTriangles.isValid() && iVertices.isValid() && iUVs.isValid() && iNormals.isValid()
+				&& ( numVerts = nif->rowCount( iVertices ) ) > 0
+				&& nif->rowCount( iUVs ) == numVerts && nif->rowCount( iNormals ) == numVerts ) ) {
+			QMessageBox::critical( nullptr, "NifSkope error", QString("Error calculating tangents for mesh %1").arg(i) );
+			continue;
+		}
+
+		QVector< Triangle >	triangles( nif->getArray<Triangle>( iTriangles ) );
+		QVector< Vector3 >	vertices( nif->getArray<Vector3>( iVertices ) );
+		QVector< Vector2 >	uvs( nif->getArray<Vector2>( iUVs ) );
+		QVector< Vector4 >	normals( nif->getArray<Vector4>( iNormals ) );
+
+		nif->set<quint32>( iMeshData, "Num Tangents", quint32(numVerts) );
+		QModelIndex	iTangents = nif->getIndex( iMeshData, "Tangents" );
+		if ( !iTangents.isValid() )
+			continue;
+		nif->updateArraySize( iTangents );
+
+		QVector< UDecVector4 >	tangents;
+		tangents.resize( numVerts );
+		for ( auto & n : tangents )
+			FloatVector4( 0.0f ).convertToFloats( &(n[0]) );
+		QVector< FloatVector4 >	bitangents;
+		bitangents.resize( numVerts );
+		for ( auto & n : bitangents )
+			n = FloatVector4( 0.0f );
+
+		for ( const auto & t : triangles ) {
+			// for each triangle caculate the texture flow direction
+
+			int	i1 = t[0];
+			int	i2 = t[1];
+			int	i3 = t[2];
+			if ( i1 >= numVerts || i2 >= numVerts || i3 >= numVerts )
+				continue;
+
+			FloatVector4	v1( FloatVector4::convertVector3( &(vertices.at(i1)[0]) ) );
+			FloatVector4	v2( FloatVector4::convertVector3( &(vertices.at(i2)[0]) ) );
+			FloatVector4	v3( FloatVector4::convertVector3( &(vertices.at(i3)[0]) ) );
+
+			const Vector2 &	w1 = uvs.at( i1 );
+			const Vector2 &	w2 = uvs.at( i2 );
+			const Vector2 &	w3 = uvs.at( i3 );
+
+			FloatVector4	v2v1 = v2 - v1;
+			FloatVector4	v3v1 = v3 - v1;
+
+			Vector2	w2w1 = w2 - w1;
+			Vector2	w3w1 = w3 - w1;
+
+			FloatVector4	sdir( v2v1 * w3w1[1] - v3v1 * w2w1[1] );
+			FloatVector4	tdir( v3v1 * w2w1[0] - v2v1 * w3w1[0] );
+
+			// this seems to produce better results
+			bool	r = ( w2w1[0] * w3w1[1] < w3w1[0] * w2w1[1] );
+			sdir.normalize( r );
+			tdir.normalize( r );
+
+			for ( int j = 0; j < 3; j++ ) {
+				int i = t[j];
+
+				( FloatVector4( &(tangents[i][0]) ) + sdir ).convertToFloats( &(tangents[i][0]) );
+				bitangents[i] += tdir;
+			}
+		}
+
+		for ( const auto & n : normals ) {
+			// for each vertex calculate tangent and binormal
+			qsizetype	i = qsizetype( &n - normals.constData() );
+			FloatVector4	normal( &(n[0]) );
+			FloatVector4	tangent( &(tangents.at(i)[0]) );
+			FloatVector4	bitangent( bitangents.at(i) );
+
+			float	r = tangent.dotProduct3( tangent );
+			if ( r > 0.0f ) {
+				tangent /= float( std::sqrt( r ) );
+				tangent -= normal * normal.dotProduct3( tangent );
+				r = tangent.dotProduct3( tangent );
+			}
+			if ( r > 0.0f )
+				tangent /= float( std::sqrt( r ) );
+			else
+				( tangent = normal ).shuffleValues( 0xC9 );	// 1, 2, 0, 3
+
+			FloatVector4	bTmp( tangent.crossProduct3( normal ) );
+
+			r = bitangent.dotProduct3( bitangent );
+			if ( r > 0.0f ) {
+				bitangent /= float( std::sqrt( r ) );
+				bitangent -= normal * normal.dotProduct3( bitangent );
+				bitangent -= tangent * tangent.dotProduct3( bitangent );
+				r = bitangent.dotProduct3( bitangent );
+			}
+			if ( r > 0.0f )
+				bitangent /= float( std::sqrt( r ) );
+			else
+				bitangent = bTmp;
+
+			tangent[3] = ( bTmp.dotProduct3( bitangent ) < 0.0f ? 1.0f : -1.0f );
+			tangent.convertToFloats( &(tangents[i][0]) );
+		}
+
+		nif->setArray<UDecVector4>( iTangents, tangents );
+	}
 }
 
 REGISTER_SPELL( spTangentSpace )
