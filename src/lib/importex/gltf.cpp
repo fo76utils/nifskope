@@ -8,6 +8,7 @@
 #include "model/nifmodel.h"
 #include "message.h"
 #include "libfo76utils/src/filebuf.hpp"
+#include "libfo76utils/src/material.hpp"
 
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
@@ -15,6 +16,7 @@
 #include <tiny_gltf.h>
 
 #include <cmath>
+#include <cctype>
 
 #include <QApplication>
 #include <QBuffer>
@@ -33,13 +35,29 @@ struct GltfStore
 	// gltfSkinID to BSMesh
 	QMap<int, BSMesh*> skins;
 	// Material Paths
-	QStringList materials;
+	std::map< std::string, int > materials;
 
 	QStringList errors;
 
 	bool flatSkeleton = false;
 };
 
+
+static inline void exportFloats( QByteArray & bin, const float * data, size_t n )
+{
+#if defined(__i386__) || defined(__x86_64__) || defined(__x86_64)
+	const char *	buf = reinterpret_cast< const char * >( data );
+	qsizetype	nBytes = qsizetype( n * sizeof(float) );
+#else
+	char	buf[64];
+	qsizetype	nBytes = 0;
+
+	for ( ; n > 0; n--, data++, nBytes = nBytes + 4 )
+		FileBuffer::writeUInt32Fast( &(buf[nBytes]), std::bit_cast< std::uint32_t >( *data ) );
+#endif
+
+	bin.append( buf, nBytes );
+}
 
 void exportCreateInverseBoneMatrices(tinygltf::Model& model, QByteArray& bin, const BSMesh* bsmesh, int gltfSkinID, GltfStore& gltf)
 {
@@ -61,7 +79,7 @@ void exportCreateInverseBoneMatrices(tinygltf::Model& model, QByteArray& bin, co
 	model.skins[gltfSkinID].inverseBindMatrices = bufferViewIndex;
 
 	for ( const auto& b : bsmesh->boneTransforms ) {
-		bin.append(reinterpret_cast<const char*>(b.toMatrix4().data()), sizeof(Matrix4));
+		exportFloats( bin, b.toMatrix4().data(), 16 );
 	}
 }
 
@@ -87,8 +105,12 @@ bool exportCreateNodes(const NifModel* nif, const Scene* scene, tinygltf::Model&
 			// Create extra nodes for GPU LODs
 			int createdNodes = 1;
 			if ( isBSGeometry ) {
-				if ( !mesh->materialPath.isEmpty() && !gltf.materials.contains(mesh->materialPath) ) {
-					gltf.materials << mesh->materialPath;
+				if ( !mesh->materialPath.isEmpty() ) {
+					std::string matPath( Game::GameManager::get_full_path( mesh->materialPath, "materials/", ".mat" ) );
+					if ( gltf.materials.find( matPath ) == gltf.materials.end() ) {
+						int materialID = int( gltf.materials.size() );
+						gltf.materials.emplace( matPath, materialID );
+					}
 				}
 				hasGPULODs = mesh->gpuLODs.size() > 0;
 				createdNodes = mesh->meshCount();
@@ -286,33 +308,6 @@ bool exportCreateNodes(const NifModel* nif, const Scene* scene, tinygltf::Model&
 	return true;
 }
 
-static inline void exportFloats( QByteArray & bin, const float * data, size_t n )
-{
-	char	buf[16];
-	qsizetype	nBytes = 0;
-
-	switch ( n ) {
-	case 4:
-		FileBuffer::writeUInt32Fast( &(buf[12]), std::bit_cast< std::uint32_t >(data[3]) );
-		nBytes += 4;
-		[[fallthrough]];
-	case 3:
-		FileBuffer::writeUInt32Fast( &(buf[8]), std::bit_cast< std::uint32_t >(data[2]) );
-		nBytes += 4;
-		[[fallthrough]];
-	case 2:
-		FileBuffer::writeUInt32Fast( &(buf[4]), std::bit_cast< std::uint32_t >(data[1]) );
-		nBytes += 4;
-		[[fallthrough]];
-	case 1:
-		FileBuffer::writeUInt32Fast( &(buf[0]), std::bit_cast< std::uint32_t >(data[0]) );
-		nBytes += 4;
-		break;
-	}
-
-	bin.append( buf, nBytes );
-}
-
 void exportCreatePrimitive(tinygltf::Model& model, QByteArray& bin, std::shared_ptr<MeshFile> mesh, tinygltf::Primitive& prim, std::string attr,
 							int count, int componentType, int type, quint32& attributeIndex, GltfStore& gltf)
 {
@@ -329,33 +324,17 @@ void exportCreatePrimitive(tinygltf::Model& model, QByteArray& bin, std::shared_
 	// Min/Max bounds
 	// TODO: Utility function in niftypes
 	if ( attr == "POSITION" ) {
-		Vector3 max{ -INFINITY, -INFINITY, -INFINITY };
-		Vector3 min{ INFINITY, INFINITY, INFINITY };
+		Q_ASSERT( !mesh->positions.isEmpty() );
+
+		FloatVector4 max( float(-FLT_MAX) );
+		FloatVector4 min( float(FLT_MAX) );
 
 		for ( const auto& v : mesh->positions ) {
-			if ( v[0] > max[0] )
-				max[0] = v[0];
-			if ( v[0] < min[0] )
-				min[0] = v[0];
+			FloatVector4 tmp( FloatVector4::convertVector3( &(v[0]) ) );
 
-			if ( v[1] > max[1] )
-				max[1] = v[1];
-			if ( v[1] < min[1] )
-				min[1] = v[1];
-
-			if ( v[2] > max[2] )
-				max[2] = v[2];
-			if ( v[2] < min[2] )
-				min[2] = v[2];
+			max.maxValues( tmp );
+			min.minValues( tmp );
 		}
-
-		Q_ASSERT(min[0] != INFINITY);
-		Q_ASSERT(min[1] != INFINITY);
-		Q_ASSERT(min[2] != INFINITY);
-
-		Q_ASSERT(max[0] != -INFINITY);
-		Q_ASSERT(max[1] != -INFINITY);
-		Q_ASSERT(max[2] != -INFINITY);
 
 		acc.minValues.push_back(min[0]);
 		acc.minValues.push_back(min[1]);
@@ -415,38 +394,42 @@ void exportCreatePrimitive(tinygltf::Model& model, QByteArray& bin, std::shared_
 			exportFloats( bin, &(v[0]), 4 );
 		}
 	} else if ( attr == "WEIGHTS_0" ) {
+		FloatVector4 tmpWeights( 0.0f );
 		for ( const auto& v : mesh->weights ) {
 			for ( int i = 0; i < 4; i++ ) {
-				auto weight = v.weightsUNORM[i].weight;
+				tmpWeights.shuffleValues( 0x39 );	// 1, 2, 3, 0
+				float weight = v.weightsUNORM[i].weight;
 				// Fix Bethesda's non-zero weights
-				if ( weight != 0.0 && weight < 0.0001 && v.weightsUNORM[i].bone == 0 ) {
-					weight = 0.0;
-				}
-				bin.append(reinterpret_cast<const char*>(&weight), sizeof(weight));
+				if ( v.weightsUNORM[i].bone != 0 || weight >= 0.0001f )
+					tmpWeights[3] = weight;
 			}
+			exportFloats( bin, &(tmpWeights[0]), 4 );
 		}
 	} else if ( attr == "WEIGHTS_1" ) {
+		FloatVector4 tmpWeights( 0.0f );
 		for ( const auto& v : mesh->weights ) {
 			for ( int i = 4; i < 8; i++ ) {
-				auto weight = v.weightsUNORM[i].weight;
+				tmpWeights.shuffleValues( 0x39 );	// 1, 2, 3, 0
+				float weight = v.weightsUNORM[i].weight;
 				// Fix Bethesda's non-zero weights
-				if ( weight != 0.0 && weight < 0.0001 && v.weightsUNORM[i].bone == 0 ) {
-					weight = 0.0;
-				}
-				bin.append(reinterpret_cast<const char*>(&weight), sizeof(weight));
+				if ( v.weightsUNORM[i].bone != 0 || weight >= 0.0001f )
+					tmpWeights[3] = weight;
 			}
+			exportFloats( bin, &(tmpWeights[0]), 4 );
 		}
 	} else if ( attr == "JOINTS_0" ) {
+		char tmpBones[8];
 		for ( const auto& v : mesh->weights ) {
-			for ( int i = 0; i < 4; i++ ) {
-				bin.append(reinterpret_cast<const char*>(&v.weightsUNORM[i].bone), sizeof(v.weightsUNORM[i].bone));
-			}
+			for ( int i = 0; i < 4; i++ )
+				FileBuffer::writeUInt16Fast( &(tmpBones[i << 1]), v.weightsUNORM[i].bone );
+			bin.append( tmpBones, 8 );
 		}
 	} else if ( attr == "JOINTS_1" ) {
+		char tmpBones[8];
 		for ( const auto& v : mesh->weights ) {
-			for ( int i = 4; i < 8; i++ ) {
-				bin.append(reinterpret_cast<const char*>(&v.weightsUNORM[i].bone), sizeof(v.weightsUNORM[i].bone));
-			}
+			for ( int i = 0; i < 4; i++ )
+				FileBuffer::writeUInt16Fast( &(tmpBones[i << 1]), v.weightsUNORM[i + 4].bone );
+			bin.append( tmpBones, 8 );
 		}
 	}
 
@@ -515,10 +498,12 @@ bool exportCreatePrimitives(tinygltf::Model& model, QByteArray& bin, const BSMes
 	view.target = TINYGLTF_TARGET_ELEMENT_ARRAY_BUFFER;
 
 	bin.reserve(bin.size() + view.byteLength);
-	for ( const auto v : tris ) {
-		bin.append(reinterpret_cast<const char*>(&v[0]), sizeof(v[0]));
-		bin.append(reinterpret_cast<const char*>(&v[1]), sizeof(v[1]));
-		bin.append(reinterpret_cast<const char*>(&v[2]), sizeof(v[2]));
+	for ( const auto & v : tris ) {
+		char tmpTriangles[6];
+		FileBuffer::writeUInt16Fast( &(tmpTriangles[0]), v[0] );
+		FileBuffer::writeUInt16Fast( &(tmpTriangles[2]), v[1] );
+		FileBuffer::writeUInt16Fast( &(tmpTriangles[4]), v[2] );
+		bin.append( tmpTriangles, 6 );
 	}
 
 	model.bufferViews.push_back(view);
@@ -554,7 +539,9 @@ bool exportCreateMeshes(const NifModel* nif, const Scene* scene, tinygltf::Model
 					tinygltf::Mesh gltfMesh;
 					gltfNode.mesh = meshIndex;
 					gltfMesh.name = QString("%1%2%3").arg(node->getName()).arg(":LOD").arg(j).toStdString();
-					int materialID = gltf.materials.indexOf(mesh->materialPath) + 1;
+					int materialID = 0;
+					if ( !mesh->materialPath.isEmpty() )
+						materialID = gltf.materials[Game::GameManager::get_full_path( mesh->materialPath, "materials/", ".mat" )];
 					int lodLevel = (hasGPULODs) ? 0 : j;
 					if ( exportCreatePrimitives(model, bin, mesh, gltfMesh, attributeIndex, lodLevel, materialID, gltf, skeletalLodIndex) ) {
 						meshIndex++;
@@ -589,6 +576,7 @@ void exportGltf(const NifModel* nif, const Scene* scene, const QModelIndex& inde
 	model.asset.generator = "NifSkope glTF 2.0 Exporter v1.1";
 
 	GltfStore gltf;
+	gltf.materials.emplace( std::string(), 0 );
 	QByteArray buffer;
 	bool success = exportCreateNodes(nif, scene, model, buffer, gltf);
 	if ( success )
@@ -599,19 +587,40 @@ void exportGltf(const NifModel* nif, const Scene* scene, const QModelIndex& inde
 		buff.data = std::vector<unsigned char>(buffer.cbegin(), buffer.cend());
 		model.buffers.push_back(buff);
 
-		gltf.materials.prepend("Default");
-		for ( const auto& name : gltf.materials ) {
-			auto mat = tinygltf::Material();
-			auto finfo = QFileInfo(name);
-			mat.name = finfo.baseName().toStdString();
-			std::map<std::string, tinygltf::Value> extras;
-			extras["Material Path"] = tinygltf::Value(name.toStdString());
-			mat.extras = tinygltf::Value(extras);
+		CE2MaterialDB *	matDB = nif->getCE2Materials();
+		model.materials.resize( gltf.materials.size() );
+		for ( const auto& i : gltf.materials ) {
+			const std::string &	name = i.first;
+			int	materialID = i.second;
+			auto &	mat = model.materials[materialID];
 
-			model.materials.push_back(mat);
+			mat.name = ( !name.empty() ? name : std::string("Default") );
+			std::map<std::string, tinygltf::Value> extras;
+			extras["Material Path"] = tinygltf::Value( mat.name );
+			mat.extras = tinygltf::Value(extras);
+			for ( size_t n = mat.name.rfind('/'); n != std::string::npos; ) {
+				mat.name.erase( 0, n + 1 );
+				break;
+			}
+			if ( mat.name.ends_with(".mat") )
+				mat.name.resize( mat.name.length() - 4 );
+			for ( size_t j = 0; j < mat.name.length(); j++ ) {
+				char	c = mat.name[j];
+				if ( std::islower(c) && ( j == 0 || !std::isalpha(mat.name[j - 1]) ) )
+					mat.name[j] = std::toupper( c );
+			}
+
+			const CE2Material *	material = nullptr;
+			if ( matDB && !name.empty() )
+				material = matDB->loadMaterial( name );
+			if ( !material )
+				continue;
+
+			// TODO: implement exporting material data
+
 		}
 
-		writer.WriteGltfSceneToFile(&model, filename.toStdString(), false, false, false, false);
+		writer.WriteGltfSceneToFile(&model, filename.toStdString(), false, false, true, false);
 	}
 
 	if ( gltf.errors.size() == 1 ) {
