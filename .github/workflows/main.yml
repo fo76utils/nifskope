@@ -28,9 +28,9 @@ jobs:
     - name: 'Build with qmake'
       shell: msys2 {0}
       run: |
-        qmake noavx2=1 NifSkope.pro
+        qmake noavx=1 NifSkope.pro
         make -j 12
-        mv -f release/NifSkope.exe release/NifSkope_noavx2.exe
+        mv -f release/NifSkope.exe release/NifSkope_noavx.exe
         make clean
         qmake NifSkope.pro
         make -j 12

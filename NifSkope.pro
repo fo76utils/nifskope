@@ -473,7 +473,8 @@ win32 {
 	} else {
 		QMAKE_CXXFLAGS *= -O3
 	}
-	contains(nof16c, 1) {
+	contains(noavx, 1 ) {
+	} else:contains(nof16c, 1) {
 		QMAKE_CXXFLAGS *= -march=sandybridge
 	} else:contains(noavx2, 1) {
 		QMAKE_CXXFLAGS *= -march=sandybridge -mf16c
