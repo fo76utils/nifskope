@@ -7,6 +7,7 @@
 #include "io/MeshFile.h"
 #include "model/nifmodel.h"
 #include "message.h"
+#include "qtcompat.h"
 #include "libfo76utils/src/filebuf.hpp"
 #include "libfo76utils/src/material.hpp"
 
@@ -23,6 +24,7 @@
 #include <QVector>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QMessageBox>
 
 #define tr( x ) QApplication::tr( x )
 
@@ -561,9 +563,8 @@ bool exportCreateMeshes(const NifModel* nif, const Scene* scene, tinygltf::Model
 }
 
 
-void exportGltf(const NifModel* nif, const Scene* scene, const QModelIndex& index)
+void exportGltf( const NifModel* nif, const Scene* scene, [[maybe_unused]] const QModelIndex& index )
 {
-	(void) index;
 	QString filename = QFileDialog::getSaveFileName(qApp->activeWindow(), tr("Choose a .glTF file for export"), nif->getFilename(), "glTF (*.gltf)");
 	if ( filename.isEmpty() )
 		return;
@@ -630,4 +631,131 @@ void exportGltf(const NifModel* nif, const Scene* scene, const QModelIndex& inde
 			Message::append("Warnings/Errors occurred during glTF Export", msg);
 		}
 	}
+}
+
+static bool nodeHasMeshes( const tinygltf::Model & model, int nodeNum )
+{
+	if ( nodeNum < 0 || size_t(nodeNum) >= model.nodes.size() )
+		return false;
+	const tinygltf::Node &	node = model.nodes[nodeNum];
+	if ( node.mesh >= 0 && size_t(node.mesh) < model.meshes.size() )
+		return true;
+	for ( int i : node.children ) {
+		if ( nodeHasMeshes( model, i ) )
+			return true;
+	}
+	return false;
+}
+
+static void importGltfLoadNode( NifModel * nif, const QPersistentModelIndex & index,
+								const tinygltf::Model & model, int nodeNum )
+{
+	NifItem *	parentItem = nif->getItem( index );
+	if ( nodeNum < 0 || size_t(nodeNum) >= model.nodes.size() || !parentItem || !nodeHasMeshes( model, nodeNum ) )
+		return;
+
+	parentItem->invalidateVersionCondition();
+	parentItem->invalidateCondition();
+
+	const tinygltf::Node &	node = model.nodes[nodeNum];
+	QPersistentModelIndex	iBlock = nif->insertNiBlock( "NiNode" );
+	for ( auto iNumChildren = nif->getIndex( index, "Num Children" ); iNumChildren.isValid(); ) {
+		quint32	n = nif->get<quint32>( iNumChildren );
+		nif->set<quint32>( iNumChildren, n + 1 );
+		auto	iChildren = nif->getIndex( index, "Children" );
+		if ( iChildren.isValid() ) {
+			nif->updateArraySize( iChildren );
+			nif->setLink( QModelIndex_child( iChildren, int(n) ), quint32( nif->getBlockNumber(iBlock) ) );
+		}
+		break;
+	}
+	nif->set<quint32>( iBlock, "Flags", 14 );
+	nif->set<QString>( iBlock, "Name", QString::fromStdString( node.name ) );
+	{
+		Transform	t;
+		if ( node.rotation.size() >= 4 && node.scale.size() >= 1 && node.translation.size() >= 3 ) {
+			Quat	r;
+			for ( size_t i = 0; i < 4; i++ )
+				r[i] = float( node.rotation[i] );
+			t.rotation.fromQuat( r );
+			t.translation[0] = float( node.translation[0] );
+			t.translation[1] = float( node.translation[1] );
+			t.translation[2] = float( node.translation[2] );
+			double	s = 0.0;
+			for ( double i : node.scale )
+				s += i;
+			t.scale = float( s / double( int(node.scale.size()) ) );
+		} else if ( node.matrix.size() >= 16 ) {
+			Matrix4	m;
+			for ( size_t i = 0; i < 16; i++ )
+				const_cast< float * >( m.data() )[i] = float( node.matrix[i] );
+			Vector3	tmpScale;
+			m.decompose( t.translation, t.rotation, tmpScale );
+			t.scale = ( tmpScale[0] + tmpScale[1] + tmpScale[2] ) / 3.0f;
+		}
+		t.writeBack( nif, iBlock );
+	}
+
+	if ( node.mesh >= 0 && size_t(node.mesh) < model.meshes.size() ) {
+		QPersistentModelIndex	iShape = nif->insertNiBlock( "BSGeometry" );
+		for ( auto iNumChildren = nif->getIndex( iBlock, "Num Children" ); iNumChildren.isValid(); ) {
+			quint32	n = nif->get<quint32>( iNumChildren );
+			nif->set<quint32>( iNumChildren, n + 1 );
+			auto	iChildren = nif->getIndex( iBlock, "Children" );
+			if ( iChildren.isValid() ) {
+				nif->updateArraySize( iChildren );
+				nif->setLink( QModelIndex_child( iChildren, int(n) ), quint32( nif->getBlockNumber(iShape) ) );
+			}
+			break;
+		}
+		const tinygltf::Mesh &	mesh = model.meshes[node.mesh];
+		nif->set<quint32>( iShape, "Flags", 526 );	// enable internal geometry
+		nif->set<QString>( iShape, "Name", QString::fromStdString( mesh.name ) );
+
+		// TODO: import shape data, material path and skin
+
+		if ( node.skin >= 0 && size_t(node.skin) < model.skins.size() ) {
+
+		}
+	}
+
+	for ( int i : node.children )
+		importGltfLoadNode( nif, iBlock, model, i );
+}
+
+void importGltf( NifModel* nif, const QModelIndex& index )
+{
+	NifItem *	rootItem;
+	if ( !( nif->getBSVersion() >= 170 && index.isValid() && nif->blockInherits( index, "NiNode" )
+			&& ( rootItem = nif->getItem( index ) ) != nullptr ) ) {
+		QMessageBox::critical( nullptr, "NifSkope error", QString("glTF import requires selecting a NiNode in a Starfield NIF") );
+		return;
+	}
+
+	QString filename = QFileDialog::getOpenFileName( qApp->activeWindow(), tr("Choose a .glTF file for import"), nif->getFilename(), "glTF (*.gltf)" );
+	if ( filename.isEmpty() )
+		return;
+
+	tinygltf::TinyGLTF	reader;
+	tinygltf::Model	model;
+	std::string	gltfErr;
+	std::string	gltfWarn;
+	if ( !reader.LoadASCIIFromFile( &model, &gltfErr, &gltfWarn, filename.toStdString() ) ) {
+		QMessageBox::critical( nullptr, "NifSkope error", QString("Error importing glTF file: %1").arg(gltfErr.c_str()) );
+		return;
+	}
+	if ( !gltfWarn.empty() )
+		QMessageBox::warning( nullptr, "NifSkope warning", QString("glTF import warning: %1").arg(gltfWarn.c_str()) );
+
+	QPersistentModelIndex	iBlock( index );
+
+	if ( model.scenes.empty() ) {
+		importGltfLoadNode( nif, iBlock, model, 0 );
+	} else {
+		for ( const auto & i : model.scenes ) {
+			for ( int j : i.nodes )
+				importGltfLoadNode( nif, iBlock, model, j );
+		}
+	}
+	nif->updateHeader();
 }

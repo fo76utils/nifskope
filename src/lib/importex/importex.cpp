@@ -53,7 +53,8 @@ void importObj( NifModel* nif, const QModelIndex& index );
 void importObjAsCollision( NifModel * nif, const QModelIndex & index );
 void import3ds( NifModel * nif, const QModelIndex & index );
 
-void exportGltf(const NifModel* nif, const Scene* scene, const QModelIndex& index);
+void exportGltf( const NifModel* nif, const Scene* scene, const QModelIndex& index );
+void importGltf( NifModel* nif, const QModelIndex& index);
 
 
 struct ImportExportOption
@@ -71,7 +72,7 @@ struct ImportExportOption
 QVector<ImportExportOption> impexOptions{
 	ImportExportOption{ ".OBJ", importObj, exportObj, 0, 169 },
 	ImportExportOption{ ".OBJ as Collision", importObjAsCollision, nullptr, 0, 169 },
-	ImportExportOption{ ".glTF", nullptr, exportGltf, 170 },
+	ImportExportOption{ ".glTF", importGltf, exportGltf, 170 },
 };
 
 
