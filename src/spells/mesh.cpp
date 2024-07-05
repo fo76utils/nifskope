@@ -830,7 +830,7 @@ void spUpdateBounds::calculateSFBoneBounds(
 		if ( i >= meshFile.positions.size() ) [[unlikely]]
 			break;
 		for ( const auto & b : w.weightsUNORM ) {
-			if ( (unsigned int) b.bone < (unsigned int) numBones && b.weight > 0.0001f )
+			if ( (unsigned int) b.bone < (unsigned int) numBones && b.weight > 0.00005f )
 				boneVertexMap[int(b.bone)].push_back( meshFile.positions.at(i) );
 		}
 	}

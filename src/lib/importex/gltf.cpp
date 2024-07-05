@@ -400,7 +400,7 @@ void exportCreatePrimitive(tinygltf::Model& model, QByteArray& bin, std::shared_
 				tmpWeights.shuffleValues( 0x39 );	// 1, 2, 3, 0
 				float weight = v.weightsUNORM[i].weight;
 				// Fix Bethesda's non-zero weights
-				if ( v.weightsUNORM[i].bone != 0 || weight >= 0.0001f )
+				if ( v.weightsUNORM[i].bone != 0 || weight > 0.00005f )
 					tmpWeights[3] = weight;
 			}
 			exportFloats( bin, &(tmpWeights[0]), 4 );
@@ -412,7 +412,7 @@ void exportCreatePrimitive(tinygltf::Model& model, QByteArray& bin, std::shared_
 				tmpWeights.shuffleValues( 0x39 );	// 1, 2, 3, 0
 				float weight = v.weightsUNORM[i].weight;
 				// Fix Bethesda's non-zero weights
-				if ( v.weightsUNORM[i].bone != 0 || weight >= 0.0001f )
+				if ( v.weightsUNORM[i].bone != 0 || weight > 0.00005f )
 					tmpWeights[3] = weight;
 			}
 			exportFloats( bin, &(tmpWeights[0]), 4 );
