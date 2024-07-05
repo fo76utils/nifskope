@@ -819,54 +819,7 @@ QModelIndex spUpdateCenterRadius::cast( NifModel * nif, const QModelIndex & inde
 
 REGISTER_SPELL( spUpdateCenterRadius )
 
-//! Updates Bounds of BSTriShape
-class spUpdateBounds final : public Spell
-{
-public:
-	QString name() const override final { return Spell::tr( "Update Bounds" ); }
-	QString page() const override final { return Spell::tr( "Mesh" ); }
-
-	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
-	{
-		if ( nif->getBSVersion() >= 170 && nif->blockInherits( index, "BSGeometry" ) )
-			return true;
-		return nif->blockInherits( index, "BSTriShape" ) && nif->getIndex( index, "Vertex Data" ).isValid();
-	}
-
-	static void calculateSFBoneBounds(
-		NifModel * nif, const QPersistentModelIndex & iBoneList, int numBones, const MeshFile & meshFile );
-	static QModelIndex cast_Starfield( NifModel * nif, const QModelIndex & index );
-
-	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
-	{
-		if ( nif->getBSVersion() >= 170 && nif->blockInherits( index, "BSGeometry" ) )
-			return cast_Starfield( nif, index );
-
-		auto vertData = nif->getIndex( index, "Vertex Data" );
-
-		// Retrieve the verts
-		QVector<Vector3> verts;
-		for ( int i = 0; i < nif->rowCount( vertData ); i++ ) {
-			verts << nif->get<Vector3>( QModelIndex_child( vertData, i ), "Vertex" );
-		}
-
-		if ( verts.isEmpty() )
-			return index;
-
-		// Creating a bounding sphere from the verts
-		BoundSphere bounds = BoundSphere( verts, true );
-		bounds.update( nif, index );
-
-		if ( nif->getBSVersion() >= 151 ) {
-			// Fallout 76: update bounding box
-			FloatVector4	bndCenter, bndDims;
-			calculateBoundingBox( bndCenter, bndDims, verts );
-			setBoundingBox( nif, index, bndCenter, bndDims );
-		}
-
-		return index;
-	}
-};
+//! spUpdateBounds: updates Bounds of BSTriShape or BSGeometry
 
 void spUpdateBounds::calculateSFBoneBounds(
 	NifModel * nif, const QPersistentModelIndex & iBoneList, int numBones, const MeshFile & meshFile )
@@ -1006,6 +959,36 @@ QModelIndex spUpdateBounds::cast_Starfield( NifModel * nif, const QModelIndex & 
 	return index;
 }
 
+QModelIndex spUpdateBounds::cast( NifModel * nif, const QModelIndex & index )
+{
+	if ( nif->getBSVersion() >= 170 && nif->blockInherits( index, "BSGeometry" ) )
+		return cast_Starfield( nif, index );
+
+	auto vertData = nif->getIndex( index, "Vertex Data" );
+
+	// Retrieve the verts
+	QVector<Vector3> verts;
+	for ( int i = 0; i < nif->rowCount( vertData ); i++ ) {
+		verts << nif->get<Vector3>( QModelIndex_child( vertData, i ), "Vertex" );
+	}
+
+	if ( verts.isEmpty() )
+		return index;
+
+	// Creating a bounding sphere from the verts
+	BoundSphere bounds = BoundSphere( verts, true );
+	bounds.update( nif, index );
+
+	if ( nif->getBSVersion() >= 151 ) {
+		// Fallout 76: update bounding box
+		FloatVector4	bndCenter, bndDims;
+		calculateBoundingBox( bndCenter, bndDims, verts );
+		setBoundingBox( nif, index, bndCenter, bndDims );
+	}
+
+	return index;
+}
+
 REGISTER_SPELL( spUpdateBounds )
 
 
@@ -1047,25 +1030,7 @@ public:
 REGISTER_SPELL( spUpdateAllBounds )
 
 
-//! Generates Starfield meshlets
-class spGenerateMeshlets final : public Spell
-{
-public:
-	QString name() const override final { return Spell::tr( "Generate Meshlets and Update Bounds" ); }
-	QString page() const override final { return Spell::tr( "Mesh" ); }
-
-	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
-	{
-		if ( !( nif && nif->getBSVersion() >= 170 ) )
-			return false;
-		if ( !index.isValid() )
-			return true;
-		return ( nif->blockInherits( index, "BSGeometry" ) && ( nif->get<quint32>(index, "Flags") & 0x0200 ) != 0 );
-	}
-
-	static void updateMeshlets( NifModel * nif, const QPersistentModelIndex & iMeshData, const MeshFile & meshFile );
-	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final;
-};
+//! spGenerateMeshlets: generates Starfield meshlets
 
 void spGenerateMeshlets::updateMeshlets(
 	NifModel * nif, const QPersistentModelIndex & iMeshData, const MeshFile & meshFile )
@@ -1120,7 +1085,7 @@ void spGenerateMeshlets::updateMeshlets(
 					meshletCnt =
 						meshopt_buildMeshlets( meshletData.data(), meshletVertices.data(), meshletTriangles.data(),
 												indices.data(), triangleCnt * 3, &( meshFile.positions.at(0)[0] ),
-												vertexCnt, sizeof( Vector3 ), 96, 128, 0.25f );
+												vertexCnt, sizeof( Vector3 ), 96, 128, 0.0625f );
 				}
 				meshletData.resize( meshletCnt );
 				if ( meshletAlgorithm & 1 ) {
