@@ -54,7 +54,7 @@ void importObjAsCollision( NifModel * nif, const QModelIndex & index );
 void import3ds( NifModel * nif, const QModelIndex & index );
 
 void exportGltf( const NifModel* nif, const Scene* scene, const QModelIndex& index );
-void importGltf( NifModel* nif, const QModelIndex& index);
+void importGltf( NifModel* nif, const QModelIndex& index );
 
 
 struct ImportExportOption
