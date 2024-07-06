@@ -29,7 +29,9 @@
 #endif
 
 /* Experimental APIs have unstable interface and might have implementation that's not fully tested or optimized */
+#ifndef MESHOPTIMIZER_EXPERIMENTAL
 #define MESHOPTIMIZER_EXPERIMENTAL MESHOPTIMIZER_API
+#endif
 
 /* C interface */
 #ifdef __cplusplus
@@ -727,8 +729,8 @@ public:
 	typedef StorageT<void> Storage;
 
 	meshopt_Allocator()
-		: blocks()
-		, count(0)
+	    : blocks()
+	    , count(0)
 	{
 	}
 
@@ -738,7 +740,8 @@ public:
 			Storage::deallocate(blocks[i - 1]);
 	}
 
-	template <typename T> T* allocate(size_t size)
+	template <typename T>
+	T* allocate(size_t size)
 	{
 		assert(count < sizeof(blocks) / sizeof(blocks[0]));
 		T* result = static_cast<T*>(Storage::allocate(size > size_t(-1) / sizeof(T) ? size_t(-1) : size * sizeof(T)));
@@ -759,8 +762,10 @@ private:
 };
 
 // This makes sure that allocate/deallocate are lazily generated in translation units that need them and are deduplicated by the linker
-template <typename T> void* (MESHOPTIMIZER_ALLOC_CALLCONV *meshopt_Allocator::StorageT<T>::allocate)(size_t) = operator new;
-template <typename T> void (MESHOPTIMIZER_ALLOC_CALLCONV *meshopt_Allocator::StorageT<T>::deallocate)(void*) = operator delete;
+template <typename T>
+void* (MESHOPTIMIZER_ALLOC_CALLCONV *meshopt_Allocator::StorageT<T>::allocate)(size_t) = operator new;
+template <typename T>
+void (MESHOPTIMIZER_ALLOC_CALLCONV *meshopt_Allocator::StorageT<T>::deallocate)(void*) = operator delete;
 #endif
 
 /* Inline implementation for C++ templated wrappers */
