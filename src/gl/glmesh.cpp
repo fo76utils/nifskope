@@ -272,7 +272,7 @@ void Mesh::updateData_NiMesh( const NifModel * nif )
 			datastreamFormats.append( NiMesh::DataStreamFormat(format) );
 		}
 
-		Q_ASSERT( compSemanticIndexMaps[i].size() == numStreamComponents );
+		Q_ASSERT( compSemanticIndexMaps[i].size() == qsizetype(numStreamComponents) );
 
 		auto tempMdl = std::make_unique<NifModel>( this );
 
@@ -392,7 +392,7 @@ void Mesh::updateData_NiMesh( const NifModel * nif )
 					Q_ASSERT( usage == NiMesh::USAGE_VERTEX );
 					if ( compType == NiMesh::E_TEXCOORD ) {
 						quint32 coordSet = compSemanticIndexMaps[i].value( k ).second;
-						Q_ASSERT( coords.size() > coordSet );
+						Q_ASSERT( coords.size() > qsizetype(coordSet) );
 						coords[coordSet][j + off] = tempValue.get<Vector2>( nif, nullptr );
 					}
 					break;
@@ -443,8 +443,8 @@ void Mesh::updateData_NiMesh( const NifModel * nif )
 	if ( !(semFlags & NiMesh::HAS_BLENDINDICES) || !(semFlags & NiMesh::HAS_BLENDWEIGHT) )
 		weights.clear();
 
-	Q_ASSERT( verts.size() == maxIndex + 1 );
-	Q_ASSERT( indices.size() == totalIndices );
+	Q_ASSERT( verts.size() == qsizetype(maxIndex + 1) );
+	Q_ASSERT( indices.size() == qsizetype(totalIndices) );
 	numVerts = verts.count();
 
 	// Make geometry

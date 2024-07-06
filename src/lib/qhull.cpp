@@ -30,9 +30,8 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ***** END LICENCE BLOCK *****/
 
+#include "common.hpp"
 #include "qhull.h"
-
-#include "data/niftypes.h"
 
 #include <QDebug>
 #include <QByteArray>
@@ -80,6 +79,8 @@ extern "C"
 #else
 #pragma GCC diagnostic pop
 #endif
+
+#include "data/niftypes.h"
 
 #include <algorithm>
 #include <functional>
