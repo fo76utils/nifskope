@@ -418,7 +418,7 @@ void BSMesh::updateImpl(const NifModel* nif, const QModelIndex& index)
 			auto mesh = std::make_shared<MeshFile>( nif, QModelIndex_child( meshArray, 1 ) );
 			if ( mesh->isValid() ) {
 				meshes.append(mesh);
-				if ( lodLevel > 0 || mesh->lods.size() > 0 )
+				if ( i > 0 || mesh->lods.size() > 0 )
 					emit nif->lodSliderChanged(true);
 			}
 		}
