@@ -22,6 +22,9 @@ CONFIG += c++20
 CONFIG += nvtristrip qhull gli libfo76utils
 
 # Debug/Release options
+contains(debug, 1) {
+	CONFIG += debug
+}
 CONFIG(debug, debug|release) {
 	# Debug Options
 	BUILD = debug
@@ -468,7 +471,7 @@ win32 {
 	QMAKE_CXXFLAGS -= -O1
 	QMAKE_CXXFLAGS -= -O2
 	QMAKE_CXXFLAGS -= -g
-	contains(debug, 1) {
+	CONFIG(debug, debug|release) {
 		QMAKE_CXXFLAGS *= -Og -ggdb
 	} else {
 		QMAKE_CXXFLAGS *= -O3
