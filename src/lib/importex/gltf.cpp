@@ -10,6 +10,8 @@
 #include "qtcompat.h"
 #include "libfo76utils/src/filebuf.hpp"
 #include "libfo76utils/src/material.hpp"
+#include "spells/mesh.h"
+#include "spells/tangentspace.h"
 
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
@@ -126,7 +128,8 @@ bool exportCreateNodes(const NifModel* nif, const Scene* scene, tinygltf::Model&
 
 				gltfNode.name = node->getName().toStdString();
 				if ( isBSGeometry ) {
-					gltfNode.name += ":LOD" + std::to_string(j);
+					if ( j )
+						gltfNode.name += ":LOD" + std::to_string(j);
 					// Skins
 					if ( mesh->skinID > -1 && mesh->weightsUNORM.size() > 0 ) {
 						if ( !gltf.skins.values().contains(mesh) ) {
@@ -137,15 +140,14 @@ bool exportCreateNodes(const NifModel* nif, const Scene* scene, tinygltf::Model&
 					}
 				}
 
-				// Rotate the root NiNode for glTF Y-Up
-				Matrix rot;
-				auto& trans = node->localTrans();
-				if ( gltfNodeID == 0 ) {
-					rot = trans.rotation.toYUp();
-				} else {
-					rot = trans.rotation;
+				Transform trans;
+				if ( !j ) {
+					trans = node->localTrans();
+					// Rotate the root NiNode for glTF Y-Up
+					if ( gltfNodeID == 0 )
+						trans.rotation = trans.rotation.toYUp();
 				}
-				auto quat = rot.toQuat();
+				auto quat = trans.rotation.toQuat();
 				gltfNode.translation = { trans.translation[0], trans.translation[1], trans.translation[2] };
 				gltfNode.rotation = { quat[1], quat[2], quat[3], quat[0] };
 				gltfNode.scale = { trans.scale, trans.scale, trans.scale };
@@ -185,10 +187,13 @@ bool exportCreateNodes(const NifModel* nif, const Scene* scene, tinygltf::Model&
 			auto children = nif->getChildLinks(i);
 			for ( const auto& child : children ) {
 				auto nodes = gltf.nodes.value(child, {});
-				for ( const auto& node : nodes ) {
-					model.nodes[gltf.nodes[i][0]].children.push_back(node);
+				auto & gltfNode = model.nodes[gltf.nodes[i][0]];
+				for ( qsizetype j = 0; j < nodes.size(); j++ ) {
+					if ( j == 0 )
+						gltfNode.children.push_back( nodes[j] );
+					else
+						model.nodes[nodes[0]].lods.push_back( nodes[j] );
 				}
-
 			}
 		}
 	}
@@ -447,7 +452,6 @@ bool exportCreatePrimitives(tinygltf::Model& model, QByteArray& bin, const BSMes
 	auto& mesh = bsmesh->meshes[lodLevel];
 	auto prim = tinygltf::Primitive();
 
-	// TODO: Full Materials, create empty Material for now
 	prim.material = materialID;
 
 	exportCreatePrimitive(model, bin, mesh, prim, "POSITION", mesh->positions.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC3, attributeIndex, gltf);
@@ -540,7 +544,11 @@ bool exportCreateMeshes(const NifModel* nif, const Scene* scene, tinygltf::Model
 					auto& gltfNode = model.nodes[n[j]];
 					tinygltf::Mesh gltfMesh;
 					gltfNode.mesh = meshIndex;
-					gltfMesh.name = QString("%1%2%3").arg(node->getName()).arg(":LOD").arg(j).toStdString();
+					if ( !j ) {
+						gltfMesh.name = node->getName().toStdString();
+					} else {
+						gltfMesh.name = QString("%1%2%3").arg(node->getName()).arg(":LOD").arg(j).toStdString();
+					}
 					int materialID = 0;
 					if ( !mesh->materialPath.isEmpty() )
 						materialID = gltf.materials[Game::GameManager::get_full_path( mesh->materialPath, "materials/", ".mat" )];
@@ -647,36 +655,262 @@ static bool nodeHasMeshes( const tinygltf::Model & model, int nodeNum )
 	return false;
 }
 
+template< typename T >
+static bool importGltfLoadBuffer(
+	std::vector< T > & outBuf, const tinygltf::Model & model, int accessor, int typeRequired )
+{
+	if ( accessor < 0 || size_t(accessor) >= model.accessors.size() )
+		return false;
+	const tinygltf::Accessor &	a = model.accessors[accessor];
+	if ( a.bufferView < 0 || size_t(a.bufferView) >= model.bufferViews.size() )
+		return false;
+	const tinygltf::BufferView &	v = model.bufferViews[a.bufferView];
+	if ( v.buffer < 0 || size_t(v.buffer) >= model.buffers.size() )
+		return false;
+	const tinygltf::Buffer &	b = model.buffers[v.buffer];
+
+	int	componentSize = tinygltf::GetComponentSizeInBytes( std::uint32_t(a.componentType) );
+	int	componentCnt = tinygltf::GetNumComponentsInType( std::uint32_t(a.type) );
+	if ( a.type != typeRequired || componentSize < 1 || componentCnt < 1 )
+		return false;
+	int	blockSize = std::max< int >( componentSize * componentCnt, v.byteStride );
+
+	size_t	offset = a.byteOffset + v.byteOffset;
+	if ( std::max( std::max( a.byteOffset, v.byteOffset ), std::max( offset, offset + v.byteLength ) ) > b.data.size() )
+		return false;
+	size_t	blockCnt = v.byteLength / size_t( blockSize );
+	if ( blockCnt < 1 )
+		return ( v.byteLength < 1 );
+
+	FileBuffer	inBuf( b.data.data() + offset, v.byteLength );
+	outBuf.resize( blockCnt * size_t( componentCnt ) );
+
+	size_t	k = 0;
+	int	t = a.componentType;
+	for ( size_t i = 0; i < blockCnt; i++ ) {
+		inBuf.setPosition( i * size_t( blockSize ) );
+		const unsigned char *	readPtr = inBuf.getReadPtr();
+		for ( int j = 0; j < componentCnt; j++, k++, readPtr = readPtr + componentSize ) {
+			switch ( t ) {
+			case TINYGLTF_COMPONENT_TYPE_BYTE:
+				outBuf[k] = static_cast< T >( *( reinterpret_cast< const signed char * >(readPtr) ) );
+				break;
+			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+				outBuf[k] = static_cast< T >( *readPtr );
+				break;
+			case TINYGLTF_COMPONENT_TYPE_SHORT:
+				outBuf[k] = static_cast< T >( std::int16_t( FileBuffer::readUInt16Fast(readPtr) ) );
+				break;
+			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+				outBuf[k] = static_cast< T >( FileBuffer::readUInt16Fast(readPtr) );
+				break;
+			case TINYGLTF_COMPONENT_TYPE_INT:
+				outBuf[k] = static_cast< T >( std::int32_t( FileBuffer::readUInt32Fast(readPtr) ) );
+				break;
+			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+				outBuf[k] = static_cast< T >( FileBuffer::readUInt32Fast(readPtr) );
+				break;
+			case TINYGLTF_COMPONENT_TYPE_FLOAT:
+#if defined(__i386__) || defined(__x86_64__) || defined(__x86_64)
+				outBuf[k] = static_cast< T >( std::bit_cast< float >( FileBuffer::readUInt32Fast(readPtr) ) );
+#else
+				outBuf[k] = static_cast< T >( inBuf.readFloat() );
+#endif
+				break;
+			case TINYGLTF_COMPONENT_TYPE_DOUBLE:
+				outBuf[k] = static_cast< T >( std::bit_cast< double >( FileBuffer::readUInt64Fast(readPtr) ) );
+				break;
+			default:
+				outBuf[k] = static_cast< T >( 0 );
+				break;
+			}
+		}
+	}
+
+	return true;
+}
+
+// Returns true if tangent space needs to be calculated
+
+static bool importGltfLoadMesh( NifModel * nif, const QPersistentModelIndex & index,
+								const tinygltf::Model & model, const tinygltf::Mesh & mesh, int lod, int skin )
+{
+	const tinygltf::Primitive *	p = nullptr;
+	for ( const auto & i : mesh.primitives ) {
+		if ( i.mode != TINYGLTF_MODE_TRIANGLES || i.attributes.empty() )
+			continue;
+		if ( i.indices >= 0 && size_t(i.indices) < model.accessors.size() ) {
+			p = &i;
+			break;
+		}
+	}
+	if ( !p )
+		return false;
+
+	auto	iMeshes = nif->getIndex( index, "Meshes" );
+	if ( !( iMeshes.isValid() && nif->isArray( iMeshes ) && nif->rowCount( iMeshes ) > lod ) )
+		return false;
+	auto	iMesh = QModelIndex_child( iMeshes, lod );
+	if ( !iMesh.isValid() )
+		return false;
+	nif->set<bool>( iMesh, "Has Mesh", true );
+	iMesh = nif->getIndex( iMesh, "Mesh" );
+	if ( !iMesh.isValid() )
+		return false;
+	auto	iMeshData = nif->getIndex( iMesh, "Mesh Data" );
+	if ( !iMeshData.isValid() )
+		return false;
+	nif->set<quint32>( iMesh, "Flags", 64 );
+	nif->set<quint32>( iMeshData, "Version", 2 );
+
+	std::vector< std::uint16_t >	indices;
+	if ( !importGltfLoadBuffer< std::uint16_t >( indices, model, p->indices, TINYGLTF_TYPE_SCALAR ) )
+		return false;
+	nif->set<quint32>( iMeshData, "Indices Size", quint32(indices.size()) );
+	nif->set<quint32>( iMesh, "Indices Size", quint32(indices.size()) );
+	auto	iTriangles = nif->getIndex( iMeshData, "Triangles" );
+	if ( iTriangles.isValid() ) {
+		nif->updateArraySize( iTriangles );
+		QVector< Triangle >	triangles;
+		triangles.resize( qsizetype(indices.size() / 3) );
+		for ( qsizetype i = 0; i < triangles.size(); i++ ) {
+			triangles[i][0] = indices[i * 3];
+			triangles[i][1] = indices[i * 3 + 1];
+			triangles[i][2] = indices[i * 3 + 2];
+		}
+		nif->setArray<Triangle>( iTriangles, triangles );
+	}
+
+	for ( const auto & i : p->attributes ) {
+		if ( i.first == "POSITION" ) {
+			std::vector< float >	positions;
+			if ( !importGltfLoadBuffer< float >( positions, model, i.second, TINYGLTF_TYPE_VEC3 ) )
+				continue;
+			std::uint32_t	numVerts = std::uint32_t( positions.size() / 3 );
+			if ( !numVerts )
+				continue;
+			float	maxPos = 0.0f;
+			for ( float x : positions )
+				maxPos = std::max( maxPos, float( std::fabs(x) ) );
+			float	scale = 1.0f / 64.0f;
+			while ( maxPos > scale && scale < 16777216.0f )
+				scale = scale + scale;
+			float	invScale = 1.0f / scale;
+			nif->set<float>( iMeshData, "Scale", scale );
+			nif->set<quint32>( iMeshData, "Num Verts", numVerts );
+			nif->set<quint32>( iMesh, "Num Verts", numVerts );
+			auto	iVertices = nif->getIndex( iMeshData, "Vertices" );
+			if ( iVertices.isValid() ) {
+				nif->updateArraySize( iVertices );
+				QVector< ShortVector3 >	vertices;
+				vertices.resize( qsizetype(numVerts) );
+				for ( qsizetype j = 0; j < qsizetype(numVerts); j++ ) {
+					vertices[j][0] = positions[j * 3] * invScale;
+					vertices[j][1] = positions[j * 3 + 1] * invScale;
+					vertices[j][2] = positions[j * 3 + 2] * invScale;
+				}
+				nif->setArray<ShortVector3>( iVertices, vertices );
+			}
+		} else if ( i.first == "NORMAL" ) {
+			std::vector< float >	normals;
+			if ( !importGltfLoadBuffer< float >( normals, model, i.second, TINYGLTF_TYPE_VEC3 ) )
+				continue;
+			std::uint32_t	numNormals = std::uint32_t( normals.size() / 3 );
+			if ( !numNormals )
+				continue;
+			nif->set<quint32>( iMeshData, "Num Normals", numNormals );
+			auto	iNormals = nif->getIndex( iMeshData, "Normals" );
+			if ( iNormals.isValid() ) {
+				nif->updateArraySize( iNormals );
+				QVector< UDecVector4 >	normalsVec4;
+				normalsVec4.resize( qsizetype(numNormals) );
+				for ( qsizetype j = 0; j < qsizetype(numNormals); j++ ) {
+					auto	normal = FloatVector4::convertVector3( normals.data() + (j * 3) );
+					float	r = normal.dotProduct3( normal );
+					if ( r > 0.0f ) [[likely]] {
+						normal /= float( std::sqrt( r ) );
+						normal[3] = -1.0f / 3.0f;
+					} else {
+						normal = FloatVector4( 0.0f, 0.0f, 1.0f, -1.0f / 3.0f );
+					}
+					normal.convertToFloats( &(normalsVec4[j][0]) );
+				}
+				nif->setArray<UDecVector4>( iNormals, normalsVec4 );
+			}
+		} else if ( i.first == "TEXCOORD_0" || i.first == "TEXCOORD_1" ) {
+			std::vector< float >	uvs;
+			if ( !importGltfLoadBuffer< float >( uvs, model, i.second, TINYGLTF_TYPE_VEC2 ) )
+				continue;
+			std::uint32_t	numUVs = std::uint32_t( uvs.size() >> 1 );
+			if ( !numUVs )
+				continue;
+			bool	isUV2 = ( i.first.c_str()[9] != '0' );
+			nif->set<quint32>( iMeshData, ( !isUV2 ? "Num UVs" : "Num UVs 2" ), numUVs );
+			auto	iUVs = nif->getIndex( iMeshData, ( !isUV2 ? "UVs" : "UVs 2" ) );
+			if ( iUVs.isValid() ) {
+				nif->updateArraySize( iUVs );
+				QVector< HalfVector2 >	uvsVec2;
+				uvsVec2.resize( qsizetype(numUVs) );
+				for ( qsizetype j = 0; j < qsizetype(numUVs); j++ ) {
+					uvsVec2[j][0] = uvs[j * 2];
+					uvsVec2[j][1] = uvs[j * 2 + 1];
+				}
+				nif->setArray<HalfVector2>( iUVs, uvsVec2 );
+			}
+		}
+		// TODO: vertex colors and tangents
+	}
+
+	// TODO: import skin
+	if ( skin >= 0 && size_t(skin) < model.skins.size() ) {
+
+	}
+
+	if ( nif->get<quint32>( iMeshData, "Num Tangents" ) == 0 ) {
+		nif->set<quint32>( iMeshData, "Num Tangents", nif->get<quint32>( iMeshData, "Num Verts" ) );
+		auto	iTangents = nif->getIndex( iMeshData, "Tangents" );
+		if ( iTangents.isValid() ) {
+			nif->updateArraySize( iTangents );
+			return true;
+		}
+	}
+	return false;
+}
+
 static void importGltfLoadNode( NifModel * nif, const QPersistentModelIndex & index,
 								const tinygltf::Model & model, int nodeNum )
 {
-	NifItem *	parentItem = nif->getItem( index );
-	if ( nodeNum < 0 || size_t(nodeNum) >= model.nodes.size() || !parentItem || !nodeHasMeshes( model, nodeNum ) )
+	if ( nodeNum < 0 || size_t(nodeNum) >= model.nodes.size() || !nodeHasMeshes( model, nodeNum ) )
 		return;
 
-	parentItem->invalidateVersionCondition();
-	parentItem->invalidateCondition();
-
 	const tinygltf::Node &	node = model.nodes[nodeNum];
-	QPersistentModelIndex	iBlock = nif->insertNiBlock( "NiNode" );
-	for ( auto iNumChildren = nif->getIndex( index, "Num Children" ); iNumChildren.isValid(); ) {
-		quint32	n = nif->get<quint32>( iNumChildren );
-		nif->set<quint32>( iNumChildren, n + 1 );
-		auto	iChildren = nif->getIndex( index, "Children" );
-		if ( iChildren.isValid() ) {
-			nif->updateArraySize( iChildren );
-			nif->setLink( QModelIndex_child( iChildren, int(n) ), quint32( nif->getBlockNumber(iBlock) ) );
+	bool	haveMesh = ( node.mesh >= 0 && size_t(node.mesh) < model.meshes.size() );
+	QPersistentModelIndex	iBlock = nif->insertNiBlock( !haveMesh ? "NiNode" : "BSGeometry" );
+	if ( index.isValid() ) {
+		NifItem *	parentItem = nif->getItem( index );
+		if ( parentItem ) {
+			parentItem->invalidateVersionCondition();
+			parentItem->invalidateCondition();
 		}
-		break;
+		auto	iNumChildren = nif->getIndex( index, "Num Children" );
+		if ( iNumChildren.isValid() ) {
+			quint32	n = nif->get<quint32>( iNumChildren );
+			nif->set<quint32>( iNumChildren, n + 1 );
+			auto	iChildren = nif->getIndex( index, "Children" );
+			if ( iChildren.isValid() ) {
+				nif->updateArraySize( iChildren );
+				nif->setLink( QModelIndex_child( iChildren, int(n) ), quint32( nif->getBlockNumber(iBlock) ) );
+			}
+		}
 	}
-	nif->set<quint32>( iBlock, "Flags", 14 );
+	nif->set<quint32>( iBlock, "Flags", ( !haveMesh ? 14U : 526U ) );	// enable internal geometry
 	nif->set<QString>( iBlock, "Name", QString::fromStdString( node.name ) );
 	{
 		Transform	t;
 		if ( node.rotation.size() >= 4 && node.scale.size() >= 1 && node.translation.size() >= 3 ) {
 			Quat	r;
 			for ( size_t i = 0; i < 4; i++ )
-				r[i] = float( node.rotation[i] );
+				r[(i + 1) & 3] = float( node.rotation[i] );
 			t.rotation.fromQuat( r );
 			t.translation[0] = float( node.translation[0] );
 			t.translation[1] = float( node.translation[1] );
@@ -696,27 +930,47 @@ static void importGltfLoadNode( NifModel * nif, const QPersistentModelIndex & in
 		t.writeBack( nif, iBlock );
 	}
 
-	if ( node.mesh >= 0 && size_t(node.mesh) < model.meshes.size() ) {
-		QPersistentModelIndex	iShape = nif->insertNiBlock( "BSGeometry" );
-		for ( auto iNumChildren = nif->getIndex( iBlock, "Num Children" ); iNumChildren.isValid(); ) {
-			quint32	n = nif->get<quint32>( iNumChildren );
-			nif->set<quint32>( iNumChildren, n + 1 );
-			auto	iChildren = nif->getIndex( iBlock, "Children" );
-			if ( iChildren.isValid() ) {
-				nif->updateArraySize( iChildren );
-				nif->setLink( QModelIndex_child( iChildren, int(n) ), quint32( nif->getBlockNumber(iShape) ) );
+	if ( haveMesh ) {
+		QPersistentModelIndex	iShaderProperty = nif->insertNiBlock( "BSLightingShaderProperty" );
+		nif->setLink( iBlock, "Shader Property", quint32( nif->getBlockNumber(iShaderProperty) ) );
+
+		QPersistentModelIndex	iMaterialID = nif->insertNiBlock( "NiIntegerExtraData" );
+		for ( auto iNumExtraData = nif->getIndex( iBlock, "Num Extra Data List" ); iNumExtraData.isValid(); ) {
+			quint32	n = nif->get<quint32>( iNumExtraData );
+			nif->set<quint32>( iNumExtraData, n + 1 );
+			auto	iExtraData = nif->getIndex( iBlock, "Extra Data List" );
+			if ( iExtraData.isValid() ) {
+				nif->updateArraySize( iExtraData );
+				nif->setLink( QModelIndex_child( iExtraData, int(n) ), quint32( nif->getBlockNumber(iMaterialID) ) );
 			}
 			break;
 		}
-		const tinygltf::Mesh &	mesh = model.meshes[node.mesh];
-		nif->set<quint32>( iShape, "Flags", 526 );	// enable internal geometry
-		nif->set<QString>( iShape, "Name", QString::fromStdString( mesh.name ) );
 
-		// TODO: import shape data, material path and skin
-
-		if ( node.skin >= 0 && size_t(node.skin) < model.skins.size() ) {
-
+		std::string	materialPath;
+		if ( node.extras.Has( "Material Path" ) )
+			materialPath = node.extras.Get( "Material Path" ).Get< std::string >();
+		if ( !materialPath.empty() ) {
+			auto	matPathTmp = QString::fromStdString( materialPath );
+			materialPath = Game::GameManager::get_full_path( matPathTmp, "materials/", ".mat" );
+			nif->set<QString>( iShaderProperty, "Name", matPathTmp );
 		}
+		std::uint32_t	matPathHash = 0;
+		for ( char c : materialPath )
+			hashFunctionCRC32( matPathHash, (unsigned char) ( c != '/' ? c : '\\' ) );
+		nif->set<quint32>( iMaterialID, "Integer Data", matPathHash );
+
+		bool	tangentsNeeded = importGltfLoadMesh( nif, iBlock, model, model.meshes[node.mesh], 0, node.skin );
+		for ( int l = 0; l < 3 && size_t(l) < node.lods.size(); l++ ) {
+			int	n = node.lods[l];
+			if ( n >= 0 && size_t(n) < model.nodes.size() ) {
+				int	m = model.nodes[n].mesh;
+				if ( m >= 0 && size_t(m) < model.meshes.size() )
+					tangentsNeeded |= importGltfLoadMesh( nif, iBlock, model, model.meshes[m], l + 1, -1 );
+			}
+		}
+		if ( tangentsNeeded )
+			spTangentSpace::tangentSpaceSFMesh( nif, iBlock );
+		spUpdateBounds::cast_Starfield( nif, iBlock );
 	}
 
 	for ( int i : node.children )
@@ -725,9 +979,7 @@ static void importGltfLoadNode( NifModel * nif, const QPersistentModelIndex & in
 
 void importGltf( NifModel* nif, const QModelIndex& index )
 {
-	NifItem *	rootItem;
-	if ( !( nif->getBSVersion() >= 170 && index.isValid() && nif->blockInherits( index, "NiNode" )
-			&& ( rootItem = nif->getItem( index ) ) != nullptr ) ) {
+	if ( nif->getBSVersion() < 170 || ( index.isValid() && !nif->blockInherits( index, "NiNode" ) ) ) {
 		QMessageBox::critical( nullptr, "NifSkope error", QString("glTF import requires selecting a NiNode in a Starfield NIF") );
 		return;
 	}
