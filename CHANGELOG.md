@@ -1,5 +1,10 @@
  == CHANGELOG ==
 
+* Implemented glTF import.
+* Exporting and importing LOD meshes from/to glTF files can be disabled in the general settings under NIF.
+* Starfield bone bounding spheres are now drawn when the 'Skin' field of a BSGeometry block is selected.
+* The maximum PBR cube map resolution in the render settings has been increased to 1024x1024 (uses importance sampling at mip levels 1 and 2).
+
 #### NifSkope-2.0.dev9-20240630
 
 * Implemented support for Starfield BSGeometry blocks that use internal mesh data instead of .mesh files. This format allows for value editing and visualization of the data, including vertices, triangles, normals/tangents, and meshlets.
