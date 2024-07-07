@@ -8,6 +8,7 @@
 #include "model/nifmodel.h"
 #include "message.h"
 #include "qtcompat.h"
+#include "libfo76utils/src/fp32vec8.hpp"
 #include "libfo76utils/src/filebuf.hpp"
 #include "libfo76utils/src/material.hpp"
 #include "spells/mesh.h"
@@ -24,11 +25,15 @@
 #include <QApplication>
 #include <QBuffer>
 #include <QVector>
+#include <QDir>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QSettings>
 #include <QMessageBox>
 
 #define tr( x ) QApplication::tr( x )
+
+static bool	gltfEnableLOD = false;
 
 struct GltfStore
 {
@@ -120,6 +125,8 @@ bool exportCreateNodes(const NifModel* nif, const Scene* scene, tinygltf::Model&
 				createdNodes = mesh->meshCount();
 				if ( hasGPULODs )
 					createdNodes = mesh->gpuLODs.size() + 1;
+				if ( !gltfEnableLOD )
+					createdNodes = std::min< int >( createdNodes, 1 );
 			}
 
 			for ( int j = 0; j < createdNodes; j++ ) {
@@ -144,8 +151,10 @@ bool exportCreateNodes(const NifModel* nif, const Scene* scene, tinygltf::Model&
 				if ( !j ) {
 					trans = node->localTrans();
 					// Rotate the root NiNode for glTF Y-Up
-					if ( gltfNodeID == 0 )
+					if ( gltfNodeID == 0 ) {
 						trans.rotation = trans.rotation.toYUp();
+						trans.translation = Vector3( trans.translation[0], trans.translation[2], -(trans.translation[1]) );
+					}
 				}
 				auto quat = trans.rotation.toQuat();
 				gltfNode.translation = { trans.translation[0], trans.translation[1], trans.translation[2] };
@@ -191,7 +200,7 @@ bool exportCreateNodes(const NifModel* nif, const Scene* scene, tinygltf::Model&
 				for ( qsizetype j = 0; j < nodes.size(); j++ ) {
 					if ( j == 0 )
 						gltfNode.children.push_back( nodes[j] );
-					else
+					else if ( gltfEnableLOD )
 						model.nodes[nodes[0]].lods.push_back( nodes[j] );
 				}
 			}
@@ -337,7 +346,7 @@ void exportCreatePrimitive(tinygltf::Model& model, QByteArray& bin, std::shared_
 		FloatVector4 min( float(FLT_MAX) );
 
 		for ( const auto& v : mesh->positions ) {
-			FloatVector4 tmp( FloatVector4::convertVector3( &(v[0]) ) );
+			auto	tmp = FloatVector4::convertVector3( &(v[0]) );
 
 			max.maxValues( tmp );
 			min.minValues( tmp );
@@ -385,7 +394,7 @@ void exportCreatePrimitive(tinygltf::Model& model, QByteArray& bin, std::shared_
 	} else if ( attr == "TANGENT" ) {
 		for ( const auto& v : mesh->tangents ) {
 			Vector4	tmp( v );
-			tmp[3] = mesh->bitangentsBasis.at( qsizetype(&v - mesh->tangents.data()) );
+			tmp[3] = mesh->bitangentsBasis.at( qsizetype(&v - mesh->tangents.data()) ) * -1.0f;
 			exportFloats( bin, &(tmp[0]), 4 );
 		}
 	} else if ( attr == "TEXCOORD_0" ) {
@@ -539,6 +548,8 @@ bool exportCreateMeshes(const NifModel* nif, const Scene* scene, tinygltf::Model
 				bool hasGPULODs = mesh->gpuLODs.size() > 0;
 				if ( hasGPULODs )
 					createdMeshes = mesh->gpuLODs.size() + 1;
+				if ( !gltfEnableLOD )
+					createdMeshes = std::min< int >( createdMeshes, 1 );
 
 				for ( int j = 0; j < createdMeshes; j++ ) {
 					auto& gltfNode = model.nodes[n[j]];
@@ -574,8 +585,12 @@ bool exportCreateMeshes(const NifModel* nif, const Scene* scene, tinygltf::Model
 void exportGltf( const NifModel* nif, const Scene* scene, [[maybe_unused]] const QModelIndex& index )
 {
 	QString filename = QFileDialog::getSaveFileName(qApp->activeWindow(), tr("Choose a .glTF file for export"), nif->getFilename(), "glTF (*.gltf)");
-	if ( filename.isEmpty() )
+	if ( filename.isEmpty() ) {
 		return;
+	} else {
+		QSettings	settings;
+		gltfEnableLOD = settings.value( "Settings/Nif/Enable LOD", true ).toBool();
+	}
 
 	QString buffName = filename;
 	buffName = QString(buffName.remove(".gltf") + ".bin");
@@ -592,7 +607,7 @@ void exportGltf( const NifModel* nif, const Scene* scene, [[maybe_unused]] const
 		success = exportCreateMeshes(nif, scene, model, buffer, gltf);
 	if ( success ) {
 		auto buff = tinygltf::Buffer();
-		buff.name = buffName.toStdString();
+		buff.name = buffName.mid( QDir::fromNativeSeparators( buffName ).lastIndexOf( QChar('/') ) + 1 ).toStdString();
 		buff.data = std::vector<unsigned char>(buffer.cbegin(), buffer.cend());
 		model.buffers.push_back(buff);
 
@@ -641,6 +656,8 @@ void exportGltf( const NifModel* nif, const Scene* scene, [[maybe_unused]] const
 	}
 }
 
+// =================================================== glTF import ====================================================
+
 static bool nodeHasMeshes( const tinygltf::Model & model, int nodeNum )
 {
 	if ( nodeNum < 0 || size_t(nodeNum) >= model.nodes.size() )
@@ -653,6 +670,37 @@ static bool nodeHasMeshes( const tinygltf::Model & model, int nodeNum )
 			return true;
 	}
 	return false;
+}
+
+static void importGltfNormalizeFloats( float * p, size_t n, int dataType )
+{
+	float	scale;
+	switch ( dataType ) {
+	case TINYGLTF_COMPONENT_TYPE_BYTE:
+		scale = 127.0f;
+		break;
+	case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+		scale = 255.0f;
+		break;
+	case TINYGLTF_COMPONENT_TYPE_SHORT:
+		scale = 32767.0f;
+		break;
+	case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+		scale = 65535.0f;
+		break;
+	case TINYGLTF_COMPONENT_TYPE_INT:
+		scale = float( 2147483647.0 );
+		break;
+	case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+		scale = float( 4294967295.0 );
+		break;
+	default:
+		return;
+	}
+	for ( ; n >= 8; p = p + 8, n = n - 8 )
+		( FloatVector8( p ) / scale ).convertToFloats( p );
+	for ( ; n > 0; p++, n-- )
+		*p = *p / scale;
 }
 
 template< typename T >
@@ -726,13 +774,27 @@ static bool importGltfLoadBuffer(
 			}
 		}
 	}
+	if ( sizeof(T) == sizeof(float) && T(0.1f) != T(0.0f) )
+		importGltfNormalizeFloats( reinterpret_cast< float * >(outBuf.data()), outBuf.size(), a.componentType );
 
 	return true;
 }
 
+struct ImportGltfBoneWeights {
+	std::uint16_t	joints[8];
+	std::uint16_t	weights[8];
+	ImportGltfBoneWeights()
+	{
+		for ( int i = 0; i < 8; i++ ) {
+			joints[i] = 0;
+			weights[i] = 0;
+		}
+	}
+};
+
 // Returns true if tangent space needs to be calculated
 
-static bool importGltfLoadMesh( NifModel * nif, const QPersistentModelIndex & index,
+static bool importGltfLoadMesh( NifModel * nif, const QPersistentModelIndex & index, std::string & materialPath,
 								const tinygltf::Model & model, const tinygltf::Mesh & mesh, int lod, int skin )
 {
 	const tinygltf::Primitive *	p = nullptr;
@@ -746,6 +808,22 @@ static bool importGltfLoadMesh( NifModel * nif, const QPersistentModelIndex & in
 	}
 	if ( !p )
 		return false;
+	// TODO: implement support for multiple primitives per mesh
+
+	if ( materialPath.empty() && p->material >= 0 && size_t(p->material) < model.materials.size() ) {
+		const std::string &	matName = model.materials[p->material].name;
+		std::string	matNameL = matName;
+		for ( auto & c : matNameL ) {
+			if ( std::isupper(c) )
+				c = std::tolower(c);
+			else if ( c == '\\' )
+				c = '/';
+		}
+		if ( ( matNameL.ends_with(".mat") || matNameL.starts_with("materials/") )
+			&& matNameL.find('/') != std::string::npos ) {
+			materialPath = matName;
+		}
+	}
 
 	auto	iMeshes = nif->getIndex( index, "Meshes" );
 	if ( !( iMeshes.isValid() && nif->isArray( iMeshes ) && nif->rowCount( iMeshes ) > lod ) )
@@ -781,6 +859,8 @@ static bool importGltfLoadMesh( NifModel * nif, const QPersistentModelIndex & in
 		nif->setArray<Triangle>( iTriangles, triangles );
 	}
 
+	std::vector< ImportGltfBoneWeights >	boneWeights;
+
 	for ( const auto & i : p->attributes ) {
 		if ( i.first == "POSITION" ) {
 			std::vector< float >	positions;
@@ -811,6 +891,26 @@ static bool importGltfLoadMesh( NifModel * nif, const QPersistentModelIndex & in
 				}
 				nif->setArray<ShortVector3>( iVertices, vertices );
 			}
+		} else if ( i.first == "TEXCOORD_0" || i.first == "TEXCOORD_1" ) {
+			std::vector< float >	uvs;
+			if ( !importGltfLoadBuffer< float >( uvs, model, i.second, TINYGLTF_TYPE_VEC2 ) )
+				continue;
+			std::uint32_t	numUVs = std::uint32_t( uvs.size() >> 1 );
+			if ( !numUVs )
+				continue;
+			bool	isUV2 = ( i.first.c_str()[9] != '0' );
+			nif->set<quint32>( iMeshData, ( !isUV2 ? "Num UVs" : "Num UVs 2" ), numUVs );
+			auto	iUVs = nif->getIndex( iMeshData, ( !isUV2 ? "UVs" : "UVs 2" ) );
+			if ( iUVs.isValid() ) {
+				nif->updateArraySize( iUVs );
+				QVector< HalfVector2 >	uvsVec2;
+				uvsVec2.resize( qsizetype(numUVs) );
+				for ( qsizetype j = 0; j < qsizetype(numUVs); j++ ) {
+					uvsVec2[j][0] = uvs[j * 2];
+					uvsVec2[j][1] = uvs[j * 2 + 1];
+				}
+				nif->setArray<HalfVector2>( iUVs, uvsVec2 );
+			}
 		} else if ( i.first == "NORMAL" ) {
 			std::vector< float >	normals;
 			if ( !importGltfLoadBuffer< float >( normals, model, i.second, TINYGLTF_TYPE_VEC3 ) )
@@ -837,28 +937,121 @@ static bool importGltfLoadMesh( NifModel * nif, const QPersistentModelIndex & in
 				}
 				nif->setArray<UDecVector4>( iNormals, normalsVec4 );
 			}
-		} else if ( i.first == "TEXCOORD_0" || i.first == "TEXCOORD_1" ) {
-			std::vector< float >	uvs;
-			if ( !importGltfLoadBuffer< float >( uvs, model, i.second, TINYGLTF_TYPE_VEC2 ) )
+		} else if ( i.first == "TANGENT" ) {
+			std::vector< float >	tangents;
+			if ( !importGltfLoadBuffer< float >( tangents, model, i.second, TINYGLTF_TYPE_VEC4 ) )
 				continue;
-			std::uint32_t	numUVs = std::uint32_t( uvs.size() >> 1 );
-			if ( !numUVs )
+			std::uint32_t	numTangents = std::uint32_t( tangents.size() >> 2 );
+			if ( !numTangents )
 				continue;
-			bool	isUV2 = ( i.first.c_str()[9] != '0' );
-			nif->set<quint32>( iMeshData, ( !isUV2 ? "Num UVs" : "Num UVs 2" ), numUVs );
-			auto	iUVs = nif->getIndex( iMeshData, ( !isUV2 ? "UVs" : "UVs 2" ) );
-			if ( iUVs.isValid() ) {
-				nif->updateArraySize( iUVs );
-				QVector< HalfVector2 >	uvsVec2;
-				uvsVec2.resize( qsizetype(numUVs) );
-				for ( qsizetype j = 0; j < qsizetype(numUVs); j++ ) {
-					uvsVec2[j][0] = uvs[j * 2];
-					uvsVec2[j][1] = uvs[j * 2 + 1];
+			nif->set<quint32>( iMeshData, "Num Tangents", numTangents );
+			auto	iTangents = nif->getIndex( iMeshData, "Tangents" );
+			if ( iTangents.isValid() ) {
+				nif->updateArraySize( iTangents );
+				QVector< UDecVector4 >	tangentsVec4;
+				tangentsVec4.resize( qsizetype(numTangents) );
+				for ( qsizetype j = 0; j < qsizetype(numTangents); j++ ) {
+					FloatVector4	tangent( tangents.data() + (j * 4) );
+					float	r = tangent.dotProduct3( tangent );
+					if ( r > 0.0f ) [[likely]] {
+						tangent /= float( std::sqrt( r ) );
+						tangent[3] = ( tangent[3] < 0.0f ? 1.0f : -1.0f );
+					} else {
+						tangent = FloatVector4( 1.0f, 0.0f, 0.0f, -1.0f );
+					}
+					tangent.convertToFloats( &(tangentsVec4[j][0]) );
 				}
-				nif->setArray<HalfVector2>( iUVs, uvsVec2 );
+				nif->setArray<UDecVector4>( iTangents, tangentsVec4 );
+			}
+		} else if ( i.first == "COLOR_0" ) {
+			std::vector< float >	colors;
+			bool	haveAlpha = importGltfLoadBuffer< float >( colors, model, i.second, TINYGLTF_TYPE_VEC4 );
+			if ( !haveAlpha && !importGltfLoadBuffer< float >( colors, model, i.second, TINYGLTF_TYPE_VEC3 ) )
+				continue;
+			size_t	componentCnt = ( !haveAlpha ? 3 : 4 );
+			std::uint32_t	numColors = std::uint32_t( colors.size() / componentCnt );
+			if ( !numColors )
+				continue;
+			nif->set<quint32>( iMeshData, "Num Vertex Colors", numColors );
+			auto	iColors = nif->getIndex( iMeshData, "Vertex Colors" );
+			if ( iColors.isValid() ) {
+				nif->updateArraySize( iColors );
+				QVector< ByteColor4BGRA >	colorsVec4;
+				colorsVec4.resize( qsizetype(numColors) );
+				const float *	q = colors.data();
+				for ( size_t j = 0; j < numColors; j++, q = q + componentCnt ) {
+					FloatVector4	color;
+					if ( !haveAlpha )
+						color = FloatVector4::convertVector3( q ).blendValues( FloatVector4(1.0f), 0x08 );
+					else
+						color = FloatVector4( q );
+					color.maxValues( FloatVector4(0.0f) ).minValues( FloatVector4(1.0f) );
+					color.convertToFloats( &(colorsVec4[qsizetype(j)][0]) );
+				}
+				nif->setArray<ByteColor4BGRA>( iColors, colorsVec4 );
+			}
+		} else if ( i.first == "WEIGHTS_0" || i.first == "WEIGHTS_1" ) {
+			std::vector< float >	weights;
+			if ( !importGltfLoadBuffer< float >( weights, model, i.second, TINYGLTF_TYPE_VEC4 ) )
+				continue;
+			size_t	numWeights = weights.size() >> 2;
+			if ( numWeights > boneWeights.size() )
+				boneWeights.resize( numWeights );
+			size_t	offs = ( i.first.c_str()[8] == '0' ? 0 : 4 );
+			for ( size_t j = 0; j < numWeights; j++ ) {
+				FloatVector4	w( weights.data() + (j * 4) );
+				w.maxValues( FloatVector4(0.0f) ).minValues( FloatVector4(1.0f) );
+				w *= 65535.0f;
+				w.roundValues();
+				boneWeights[j].weights[offs] = std::uint16_t( w[0] );
+				boneWeights[j].weights[offs + 1] = std::uint16_t( w[1] );
+				boneWeights[j].weights[offs + 2] = std::uint16_t( w[2] );
+				boneWeights[j].weights[offs + 3] = std::uint16_t( w[3] );
+			}
+		} else if ( i.first == "JOINTS_0" || i.first == "JOINTS_1" ) {
+			std::vector< std::uint16_t >	joints;
+			if ( !importGltfLoadBuffer< std::uint16_t >( joints, model, i.second, TINYGLTF_TYPE_VEC4 ) )
+				continue;
+			size_t	numJoints = joints.size() >> 2;
+			if ( numJoints > boneWeights.size() )
+				boneWeights.resize( numJoints );
+			size_t	offs = ( i.first.c_str()[7] == '0' ? 0 : 4 );
+			for ( size_t j = 0; j < numJoints; j++ ) {
+				for ( size_t k = 0; k < 4; k++ )
+					boneWeights[j].joints[offs + k] = joints[j * 4 + k];
 			}
 		}
-		// TODO: vertex colors and tangents
+	}
+
+	if ( !boneWeights.empty() ) {
+		size_t	weightsPerVertex = 0;
+		for ( const auto & bw : boneWeights ) {
+			for ( size_t i = 8; i > 0; i-- ) {
+				if ( bw.weights[i - 1] != 0 ) {
+					weightsPerVertex = std::max( weightsPerVertex, i );
+					break;
+				}
+			}
+		}
+		if ( weightsPerVertex > 0 ) {
+			size_t	numWeights = boneWeights.size() * weightsPerVertex;
+			nif->set<quint32>( iMeshData, "Weights Per Vertex", quint32(weightsPerVertex) );
+			nif->set<quint32>( iMeshData, "Num Weights", quint32(numWeights) );
+			auto	iWeights = nif->getIndex( iMeshData, "Weights" );
+			if ( iWeights.isValid() ) {
+				nif->updateArraySize( iWeights );
+				NifItem *	weightsItem = nif->getItem( iWeights );
+				for ( size_t i = 0; weightsItem && i < boneWeights.size(); i++ ) {
+					for ( size_t j = 0; j < weightsPerVertex; j++ ) {
+						auto	weightItem = weightsItem->child( int(i * weightsPerVertex + j) );
+						if ( weightItem ) {
+							nif->set<quint16>( weightItem->child( 0 ), boneWeights[i].joints[j] );
+							nif->set<quint16>( weightItem->child( 1 ), boneWeights[i].weights[j] );
+						}
+					}
+				}
+			}
+		}
 	}
 
 	// TODO: import skin
@@ -878,7 +1071,7 @@ static bool importGltfLoadMesh( NifModel * nif, const QPersistentModelIndex & in
 }
 
 static void importGltfLoadNode( NifModel * nif, const QPersistentModelIndex & index,
-								const tinygltf::Model & model, int nodeNum )
+								const tinygltf::Model & model, int nodeNum, bool isRoot )
 {
 	if ( nodeNum < 0 || size_t(nodeNum) >= model.nodes.size() || !nodeHasMeshes( model, nodeNum ) )
 		return;
@@ -907,25 +1100,35 @@ static void importGltfLoadNode( NifModel * nif, const QPersistentModelIndex & in
 	nif->set<QString>( iBlock, "Name", QString::fromStdString( node.name ) );
 	{
 		Transform	t;
-		if ( node.rotation.size() >= 4 && node.scale.size() >= 1 && node.translation.size() >= 3 ) {
-			Quat	r;
-			for ( size_t i = 0; i < 4; i++ )
-				r[(i + 1) & 3] = float( node.rotation[i] );
-			t.rotation.fromQuat( r );
-			t.translation[0] = float( node.translation[0] );
-			t.translation[1] = float( node.translation[1] );
-			t.translation[2] = float( node.translation[2] );
-			double	s = 0.0;
-			for ( double i : node.scale )
-				s += i;
-			t.scale = float( s / double( int(node.scale.size()) ) );
-		} else if ( node.matrix.size() >= 16 ) {
+		if ( node.matrix.size() >= 16 ) {
 			Matrix4	m;
 			for ( size_t i = 0; i < 16; i++ )
 				const_cast< float * >( m.data() )[i] = float( node.matrix[i] );
 			Vector3	tmpScale;
 			m.decompose( t.translation, t.rotation, tmpScale );
 			t.scale = ( tmpScale[0] + tmpScale[1] + tmpScale[2] ) / 3.0f;
+		} else {
+			if ( node.rotation.size() >= 4 ) {
+				Quat	r;
+				for ( size_t i = 0; i < 4; i++ )
+					r[(i + 1) & 3] = float( node.rotation[i] );
+				t.rotation.fromQuat( r );
+			}
+			if ( node.scale.size() >= 1 ) {
+				double	s = 0.0;
+				for ( double i : node.scale )
+					s += i;
+				t.scale = float( s / double( int(node.scale.size()) ) );
+			}
+			if ( node.translation.size() >= 3 ) {
+				t.translation[0] = float( node.translation[0] );
+				t.translation[1] = float( node.translation[1] );
+				t.translation[2] = float( node.translation[2] );
+			}
+		}
+		if ( isRoot ) {
+			t.rotation = t.rotation.toZUp();
+			t.translation = Vector3( t.translation[0], -(t.translation[2]), t.translation[1] );
 		}
 		t.writeBack( nif, iBlock );
 	}
@@ -935,6 +1138,7 @@ static void importGltfLoadNode( NifModel * nif, const QPersistentModelIndex & in
 		nif->setLink( iBlock, "Shader Property", quint32( nif->getBlockNumber(iShaderProperty) ) );
 
 		QPersistentModelIndex	iMaterialID = nif->insertNiBlock( "NiIntegerExtraData" );
+		nif->set<QString>( iMaterialID, "Name", "MaterialID" );
 		for ( auto iNumExtraData = nif->getIndex( iBlock, "Num Extra Data List" ); iNumExtraData.isValid(); ) {
 			quint32	n = nif->get<quint32>( iNumExtraData );
 			nif->set<quint32>( iNumExtraData, n + 1 );
@@ -949,6 +1153,17 @@ static void importGltfLoadNode( NifModel * nif, const QPersistentModelIndex & in
 		std::string	materialPath;
 		if ( node.extras.Has( "Material Path" ) )
 			materialPath = node.extras.Get( "Material Path" ).Get< std::string >();
+
+		bool	tangentsNeeded = importGltfLoadMesh( nif, iBlock, materialPath, model, model.meshes[node.mesh], 0, node.skin );
+		for ( int l = 0; size_t(l) < node.lods.size() && l < 3 && gltfEnableLOD; l++ ) {
+			int	n = node.lods[l];
+			if ( n >= 0 && size_t(n) < model.nodes.size() ) {
+				int	m = model.nodes[n].mesh;
+				if ( m >= 0 && size_t(m) < model.meshes.size() )
+					tangentsNeeded |= importGltfLoadMesh( nif, iBlock, materialPath, model, model.meshes[m], l + 1, -1 );
+			}
+		}
+
 		if ( !materialPath.empty() ) {
 			auto	matPathTmp = QString::fromStdString( materialPath );
 			materialPath = Game::GameManager::get_full_path( matPathTmp, "materials/", ".mat" );
@@ -959,22 +1174,13 @@ static void importGltfLoadNode( NifModel * nif, const QPersistentModelIndex & in
 			hashFunctionCRC32( matPathHash, (unsigned char) ( c != '/' ? c : '\\' ) );
 		nif->set<quint32>( iMaterialID, "Integer Data", matPathHash );
 
-		bool	tangentsNeeded = importGltfLoadMesh( nif, iBlock, model, model.meshes[node.mesh], 0, node.skin );
-		for ( int l = 0; l < 3 && size_t(l) < node.lods.size(); l++ ) {
-			int	n = node.lods[l];
-			if ( n >= 0 && size_t(n) < model.nodes.size() ) {
-				int	m = model.nodes[n].mesh;
-				if ( m >= 0 && size_t(m) < model.meshes.size() )
-					tangentsNeeded |= importGltfLoadMesh( nif, iBlock, model, model.meshes[m], l + 1, -1 );
-			}
-		}
 		if ( tangentsNeeded )
 			spTangentSpace::tangentSpaceSFMesh( nif, iBlock );
 		spUpdateBounds::cast_Starfield( nif, iBlock );
 	}
 
 	for ( int i : node.children )
-		importGltfLoadNode( nif, iBlock, model, i );
+		importGltfLoadNode( nif, iBlock, model, i, false );
 }
 
 void importGltf( NifModel* nif, const QModelIndex& index )
@@ -985,8 +1191,12 @@ void importGltf( NifModel* nif, const QModelIndex& index )
 	}
 
 	QString filename = QFileDialog::getOpenFileName( qApp->activeWindow(), tr("Choose a .glTF file for import"), nif->getFilename(), "glTF (*.gltf)" );
-	if ( filename.isEmpty() )
+	if ( filename.isEmpty() ) {
 		return;
+	} else {
+		QSettings	settings;
+		gltfEnableLOD = settings.value( "Settings/Nif/Enable LOD", true ).toBool();
+	}
 
 	tinygltf::TinyGLTF	reader;
 	tinygltf::Model	model;
@@ -1001,13 +1211,15 @@ void importGltf( NifModel* nif, const QModelIndex& index )
 
 	QPersistentModelIndex	iBlock( index );
 
+	nif->setState( BaseModel::Processing );
 	if ( model.scenes.empty() ) {
-		importGltfLoadNode( nif, iBlock, model, 0 );
+		importGltfLoadNode( nif, iBlock, model, 0, true );
 	} else {
 		for ( const auto & i : model.scenes ) {
 			for ( int j : i.nodes )
-				importGltfLoadNode( nif, iBlock, model, j );
+				importGltfLoadNode( nif, iBlock, model, j, true );
 		}
 	}
 	nif->updateHeader();
+	nif->restoreState();
 }
