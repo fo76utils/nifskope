@@ -276,26 +276,26 @@ void MeshFile::update( const NifModel * nif, const QModelIndex & index )
 		xyz = xyz * scale;
 
 	quint32 numCoord1 = nif->get<quint32>( meshData, "Num UVs" );
-	auto	uvIndex1 = nif->getIndex( meshData, "UVs" );
-	if ( !uvIndex1.isValid() )
+	auto	uvItem1 = nif->getItem( meshData, "UVs" );
+	if ( !uvItem1 )
 		numCoord1 = 0;
 	coords.resize( numCoord1 );
 
 	for ( int i = 0; i < int(numCoord1); i++ ) {
-		HalfVector2	uv = nif->get<HalfVector2>( QModelIndex_child( uvIndex1, i ) );
+		HalfVector2	uv = nif->get<HalfVector2>( uvItem1->child( i ) );
 
 		coords[i] = Vector4( uv[0], uv[1], 0.0f, 0.0f );
 	}
 
 	quint32 numCoord2 = nif->get<quint32>( meshData, "Num UVs 2" );
-	auto	uvIndex2 = nif->getIndex( meshData, "UVs 2" );
-	if ( !uvIndex2.isValid() )
+	auto	uvItem2 = nif->getItem( meshData, "UVs 2" );
+	if ( !uvItem2 )
 		numCoord2 = 0;
 	numCoord2 = std::min( numCoord2, numCoord1 );
 	haveTexCoord2 = bool( numCoord2 );
 
 	for ( quint32 i = 0; i < numCoord2; i++ ) {
-		HalfVector2	uv = nif->get<HalfVector2>( QModelIndex_child( uvIndex2, i ) );
+		HalfVector2	uv = nif->get<HalfVector2>( uvItem2->child( i ) );
 
 		coords[i][2] = uv[0];
 		coords[i][3] = uv[1];
@@ -311,31 +311,31 @@ void MeshFile::update( const NifModel * nif, const QModelIndex & index )
 	}
 
 	quint32 numNormal = nif->get<quint32>( meshData, "Num Normals" );
-	auto	normalsIndex = nif->getIndex( meshData, "Normals" );
-	if ( !normalsIndex.isValid() )
+	auto	normalsItem = nif->getItem( meshData, "Normals" );
+	if ( !normalsItem )
 		numNormal = 0;
 	if ( numNormal > 0 )
 		normals.resize( numNormal );
 	for ( int i = 0; i < int(numNormal); i++ )
-		normals[i] = Vector3( nif->get<UDecVector4>( QModelIndex_child( normalsIndex, i ) ) );
+		normals[i] = Vector3( nif->get<UDecVector4>( normalsItem->child( i ) ) );
 
 	quint32 numTangent = nif->get<quint32>( meshData, "Num Tangents" );
-	auto	tangentsIndex = nif->getIndex( meshData, "Tangents" );
-	if ( !tangentsIndex.isValid() )
+	auto	tangentsItem = nif->getItem( meshData, "Tangents" );
+	if ( !tangentsItem )
 		numTangent = 0;
 	if ( numTangent > 0 ) {
 		tangents.resize( numTangent );
 		bitangentsBasis.resize( numTangent );
 	}
 	for ( int i = 0; i < int(numTangent); i++ ) {
-		Vector4	v = nif->get<Vector4>( QModelIndex_child( tangentsIndex, i ) );
+		Vector4	v = nif->get<Vector4>( tangentsItem->child( i ) );
 		tangents[i] = Vector3( v );
 		bitangentsBasis[i] = v[3];
 	}
 
 	quint32 numWeights = nif->get<quint32>( meshData, "Num Weights" );
-	auto	weightsIndex = nif->getIndex( meshData, "Weights" );
-	if ( !weightsIndex.isValid() )
+	auto	weightsItem = nif->getItem( meshData, "Weights" );
+	if ( !weightsItem )
 		numWeights = 0;
 	if ( numWeights > 0 && numWeightsPerVertex > 0 ) {
 		weights.resize(numWeights / numWeightsPerVertex);
@@ -344,36 +344,38 @@ void MeshFile::update( const NifModel * nif, const QModelIndex & index )
 	for ( int i = 0; i < weights.count(); i++ ) {
 		QVector<QPair<quint16, quint16>> weightsUNORM;
 		for ( quint32 j = 0; j < 8; j++ ) {
+			quint16	b = 0;
+			quint16	w = 0;
 			if ( j < numWeightsPerVertex ) {
-				auto	weightIndex = QModelIndex_child( weightsIndex, k );
-				quint16	b = nif->get<quint16>( QModelIndex_child( weightIndex, 0 ) );
-				quint16	w = nif->get<quint16>( QModelIndex_child( weightIndex, 1 ) );
-				weightsUNORM.append({ b, w });
+				auto	weightItem = weightsItem->child( k );
+				if ( weightItem ) {
+					b = nif->get<quint16>( weightItem->child( 0 ) );
+					w = nif->get<quint16>( weightItem->child( 1 ) );
+				}
 				k++;
-			} else {
-				weightsUNORM.append({0, 0});
 			}
+			weightsUNORM.append({ b, w });
 		}
 		weights[i] = BoneWeightsUNorm(weightsUNORM, i);
 	}
 
 	quint32	numLODs = 0;
-	auto	lodsIndex = nif->getIndex( meshData, "LODs" );
-	if ( lodsIndex.isValid() )
+	auto	lodsItem = nif->getItem( meshData, "LODs" );
+	if ( lodsItem )
 		numLODs = nif->get<quint32>( meshData, "Num LODs" );
 	lods.resize(numLODs);
 	for ( quint32 i = 0; i < numLODs; i++ ) {
-		auto	lodIndex = QModelIndex_child( lodsIndex, int(i) );
-		if ( !lodIndex.isValid() )
+		auto	lodItem = lodsItem->child( int(i) );
+		if ( !lodItem )
 			continue;
-		auto	trianglesIndex2 = nif->getIndex( lodIndex, "Triangles" );
-		if ( !trianglesIndex2.isValid() )
+		auto	trianglesItem2 = nif->getItem( lodItem, "Triangles" );
+		if ( !trianglesItem2 )
 			continue;
-		quint32 indicesSize2 = nif->get<quint32>( lodIndex, "Indices Size" );
+		quint32 indicesSize2 = nif->get<quint32>( lodItem, "Indices Size" );
 		lods[i].resize(indicesSize2 / 3);
 
 		for ( quint32 j = 0; j < indicesSize2 / 3; j++ )
-			lods[i][j] = nif->get<Triangle>( QModelIndex_child( trianglesIndex2, int(j) ) );
+			lods[i][j] = nif->get<Triangle>( trianglesItem2->child( int(j) ) );
 	}
 }
 
