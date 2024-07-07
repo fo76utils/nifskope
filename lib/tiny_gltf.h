@@ -5660,7 +5660,7 @@ static bool ParseSkin(Skin *skin, std::string *err, const detail::json &o,
   skin->skeleton = skeleton;
 
   int invBind = -1;
-  ParseIntegerProperty(&invBind, err, o, "inverseBindMatrices", true, "Skin");
+  ParseIntegerProperty(&invBind, err, o, "inverseBindMatrices", false, "Skin");
   skin->inverseBindMatrices = invBind;
 
   ParseExtrasAndExtensions(skin, err, o,
@@ -6108,16 +6108,8 @@ bool TinyGLTF::LoadFromString(Model *model, std::string *err, std::string *warn,
     }
   }
 
-  model->buffers.clear();
-  model->bufferViews.clear();
-  model->accessors.clear();
-  model->meshes.clear();
-  model->cameras.clear();
-  model->nodes.clear();
-  model->extensionsUsed.clear();
-  model->extensionsRequired.clear();
-  model->extensions.clear();
-  model->defaultScene = -1;
+  // Reset the model
+  (*model) = Model();
 
   // 1. Parse Asset
   {
