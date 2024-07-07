@@ -281,12 +281,47 @@
        <item>
         <widget class="QGroupBox" name="groupBox_3">
          <property name="title">
-          <string>Starfield meshlet algorithm</string>
+          <string>glTF import and export</string>
          </property>
          <property name="flat">
           <bool>true</bool>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_5">
+          <item>
+           <widget class="QCheckBox" name="gltfEnableLOD">
+            <property name="text">
+             <string>Enable LOD</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_3">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_4">
+         <property name="title">
+          <string>Starfield meshlet algorithm</string>
+         </property>
+         <property name="flat">
+          <bool>true</bool>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_6">
           <item>
            <widget class="QComboBox" name="starfieldMeshletAlgorithm">
             <property name="maximumSize">
@@ -329,7 +364,7 @@
         </widget>
        </item>
        <item>
-        <spacer name="verticalSpacer_3">
+        <spacer name="verticalSpacer_4">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
@@ -340,6 +375,279 @@
           </size>
          </property>
         </spacer>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_5">
+         <property name="title">
+          <string>Starfield LOD generation settings</string>
+         </property>
+         <property name="flat">
+          <bool>true</bool>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_3">
+          <item row="0" column="0">
+           <widget class="QLabel" name="lblSFLODGenTargetCnt1">
+            <property name="text">
+             <string>LOD1: Target count</string>
+            </property>
+            <property name="buddy">
+             <cstring>sfLODGenTargetCnt1</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QDoubleSpinBox" name="sfLODGenTargetCnt1">
+            <property name="decimals">
+             <number>3</number>
+            </property>
+            <property name="minimum">
+             <double>0.0</double>
+            </property>
+            <property name="maximum">
+             <double>1.0</double>
+            </property>
+            <property name="singleStep">
+             <double>0.001</double>
+            </property>
+            <property name="value">
+             <double>0.5</double>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="lblSFLODGenTargetErr1">
+            <property name="text">
+             <string>Max. error</string>
+            </property>
+            <property name="buddy">
+             <cstring>sfLODGenTargetErr1</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QDoubleSpinBox" name="sfLODGenTargetErr1">
+            <property name="decimals">
+             <number>4</number>
+            </property>
+            <property name="minimum">
+             <double>0.0</double>
+            </property>
+            <property name="maximum">
+             <double>1.0</double>
+            </property>
+            <property name="singleStep">
+             <double>0.0001</double>
+            </property>
+            <property name="value">
+             <double>0.01</double>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="4" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="lblSFLODGenMinTriCnt1">
+            <property name="text">
+             <string>Min. triangles</string>
+            </property>
+            <property name="buddy">
+             <cstring>sfLODGenMinTriCnt1</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="5">
+           <widget class="QDoubleSpinBox" name="sfLODGenMinTriCnt1">
+            <property name="decimals">
+             <number>0</number>
+            </property>
+            <property name="minimum">
+             <double>0.0</double>
+            </property>
+            <property name="maximum">
+             <double>1000000.0</double>
+            </property>
+            <property name="singleStep">
+             <double>1.0</double>
+            </property>
+            <property name="value">
+             <double>200.0</double>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="lblSFLODGenTargetCnt2">
+            <property name="text">
+             <string>LOD2: Target count</string>
+            </property>
+            <property name="buddy">
+             <cstring>sfLODGenTargetCnt2</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QDoubleSpinBox" name="sfLODGenTargetCnt2">
+            <property name="decimals">
+             <number>3</number>
+            </property>
+            <property name="minimum">
+             <double>0.0</double>
+            </property>
+            <property name="maximum">
+             <double>1.0</double>
+            </property>
+            <property name="singleStep">
+             <double>0.001</double>
+            </property>
+            <property name="value">
+             <double>0.2</double>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="lblSFLODGenTargetErr2">
+            <property name="text">
+             <string>Max. error</string>
+            </property>
+            <property name="buddy">
+             <cstring>sfLODGenTargetErr2</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3">
+           <widget class="QDoubleSpinBox" name="sfLODGenTargetErr2">
+            <property name="decimals">
+             <number>4</number>
+            </property>
+            <property name="minimum">
+             <double>0.0</double>
+            </property>
+            <property name="maximum">
+             <double>1.0</double>
+            </property>
+            <property name="singleStep">
+             <double>0.0001</double>
+            </property>
+            <property name="value">
+             <double>0.03</double>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="4" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="lblSFLODGenMinTriCnt2">
+            <property name="text">
+             <string>Min. triangles</string>
+            </property>
+            <property name="buddy">
+             <cstring>sfLODGenMinTriCnt2</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="5">
+           <widget class="QDoubleSpinBox" name="sfLODGenMinTriCnt2">
+            <property name="decimals">
+             <number>0</number>
+            </property>
+            <property name="minimum">
+             <double>0.0</double>
+            </property>
+            <property name="maximum">
+             <double>1000000.0</double>
+            </property>
+            <property name="singleStep">
+             <double>1.0</double>
+            </property>
+            <property name="value">
+             <double>100.0</double>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="lblSFLODGenTargetCnt3">
+            <property name="text">
+             <string>LOD3: Target count</string>
+            </property>
+            <property name="buddy">
+             <cstring>sfLODGenTargetCnt3</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QDoubleSpinBox" name="sfLODGenTargetCnt3">
+            <property name="decimals">
+             <number>3</number>
+            </property>
+            <property name="minimum">
+             <double>0.0</double>
+            </property>
+            <property name="maximum">
+             <double>1.0</double>
+            </property>
+            <property name="singleStep">
+             <double>0.001</double>
+            </property>
+            <property name="value">
+             <double>0.08</double>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="2" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="lblSFLODGenTargetErr3">
+            <property name="text">
+             <string>Max. error</string>
+            </property>
+            <property name="buddy">
+             <cstring>sfLODGenTargetErr3</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="3">
+           <widget class="QDoubleSpinBox" name="sfLODGenTargetErr3">
+            <property name="decimals">
+             <number>4</number>
+            </property>
+            <property name="minimum">
+             <double>0.0</double>
+            </property>
+            <property name="maximum">
+             <double>1.0</double>
+            </property>
+            <property name="singleStep">
+             <double>0.0001</double>
+            </property>
+            <property name="value">
+             <double>0.1</double>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="4" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="lblSFLODGenMinTriCnt3">
+            <property name="text">
+             <string>Min. triangles</string>
+            </property>
+            <property name="buddy">
+             <cstring>sfLODGenMinTriCnt3</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="5">
+           <widget class="QDoubleSpinBox" name="sfLODGenMinTriCnt3">
+            <property name="decimals">
+             <number>0</number>
+            </property>
+            <property name="minimum">
+             <double>0.0</double>
+            </property>
+            <property name="maximum">
+             <double>1000000.0</double>
+            </property>
+            <property name="singleStep">
+             <double>1.0</double>
+            </property>
+            <property name="value">
+             <double>50.0</double>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
        </item>
       </layout>
      </widget>
