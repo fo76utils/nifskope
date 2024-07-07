@@ -457,7 +457,8 @@ void SettingsRender::write()
 	setModified( false );
 
 	int	tmp = settings.value( "Settings/Render/General/Pbr Cube Map Resolution", 1 ).toInt();
-	tmp = std::min< int >( 1 << ( tmp + 7 ), 513 );
+	tmp = std::min< int >( std::max< int >( tmp, 0 ), 4 );
+	tmp = ( 128 << ( tmp - int(tmp >= 3) ) ) + int( tmp == 3 );	// 128, 256, 512, 513, 1024
 	if ( tmp != TexCache::pbrCubeMapResolution ) {
 		TexCache::pbrCubeMapResolution = tmp;
 		emit dlg->flush3D();
