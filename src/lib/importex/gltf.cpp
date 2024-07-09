@@ -148,19 +148,18 @@ bool exportCreateNodes(const NifModel* nif, const Scene* scene, tinygltf::Model&
 					}
 				}
 
-				Transform trans;
 				if ( !j ) {
-					trans = node->localTrans();
+					Transform trans = node->localTrans();
 					// Rotate the root NiNode for glTF Y-Up
 					if ( gltfNodeID == 0 ) {
 						trans.rotation = trans.rotation.toYUp();
 						trans.translation = Vector3( trans.translation[0], trans.translation[2], -(trans.translation[1]) );
 					}
+					auto quat = trans.rotation.toQuat();
+					gltfNode.translation = { trans.translation[0], trans.translation[1], trans.translation[2] };
+					gltfNode.rotation = { quat[1], quat[2], quat[3], quat[0] };
+					gltfNode.scale = { trans.scale, trans.scale, trans.scale };
 				}
-				auto quat = trans.rotation.toQuat();
-				gltfNode.translation = { trans.translation[0], trans.translation[1], trans.translation[2] };
-				gltfNode.rotation = { quat[1], quat[2], quat[3], quat[0] };
-				gltfNode.scale = { trans.scale, trans.scale, trans.scale };
 
 				std::map<std::string, tinygltf::Value> extras;
 				extras["ID"] = tinygltf::Value(nodeId);
@@ -411,8 +410,8 @@ void exportCreatePrimitive(tinygltf::Model& model, QByteArray& bin, std::shared_
 			exportFloats( bin, &(v[0]), 4 );
 		}
 	} else if ( attr == "WEIGHTS_0" ) {
-		FloatVector4 tmpWeights( 0.0f );
 		for ( const auto& v : mesh->weights ) {
+			FloatVector4 tmpWeights( 0.0f );
 			for ( int i = 0; i < 4; i++ ) {
 				tmpWeights.shuffleValues( 0x39 );	// 1, 2, 3, 0
 				float weight = v.weightsUNORM[i].weight;
@@ -423,8 +422,8 @@ void exportCreatePrimitive(tinygltf::Model& model, QByteArray& bin, std::shared_
 			exportFloats( bin, &(tmpWeights[0]), 4 );
 		}
 	} else if ( attr == "WEIGHTS_1" ) {
-		FloatVector4 tmpWeights( 0.0f );
 		for ( const auto& v : mesh->weights ) {
+			FloatVector4 tmpWeights( 0.0f );
 			for ( int i = 4; i < 8; i++ ) {
 				tmpWeights.shuffleValues( 0x39 );	// 1, 2, 3, 0
 				float weight = v.weightsUNORM[i].weight;
