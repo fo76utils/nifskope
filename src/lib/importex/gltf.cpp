@@ -700,7 +700,7 @@ void ExportGltfMaterials::getTexture(
 					case 1:
 						// normal map: calculate Z (blue) channel and convert to unsigned format
 						a[2] = float( std::sqrt( std::max( 1.0f - a.dotProduct2(a), 0.0f ) ) );
-						a = a * 0.5f + 0.5f;
+						a = a * FloatVector4( 0.5f, -0.5f, 0.5f, 0.5f ) + 0.5f;	// invert green channel
 						break;
 					case 2:
 						// PBR map: G = roughness, B = metalness
@@ -937,7 +937,7 @@ protected:
 	bool	lodEnabled;
 	bool	meshPrimWarningFlag;
 	std::vector< int >	nodeStack;
-	bool nodeHasMeshes( const tinygltf::Node & node ) const;
+	bool nodeHasMeshes( const tinygltf::Node & node, int d = 0 ) const;
 	static void normalizeFloats( float * p, size_t n, int dataType );
 	template< typename T > bool loadBuffer( std::vector< T > & outBuf, int accessor, int typeRequired );
 	void loadSkin( const QPersistentModelIndex & index, const tinygltf::Skin & skin );
@@ -954,12 +954,14 @@ public:
 	void importModel( const QPersistentModelIndex & iBlock );
 };
 
-bool ImportGltf::nodeHasMeshes( const tinygltf::Node & node ) const
+bool ImportGltf::nodeHasMeshes( const tinygltf::Node & node, int d ) const
 {
 	if ( node.mesh >= 0 && size_t(node.mesh) < model.meshes.size() )
 		return true;
+	if ( d >= 1024 )
+		return false;
 	for ( int i : node.children ) {
-		if ( i >= 0 && size_t(i) < model.nodes.size() && nodeHasMeshes( model.nodes[i] ) )
+		if ( i >= 0 && size_t(i) < model.nodes.size() && nodeHasMeshes( model.nodes[i], d + 1 ) )
 			return true;
 	}
 	return false;
