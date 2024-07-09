@@ -19,7 +19,7 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_1">
+  <layout class="QVBoxLayout" name="verticalLayout">
    <property name="leftMargin">
     <number>0</number>
    </property>
@@ -56,7 +56,7 @@
       <attribute name="title">
        <string>User Interface</string>
       </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_2">
+      <layout class="QVBoxLayout" name="verticalLayout_1">
        <item>
         <widget class="QGroupBox" name="grpLanguage">
          <property name="sizePolicy">
@@ -71,7 +71,7 @@
          <property name="flat">
           <bool>true</bool>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout">
+         <layout class="QVBoxLayout" name="verticalLayout_2">
           <item>
            <widget class="QComboBox" name="language">
             <property name="enabled">
@@ -102,7 +102,7 @@
          <property name="flat">
           <bool>true</bool>
          </property>
-         <layout class="QGridLayout" name="gridLayout_2">
+         <layout class="QGridLayout" name="gridLayout">
           <item row="0" column="1">
            <widget class="QSpinBox" name="optionsPerLine">
             <property name="sizePolicy">
@@ -146,7 +146,7 @@
          <property name="flat">
           <bool>true</bool>
          </property>
-         <layout class="QGridLayout" name="gridLayout">
+         <layout class="QGridLayout" name="gridLayout_2">
           <item row="0" column="0">
            <widget class="QCheckBox" name="suppressSaveConfirmation">
             <property name="text">
@@ -286,14 +286,56 @@
          <property name="flat">
           <bool>true</bool>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_5">
-          <item>
+         <layout class="QGridLayout" name="gridLayout_3">
+          <item row="0" column="0">
            <widget class="QCheckBox" name="gltfEnableLOD">
             <property name="text">
              <string>Enable LOD</string>
             </property>
             <property name="checked">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QCheckBox" name="gltfFullMatPaths">
+            <property name="text">
+             <string>Export full material paths</string>
+            </property>
+            <property name="checked">
              <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="lblGLTFExportMipLevel">
+            <property name="text">
+             <string>Export texture mip level</string>
+            </property>
+            <property name="buddy">
+             <cstring>glTFExportMipLevel</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QSpinBox" name="glTFExportMipLevel">
+            <property name="maximumSize">
+             <size>
+              <width>60</width>
+              <height>40</height>
+             </size>
+            </property>
+            <property name="minimum">
+             <number>-1</number>
+            </property>
+            <property name="maximum">
+             <number>15</number>
+            </property>
+            <property name="singleStep">
+             <number>1</number>
+            </property>
+            <property name="value">
+             <number>2</number>
             </property>
            </widget>
           </item>
@@ -321,7 +363,7 @@
          <property name="flat">
           <bool>true</bool>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_6">
+         <layout class="QVBoxLayout" name="verticalLayout_5">
           <item>
            <widget class="QComboBox" name="starfieldMeshletAlgorithm">
             <property name="maximumSize">
@@ -384,7 +426,7 @@
          <property name="flat">
           <bool>true</bool>
          </property>
-         <layout class="QGridLayout" name="gridLayout_3">
+         <layout class="QGridLayout" name="gridLayout_4">
           <item row="0" column="0">
            <widget class="QLabel" name="lblSFLODGenTargetCnt1">
             <property name="text">
@@ -454,21 +496,18 @@
            </widget>
           </item>
           <item row="0" column="5">
-           <widget class="QDoubleSpinBox" name="sfLODGenMinTriCnt1">
-            <property name="decimals">
+           <widget class="QSpinBox" name="sfLODGenMinTriCnt1">
+            <property name="minimum">
              <number>0</number>
             </property>
-            <property name="minimum">
-             <double>0.0</double>
-            </property>
             <property name="maximum">
-             <double>1000000.0</double>
+             <number>1000000</number>
             </property>
             <property name="singleStep">
-             <double>1.0</double>
+             <number>1</number>
             </property>
             <property name="value">
-             <double>200.0</double>
+             <number>200</number>
             </property>
            </widget>
           </item>
@@ -541,21 +580,18 @@
            </widget>
           </item>
           <item row="1" column="5">
-           <widget class="QDoubleSpinBox" name="sfLODGenMinTriCnt2">
-            <property name="decimals">
+           <widget class="QSpinBox" name="sfLODGenMinTriCnt2">
+            <property name="minimum">
              <number>0</number>
             </property>
-            <property name="minimum">
-             <double>0.0</double>
-            </property>
             <property name="maximum">
-             <double>1000000.0</double>
+             <number>1000000</number>
             </property>
             <property name="singleStep">
-             <double>1.0</double>
+             <number>1</number>
             </property>
             <property name="value">
-             <double>100.0</double>
+             <number>100</number>
             </property>
            </widget>
           </item>
@@ -628,21 +664,18 @@
            </widget>
           </item>
           <item row="2" column="5">
-           <widget class="QDoubleSpinBox" name="sfLODGenMinTriCnt3">
-            <property name="decimals">
+           <widget class="QSpinBox" name="sfLODGenMinTriCnt3">
+            <property name="minimum">
              <number>0</number>
             </property>
-            <property name="minimum">
-             <double>0.0</double>
-            </property>
             <property name="maximum">
-             <double>1000000.0</double>
+             <number>1000000</number>
             </property>
             <property name="singleStep">
-             <double>1.0</double>
+             <number>1</number>
             </property>
             <property name="value">
-             <double>50.0</double>
+             <number>50</number>
             </property>
            </widget>
           </item>

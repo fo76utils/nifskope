@@ -1,6 +1,7 @@
  == CHANGELOG ==
 
-* Implemented glTF import.
+* Implemented Starfield glTF import, fixes and improvements to glTF export.
+* Basic material information and textures can be exported in glTF format. The resolution of the exported textures is reduced according to the mip level in the general settings, which defaults to 2 (1/4 resolution). Setting the mip level to -1 disables texture export.
 * Exporting and importing LOD meshes from/to glTF files can be disabled in the general settings under NIF.
 * Starfield bone bounding spheres are now drawn when the 'Skin' field of a BSGeometry block is selected.
 * The maximum PBR cube map resolution in the render settings has been increased to 1024x1024 (uses importance sampling at mip levels 1 and 2).
