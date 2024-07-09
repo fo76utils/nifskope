@@ -709,7 +709,7 @@ int Renderer::Program::storeUniformLocation( const UniformLocationMapItem & o, s
 	uniLocationsMap[i] = o;
 	uniLocationsMap[i].l = l;
 	if ( l < 0 )
-		qWarning() << "Warning: uniform '" << varNameBuf << "' not found";
+		std::fprintf( stderr, "[Warning] Uniform '%s' not found\n", varNameBuf );
 
 	uniLocationsMapSize++;
 	if ( ( uniLocationsMapSize * size_t(3) ) > ( uniLocationsMapMask * size_t(2) ) ) {
