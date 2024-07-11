@@ -380,7 +380,7 @@ bool Renderer::Program::load( const QString & filepath, Renderer * renderer )
 					throw QString( "texcoord tag refers to unknown texture id '%1'" ).arg( idStr );
 
 				if ( texcoords.contains( unit ) )
-					throw QString( "texture unit %1 is assigned twiced" ).arg( unit );
+					throw QString( "texture unit %1 is assigned twice" ).arg( unit );
 
 				texcoords.insert( unit, CoordType(id) );
 			}
@@ -441,12 +441,14 @@ void Renderer::updateSettings()
 	QSettings settings;
 
 	cfg.useShaders = settings.value( "Settings/Render/General/Use Shaders", true ).toBool();
+	int	tmp = settings.value( "Settings/Render/General/Cube Map Bgnd", -1 ).toInt();
+	cfg.cubeBgndMipLevel = std::int8_t( std::min< int >( std::max< int >( tmp, -1 ), 6 ) );
 	cfg.sfParallaxMaxSteps = short( settings.value( "Settings/Render/General/Sf Parallax Steps", 200 ).toInt() );
 	cfg.sfParallaxScale = settings.value( "Settings/Render/General/Sf Parallax Scale", 0.0f).toFloat();
 	cfg.sfParallaxOffset = settings.value( "Settings/Render/General/Sf Parallax Offset", 0.5f).toFloat();
 	cfg.cubeMapPathFO76 = settings.value( "Settings/Render/General/Cube Map Path FO 76", "textures/shared/cubemaps/mipblur_defaultoutside1.dds" ).toString();
 	cfg.cubeMapPathSTF = settings.value( "Settings/Render/General/Cube Map Path STF", "textures/cubemaps/cell_cityplazacube.dds" ).toString();
-	int	tmp = settings.value( "Settings/Render/General/Pbr Cube Map Resolution", 1 ).toInt();
+	tmp = settings.value( "Settings/Render/General/Pbr Cube Map Resolution", 1 ).toInt();
 	tmp = std::min< int >( std::max< int >( tmp, 0 ), 4 );
 	TexCache::pbrCubeMapResolution = ( 128 << ( tmp - int(tmp >= 3) ) ) + int( tmp == 3 );	// 128, 256, 512, 513, 1024
 
@@ -2054,3 +2056,99 @@ void Renderer::setupFixedFunction( Shape * mesh, const PropertyList & props )
 	}
 }
 
+void Renderer::drawSkyBox( Scene * scene )
+{
+	static const std::uint16_t	skyBoxTriangles[36] = {
+		1, 5, 3,  3, 5, 7,  0, 2, 4,  4, 2, 6,	// +X, -X
+		2, 3, 6,  6, 3, 7,  0, 4, 1,  1, 4, 5,	// +Y, -Y
+		4, 6, 5,  5, 6, 7,  0, 1, 2,  2, 1, 3	// +Z, -Z
+	};
+	static const float	skyBoxVertices[24] = {
+		-10.0f, -10.0f, -10.0f,   10.0f, -10.0f, -10.0f,  -10.0f,  10.0f, -10.0f,   10.0f,  10.0f, -10.0f,
+		-10.0f, -10.0f,  10.0f,   10.0f, -10.0f,  10.0f,  -10.0f,  10.0f,  10.0f,   10.0f,  10.0f,  10.0f
+	};
+
+	if ( !( cfg.cubeBgndMipLevel >= 0 && scene && scene->nifModel && scene->nifModel->getBSVersion() >= 151 ) )
+		return;
+
+	const NifModel *	nif = scene->nifModel;
+	quint32	bsVersion = nif->getBSVersion();
+	QString	programName = "skybox.prog";
+	auto	p = programs.cbegin();
+	for ( ; p != programs.cend(); p++ ) {
+		if ( p.key().compare( programName, Qt::CaseInsensitive ) == 0 )
+			break;
+	}
+	if ( p == programs.cend() || !p.value() || !fn )
+		return;
+	Program *	prog = p.value();
+
+	Transform	vt = scene->view;
+	vt.translation = Vector3( 0.0, 0.0, 0.0 );
+
+	glLoadIdentity();
+	glPushMatrix();
+	glMultMatrix( vt );
+	glDisable( GL_POLYGON_OFFSET_FILL );
+	glEnableClientState( GL_VERTEX_ARRAY );
+	glVertexPointer( 3, GL_FLOAT, 0, skyBoxVertices );
+	glEnable( GL_FRAMEBUFFER_SRGB );
+
+	fn->glUseProgram( prog->id );
+
+	// texturing
+
+	int	texunit = 0;
+
+	// Always bind cube to texture unit 0, regardless of shader settings
+	bool	hasCubeMap = scene->hasOption(Scene::DoCubeMapping) && scene->hasOption(Scene::DoLighting);
+	GLint	uniCubeMap = prog->uniformLocations[SAMP_CUBE];
+	if ( uniCubeMap < 0 || !activateTextureUnit( texunit ) ) {
+		stopProgram();
+		glDisableClientState( GL_VERTEX_ARRAY );
+		glPopMatrix();
+		return;
+	}
+	if ( hasCubeMap )
+		hasCubeMap = scene->bindTexture( bsVersion < 170 ? cfg.cubeMapPathFO76 : cfg.cubeMapPathSTF );
+	if ( !hasCubeMap )
+		scene->bindTexture( "#FF555555c", false, true );
+	fn->glUniform1i( uniCubeMap, texunit++ );
+
+	glEnable( GL_TEXTURE_CUBE_MAP_SEAMLESS );
+	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE );
+	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
+	glTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+	glMatrixMode( GL_TEXTURE );
+	glLoadIdentity();
+	glMatrixMode( GL_MODELVIEW );
+
+	prog->uni1i( HAS_MAP_CUBE, hasCubeMap );
+	prog->uni1b_l( prog->uniLocation("invertZAxis"), ( bsVersion < 170 ) );
+	prog->uni1i_l( prog->uniLocation("skyCubeMipLevel"), cfg.cubeBgndMipLevel );
+
+	prog->uni4m( MAT_VIEW, vt.toMatrix4() );
+
+	glDisable( GL_BLEND );
+	glDisable( GL_ALPHA_TEST );
+	glDisable( GL_COLOR_MATERIAL );
+	glEnable( GL_DEPTH_TEST );
+	glDepthMask( GL_FALSE );
+	glDepthFunc( GL_LEQUAL );
+	glEnable( GL_CULL_FACE );
+	glCullFace( GL_BACK );
+	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+
+	glEnableClientState( GL_NORMAL_ARRAY );
+	glNormalPointer( GL_FLOAT, 0, skyBoxVertices );
+
+	glDrawElements( GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, skyBoxTriangles );
+
+	stopProgram();
+	glDisableClientState( GL_VERTEX_ARRAY );
+	glDisableClientState( GL_NORMAL_ARRAY );
+	glPopMatrix();
+}

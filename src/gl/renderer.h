@@ -48,6 +48,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //! @file renderer.h Renderer, Renderer::ConditionSingle, Renderer::ConditionGroup, Renderer::Shader, Renderer::Program
 
 class NifModel;
+class Scene;
 class Shape;
 class PropertyList;
 
@@ -410,12 +411,15 @@ public:
 	struct Settings
 	{
 		bool	useShaders = true;
+		std::int8_t	cubeBgndMipLevel = -1;
 		short	sfParallaxMaxSteps = 200;
 		float	sfParallaxScale = 0.0f;
 		float	sfParallaxOffset = 0.5f;
 		QString	cubeMapPathFO76;
 		QString	cubeMapPathSTF;
 	} cfg;
+public:
+	void drawSkyBox( Scene * scene );
 };
 
 

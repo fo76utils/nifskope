@@ -352,6 +352,8 @@ void Scene::drawShapes()
 			node->drawShapes( &secondPass );
 		}
 
+		renderer->drawSkyBox( this );
+
 		if ( secondPass.list().count() > 0 )
 			drawSelection(); // for transparency pass
 
@@ -364,6 +366,8 @@ void Scene::drawShapes()
 		for ( Node * node : roots.list() ) {
 			node->drawShapes();
 		}
+
+		renderer->drawSkyBox( this );
 	}
 }
 

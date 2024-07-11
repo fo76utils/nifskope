@@ -1,0 +1,7 @@
+# skybox shader
+
+checkgroup begin and
+	check HEADER/BS Header/BS Version < 0
+checkgroup end
+
+shaders skybox.vert skybox.frag

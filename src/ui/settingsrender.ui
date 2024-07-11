@@ -286,12 +286,18 @@
               </widget>
              </item>
              <item row="4" column="1">
-              <widget class="QCheckBox" name="cubeMapBgnd">
-               <property name="text">
-                <string/>
+              <widget class="QSpinBox" name="cubeMapBgnd">
+               <property name="minimum">
+                <number>-1</number>
                </property>
-               <property name="checked">
-                <bool>false</bool>
+               <property name="maximum">
+                <number>6</number>
+               </property>
+               <property name="singleStep">
+                <number>1</number>
+               </property>
+               <property name="value">
+                <number>-1</number>
                </property>
               </widget>
              </item>
