@@ -8,8 +8,6 @@
 #include "model/nifmodel.h"
 #include "message.h"
 #include "qtcompat.h"
-#include "libfo76utils/src/fp32vec8.hpp"
-#include "libfo76utils/src/filebuf.hpp"
 #include "libfo76utils/src/ddstxt16.hpp"
 #include "libfo76utils/src/material.hpp"
 #include "spells/mesh.h"
@@ -20,7 +18,6 @@
 #define TINYGLTF_NO_STB_IMAGE_WRITE	1
 #include <tiny_gltf.h>
 
-#include <cmath>
 #include <cctype>
 
 #include <QApplication>
@@ -29,6 +26,8 @@
 #include <QDir>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QIODevice>
+#include <QImage>
 #include <QSettings>
 #include <QMessageBox>
 
@@ -644,10 +643,10 @@ void ExportGltfMaterials::getTexture(
 
 	auto	i = textureMap.find( textureMapKey );
 	if ( i == textureMap.end() ) {
-		// load texture(s) and convert to glTF compatible BMP format
-		std::vector< unsigned char >	imageData;
-		int	width = 0;
-		int	height = 0;
+		// load texture(s) and convert to glTF compatible PNG format
+		QByteArray	imageBuf;
+		int	width = 1;
+		int	height = 1;
 		int	channels = 0;
 		DDSTexture16 *	t1 = nullptr;
 		DDSTexture16 *	t2 = nullptr;
@@ -661,29 +660,21 @@ void ExportGltfMaterials::getTexture(
 				height = std::max< int >( height, t2->getHeight() );
 			}
 			if ( t1 || t2 )
-				channels = 3 + int( n == 0 && t2 );
-			size_t	lineBytes = ( size_t(width) * size_t(channels) + 3 ) & ~( size_t(3) );
-			imageData.resize( lineBytes * size_t(height) + 54, 0 );
-			unsigned char *	bmpPtr = imageData.data();
-			FileBuffer::writeUInt16Fast( bmpPtr, 0x4D42 );	// "BM"
-			FileBuffer::writeUInt32Fast( bmpPtr + 2, std::uint32_t( imageData.size() ) );
-			FileBuffer::writeUInt32Fast( bmpPtr + 10, 54 );	// data offset
-			FileBuffer::writeUInt32Fast( bmpPtr + 14, 40 );	// DIB header size
-			FileBuffer::writeUInt32Fast( bmpPtr + 18, std::uint32_t( width ) );
-			FileBuffer::writeUInt32Fast( bmpPtr + 22, std::uint32_t( height ) );
-			FileBuffer::writeUInt16Fast( bmpPtr + 26, 1 );	// color planes
-			FileBuffer::writeUInt16Fast( bmpPtr + 28, std::uint16_t( channels << 3 ) );	// bits per pixel
-			FileBuffer::writeUInt32Fast( bmpPtr + 34, std::uint32_t( lineBytes * size_t(height) ) );	// data size
-			FileBuffer::writeUInt64Fast( bmpPtr + 38, 0x00000B1300000B13ULL );	// 72 DPI
-			bmpPtr = bmpPtr + 54;
+				channels = ( n == 0 ? ( !t2 ? 3 : 4 ) : ( n == 3 ? 1 : 3 ) );
+			QImage::Format	fmt =
+				( channels <= 1 ? QImage::Format_Grayscale8
+									: ( channels == 3 ? QImage::Format_RGB888 : QImage::Format_RGBA8888 ) );
+			QImage	img( width, height, fmt );
+			size_t	lineBytes = size_t( img.bytesPerLine() );
 			float	xScale = 1.0f / float( width );
 			float	xOffset = xScale * 0.5f;
 			float	yScale = 1.0f / float( height );
 			float	yOffset = yScale * 0.5f;
 			bool	f1 = ( t1 && ( t1->getWidth() != width || t1->getHeight() != height ) );
 			bool	f2 = ( t2 && ( t2->getWidth() != width || t2->getHeight() != height ) );
-			for ( int y = height; y-- > 0; ) {
-				for ( int x = 0; x < width; x++, bmpPtr = bmpPtr + channels ) {
+			for ( int y = 0; channels > 0 && y < height; y++ ) {
+				unsigned char *	imgPtr = reinterpret_cast< unsigned char * >( img.bits() ) + ( size_t(y) * lineBytes );
+				for ( int x = 0; x < width; x++, imgPtr = imgPtr + channels ) {
 					FloatVector4	a( 0.0f, 0.0f, 0.0f, 1.0f );
 					FloatVector4	b( 0.0f, 0.0f, 0.0f, 1.0f );
 					float	xf = float( x ) * xScale + xOffset;
@@ -706,20 +697,28 @@ void ExportGltfMaterials::getTexture(
 						// PBR map: G = roughness, B = metalness
 						a = FloatVector4( 0.0f, a[0], b[0], 0.0f );
 						break;
-					case 3:
-						// occlusion: convert grayscale texture
-						a = FloatVector4( a[0] );
-						break;
 					}
-					// swap red and blue channels
-					FileBuffer::writeUInt32Fast( bmpPtr, std::uint32_t( ( a * 255.0f ).shuffleValues( 0xC6 ) ) );
+					std::uint32_t	c = std::uint32_t( a * 255.0f );
+					if ( channels == 3 ) {
+						FileBuffer::writeUInt16Fast( imgPtr, std::uint16_t( c ) );
+						imgPtr[2] = std::uint8_t( c >> 16 );
+					} else if ( channels == 4 ) {
+						FileBuffer::writeUInt32Fast( imgPtr, c );
+					} else {
+						*imgPtr = std::uint8_t( c );
+					}
 				}
-				bmpPtr = bmpPtr + ( lineBytes - size_t(width) * size_t(channels) );
 			}
 			delete t1;
 			t1 = nullptr;
 			delete t2;
 			t2 = nullptr;
+
+			if ( channels ) {
+				QBuffer	tmpBuf( &imageBuf );
+				tmpBuf.open( QIODevice::WriteOnly );
+				img.save( &tmpBuf, "PNG", 89 );
+			}
 		} catch ( ... ) {
 			delete t1;
 			delete t2;
@@ -728,14 +727,15 @@ void ExportGltfMaterials::getTexture(
 
 		// if a valid image has been created, add it as a glTF buffer view
 		int	bufView = -1;
-		if ( imageData.size() > 54 && !model.buffers.empty() ) {
+		if ( !imageBuf.isEmpty() && !model.buffers.empty() ) {
 			bufView = int( model.bufferViews.size() );
 			tinygltf::BufferView &	v = model.bufferViews.emplace_back();
 			v.buffer = int( model.buffers.size() - 1 );
 			std::vector< unsigned char > &	buf = model.buffers.back().data;
 			v.byteOffset = buf.size();
-			v.byteLength = imageData.size();
-			buf.insert( buf.end(), imageData.begin(), imageData.end() );
+			v.byteLength = size_t( imageBuf.size() );
+			buf.resize( v.byteOffset + v.byteLength );
+			std::memcpy( buf.data() + v.byteOffset, imageBuf.data(), v.byteLength );
 		}
 
 		int	textureID = -1;
@@ -747,7 +747,7 @@ void ExportGltfMaterials::getTexture(
 			img.bits = 8;
 			img.pixel_type = TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE;
 			img.bufferView = bufView;
-			img.mimeType = "image/bmp";
+			img.mimeType = "image/png";
 			textureID = int( model.textures.size() );
 			model.textures.emplace_back().source = int( model.images.size() - 1 );
 		}
@@ -854,7 +854,7 @@ void exportGltf( const NifModel* nif, const Scene* scene, [[maybe_unused]] const
 		QSettings	settings;
 		gltfEnableLOD = settings.value( "Settings/Nif/Enable LOD", false ).toBool();
 		useFullMatPaths = settings.value( "Settings/Nif/Export full material paths", true ).toBool();
-		textureMipLevel = settings.value( "Settings/Nif/Gl TF Export Mip Level", 2 ).toInt();
+		textureMipLevel = settings.value( "Settings/Nif/Gl TF Export Mip Level", 1 ).toInt();
 		textureMipLevel = std::min< int >( std::max< int >( textureMipLevel, -1 ), 15 );
 	}
 

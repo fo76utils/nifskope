@@ -35,7 +35,7 @@ As of Exporter v1.1 you should **no longer need to uncheck "Guess Original Bind 
 
 ## Materials
 
-glTF export includes a limited set of material settings, and textures from the first layer of the material, which are saved in the output .bin file in uncompressed BMP format. Replacement colors are stored as 1x1 textures. Texture quality can be configured in the general settings with the 'Export texture mip level' option. A mip level of -1 disables texture export.
+glTF export includes a limited set of material settings, and textures from the first layer of the material, which are saved in the output .bin file in PNG format. Replacement colors are stored as 1x1 textures. Texture quality can be configured in the general settings with the 'Export texture mip level' option. A mip level of -1 disables texture export.
 
 Import is limited to using the name of the material as a material path (name of the created BSLightingShaderProperty block), or the "Material Path" extra data if available.
 
