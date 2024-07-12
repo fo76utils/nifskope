@@ -619,7 +619,7 @@ public:
 				throw QString( Spell::tr( "Vertex array size differs" ) );
 			}
 
-			// detect the dublicates
+			// detect the duplicates
 
 			QMap<quint16, quint16> map;
 
@@ -702,15 +702,220 @@ REGISTER_SPELL( spRemoveDuplicateVertices )
 
 //! Removes unused vertices
 
-QModelIndex spRemoveWasteVertices::cast_Starfield( NifModel * nif, const QModelIndex & index )
+void spRemoveWasteVertices::cast_Starfield( NifModel * nif, const QModelIndex & index )
 {
+	if ( !index.isValid() ) {
+		return;
+	} else {
+		NifItem *	i = nif->getItem( index );
+		if ( !i )
+			return;
+		if ( !i->hasStrType( "BSMeshData" ) ) {
+			if ( i->hasStrType( "BSMesh" ) ) {
+				cast_Starfield( nif, nif->getIndex( i, "Mesh Data" ) );
+			} else if ( i->hasStrType( "BSMeshArray" ) ) {
+				if ( nif->get<bool>( i, "Has Mesh" ) )
+					cast_Starfield( nif, nif->getIndex( i, "Mesh" ) );
+			} else if ( nif->blockInherits( index, "BSGeometry" ) && ( nif->get<quint32>( i, "Flags" ) & 0x0200 ) ) {
+				auto	iMeshes = nif->getIndex( i, "Meshes" );
+				if ( iMeshes.isValid() && nif->isArray( iMeshes ) ) {
+					for ( int n = 0; n <= 3; n++ )
+						cast_Starfield( nif, QModelIndex_child( iMeshes, n ) );
+				}
+			}
+			return;
+		}
+	}
 
-	return index;
+	std::uint32_t	numVerts = nif->get<quint32>( index, "Num Verts" );
+	if ( !numVerts )
+		return;
+	std::uint32_t	weightsPerVertex = nif->get<quint32>( index, "Weights Per Vertex" );
+	std::uint32_t	numUVs = nif->get<quint32>( index, "Num UVs" );
+	std::uint32_t	numUVs2 = nif->get<quint32>( index, "Num UVs 2" );
+	std::uint32_t	numColors = nif->get<quint32>( index, "Num Vertex Colors" );
+	std::uint32_t	numNormals = nif->get<quint32>( index, "Num Normals" );
+	std::uint32_t	numTangents = nif->get<quint32>( index, "Num Tangents" );
+	std::uint32_t	numWeights = nif->get<quint32>( index, "Num Weights" );
+	if ( ( numUVs && numUVs != numVerts ) || ( numUVs2 && numUVs2 != numVerts )
+		|| ( numColors && numColors != numVerts ) || ( numNormals && numNormals != numVerts )
+		|| ( numTangents && numTangents != numVerts ) || ( numWeights != ( size_t(numVerts) * weightsPerVertex ) ) ) {
+		QMessageBox::critical( nullptr, "NifSkope error", QString("Mesh has inconsistent number of vertex attributes, cannot remove unused vertices") );
+		return;
+	}
+
+	std::map< std::uint32_t, std::uint32_t >	verticesUsed;
+
+	size_t	invalidIndices = 0;
+	for ( int l = 0; true; l++ ) {
+		QModelIndex	lodIndex;
+		if ( !l ) {
+			lodIndex = index;
+		} else if ( l <= int( nif->get<quint32>( index, "Num LODs" ) ) ) {
+			lodIndex = nif->getIndex( index, "LODs" );
+			if ( lodIndex.isValid() )
+				lodIndex = QModelIndex_child( lodIndex, l - 1 );
+		}
+		if ( !lodIndex.isValid() )
+			break;
+		int	indicesSize = int( nif->get<quint32>( lodIndex, "Indices Size" ) );
+		if ( indicesSize > 0 ) {
+			NifItem *	trianglesItem = nif->getItem( lodIndex, "Triangles" );
+			if ( trianglesItem ) {
+				for ( int i = 0; i < indicesSize; i++ ) {
+					Triangle	t = nif->get<Triangle>( trianglesItem->child( i ) );
+					for ( int j = 0; j < 3; j++ ) {
+						std::uint32_t	v = t[j];
+						if ( v >= numVerts )
+							invalidIndices++;
+						else
+							verticesUsed[v] = 0U;
+					}
+				}
+			}
+		}
+	}
+	if ( invalidIndices > 0 )
+		QMessageBox::warning( nullptr, "NifSkope warning", QString("Mesh has %1 invalid indices").arg(invalidIndices) );
+	if ( verticesUsed.size() >= numVerts )
+		return;
+
+	size_t	verticesRemoved = numVerts - verticesUsed.size();
+	std::uint32_t	n = 0;
+	for ( auto & v : verticesUsed ) {
+		v.second = n;
+		n++;
+	}
+
+	// remap indices
+	for ( int l = 0; true; l++ ) {
+		QModelIndex	lodIndex;
+		if ( !l ) {
+			lodIndex = index;
+		} else if ( l <= int( nif->get<quint32>( index, "Num LODs" ) ) ) {
+			lodIndex = nif->getIndex( index, "LODs" );
+			if ( lodIndex.isValid() )
+				lodIndex = QModelIndex_child( lodIndex, l - 1 );
+		}
+		if ( !lodIndex.isValid() )
+			break;
+		int	indicesSize = int( nif->get<quint32>( lodIndex, "Indices Size" ) );
+		if ( indicesSize > 0 ) {
+			NifItem *	trianglesItem = nif->getItem( lodIndex, "Triangles" );
+			if ( trianglesItem ) {
+				for ( int i = 0; i < indicesSize; i++ ) {
+					Triangle	t = nif->get<Triangle>( trianglesItem->child( i ) );
+					bool	indicesChanged = false;
+					for ( int j = 0; j < 3; j++ ) {
+						std::uint32_t	v = t[j];
+						auto	k = verticesUsed.find( v );
+						if ( k != verticesUsed.end() && k->second != v ) {
+							t[j] = quint16( k->second );
+							indicesChanged = true;
+						}
+					}
+					if ( indicesChanged )
+						nif->set<Triangle>( trianglesItem->child( i ), t );
+				}
+			}
+		}
+	}
+
+	// remap vertex attributes
+	NifItem *	verticesItem = nif->getItem( index, "Vertices" );
+	NifItem *	uvsItem = nullptr;
+	if ( numUVs )
+		uvsItem = nif->getItem( index, "UVs" );
+	NifItem *	uvs2Item = nullptr;
+	if ( numUVs2 )
+		uvs2Item = nif->getItem( index, "UVs 2" );
+	NifItem *	colorsItem = nullptr;
+	if ( numColors )
+		colorsItem = nif->getItem( index, "Vertex Colors" );
+	NifItem *	normalsItem = nullptr;
+	if ( numNormals )
+		normalsItem = nif->getItem( index, "Normals" );
+	NifItem *	tangentsItem = nullptr;
+	if ( numTangents )
+		tangentsItem = nif->getItem( index, "Tangents" );
+	NifItem *	weightsItem = nullptr;
+	if ( numWeights )
+		weightsItem = nif->getItem( index, "Weights" );
+	for ( const auto & v : verticesUsed ) {
+		int	n0 = int( v.first );
+		int	n1 = int( v.second );
+		if ( n1 >= n0 )
+			continue;
+		if ( verticesItem )
+			nif->set<ShortVector3>( verticesItem->child( n1 ), nif->get<ShortVector3>( verticesItem->child( n0 ) ) );
+		if ( uvsItem )
+			nif->set<HalfVector2>( uvsItem->child( n1 ), nif->get<HalfVector2>( uvsItem->child( n0 ) ) );
+		if ( uvs2Item )
+			nif->set<HalfVector2>( uvs2Item->child( n1 ), nif->get<HalfVector2>( uvs2Item->child( n0 ) ) );
+		if ( colorsItem )
+			nif->set<ByteColor4BGRA>( colorsItem->child( n1 ), nif->get<ByteColor4BGRA>( colorsItem->child( n0 ) ) );
+		if ( normalsItem )
+			nif->set<UDecVector4>( normalsItem->child( n1 ), nif->get<UDecVector4>( normalsItem->child( n0 ) ) );
+		if ( tangentsItem )
+			nif->set<UDecVector4>( tangentsItem->child( n1 ), nif->get<UDecVector4>( tangentsItem->child( n0 ) ) );
+		if ( weightsItem ) {
+			for ( std::uint32_t i = 0; i < weightsPerVertex; i++ ) {
+				NifItem *	bw0 = weightsItem->child( int( v.first * weightsPerVertex + i ) );
+				NifItem *	bw1 = weightsItem->child( int( v.second * weightsPerVertex + i ) );
+				if ( bw0 && bw1 ) {
+					nif->set<quint16>( bw1->child( 0 ), nif->get<quint16>( bw0->child( 0 ) ) );
+					nif->set<quint16>( bw1->child( 1 ), nif->get<quint16>( bw0->child( 1 ) ) );
+				}
+			}
+		}
+	}
+
+	// update array sizes
+	for ( auto i = nif->getItem( index ); i; ) {
+		i->invalidateVersionCondition();
+		i->invalidateCondition();
+		break;
+	}
+	numVerts = std::uint32_t( verticesUsed.size() );
+	numUVs = std::min( numUVs, numVerts );
+	numUVs2 = std::min( numUVs2, numVerts );
+	numColors = std::min( numColors, numVerts );
+	numNormals = std::min( numNormals, numVerts );
+	numTangents = std::min( numTangents, numVerts );
+	numWeights = numVerts * weightsPerVertex;
+	QModelIndex	i;
+	nif->set<quint32>( index, "Num Verts", numVerts );
+	if ( ( i = nif->getIndex( index, "Vertices" ) ).isValid() )
+		nif->updateArraySize( i );
+	nif->set<quint32>( index, "Num UVs", numUVs );
+	if ( ( i = nif->getIndex( index, "UVs" ) ).isValid() )
+		nif->updateArraySize( i );
+	nif->set<quint32>( index, "Num UVs 2", numUVs2 );
+	if ( ( i = nif->getIndex( index, "UVs 2" ) ).isValid() )
+		nif->updateArraySize( i );
+	nif->set<quint32>( index, "Num Vertex Colors", numColors );
+	if ( ( i = nif->getIndex( index, "Vertex Colors" ) ).isValid() )
+		nif->updateArraySize( i );
+	nif->set<quint32>( index, "Num Normals", numNormals );
+	if ( ( i = nif->getIndex( index, "Normals" ) ).isValid() )
+		nif->updateArraySize( i );
+	nif->set<quint32>( index, "Num Tangents", numTangents );
+	if ( ( i = nif->getIndex( index, "Tangents" ) ).isValid() )
+		nif->updateArraySize( i );
+	nif->set<quint32>( index, "Num Weights", numWeights );
+	if ( ( i = nif->getIndex( index, "Weights" ) ).isValid() )
+		nif->updateArraySize( i );
+
+	Message::info( nullptr, Spell::tr( "Removed %1 vertices" ).arg( verticesRemoved ) );
 }
 
 QModelIndex spRemoveWasteVertices::cast( NifModel * nif, const QModelIndex & index )
 {
-	if ( nif->blockInherits( index, "BSTriShape" ) ) {
+	if ( nif->blockInherits( index, "BSGeometry" ) ) {
+		nif->setState( BaseModel::Processing );
+		cast_Starfield( nif, index );
+		nif->restoreState();
+	} else if ( nif->blockInherits( index, "BSTriShape" ) ) {
 		removeWasteVertices( nif, index );
 	} else {
 		QModelIndex iShape = getShape( nif, index );

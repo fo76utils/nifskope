@@ -78,7 +78,7 @@ public:
 	QString page() const override final { return Spell::tr( "Mesh" ); }
 
 	static QModelIndex getShape( const NifModel * nif, const QModelIndex & index );
-	static QModelIndex cast_Starfield( NifModel * nif, const QModelIndex & index );
+	static void cast_Starfield( NifModel * nif, const QModelIndex & index );
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
