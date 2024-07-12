@@ -2236,6 +2236,12 @@
         <field name="DIV2 AABB" type="NiBoundAABB" since="20.3.0.9" until="20.3.0.9" vercond="#DIVINITY2#" />
     </struct>
 
+    <struct name="BSBoundingBox" module="BSMain" versions="#BETHESDA#">
+        Bethesda-specific bounding box.
+        <field name="Center" type="Vector3">Center of the bounding box.</field>
+        <field name="Dimensions" type="Vector3">Dimensions of the bounding box from center.</field>
+    </struct>
+
     <struct name="NiCurve3" module="NiMain">
         A 3D curve made up of control points and knots.
         <field name="Degree" type="uint" />
@@ -3906,7 +3912,7 @@
             This causes massive inheritance problems so the rows below are doubled up to exclude NiParticleSystem for Bethesda Stream 100+
             and to add data exclusive to BSGeometry.
         <field name="Bounding Sphere" type="NiBound" since="20.2.0.7" until="20.2.0.7" vercond="#BS_GTE_SSE#" onlyT="NiParticleSystem" />
-        <field name="Bound Min Max" type="float" length="6" since="20.2.0.7" until="20.2.0.7" vercond="#BS_F76#" onlyT="NiParticleSystem" />
+        <field name="Bounding Box" type="BSBoundingBox" since="20.2.0.7" until="20.2.0.7" vercond="#BS_F76#" onlyT="NiParticleSystem" />
         <field name="Skin" type="Ref" template="NiObject" since="20.2.0.7" until="20.2.0.7" vercond="#BS_GTE_SSE#" onlyT="NiParticleSystem" />
         <field name="Data" type="Ref" template="NiGeometryData" vercond="#NI_BS_LT_SSE#">Data index (NiTriShapeData/NiTriStripData).</field>
         <field name="Data" type="Ref" template="NiGeometryData" since="20.2.0.7" until="20.2.0.7" vercond="#BS_GTE_SSE#" excludeT="NiParticleSystem">Data index (NiTriShapeData/NiTriStripData).</field>
@@ -8911,7 +8917,7 @@
     <niobject name="BSTriShape" inherit="NiAVObject" module="BSMain" versions="#SSE# #FO4# #F76#">
         Fallout 4 Tri Shape
         <field name="Bounding Sphere" type="NiBound" />
-        <field name="Bound Min Max" type="float" length="6" vercond="#BS_GTE_F76#" />
+        <field name="Bounding Box" type="BSBoundingBox" vercond="#BS_GTE_F76#" />
         <field name="Skin" type="Ref" template="NiObject" />
         <field name="Shader Property" type="Ref" template="BSShaderProperty" />
         <field name="Alpha Property" type="Ref" template="NiAlphaProperty" />
@@ -9231,7 +9237,7 @@
         <field name="Bounding Sphere" type="NiBound" cond="#ARG# #LT# 2" />
         <field name="Normal Cone" type="ByteVector4" cond="#ARG# #LT# 2" />
         <field name="Apex Offset" type="float" cond="#ARG# #LT# 2" />
-        <field name="Bound Min Max" type="float" length="6" cond="#ARG# #GTE# 2" />
+        <field name="Bounding Box" type="BSBoundingBox" cond="#ARG# #GTE# 2" />
     </struct>
 
     <struct name="BSBoneWeight" module="BSMain" versions="#STF#">
@@ -9282,7 +9288,7 @@
 
     <niobject name="BSGeometry" inherit="NiAVObject" module="BSMain" versions="#STF#">
         <field name="Bounding Sphere" type="NiBound" />
-        <field name="Bound Min Max" type="float" length="6" />
+        <field name="Bounding Box" type="BSBoundingBox" />
         <field name="Skin" type="Ref" template="NiObject" />
         <field name="Shader Property" type="Ref" template="BSShaderProperty" />
         <field name="Alpha Property" type="Ref" template="NiAlphaProperty" />

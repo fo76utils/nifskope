@@ -198,12 +198,16 @@ void BSMesh::drawSelection() const
 			glColor4f( 1, 1, 1, 0.33f );
 			drawSphereSimple( sph.center, sph.radius, 72 );
 		}
-	} else if ( n == "Bound Min Max" ) {
-		if ( n == p )
-			idx = idx.parent();
-		Vector3	boundsDims( nif->get<float>( idx, 3 ), nif->get<float>( idx, 4 ), nif->get<float>( idx, 5 ) );
-		if ( boundsDims[0] > 0.0f && boundsDims[1] > 0.0f && boundsDims[2] > 0.0f ) {
-			Vector3	boundsCenter( nif->get<float>( idx, 0 ), nif->get<float>( idx, 1 ), nif->get<float>( idx, 2 ) );
+	} else if ( n == "Bounding Box" ) {
+		const NifItem *	boundsItem = nif->getItem( idx );
+		Vector3	boundsCenter, boundsDims;
+		if ( boundsItem ) {
+			boundsCenter = nif->get<Vector3>( boundsItem->child( 0 ) );
+			boundsDims = nif->get<Vector3>( boundsItem->child( 1 ) );
+		}
+		float	minVal = std::min( boundsDims[0], std::min( boundsDims[1], boundsDims[2] ) );
+		float	maxVal = std::max( boundsDims[0], std::max( boundsDims[1], boundsDims[2] ) );
+		if ( minVal > 0.0f && maxVal < 2.1e9f ) {
 			glColor4f( 1, 1, 1, 0.33f );
 			drawBox( boundsCenter - boundsDims, boundsCenter + boundsDims );
 		}

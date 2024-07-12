@@ -70,4 +70,28 @@ public:
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final;
 };
 
+//! Removes unused vertices
+class spRemoveWasteVertices final : public Spell
+{
+public:
+	QString name() const override final { return Spell::tr( "Remove Unused Vertices" ); }
+	QString page() const override final { return Spell::tr( "Mesh" ); }
+
+	static QModelIndex getShape( const NifModel * nif, const QModelIndex & index );
+	static QModelIndex cast_Starfield( NifModel * nif, const QModelIndex & index );
+
+	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
+	{
+		if ( !nif )
+			return false;
+		if ( nif->getBSVersion() >= 170 && nif->blockInherits( index, "BSGeometry" ) )
+			return bool( nif->get<quint32>(index, "Flags") & 0x0200 );
+		if ( nif->blockInherits( index, "BSTriShape" ) )
+			return nif->getIndex( index, "Vertex Data" ).isValid();
+		return getShape( nif, index ).isValid();
+	}
+
+	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final;
+};
+
 #endif

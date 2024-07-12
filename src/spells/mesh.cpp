@@ -20,7 +20,7 @@
  */
 
 //! Find shape data of triangle geometry
-static QModelIndex getShape( const NifModel * nif, const QModelIndex & index )
+QModelIndex spRemoveWasteVertices::getShape( const NifModel * nif, const QModelIndex & index )
 {
 	QModelIndex iShape = nif->getBlockIndex( index );
 
@@ -581,14 +581,14 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
-		return getShape( nif, index ).isValid();
+		return spRemoveWasteVertices::getShape( nif, index ).isValid();
 	}
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
 	{
 		try
 		{
-			QModelIndex iShape = getShape( nif, index );
+			QModelIndex iShape = spRemoveWasteVertices::getShape( nif, index );
 			QModelIndex iData  = nif->getBlockIndex( nif->getLink( iShape, "Data" ) );
 
 			// read the data
@@ -701,33 +701,25 @@ public:
 REGISTER_SPELL( spRemoveDuplicateVertices )
 
 //! Removes unused vertices
-class spRemoveWasteVertices final : public Spell
+
+QModelIndex spRemoveWasteVertices::cast_Starfield( NifModel * nif, const QModelIndex & index )
 {
-public:
-	QString name() const override final { return Spell::tr( "Remove Unused Vertices" ); }
-	QString page() const override final { return Spell::tr( "Mesh" ); }
 
-	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
-	{
-		if ( nif && nif->blockInherits( index, "BSTriShape" ) && nif->getIndex( index, "Vertex Data" ).isValid() )
-			return true;
-		return getShape( nif, index ).isValid();
+	return index;
+}
+
+QModelIndex spRemoveWasteVertices::cast( NifModel * nif, const QModelIndex & index )
+{
+	if ( nif->blockInherits( index, "BSTriShape" ) ) {
+		removeWasteVertices( nif, index );
+	} else {
+		QModelIndex iShape = getShape( nif, index );
+		QModelIndex iData  = nif->getBlockIndex( nif->getLink( iShape, "Data" ) );
+		removeWasteVertices( nif, iData, iShape );
 	}
 
-	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
-	{
-		if ( nif->blockInherits( index, "BSTriShape" ) ) {
-			removeWasteVertices( nif, index );
-		} else {
-			QModelIndex iShape = getShape( nif, index );
-			QModelIndex iData  = nif->getBlockIndex( nif->getLink( iShape, "Data" ) );
-
-			removeWasteVertices( nif, iData, iShape );
-		}
-
-		return index;
-	}
-};
+	return index;
+}
 
 REGISTER_SPELL( spRemoveWasteVertices )
 
@@ -755,16 +747,14 @@ static bool calculateBoundingBox( FloatVector4 & bndCenter, FloatVector4 & bndDi
 
 static void setBoundingBox( NifModel * nif, const QModelIndex & index, FloatVector4 bndCenter, FloatVector4 bndDims )
 {
-	auto boundMinMax = nif->getIndex( index, "Bound Min Max" );
-	if ( !boundMinMax.isValid() )
+	auto boundingBox = nif->getIndex( index, "Bounding Box" );
+	if ( !boundingBox.isValid() )
 		return;
-	nif->updateArraySize( boundMinMax );
-	nif->set<float>( QModelIndex_child( boundMinMax, 0 ), bndCenter[0] );
-	nif->set<float>( QModelIndex_child( boundMinMax, 1 ), bndCenter[1] );
-	nif->set<float>( QModelIndex_child( boundMinMax, 2 ), bndCenter[2] );
-	nif->set<float>( QModelIndex_child( boundMinMax, 3 ), bndDims[0] );
-	nif->set<float>( QModelIndex_child( boundMinMax, 4 ), bndDims[1] );
-	nif->set<float>( QModelIndex_child( boundMinMax, 5 ), bndDims[2] );
+	NifItem *	boundsItem = nif->getItem( boundingBox );
+	if ( boundsItem ) {
+		nif->set<Vector3>( boundsItem->child( 0 ), Vector3( bndCenter ) );
+		nif->set<Vector3>( boundsItem->child( 1 ), Vector3( bndDims ) );
+	}
 }
 
 /*
