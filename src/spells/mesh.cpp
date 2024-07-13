@@ -843,7 +843,7 @@ REGISTER_SPELL( spRemoveDuplicateVertices )
 
 //! Removes unused vertices
 
-void spRemoveWasteVertices::cast_Starfield( NifModel * nif, const QModelIndex & index )
+void spRemoveWasteVertices::cast_Starfield( NifModel * nif, const QModelIndex & index, bool noMessages )
 {
 	if ( !index.isValid() ) {
 		return;
@@ -853,15 +853,15 @@ void spRemoveWasteVertices::cast_Starfield( NifModel * nif, const QModelIndex & 
 			return;
 		if ( !i->hasStrType( "BSMeshData" ) ) {
 			if ( i->hasStrType( "BSMesh" ) ) {
-				cast_Starfield( nif, nif->getIndex( i, "Mesh Data" ) );
+				cast_Starfield( nif, nif->getIndex( i, "Mesh Data" ), noMessages );
 			} else if ( i->hasStrType( "BSMeshArray" ) ) {
 				if ( nif->get<bool>( i, "Has Mesh" ) )
-					cast_Starfield( nif, nif->getIndex( i, "Mesh" ) );
+					cast_Starfield( nif, nif->getIndex( i, "Mesh" ), noMessages );
 			} else if ( nif->blockInherits( index, "BSGeometry" ) && ( nif->get<quint32>( i, "Flags" ) & 0x0200 ) ) {
 				auto	iMeshes = nif->getIndex( i, "Meshes" );
 				if ( iMeshes.isValid() && nif->isArray( iMeshes ) ) {
 					for ( int n = 0; n <= 3; n++ )
-						cast_Starfield( nif, QModelIndex_child( iMeshes, n ) );
+						cast_Starfield( nif, QModelIndex_child( iMeshes, n ), noMessages );
 				}
 			}
 			return;
@@ -1051,7 +1051,8 @@ void spRemoveWasteVertices::cast_Starfield( NifModel * nif, const QModelIndex & 
 	if ( ( i = nif->getIndex( index, "Weights" ) ).isValid() )
 		nif->updateArraySize( i );
 
-	Message::info( nullptr, Spell::tr( "Removed %1 vertices" ).arg( verticesRemoved ) );
+	if ( !noMessages )
+		Message::info( nullptr, Spell::tr( "Removed %1 vertices" ).arg( verticesRemoved ) );
 }
 
 QModelIndex spRemoveWasteVertices::cast( NifModel * nif, const QModelIndex & index )
