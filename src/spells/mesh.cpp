@@ -6,6 +6,7 @@
 #include <QGridLayout>
 #include <QSettings>
 #include <cfloat>
+#include <unordered_set>
 
 #include "libfo76utils/src/fp32vec4.hpp"
 #include "io/MeshFile.h"
@@ -504,13 +505,32 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
+		if ( nif->getBSVersion() >= 170 && nif->blockInherits( index, "BSGeometry" ) )
+			return bool( nif->get<quint32>( index, "Flags" ) & 0x0200 );
 		if ( nif->blockInherits( index, "BSTriShape" ) && nif->getIndex( index, "Triangles" ).isValid() )
 			return true;
 		return getTriShapeData( nif, index ).isValid();
 	}
 
+	static inline std::uint64_t triangleToKey( const Triangle & t )
+	{
+		return std::uint64_t(t[0]) | ( std::uint64_t(t[1]) << 21 ) | ( std::uint64_t(t[2]) << 42 );
+	}
+	static inline std::uint64_t rotateVertices( std::uint64_t t )
+	{
+		return ( t >> 21 ) | ( ( t & 0x001FFFFFUL ) << 42 );
+	}
+	static void cast_Starfield( NifModel * nif, const QModelIndex & index );
+
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
 	{
+		if ( nif->getBSVersion() >= 170 && nif->blockInherits( index, "BSGeometry" ) ) {
+			nif->setState( BaseModel::Processing );
+			cast_Starfield( nif, index );
+			nif->restoreState();
+			return index;
+		}
+
 		QModelIndex iData;
 		bool isBSTriShape = nif->blockInherits( index, "BSTriShape" );
 		if ( !isBSTriShape )
@@ -569,6 +589,127 @@ public:
 		return index;
 	}
 };
+
+void spPruneRedundantTriangles::cast_Starfield( NifModel * nif, const QModelIndex & index )
+{
+	if ( !index.isValid() ) {
+		return;
+	} else {
+		NifItem *	i = nif->getItem( index );
+		if ( !i )
+			return;
+		if ( !i->hasStrType( "BSMeshData" ) ) {
+			if ( i->hasStrType( "BSMesh" ) ) {
+				cast_Starfield( nif, nif->getIndex( i, "Mesh Data" ) );
+			} else if ( i->hasStrType( "BSMeshArray" ) ) {
+				if ( nif->get<bool>( i, "Has Mesh" ) )
+					cast_Starfield( nif, nif->getIndex( i, "Mesh" ) );
+			} else if ( nif->blockInherits( index, "BSGeometry" ) && ( nif->get<quint32>( i, "Flags" ) & 0x0200 ) ) {
+				auto	iMeshes = nif->getIndex( i, "Meshes" );
+				if ( iMeshes.isValid() && nif->isArray( iMeshes ) ) {
+					for ( int n = 0; n <= 3; n++ )
+						cast_Starfield( nif, QModelIndex_child( iMeshes, n ) );
+				}
+			}
+			return;
+		}
+	}
+
+	std::uint32_t	numVerts = nif->get<quint32>( index, "Num Verts" );
+	size_t	trianglesRemovedCnt = 0;
+
+	for ( int l = 0; true; l++ ) {
+		QModelIndex	lodIndex;
+		if ( !l ) {
+			lodIndex = index;
+		} else if ( l <= int( nif->get<quint32>( index, "Num LODs" ) ) ) {
+			lodIndex = nif->getIndex( index, "LODs" );
+			if ( lodIndex.isValid() )
+				lodIndex = QModelIndex_child( lodIndex, l - 1 );
+		}
+		if ( !lodIndex.isValid() )
+			break;
+
+		int	numTriangles = int( nif->get<quint32>( lodIndex, "Indices Size" ) / 3U );
+		if ( numTriangles < 1 )
+			continue;
+		NifItem *	trianglesItem = nif->getItem( lodIndex, "Triangles" );
+		if ( !trianglesItem )
+			continue;
+
+		std::unordered_set< std::uint64_t >	triangleSet;
+		std::unordered_set< std::uint64_t >	trianglesRemoved;
+		std::unordered_set< std::uint64_t >	invalidTriangles;
+
+		for ( int i = 0; i < numTriangles; i++ ) {
+			Triangle	t = nif->get<Triangle>( trianglesItem->child( i ) );
+			std::uint32_t	v0 = t[0];
+			std::uint32_t	v1 = t[1];
+			std::uint32_t	v2 = t[2];
+			if ( v0 >= numVerts || v1 >= numVerts || v2 >= numVerts ) {
+				invalidTriangles.insert( std::uint64_t(i) );
+			} else if ( v0 == v1 || v0 == v2 || v1 == v2 ) {
+				trianglesRemoved.insert( std::uint64_t(i) );
+			} else {
+				std::uint64_t	t0 = triangleToKey( t );
+				std::uint64_t	t1 = rotateVertices( t0 );
+				std::uint64_t	t2 = rotateVertices( t1 );
+				if ( !triangleSet.insert( t0 ).second || !triangleSet.insert( t1 ).second
+					|| !triangleSet.insert( t2 ).second ) {
+					trianglesRemoved.insert( std::uint64_t(i) );
+				}
+			}
+		}
+
+		bool	removeInvalid = false;
+		if ( !invalidTriangles.empty() ) {
+			removeInvalid = ( QMessageBox::question( nullptr, "NifSkope warning", QString("Remove %1 triangles with invalid indices?").arg(invalidTriangles.size()) ) == QMessageBox::Yes );
+		}
+
+		if ( trianglesRemoved.empty() && !removeInvalid )
+			continue;
+
+		int	j = 0;
+		for ( int i = 0; i < numTriangles; i++ ) {
+			if ( trianglesRemoved.find( std::uint64_t(i) ) == trianglesRemoved.end() ) {
+				if ( !removeInvalid || invalidTriangles.find( std::uint64_t(i) ) == invalidTriangles.end() ) {
+					if ( j < i )
+						nif->set<Triangle>( trianglesItem->child(j), nif->get<Triangle>( trianglesItem->child(i) ) );
+					j++;
+					continue;
+				}
+			}
+		}
+		trianglesRemovedCnt += size_t( numTriangles - j );
+		numTriangles = j;
+
+		nif->set<quint32>( lodIndex, "Indices Size", quint32(numTriangles) * 3U );
+		if ( !l )
+			nif->set<quint32>( index.parent(), "Indices Size", quint32(numTriangles) * 3U );
+		auto	iTriangles = nif->getIndex( lodIndex, "Triangles" );
+		if ( iTriangles.isValid() )
+			nif->updateArraySize( iTriangles );
+	}
+
+	if ( trianglesRemovedCnt < 1 )
+		return;
+
+	// clear meshlets
+	for ( auto i = nif->getItem( index ); i; ) {
+		i->invalidateVersionCondition();
+		i->invalidateCondition();
+		break;
+	}
+	nif->set<quint32>( index, "Num Meshlets", 0 );
+	QModelIndex	i;
+	if ( ( i = nif->getIndex( index, "Meshlets" ) ).isValid() )
+		nif->updateArraySize( i );
+	nif->set<quint32>( index, "Num Cull Data", 0 );
+	if ( ( i = nif->getIndex( index, "Cull Data" ) ).isValid() )
+		nif->updateArraySize( i );
+
+	Message::info( nullptr, Spell::tr( "Removed %1 triangles" ).arg( trianglesRemovedCnt ) );
+}
 
 REGISTER_SPELL( spPruneRedundantTriangles )
 
@@ -744,9 +885,10 @@ void spRemoveWasteVertices::cast_Starfield( NifModel * nif, const QModelIndex & 
 		return;
 	}
 
-	std::map< std::uint32_t, std::uint32_t >	verticesUsed;
-
+	std::vector< std::uint32_t >	vertexMap( numVerts, 0xFFFFFFFFU );	// value = new index
 	size_t	invalidIndices = 0;
+	size_t	verticesRemoved = numVerts;
+
 	for ( int l = 0; true; l++ ) {
 		QModelIndex	lodIndex;
 		if ( !l ) {
@@ -758,18 +900,20 @@ void spRemoveWasteVertices::cast_Starfield( NifModel * nif, const QModelIndex & 
 		}
 		if ( !lodIndex.isValid() )
 			break;
-		int	indicesSize = int( nif->get<quint32>( lodIndex, "Indices Size" ) );
-		if ( indicesSize > 0 ) {
+		int	numTriangles = int( nif->get<quint32>( lodIndex, "Indices Size" ) / 3U );
+		if ( numTriangles > 0 ) {
 			NifItem *	trianglesItem = nif->getItem( lodIndex, "Triangles" );
 			if ( trianglesItem ) {
-				for ( int i = 0; i < indicesSize; i++ ) {
+				for ( int i = 0; i < numTriangles; i++ ) {
 					Triangle	t = nif->get<Triangle>( trianglesItem->child( i ) );
 					for ( int j = 0; j < 3; j++ ) {
 						std::uint32_t	v = t[j];
-						if ( v >= numVerts )
+						if ( v >= numVerts ) {
 							invalidIndices++;
-						else
-							verticesUsed[v] = 0U;
+						} else if ( vertexMap[v] ) {
+							vertexMap[v] = 0;
+							verticesRemoved--;
+						}
 					}
 				}
 			}
@@ -777,14 +921,15 @@ void spRemoveWasteVertices::cast_Starfield( NifModel * nif, const QModelIndex & 
 	}
 	if ( invalidIndices > 0 )
 		QMessageBox::warning( nullptr, "NifSkope warning", QString("Mesh has %1 invalid indices").arg(invalidIndices) );
-	if ( verticesUsed.size() >= numVerts )
+	if ( verticesRemoved < 1 )
 		return;
 
-	size_t	verticesRemoved = numVerts - verticesUsed.size();
 	std::uint32_t	n = 0;
-	for ( auto & v : verticesUsed ) {
-		v.second = n;
-		n++;
+	for ( auto & v : vertexMap ) {
+		if ( !v ) {
+			v = n;
+			n++;
+		}
 	}
 
 	// remap indices
@@ -799,18 +944,17 @@ void spRemoveWasteVertices::cast_Starfield( NifModel * nif, const QModelIndex & 
 		}
 		if ( !lodIndex.isValid() )
 			break;
-		int	indicesSize = int( nif->get<quint32>( lodIndex, "Indices Size" ) );
-		if ( indicesSize > 0 ) {
+		int	numTriangles = int( nif->get<quint32>( lodIndex, "Indices Size" ) / 3U );
+		if ( numTriangles > 0 ) {
 			NifItem *	trianglesItem = nif->getItem( lodIndex, "Triangles" );
 			if ( trianglesItem ) {
-				for ( int i = 0; i < indicesSize; i++ ) {
+				for ( int i = 0; i < numTriangles; i++ ) {
 					Triangle	t = nif->get<Triangle>( trianglesItem->child( i ) );
 					bool	indicesChanged = false;
 					for ( int j = 0; j < 3; j++ ) {
 						std::uint32_t	v = t[j];
-						auto	k = verticesUsed.find( v );
-						if ( k != verticesUsed.end() && k->second != v ) {
-							t[j] = quint16( k->second );
+						if ( v < numVerts && vertexMap[v] != v && vertexMap[v] < numVerts ) {
+							t[j] = quint16( vertexMap[v] );
 							indicesChanged = true;
 						}
 					}
@@ -841,10 +985,10 @@ void spRemoveWasteVertices::cast_Starfield( NifModel * nif, const QModelIndex & 
 	NifItem *	weightsItem = nullptr;
 	if ( numWeights )
 		weightsItem = nif->getItem( index, "Weights" );
-	for ( const auto & v : verticesUsed ) {
-		int	n0 = int( v.first );
-		int	n1 = int( v.second );
-		if ( n1 >= n0 )
+	for ( const auto & v : vertexMap ) {
+		int	n0 = int( &v - vertexMap.data() );
+		int	n1 = int( v );
+		if ( n1 < 0 || n1 >= n0 )
 			continue;
 		if ( verticesItem )
 			nif->set<ShortVector3>( verticesItem->child( n1 ), nif->get<ShortVector3>( verticesItem->child( n0 ) ) );
@@ -860,8 +1004,8 @@ void spRemoveWasteVertices::cast_Starfield( NifModel * nif, const QModelIndex & 
 			nif->set<UDecVector4>( tangentsItem->child( n1 ), nif->get<UDecVector4>( tangentsItem->child( n0 ) ) );
 		if ( weightsItem ) {
 			for ( std::uint32_t i = 0; i < weightsPerVertex; i++ ) {
-				NifItem *	bw0 = weightsItem->child( int( v.first * weightsPerVertex + i ) );
-				NifItem *	bw1 = weightsItem->child( int( v.second * weightsPerVertex + i ) );
+				NifItem *	bw0 = weightsItem->child( int( std::uint32_t(n0) * weightsPerVertex + i ) );
+				NifItem *	bw1 = weightsItem->child( int( std::uint32_t(n1) * weightsPerVertex + i ) );
 				if ( bw0 && bw1 ) {
 					nif->set<quint16>( bw1->child( 0 ), nif->get<quint16>( bw0->child( 0 ) ) );
 					nif->set<quint16>( bw1->child( 1 ), nif->get<quint16>( bw0->child( 1 ) ) );
@@ -876,7 +1020,7 @@ void spRemoveWasteVertices::cast_Starfield( NifModel * nif, const QModelIndex & 
 		i->invalidateCondition();
 		break;
 	}
-	numVerts = std::uint32_t( verticesUsed.size() );
+	numVerts -= std::uint32_t( verticesRemoved );
 	numUVs = std::min( numUVs, numVerts );
 	numUVs2 = std::min( numUVs2, numVerts );
 	numColors = std::min( numColors, numVerts );
@@ -885,6 +1029,7 @@ void spRemoveWasteVertices::cast_Starfield( NifModel * nif, const QModelIndex & 
 	numWeights = numVerts * weightsPerVertex;
 	QModelIndex	i;
 	nif->set<quint32>( index, "Num Verts", numVerts );
+	nif->set<quint32>( index.parent(), "Num Verts", numVerts );
 	if ( ( i = nif->getIndex( index, "Vertices" ) ).isValid() )
 		nif->updateArraySize( i );
 	nif->set<quint32>( index, "Num UVs", numUVs );
