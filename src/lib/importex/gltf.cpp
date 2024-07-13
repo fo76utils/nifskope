@@ -857,9 +857,10 @@ void exportGltf( const NifModel* nif, const Scene* scene, [[maybe_unused]] const
 		textureMipLevel = settings.value( "Settings/Nif/Gl TF Export Mip Level", 1 ).toInt();
 		textureMipLevel = std::min< int >( std::max< int >( textureMipLevel, -1 ), 15 );
 	}
+	if ( !filename.endsWith( ".gltf", Qt::CaseInsensitive ) )
+		filename.append( ".gltf" );
 
-	QString buffName = filename;
-	buffName = QString(buffName.remove(".gltf") + ".bin");
+	QString buffName = filename.left( filename.length() - 5 ) + ".bin";
 
 	tinygltf::TinyGLTF writer;
 	tinygltf::Model model;
