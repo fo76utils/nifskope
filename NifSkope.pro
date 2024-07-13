@@ -281,6 +281,7 @@ SOURCES += \
 	src/spells/optimize.cpp \
 	src/spells/sanitize.cpp \
 	src/spells/sfmatexport.cpp \
+	src/spells/simplify.cpp \
 	src/spells/skeleton.cpp \
 	src/spells/stringpalette.cpp \
 	src/spells/strippify.cpp \
@@ -321,6 +322,7 @@ SOURCES += \
 	lib/half.cpp \
 	lib/meshlet.cpp \
 	lib/meshoptimizer/clusterizer.cpp \
+	lib/meshoptimizer/simplifier.cpp \
 	lib/meshoptimizer/spatialorder.cpp \
 	lib/meshoptimizer/vcacheoptimizer.cpp
 
