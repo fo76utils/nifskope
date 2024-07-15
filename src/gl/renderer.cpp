@@ -441,7 +441,7 @@ void Renderer::updateSettings()
 	QSettings settings;
 
 	cfg.useShaders = settings.value( "Settings/Render/General/Use Shaders", true ).toBool();
-	int	tmp = settings.value( "Settings/Render/General/Cube Map Bgnd", -1 ).toInt();
+	int	tmp = settings.value( "Settings/Render/General/Cube Map Bgnd", 1 ).toInt();
 	cfg.cubeBgndMipLevel = std::int8_t( std::min< int >( std::max< int >( tmp, -1 ), 6 ) );
 	cfg.sfParallaxMaxSteps = short( settings.value( "Settings/Render/General/Sf Parallax Steps", 200 ).toInt() );
 	cfg.sfParallaxScale = settings.value( "Settings/Render/General/Sf Parallax Scale", 0.0f).toFloat();
