@@ -653,9 +653,8 @@ void spPruneRedundantTriangles::cast_Starfield( NifModel * nif, const QModelInde
 			} else {
 				std::uint64_t	t0 = triangleToKey( t );
 				std::uint64_t	t1 = rotateVertices( t0 );
-				std::uint64_t	t2 = rotateVertices( t1 );
-				if ( !triangleSet.insert( t0 ).second || !triangleSet.insert( t1 ).second
-					|| !triangleSet.insert( t2 ).second ) {
+				if ( !triangleSet.insert( t0 ).second || triangleSet.find( t1 ) != triangleSet.end()
+					|| triangleSet.find( rotateVertices( t1 ) ) != triangleSet.end() ) {
 					trianglesRemoved.insert( std::uint64_t(i) );
 				}
 			}
