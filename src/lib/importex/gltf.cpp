@@ -462,31 +462,35 @@ bool exportCreatePrimitives(tinygltf::Model& model, QByteArray& bin, const BSMes
 
 	prim.material = materialID;
 
-	exportCreatePrimitive(model, bin, mesh, prim, "POSITION", mesh->positions.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC3, attributeIndex, gltf);
-	exportCreatePrimitive(model, bin, mesh, prim, "NORMAL", mesh->normals.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC3, attributeIndex, gltf);
-	exportCreatePrimitive(model, bin, mesh, prim, "TANGENT", mesh->tangents.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC4, attributeIndex, gltf);
-	if ( mesh->coords.size() > 0 ) {
-		exportCreatePrimitive(model, bin, mesh, prim, "TEXCOORD_0", mesh->coords.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC2, attributeIndex, gltf);
-	}
-	if ( mesh->coords.size() > 0 && mesh->haveTexCoord2 ) {
-		exportCreatePrimitive(model, bin, mesh, prim, "TEXCOORD_1", mesh->coords.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC2, attributeIndex, gltf);
-	}
-	exportCreatePrimitive(model, bin, mesh, prim, "COLOR_0", mesh->colors.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC4, attributeIndex, gltf);
+	if ( meshLodLevel >= 0 && !model.meshes.empty() && !model.meshes.back().primitives.empty() ) {
+		prim = model.meshes.back().primitives.front();
+	} else {
+		exportCreatePrimitive(model, bin, mesh, prim, "POSITION", mesh->positions.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC3, attributeIndex, gltf);
+		exportCreatePrimitive(model, bin, mesh, prim, "NORMAL", mesh->normals.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC3, attributeIndex, gltf);
+		exportCreatePrimitive(model, bin, mesh, prim, "TANGENT", mesh->tangents.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC4, attributeIndex, gltf);
+		if ( mesh->coords.size() > 0 ) {
+			exportCreatePrimitive(model, bin, mesh, prim, "TEXCOORD_0", mesh->coords.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC2, attributeIndex, gltf);
+		}
+		if ( mesh->coords.size() > 0 && mesh->haveTexCoord2 ) {
+			exportCreatePrimitive(model, bin, mesh, prim, "TEXCOORD_1", mesh->coords.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC2, attributeIndex, gltf);
+		}
+		exportCreatePrimitive(model, bin, mesh, prim, "COLOR_0", mesh->colors.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC4, attributeIndex, gltf);
 
-	if ( mesh->weights.size() > 0 && mesh->weightsPerVertex > 0 ) {
-		exportCreatePrimitive(model, bin, mesh, prim, "WEIGHTS_0", mesh->weights.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC4, attributeIndex, gltf);
-	}
+		if ( mesh->weights.size() > 0 && mesh->weightsPerVertex > 0 ) {
+			exportCreatePrimitive(model, bin, mesh, prim, "WEIGHTS_0", mesh->weights.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC4, attributeIndex, gltf);
+		}
 
-	if ( mesh->weights.size() > 0 && mesh->weightsPerVertex > 4 ) {
-		exportCreatePrimitive(model, bin, mesh, prim, "WEIGHTS_1", mesh->weights.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC4, attributeIndex, gltf);
-	}
+		if ( mesh->weights.size() > 0 && mesh->weightsPerVertex > 4 ) {
+			exportCreatePrimitive(model, bin, mesh, prim, "WEIGHTS_1", mesh->weights.size(), TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC4, attributeIndex, gltf);
+		}
 
-	if ( mesh->weights.size() > 0 && mesh->weightsPerVertex > 0 ) {
-		exportCreatePrimitive(model, bin, mesh, prim, "JOINTS_0", mesh->weights.size(), TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT, TINYGLTF_TYPE_VEC4, attributeIndex, gltf);
-	}
+		if ( mesh->weights.size() > 0 && mesh->weightsPerVertex > 0 ) {
+			exportCreatePrimitive(model, bin, mesh, prim, "JOINTS_0", mesh->weights.size(), TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT, TINYGLTF_TYPE_VEC4, attributeIndex, gltf);
+		}
 
-	if ( mesh->weights.size() > 0 && mesh->weightsPerVertex > 4 ) {
-		exportCreatePrimitive(model, bin, mesh, prim, "JOINTS_1", mesh->weights.size(), TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT, TINYGLTF_TYPE_VEC4, attributeIndex, gltf);
+		if ( mesh->weights.size() > 0 && mesh->weightsPerVertex > 4 ) {
+			exportCreatePrimitive(model, bin, mesh, prim, "JOINTS_1", mesh->weights.size(), TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT, TINYGLTF_TYPE_VEC4, attributeIndex, gltf);
+		}
 	}
 
 	QVector<Triangle>& tris = mesh->triangles;
@@ -543,7 +547,6 @@ bool exportCreateMeshes(const NifModel* nif, const Scene* scene, tinygltf::Model
 			auto mesh = static_cast<BSMesh*>(node);
 			if ( mesh ) {
 				int createdMeshes = mesh->meshCount();
-				int skeletalLodIndex = -1;
 				bool hasGPULODs = mesh->gpuLODs.size() > 0;
 				if ( hasGPULODs )
 					createdMeshes = mesh->gpuLODs.size() + 1;
@@ -562,13 +565,11 @@ bool exportCreateMeshes(const NifModel* nif, const Scene* scene, tinygltf::Model
 					int materialID = 0;
 					if ( !mesh->materialPath.isEmpty() )
 						materialID = gltf.materials[Game::GameManager::get_full_path( mesh->materialPath, "materials/", ".mat" )];
-					int lodLevel = (hasGPULODs) ? 0 : j;
+					int	lodLevel = (hasGPULODs) ? 0 : j;
+					int	skeletalLodIndex = ( hasGPULODs ? j : 0 ) - 1;
 					if ( exportCreatePrimitives(model, bin, mesh, gltfMesh, attributeIndex, lodLevel, materialID, gltf, skeletalLodIndex) ) {
 						meshIndex++;
 						model.meshes.push_back(gltfMesh);
-						if ( hasGPULODs ) {
-							skeletalLodIndex++;
-						}
 					} else {
 						gltf.errors << QString("ERROR: %1 creation failed").arg(QString::fromStdString(gltfMesh.name));
 						return false;
@@ -843,9 +844,18 @@ void ExportGltfMaterials::exportMaterial( tinygltf::Material & mat, const std::s
 	mat.emissiveFactor[2] = emissiveFactor[2];
 }
 
+static QString getGltfFolder( const NifModel * nif )
+{
+	QString	dirName = nif->getFolder();
+	if ( !( dirName.isEmpty() || dirName.contains( ".ba2/", Qt::CaseInsensitive ) || dirName.contains( ".bsa/", Qt::CaseInsensitive ) ) )
+		return dirName;
+	QSettings	settings;
+	return settings.value( "Spells//Extract File/Last File Path", QString() ).toString();
+}
+
 void exportGltf( const NifModel* nif, const Scene* scene, [[maybe_unused]] const QModelIndex& index )
 {
-	QString filename = QFileDialog::getSaveFileName(qApp->activeWindow(), tr("Choose a .glTF file for export"), nif->getFilename(), "glTF (*.gltf)");
+	QString filename = QFileDialog::getSaveFileName(qApp->activeWindow(), tr("Choose a .glTF file for export"), getGltfFolder(nif), "glTF (*.gltf)");
 	bool	useFullMatPaths;
 	int	textureMipLevel;
 	if ( filename.isEmpty() ) {
@@ -942,6 +952,8 @@ protected:
 	static void normalizeFloats( float * p, size_t n, int dataType );
 	template< typename T > bool loadBuffer( std::vector< T > & outBuf, int accessor, int typeRequired );
 	void loadSkin( const QPersistentModelIndex & index, const tinygltf::Skin & skin );
+	int loadTriangles( const QModelIndex & index, const tinygltf::Primitive & p );
+	void loadSkinnedLODMesh( const QPersistentModelIndex & index, const tinygltf::Primitive & p, int lod );
 	// Returns true if tangent space needs to be calculated
 	bool loadMesh(
 		const QPersistentModelIndex & index, std::string & materialPath, const tinygltf::Mesh & mesh,
@@ -1166,6 +1178,91 @@ void ImportGltf::loadSkin( const QPersistentModelIndex & index, const tinygltf::
 	}
 }
 
+int ImportGltf::loadTriangles( const QModelIndex & index, const tinygltf::Primitive & p )
+{
+	std::vector< std::uint16_t >	indices;
+	if ( !loadBuffer< std::uint16_t >( indices, p.indices, TINYGLTF_TYPE_SCALAR ) )
+		return -1;
+
+	int	numTriangles = int( indices.size() / 3 );
+	nif->set<quint32>( index, "Indices Size", quint32(indices.size()) );
+	auto	iTriangles = nif->getIndex( index, "Triangles" );
+	if ( iTriangles.isValid() ) {
+		nif->updateArraySize( iTriangles );
+		QVector< Triangle >	triangles;
+		triangles.resize( numTriangles );
+		for ( qsizetype i = 0; i < numTriangles; i++ ) {
+			triangles[i][0] = indices[i * 3];
+			triangles[i][1] = indices[i * 3 + 1];
+			triangles[i][2] = indices[i * 3 + 2];
+		}
+		nif->setArray<Triangle>( iTriangles, triangles );
+	}
+
+	return numTriangles;
+}
+
+void ImportGltf::loadSkinnedLODMesh( const QPersistentModelIndex & index, const tinygltf::Primitive & p, int lod )
+{
+	auto	iMeshes = nif->getIndex( index, "Meshes" );
+	if ( !iMeshes.isValid() )
+		return;
+	auto	iMesh = QModelIndex_child( iMeshes, 0 );
+	if ( iMesh.isValid() )
+		iMesh = nif->getIndex( iMesh, "Mesh" );
+	if ( !iMesh.isValid() )
+		return;
+	auto	iMeshData = nif->getIndex( iMesh, "Mesh Data" );
+	if ( !iMeshData.isValid() )
+		return;
+
+	std::uint32_t	numVerts = nif->get<quint32>( iMeshData, "Num Verts" );
+	bool	invalidAttrSize = false;
+	for ( const auto & i : p.attributes ) {
+		std::vector< float >	attrBuf;
+		if ( i.first == "POSITION" || i.first == "NORMAL" ) {
+			if ( !loadBuffer< float >( attrBuf, i.second, TINYGLTF_TYPE_VEC3 ) )
+				continue;
+			if ( !attrBuf.empty() && attrBuf.size() != ( size_t(numVerts) * 3 ) ) {
+				invalidAttrSize = true;
+				break;
+			}
+		} else if ( i.first == "TEXCOORD_0" || i.first == "TEXCOORD_1" ) {
+			if ( !loadBuffer< float >( attrBuf, i.second, TINYGLTF_TYPE_VEC2 ) )
+				continue;
+			if ( !attrBuf.empty() && attrBuf.size() != ( size_t(numVerts) << 1 ) ) {
+				invalidAttrSize = true;
+				break;
+			}
+		} else if ( i.first == "TANGENT" || i.first == "COLOR_0" ) {
+			if ( !loadBuffer< float >( attrBuf, i.second, TINYGLTF_TYPE_VEC4 ) )
+				continue;
+			if ( !attrBuf.empty() && attrBuf.size() != ( size_t(numVerts) << 2 ) ) {
+				invalidAttrSize = true;
+				break;
+			}
+		}
+	}
+	if ( invalidAttrSize ) {
+		QMessageBox::warning( nullptr, "NifSkope warning", QString("LOD%1 mesh has inconsistent vertex count with LOD0").arg(lod) );
+		return;
+	}
+
+	for ( auto i = nif->getItem( iMeshData ); i; ) {
+		i->invalidateVersionCondition();
+		i->invalidateCondition();
+		break;
+	}
+	nif->set<quint32>( iMeshData, "Num LODs", quint32(lod) );
+	QModelIndex	iLODMesh = nif->getIndex( iMeshData, "LODs" );
+	if ( !iLODMesh.isValid() )
+		return;
+	nif->updateArraySize( iLODMesh );
+	iLODMesh = QModelIndex_child( iLODMesh, lod - 1 );
+	if ( iLODMesh.isValid() )
+		(void) loadTriangles( iLODMesh, p );
+}
+
 bool ImportGltf::loadMesh(
 	const QPersistentModelIndex & index, std::string & materialPath, const tinygltf::Mesh & mesh, int lod, int skin )
 {
@@ -1187,6 +1284,11 @@ bool ImportGltf::loadMesh(
 	}
 	if ( !p )
 		return false;
+
+	if ( lod > 0 && skin >= 0 && size_t(skin) < model.skins.size() ) {
+		loadSkinnedLODMesh( index, *p, lod );
+		return false;
+	}
 
 	if ( materialPath.empty() && p->material >= 0 && size_t(p->material) < model.materials.size() ) {
 		const std::string &	matName = model.materials[p->material].name;
@@ -1219,23 +1321,10 @@ bool ImportGltf::loadMesh(
 	nif->set<quint32>( iMesh, "Flags", 64 );
 	nif->set<quint32>( iMeshData, "Version", 2 );
 
-	std::vector< std::uint16_t >	indices;
-	if ( !loadBuffer< std::uint16_t >( indices, p->indices, TINYGLTF_TYPE_SCALAR ) )
+	int	numTriangles = loadTriangles( iMeshData, *p );
+	if ( numTriangles < 0 )
 		return false;
-	nif->set<quint32>( iMeshData, "Indices Size", quint32(indices.size()) );
-	nif->set<quint32>( iMesh, "Indices Size", quint32(indices.size()) );
-	auto	iTriangles = nif->getIndex( iMeshData, "Triangles" );
-	if ( iTriangles.isValid() ) {
-		nif->updateArraySize( iTriangles );
-		QVector< Triangle >	triangles;
-		triangles.resize( qsizetype(indices.size() / 3) );
-		for ( qsizetype i = 0; i < triangles.size(); i++ ) {
-			triangles[i][0] = indices[i * 3];
-			triangles[i][1] = indices[i * 3 + 1];
-			triangles[i][2] = indices[i * 3 + 2];
-		}
-		nif->setArray<Triangle>( iTriangles, triangles );
-	}
+	nif->set<quint32>( iMesh, "Indices Size", quint32(numTriangles) * 3U );
 
 	if ( skin >= 0 && size_t(skin) < model.skins.size() )
 		loadSkin( index, model.skins[skin] );
@@ -1540,7 +1629,7 @@ void ImportGltf::loadNode( const QPersistentModelIndex & index, int nodeNum, boo
 			if ( n >= 0 && size_t(n) < model.nodes.size() ) {
 				int	m = model.nodes[n].mesh;
 				if ( m >= 0 && size_t(m) < model.meshes.size() )
-					tangentsNeeded |= loadMesh( iBlock, materialPath, model.meshes[m], l + 1, -1 );
+					tangentsNeeded |= loadMesh( iBlock, materialPath, model.meshes[m], l + 1, node.skin );
 			}
 		}
 
@@ -1598,7 +1687,7 @@ void importGltf( NifModel * nif, const QModelIndex & index )
 		return;
 	}
 
-	QString filename = QFileDialog::getOpenFileName( qApp->activeWindow(), tr("Choose a .glTF file for import"), nif->getFilename(), "glTF (*.gltf)" );
+	QString filename = QFileDialog::getOpenFileName( qApp->activeWindow(), tr("Choose a .glTF file for import"), getGltfFolder(nif), "glTF (*.gltf)" );
 	if ( filename.isEmpty() ) {
 		return;
 	} else {
