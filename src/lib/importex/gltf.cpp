@@ -92,6 +92,14 @@ void exportCreateInverseBoneMatrices(tinygltf::Model& model, QByteArray& bin, co
 	}
 }
 
+static QString exportGetMaterialPath( const NifModel * nif, const QModelIndex & index )
+{
+	auto	iSPBlock = nif->getBlockIndex( nif->getLink( index, "Shader Property" ) );
+	if ( !iSPBlock.isValid() )
+		return QString();
+	return nif->get<QString>( iSPBlock, "Name" );
+}
+
 bool exportCreateNodes(const NifModel* nif, const Scene* scene, tinygltf::Model& model, QByteArray& bin, GltfStore& gltf)
 {
 	int gltfNodeID = 0;
@@ -113,9 +121,14 @@ bool exportCreateNodes(const NifModel* nif, const Scene* scene, tinygltf::Model&
 			bool isBSGeometry = nif->blockInherits(iBlock, "BSGeometry") && mesh;
 			// Create extra nodes for GPU LODs
 			int createdNodes = 1;
+			QString	materialPath;
+			std::uint32_t	matPathCRC = 0U;
 			if ( isBSGeometry ) {
-				if ( !mesh->materialPath.isEmpty() ) {
-					std::string matPath( Game::GameManager::get_full_path( mesh->materialPath, "materials/", ".mat" ) );
+				materialPath = exportGetMaterialPath( nif, iBlock );
+				if ( !materialPath.isEmpty() ) {
+					std::string matPath( Game::GameManager::get_full_path( materialPath, "materials/", ".mat" ) );
+					for ( char c : matPath )
+						hashFunctionCRC32( matPathCRC, (unsigned char) ( c != '/' ? char(std::tolower(c)) : '\\' ) );
 					if ( gltf.materials.find( matPath ) == gltf.materials.end() ) {
 						int materialID = int( gltf.materials.size() );
 						gltf.materials.emplace( matPath, materialID );
@@ -163,15 +176,9 @@ bool exportCreateNodes(const NifModel* nif, const Scene* scene, tinygltf::Model&
 				std::map<std::string, tinygltf::Value> extras;
 				extras["ID"] = tinygltf::Value(nodeId);
 				extras["Parent ID"] = tinygltf::Value((node->parentNode()) ? node->parentNode()->id() : -1);
-				auto links = nif->getChildLinks(nif->getBlockNumber(node->index()));
-				for ( const auto link : links ) {
-					auto idx = nif->getBlockIndex(link);
-					if ( nif->blockInherits(idx, "BSShaderProperty") ) {
-						extras["Material Path"] = tinygltf::Value(nif->get<QString>(idx, "Name").toStdString());
-					} else if ( nif->blockInherits(idx, "NiIntegerExtraData") ) {
-						auto key = QString("%1:%2").arg(nif->itemName(idx)).arg(nif->get<QString>(idx, "Name"));
-						extras[key.toStdString()] = tinygltf::Value(nif->get<int>(idx, "Integer Data"));
-					}
+				if ( isBSGeometry ) {
+					extras["Material Path"] = tinygltf::Value( materialPath.toStdString() );
+					extras["NiIntegerExtraData:MaterialID"] = tinygltf::Value( int(matPathCRC) );
 				}
 
 				auto flags = nif->get<int>(iBlock, "Flags");
@@ -563,8 +570,9 @@ bool exportCreateMeshes(const NifModel* nif, const Scene* scene, tinygltf::Model
 						gltfMesh.name = QString("%1%2%3").arg(node->getName()).arg(":LOD").arg(j).toStdString();
 					}
 					int materialID = 0;
-					if ( !mesh->materialPath.isEmpty() )
-						materialID = gltf.materials[Game::GameManager::get_full_path( mesh->materialPath, "materials/", ".mat" )];
+					QString	materialPath = exportGetMaterialPath( nif, iBlock );
+					if ( !materialPath.isEmpty() )
+						materialID = gltf.materials[Game::GameManager::get_full_path( materialPath, "materials/", ".mat" )];
 					int	lodLevel = (hasGPULODs) ? 0 : j;
 					int	skeletalLodIndex = ( hasGPULODs ? j : 0 ) - 1;
 					if ( exportCreatePrimitives(model, bin, mesh, gltfMesh, attributeIndex, lodLevel, materialID, gltf, skeletalLodIndex) ) {
@@ -596,7 +604,8 @@ protected:
 	// n = 2: PBR
 	// n = 3: occlusion
 	// n = 4: emissive
-	void getTexture( tinygltf::Material & mat, int n, const std::string & txtPath1, const std::string & txtPath2 );
+	void getTexture( tinygltf::Material & mat, int n, const std::string & txtPath1, const std::string & txtPath2,
+					const CE2Material::UVStream * uvStream );
 	static std::string getTexturePath( const CE2Material::TextureSet * txtSet, int n, std::uint32_t defaultColor = 0 );
 public:
 	ExportGltfMaterials( NifModel * nifModel, tinygltf::Model & gltfModel, int textureMipLevel )
@@ -634,13 +643,21 @@ DDSTexture16 * ExportGltfMaterials::loadTexture( const std::string_view & txtPat
 }
 
 void ExportGltfMaterials::getTexture(
-	tinygltf::Material & mat, int n, const std::string & txtPath1, const std::string & txtPath2 )
+	tinygltf::Material & mat, int n, const std::string & txtPath1, const std::string & txtPath2,
+	const CE2Material::UVStream * uvStream )
 {
 	if ( txtPath1.empty() && txtPath2.empty() )
 		return;
 
 	std::string	textureMapKey;
 	printToString( textureMapKey, "%s\n%s\n%d", txtPath1.c_str(), txtPath2.c_str(), n );
+
+	unsigned char	texCoordMode = 0;	// "Wrap"
+	unsigned char	texCoordChannel = 0;
+	if ( uvStream ) {
+		texCoordMode = uvStream->textureAddressMode & 3;
+		texCoordChannel = (unsigned char) ( uvStream->channel > 1 );
+	}
 
 	auto	i = textureMap.find( textureMapKey );
 	if ( i == textureMap.end() ) {
@@ -751,6 +768,22 @@ void ExportGltfMaterials::getTexture(
 			img.mimeType = "image/png";
 			textureID = int( model.textures.size() );
 			model.textures.emplace_back().source = int( model.images.size() - 1 );
+			if ( texCoordMode ) {
+				int	wrapMode = TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE;
+				if ( !( texCoordMode & 1 ) )
+					wrapMode = TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT;
+				for ( const auto & j : model.samplers ) {
+					if ( j.wrapS == wrapMode ) {
+						model.textures.back().sampler = int( &j - model.samplers.data() );
+						break;
+					}
+				}
+				if ( model.textures.back().sampler < 0 ) {
+					model.samplers.emplace_back().wrapS = wrapMode;
+					model.samplers.back().wrapT = wrapMode;
+					model.textures.back().sampler = int( model.samplers.size() - 1 );
+				}
+			}
 		}
 
 		i = textureMap.emplace( textureMapKey, textureID ).first;
@@ -759,18 +792,23 @@ void ExportGltfMaterials::getTexture(
 	switch ( n ) {
 	case 0:
 		mat.pbrMetallicRoughness.baseColorTexture.index = i->second;
+		mat.pbrMetallicRoughness.baseColorTexture.texCoord = texCoordChannel;
 		break;
 	case 1:
 		mat.normalTexture.index = i->second;
+		mat.normalTexture.texCoord = texCoordChannel;
 		break;
 	case 2:
 		mat.pbrMetallicRoughness.metallicRoughnessTexture.index = i->second;
+		mat.pbrMetallicRoughness.metallicRoughnessTexture.texCoord = texCoordChannel;
 		break;
 	case 3:
 		mat.occlusionTexture.index = i->second;
+		mat.occlusionTexture.texCoord = texCoordChannel;
 		break;
 	case 4:
 		mat.emissiveTexture.index = i->second;
+		mat.emissiveTexture.texCoord = texCoordChannel;
 		break;
 	}
 }
@@ -813,13 +851,12 @@ void ExportGltfMaterials::exportMaterial( tinygltf::Material & mat, const std::s
 
 	const CE2Material::Material *	m = layer->material;
 	const CE2Material::TextureSet *	txtSet = m->textureSet;
-	// TODO: UV stream
 
-	getTexture( mat, 0, getTexturePath( txtSet, 0, 0xFFFFFFFFU ), getTexturePath( txtSet, 2 ) );
-	getTexture( mat, 1, getTexturePath( txtSet, 1 ), std::string() );
-	getTexture( mat, 2, getTexturePath( txtSet, 3 ), getTexturePath( txtSet, 4 ) );
-	getTexture( mat, 3, getTexturePath( txtSet, 5 ), std::string() );
-	getTexture( mat, 4, getTexturePath( txtSet, 7 ), std::string() );
+	getTexture( mat, 0, getTexturePath( txtSet, 0, 0xFFFFFFFFU ), getTexturePath( txtSet, 2 ), layer->uvStream );
+	getTexture( mat, 1, getTexturePath( txtSet, 1 ), std::string(), layer->uvStream );
+	getTexture( mat, 2, getTexturePath( txtSet, 3 ), getTexturePath( txtSet, 4 ), layer->uvStream );
+	getTexture( mat, 3, getTexturePath( txtSet, 5 ), std::string(), layer->uvStream );
+	getTexture( mat, 4, getTexturePath( txtSet, 7 ), std::string(), layer->uvStream );
 
 	if ( material->shaderRoute == 1 ) {	// effect
 		mat.alphaMode = "BLEND";
