@@ -54,9 +54,6 @@ public:
 		return nullptr;
 	}
 
-	int materialID = 0;
-	QString materialPath;
-
 	int skinID = -1;
 	QVector<BoneWeightsUNorm> weightsUNORM;
 	QVector<QVector<Triangle>> gpuLODs;

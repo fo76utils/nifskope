@@ -3,7 +3,6 @@
 #include "gl/controllers.h"
 #include "gl/glscene.h"
 #include "gl/renderer.h"
-#include "io/material.h"
 #include "io/nifstream.h"
 #include "model/nifmodel.h"
 #include "qtcompat.h"
@@ -489,11 +488,7 @@ void BSMesh::updateData(const NifModel* nif)
 	auto links = nif->getChildLinks(nif->getBlockNumber(iBlock));
 	for ( const auto link : links ) {
 		auto idx = nif->getBlockIndex(link);
-		if ( nif->blockInherits(idx, "BSShaderProperty") ) {
-			materialPath = nif->get<QString>(idx, "Name");
-		} else if ( nif->blockInherits(idx, "NiIntegerExtraData") ) {
-			materialID = nif->get<int>(idx, "Integer Data");
-		} else if ( nif->blockInherits(idx, "BSSkin::Instance") ) {
+		if ( nif->blockInherits(idx, "BSSkin::Instance") ) {
 			iSkin = idx;
 			iSkinData = nif->getBlockIndex(nif->getLink(nif->getIndex(idx, "Data")));
 			skinID = nif->getBlockNumber(iSkin);
