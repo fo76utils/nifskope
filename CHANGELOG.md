@@ -1,9 +1,12 @@
  == CHANGELOG ==
 
+#### NifSkope-2.0.dev9-20240716
+
 * Implemented Starfield glTF import, fixes and improvements to glTF export.
 * Basic material information and textures can be exported in glTF format. The resolution of the exported textures is reduced according to the mip level in the general settings, which defaults to 1 (half resolution). Setting the mip level to -1 disables texture export.
 * Exporting and importing LOD meshes from/to glTF files can be disabled in the general settings under NIF.
-* The 'Prune Triangles' and 'Remove Unused Vertices' spells have been implemented for Starfield (internal geometry only).
+* New spell for simplifying Starfield meshes (LOD generation), using meshopt\_simplify() from [meshoptimizer](https://github.com/zeux/meshoptimizer). It can be configured under NIF in the general settings: the algorithm tries to reduce the triangle count to the original number multiplied by 'Target count', but not less than 'Min. triangles' per shape, while keeping error under the specified value. A target count of 0.0 and/or maximum error of 1.0 disables LOD generation for all remaining levels. Note that internal geometry is required, and that using the spell globally processes all shapes as one large mesh (this is less efficient, but preserves topology across shapes and can reduce seams).
+* The 'Flip Faces', 'Flip UV', 'Prune Triangles' and 'Remove Unused Vertices' spells have been implemented for Starfield (internal geometry only). Flip UV also allows for swapping the two sets of texture coordinates.
 * New render setting for using the Fallout 76 or Starfield PBR cube map as a skybox. Setting this to a negative value disables the effect, while positive numbers control the amount of blur.
 * Starfield bone bounding spheres are now drawn when the 'Skin' field of a BSGeometry block is selected.
 * The maximum PBR cube map resolution in the render settings has been increased to 1024x1024 (uses importance sampling at mip levels 1 and 2).

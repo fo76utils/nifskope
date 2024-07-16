@@ -338,33 +338,45 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
+		if ( nif->getBSVersion() >= 170 && nif->blockInherits( index, "BSGeometry" ) )
+			return bool( nif->get<quint32>( index, "Flags" ) & 0x0200 );
 		if ( nif->blockInherits( index, "BSTriShape" ) && nif->getIndex( index, "Vertex Data" ).isValid() )
 			return true;
 		return nif->itemStrType( index ).toLower() == "texcoord" || nif->blockInherits( index, "NiTriBasedGeomData" );
 	}
 
+	static void flip_Starfield( NifModel * nif, const QModelIndex & index, int f );
+
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
 	{
 		QModelIndex idx = index;
 
-		if ( nif->blockInherits( index, "BSTriShape" ) ) {
-			idx = nif->getIndex( index, "Vertex Data" );
-		} else if ( nif->itemStrType( index ).toLower() != "texcoord" ) {
-			idx = nif->getIndex( nif->getBlockIndex( index ), "UV Sets" );
+		int	cmdCnt = 4;
+		if ( nif->getBSVersion() < 170 ) {
+			cmdCnt--;
+			if ( nif->blockInherits( index, "BSTriShape" ) ) {
+				idx = nif->getIndex( index, "Vertex Data" );
+			} else if ( nif->itemStrType( index ).toLower() != "texcoord" ) {
+				idx = nif->getIndex( nif->getBlockIndex( index ), "UV Sets" );
+			}
 		}
 
 		QMenu menu;
-		static const char * const flipCmds[3] = { "S = 1.0 - S", "T = 1.0 - T", "S <=> T" };
+		static const char * const flipCmds[4] = { "S = 1.0 - S", "T = 1.0 - T", "S <=> T", "ST <=> PQ" };
 
-		for ( int c = 0; c < 3; c++ )
+		for ( int c = 0; c < cmdCnt; c++ )
 			menu.addAction( flipCmds[c] );
 
 		QAction * act = menu.exec( QCursor::pos() );
 
 		if ( act ) {
-			for ( int c = 0; c < 3; c++ ) {
-				if ( act->text() == flipCmds[c] )
-					flip( nif, idx, c );
+			for ( int c = 0; c < cmdCnt; c++ ) {
+				if ( act->text() == flipCmds[c] ) {
+					if ( nif->getBSVersion() < 170 )
+						flip( nif, idx, c );
+					else
+						flip_Starfield( nif, idx, c );
+				}
 			}
 
 		}
@@ -432,6 +444,65 @@ public:
 	}
 };
 
+void spFlipTexCoords::flip_Starfield( NifModel * nif, const QModelIndex & index, int f )
+{
+	if ( !index.isValid() ) {
+		return;
+	} else {
+		NifItem *	i = nif->getItem( index );
+		if ( !i )
+			return;
+		if ( !i->hasStrType( "BSMeshData" ) ) {
+			if ( i->hasStrType( "BSMesh" ) ) {
+				flip_Starfield( nif, nif->getIndex( i, "Mesh Data" ), f );
+			} else if ( i->hasStrType( "BSMeshArray" ) ) {
+				if ( nif->get<bool>( i, "Has Mesh" ) )
+					flip_Starfield( nif, nif->getIndex( i, "Mesh" ), f );
+			} else if ( nif->blockInherits( index, "BSGeometry" ) && ( nif->get<quint32>( i, "Flags" ) & 0x0200 ) ) {
+				auto	iMeshes = nif->getIndex( i, "Meshes" );
+				if ( iMeshes.isValid() && nif->isArray( iMeshes ) ) {
+					for ( int n = 0; n <= 3; n++ )
+						flip_Starfield( nif, QModelIndex_child( iMeshes, n ), f );
+				}
+			}
+			return;
+		}
+	}
+
+	std::uint32_t	numUVs = nif->get<quint32>( index, "Num UVs" );
+	std::uint32_t	numUVs2 = nif->get<quint32>( index, "Num UVs 2" );
+	if ( !numUVs || ( f == 3 && numUVs2 != numUVs ) )
+		return;
+
+	auto	uvsIndex = nif->getIndex( index, "UVs" );
+	if ( !uvsIndex.isValid() )
+		return;
+	QVector< HalfVector2 >	uvs = nif->getArray< HalfVector2 >( uvsIndex );
+	switch ( f ) {
+	case 0:
+		for ( auto & v : uvs )
+			v[0] = 1.0f - v[0];
+		break;
+	case 1:
+		for ( auto & v : uvs )
+			v[1] = 1.0f - v[1];
+		break;
+	case 2:
+		for ( auto & v : uvs )
+			std::swap( v[0], v[1] );
+		break;
+	case 3:
+		for ( auto uvs2Index = nif->getIndex( index, "UVs 2" ); uvs2Index.isValid(); ) {
+			QVector< HalfVector2 >	uvs2 = nif->getArray< HalfVector2 >( uvs2Index );
+			nif->setArray< HalfVector2 >( uvs2Index, uvs );
+			uvs = uvs2;
+			break;
+		}
+		break;
+	}
+	nif->setArray< HalfVector2 >( uvsIndex, uvs );
+}
+
 REGISTER_SPELL( spFlipTexCoords )
 
 //! Flips triangle faces, individually or in the selected array
@@ -476,11 +547,19 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
+		if ( nif->getBSVersion() >= 170 && nif->blockInherits( index, "BSGeometry" ) )
+			return bool( nif->get<quint32>( index, "Flags" ) & 0x0200 );
 		return getTriShapeData( nif, index ).isValid();
 	}
 
+	static void cast_Starfield( NifModel * nif, const QModelIndex & index );
+
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
 	{
+		if ( nif->getBSVersion() >= 170 && nif->blockInherits( index, "BSGeometry" ) ) {
+			cast_Starfield( nif, index );
+			return index;
+		}
 		QModelIndex iData = getTriShapeData( nif, index );
 
 		QVector<Triangle> tris = nif->getArray<Triangle>( iData, "Triangles" );
@@ -493,6 +572,57 @@ public:
 		return index;
 	}
 };
+
+void spFlipAllFaces::cast_Starfield( NifModel * nif, const QModelIndex & index )
+{
+	if ( !index.isValid() ) {
+		return;
+	} else {
+		NifItem *	i = nif->getItem( index );
+		if ( !i )
+			return;
+		if ( !i->hasStrType( "BSMeshData" ) ) {
+			if ( i->hasStrType( "BSMesh" ) ) {
+				cast_Starfield( nif, nif->getIndex( i, "Mesh Data" ) );
+			} else if ( i->hasStrType( "BSMeshArray" ) ) {
+				if ( nif->get<bool>( i, "Has Mesh" ) )
+					cast_Starfield( nif, nif->getIndex( i, "Mesh" ) );
+			} else if ( nif->blockInherits( index, "BSGeometry" ) && ( nif->get<quint32>( i, "Flags" ) & 0x0200 ) ) {
+				auto	iMeshes = nif->getIndex( i, "Meshes" );
+				if ( iMeshes.isValid() && nif->isArray( iMeshes ) ) {
+					for ( int n = 0; n <= 3; n++ )
+						cast_Starfield( nif, QModelIndex_child( iMeshes, n ) );
+				}
+			}
+			return;
+		}
+	}
+
+	for ( int l = 0; true; l++ ) {
+		QModelIndex	lodIndex;
+		if ( !l ) {
+			lodIndex = index;
+		} else if ( l <= int( nif->get<quint32>( index, "Num LODs" ) ) ) {
+			lodIndex = nif->getIndex( index, "LODs" );
+			if ( lodIndex.isValid() )
+				lodIndex = QModelIndex_child( lodIndex, l - 1 );
+		}
+		if ( !lodIndex.isValid() )
+			break;
+
+		int	numTriangles = int( nif->get<quint32>( lodIndex, "Indices Size" ) / 3U );
+		if ( numTriangles < 1 )
+			continue;
+		auto	trianglesIndex = nif->getIndex( lodIndex, "Triangles" );
+		if ( !trianglesIndex.isValid() )
+			continue;
+
+		QVector<Triangle> tris = nif->getArray<Triangle>( trianglesIndex );
+		for ( auto & t : tris )
+			t.flip();
+		nif->setArray<Triangle>( trianglesIndex, tris );
+	}
+}
 
 REGISTER_SPELL( spFlipAllFaces )
 
