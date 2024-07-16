@@ -946,7 +946,6 @@ protected:
 	const tinygltf::Model &	model;
 	NifModel *	nif;
 	bool	lodEnabled;
-	bool	meshPrimWarningFlag;
 	std::vector< int >	nodeStack;
 	bool nodeHasMeshes( const tinygltf::Node & node, int d = 0 ) const;
 	static void normalizeFloats( float * p, size_t n, int dataType );
@@ -956,12 +955,12 @@ protected:
 	void loadSkinnedLODMesh( const QPersistentModelIndex & index, const tinygltf::Primitive & p, int lod );
 	// Returns true if tangent space needs to be calculated
 	bool loadMesh(
-		const QPersistentModelIndex & index, std::string & materialPath, const tinygltf::Mesh & mesh,
+		const QPersistentModelIndex & index, std::string & materialPath, const tinygltf::Primitive & p,
 		int lod, int skin );
 	void loadNode( const QPersistentModelIndex & index, int nodeNum, bool isRoot );
 public:
 	ImportGltf( NifModel * nifModel, const tinygltf::Model & gltfModel, bool enableLOD )
-		: model( gltfModel ), nif( nifModel ), lodEnabled( enableLOD ), meshPrimWarningFlag( false )
+		: model( gltfModel ), nif( nifModel ), lodEnabled( enableLOD )
 	{
 	}
 	void importModel( const QPersistentModelIndex & iBlock );
@@ -1096,17 +1095,17 @@ void ImportGltf::loadSkin( const QPersistentModelIndex & index, const tinygltf::
 		auto	iExtraData = nif->getIndex( index, "Extra Data List" );
 		if ( iExtraData.isValid() ) {
 			nif->updateArraySize( iExtraData );
-			nif->setLink( QModelIndex_child( iExtraData, int(n) ), quint32( nif->getBlockNumber(iSkinBMP) ) );
+			nif->setLink( QModelIndex_child( iExtraData, int(n) ), qint32( nif->getBlockNumber(iSkinBMP) ) );
 		}
 		break;
 	}
 
 	QPersistentModelIndex	iSkin = nif->insertNiBlock( "BSSkin::Instance" );
-	nif->setLink( index, "Skin", quint32( nif->getBlockNumber(iSkin) ) );
-	nif->setLink( iSkin, "Skeleton Root", quint32( 0 ) );
+	nif->setLink( index, "Skin", qint32( nif->getBlockNumber(iSkin) ) );
+	nif->setLink( iSkin, "Skeleton Root", qint32( 0 ) );
 
 	QPersistentModelIndex	iBoneData = nif->insertNiBlock( "BSSkin::BoneData" );
-	nif->setLink( iSkin, "Data", quint32( nif->getBlockNumber(iBoneData) ) );
+	nif->setLink( iSkin, "Data", qint32( nif->getBlockNumber(iBoneData) ) );
 
 	size_t	numBones = skin.joints.size();
 	nif->set<quint32>( iSkinBMP, "Num Bones", quint32(numBones) );
@@ -1264,34 +1263,15 @@ void ImportGltf::loadSkinnedLODMesh( const QPersistentModelIndex & index, const 
 }
 
 bool ImportGltf::loadMesh(
-	const QPersistentModelIndex & index, std::string & materialPath, const tinygltf::Mesh & mesh, int lod, int skin )
+	const QPersistentModelIndex & index, std::string & materialPath, const tinygltf::Primitive & p, int lod, int skin )
 {
-	const tinygltf::Primitive *	p = nullptr;
-	for ( const auto & i : mesh.primitives ) {
-		if ( i.mode != TINYGLTF_MODE_TRIANGLES || i.attributes.empty() )
-			continue;
-		if ( i.indices >= 0 && size_t(i.indices) < model.accessors.size() ) {
-			if ( p ) {
-				// TODO: implement support for multiple primitives per mesh
-				meshPrimWarningFlag = true;
-				QMessageBox::warning( nullptr, "NifSkope warning", QString("glTF mesh '%1' uses multiple primitives, only one is imported").arg(mesh.name.c_str()) );
-				break;
-			}
-			p = &i;
-			if ( meshPrimWarningFlag )
-				break;
-		}
-	}
-	if ( !p )
-		return false;
-
 	if ( lod > 0 && skin >= 0 && size_t(skin) < model.skins.size() ) {
-		loadSkinnedLODMesh( index, *p, lod );
+		loadSkinnedLODMesh( index, p, lod );
 		return false;
 	}
 
-	if ( materialPath.empty() && p->material >= 0 && size_t(p->material) < model.materials.size() ) {
-		const std::string &	matName = model.materials[p->material].name;
+	if ( materialPath.empty() && p.material >= 0 && size_t(p.material) < model.materials.size() ) {
+		const std::string &	matName = model.materials[p.material].name;
 		std::string	matNameL = matName;
 		for ( auto & c : matNameL ) {
 			if ( std::isupper(c) )
@@ -1321,7 +1301,7 @@ bool ImportGltf::loadMesh(
 	nif->set<quint32>( iMesh, "Flags", 64 );
 	nif->set<quint32>( iMeshData, "Version", 2 );
 
-	int	numTriangles = loadTriangles( iMeshData, *p );
+	int	numTriangles = loadTriangles( iMeshData, p );
 	if ( numTriangles < 0 )
 		return false;
 	nif->set<quint32>( iMesh, "Indices Size", quint32(numTriangles) * 3U );
@@ -1331,7 +1311,7 @@ bool ImportGltf::loadMesh(
 
 	std::vector< BoneWeights >	boneWeights;
 
-	for ( const auto & i : p->attributes ) {
+	for ( const auto & i : p.attributes ) {
 		if ( i.first == "POSITION" ) {
 			std::vector< float >	positions;
 			if ( !loadBuffer< float >( positions, i.second, TINYGLTF_TYPE_VEC3 ) )
@@ -1550,27 +1530,43 @@ void ImportGltf::loadNode( const QPersistentModelIndex & index, int nodeNum, boo
 	nodeStack.push_back( nodeNum );
 
 	bool	haveMesh = ( node.mesh >= 0 && size_t(node.mesh) < model.meshes.size() );
-	QPersistentModelIndex	iBlock = nif->insertNiBlock( !haveMesh ? "NiNode" : "BSGeometry" );
-	if ( index.isValid() ) {
-		NifItem *	parentItem = nif->getItem( index );
-		if ( parentItem ) {
-			parentItem->invalidateVersionCondition();
-			parentItem->invalidateCondition();
+	size_t	primCnt = 0;
+	if ( haveMesh )
+		primCnt = model.meshes[node.mesh].primitives.size();
+	size_t	p = 0;
+	do {
+		const tinygltf::Primitive *	meshPrim = nullptr;
+		if ( haveMesh ) {
+			if ( !primCnt )
+				break;
+			meshPrim = model.meshes[node.mesh].primitives.data() + p;
+			if ( meshPrim->mode != TINYGLTF_MODE_TRIANGLES || meshPrim->attributes.empty() )
+				continue;
+			if ( meshPrim->indices < 0 || size_t(meshPrim->indices) >= model.accessors.size() )
+				continue;
 		}
-		auto	iNumChildren = nif->getIndex( index, "Num Children" );
-		if ( iNumChildren.isValid() ) {
-			quint32	n = nif->get<quint32>( iNumChildren );
-			nif->set<quint32>( iNumChildren, n + 1 );
-			auto	iChildren = nif->getIndex( index, "Children" );
-			if ( iChildren.isValid() ) {
-				nif->updateArraySize( iChildren );
-				nif->setLink( QModelIndex_child( iChildren, int(n) ), quint32( nif->getBlockNumber(iBlock) ) );
+
+		QPersistentModelIndex	iBlock = nif->insertNiBlock( !haveMesh ? "NiNode" : "BSGeometry" );
+		if ( index.isValid() ) {
+			NifItem *	parentItem = nif->getItem( index );
+			if ( parentItem ) {
+				parentItem->invalidateVersionCondition();
+				parentItem->invalidateCondition();
+			}
+			auto	iNumChildren = nif->getIndex( index, "Num Children" );
+			if ( iNumChildren.isValid() ) {
+				quint32	n = nif->get<quint32>( iNumChildren );
+				nif->set<quint32>( iNumChildren, n + 1 );
+				auto	iChildren = nif->getIndex( index, "Children" );
+				if ( iChildren.isValid() ) {
+					nif->updateArraySize( iChildren );
+					nif->setLink( QModelIndex_child( iChildren, int(n) ), qint32( nif->getBlockNumber(iBlock) ) );
+				}
 			}
 		}
-	}
-	nif->set<quint32>( iBlock, "Flags", ( !haveMesh ? 14U : 526U ) );	// enable internal geometry
-	nif->set<QString>( iBlock, "Name", QString::fromStdString( node.name ) );
-	{
+		nif->set<quint32>( iBlock, "Flags", ( !haveMesh ? 14U : 526U ) );	// enable internal geometry
+		nif->set<QString>( iBlock, "Name", QString::fromStdString( node.name ) );
+
 		Transform	t;
 		if ( node.matrix.size() >= 16 ) {
 			Matrix4	m;
@@ -1603,56 +1599,56 @@ void ImportGltf::loadNode( const QPersistentModelIndex & index, int nodeNum, boo
 			t.translation = Vector3( t.translation[0], -(t.translation[2]), t.translation[1] );
 		}
 		t.writeBack( nif, iBlock );
-	}
 
-	if ( haveMesh ) {
-		QPersistentModelIndex	iMaterialID = nif->insertNiBlock( "NiIntegerExtraData" );
-		nif->set<QString>( iMaterialID, "Name", "MaterialID" );
-		for ( auto iNumExtraData = nif->getIndex( iBlock, "Num Extra Data List" ); iNumExtraData.isValid(); ) {
-			quint32	n = nif->get<quint32>( iNumExtraData );
-			nif->set<quint32>( iNumExtraData, n + 1 );
-			auto	iExtraData = nif->getIndex( iBlock, "Extra Data List" );
-			if ( iExtraData.isValid() ) {
-				nif->updateArraySize( iExtraData );
-				nif->setLink( QModelIndex_child( iExtraData, int(n) ), quint32( nif->getBlockNumber(iMaterialID) ) );
+		if ( meshPrim ) {
+			QPersistentModelIndex	iMaterialID = nif->insertNiBlock( "NiIntegerExtraData" );
+			nif->set<QString>( iMaterialID, "Name", "MaterialID" );
+			for ( auto iNumExtraData = nif->getIndex( iBlock, "Num Extra Data List" ); iNumExtraData.isValid(); ) {
+				quint32	n = nif->get<quint32>( iNumExtraData );
+				nif->set<quint32>( iNumExtraData, n + 1 );
+				auto	iExtraData = nif->getIndex( iBlock, "Extra Data List" );
+				if ( iExtraData.isValid() ) {
+					nif->updateArraySize( iExtraData );
+					nif->setLink( QModelIndex_child( iExtraData, int(n) ), qint32( nif->getBlockNumber(iMaterialID) ) );
+				}
+				break;
 			}
-			break;
-		}
 
-		std::string	materialPath;
-		if ( node.extras.Has( "Material Path" ) )
-			materialPath = node.extras.Get( "Material Path" ).Get< std::string >();
+			std::string	materialPath;
+			if ( node.extras.Has( "Material Path" ) )
+				materialPath = node.extras.Get( "Material Path" ).Get< std::string >();
 
-		bool	tangentsNeeded = loadMesh( iBlock, materialPath, model.meshes[node.mesh], 0, node.skin );
-		for ( int l = 0; size_t(l) < node.lods.size() && l < 3 && gltfEnableLOD; l++ ) {
-			int	n = node.lods[l];
-			if ( n >= 0 && size_t(n) < model.nodes.size() ) {
-				int	m = model.nodes[n].mesh;
-				if ( m >= 0 && size_t(m) < model.meshes.size() )
-					tangentsNeeded |= loadMesh( iBlock, materialPath, model.meshes[m], l + 1, node.skin );
+			bool	tangentsNeeded = loadMesh( iBlock, materialPath, *meshPrim, 0, node.skin );
+			for ( int l = 0; size_t(l) < node.lods.size() && l < 3 && gltfEnableLOD; l++ ) {
+				int	n = node.lods[l];
+				if ( n >= 0 && size_t(n) < model.nodes.size() ) {
+					int	m = model.nodes[n].mesh;
+					if ( m >= 0 && size_t(m) < model.meshes.size() )
+						tangentsNeeded |= loadMesh( iBlock, materialPath, *meshPrim, l + 1, node.skin );
+				}
 			}
+
+			QPersistentModelIndex	iShaderProperty = nif->insertNiBlock( "BSLightingShaderProperty" );
+			nif->setLink( iBlock, "Shader Property", qint32( nif->getBlockNumber(iShaderProperty) ) );
+
+			if ( !materialPath.empty() ) {
+				auto	matPathTmp = QString::fromStdString( materialPath );
+				materialPath = Game::GameManager::get_full_path( matPathTmp, "materials/", ".mat" );
+				nif->set<QString>( iShaderProperty, "Name", matPathTmp );
+			}
+			std::uint32_t	matPathHash = 0;
+			for ( char c : materialPath )
+				hashFunctionCRC32( matPathHash, (unsigned char) ( c != '/' ? c : '\\' ) );
+			nif->set<quint32>( iMaterialID, "Integer Data", matPathHash );
+
+			if ( tangentsNeeded )
+				spTangentSpace::tangentSpaceSFMesh( nif, iBlock );
+			spUpdateBounds::cast_Starfield( nif, iBlock );
+		} else {
+			for ( int i : node.children )
+				loadNode( iBlock, i, false );
 		}
-
-		QPersistentModelIndex	iShaderProperty = nif->insertNiBlock( "BSLightingShaderProperty" );
-		nif->setLink( iBlock, "Shader Property", quint32( nif->getBlockNumber(iShaderProperty) ) );
-
-		if ( !materialPath.empty() ) {
-			auto	matPathTmp = QString::fromStdString( materialPath );
-			materialPath = Game::GameManager::get_full_path( matPathTmp, "materials/", ".mat" );
-			nif->set<QString>( iShaderProperty, "Name", matPathTmp );
-		}
-		std::uint32_t	matPathHash = 0;
-		for ( char c : materialPath )
-			hashFunctionCRC32( matPathHash, (unsigned char) ( c != '/' ? c : '\\' ) );
-		nif->set<quint32>( iMaterialID, "Integer Data", matPathHash );
-
-		if ( tangentsNeeded )
-			spTangentSpace::tangentSpaceSFMesh( nif, iBlock );
-		spUpdateBounds::cast_Starfield( nif, iBlock );
-	}
-
-	for ( int i : node.children )
-		loadNode( iBlock, i, false );
+	} while ( ++p < primCnt );
 
 	nodeStack.pop_back();
 }
