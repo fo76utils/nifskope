@@ -147,7 +147,9 @@ public:
 
 	void setDebugMode( DebugMode );
 
-	float scale() { return (scene->nifModel && scene->nifModel->getBSVersion() >= 170) ? 1.0 / 32.0 : 1.0; };
+	// Starfield: 1 unit = 1 meter
+	// older games: 64 units = 1 yard = 0.9144 m
+	float scale() { return (scene->nifModel && scene->nifModel->getBSVersion() >= 170) ? float(1.0 / 64.0) : 1.0f; };
 
 	QColor clearColor() const;
 

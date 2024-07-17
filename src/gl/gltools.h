@@ -176,7 +176,7 @@ QVector<int> sortAxes( QVector<float> axesDots );
 
 void drawAxes( const Vector3 & c, float axis, bool color = true );
 void drawAxesOverlay( const Vector3 & c, float axis, QVector<int> axesOrder = {2, 1, 0} );
-void drawGrid( int s, int line, int sub );
+void drawGrid( float s, int lines, int sub );
 void drawBox( const Vector3 & a, const Vector3 & b );
 void drawCircle( const Vector3 & c, const Vector3 & n, float r, int sd = 16 );
 void drawArc( const Vector3 & c, const Vector3 & x, const Vector3 & y, float an, float ax, int sd = 8 );

@@ -564,7 +564,7 @@ void GLView::paintGL()
 
 		// TODO: Configurable grid in Settings
 		// 1024 game units, major lines every 128, minor lines every 64
-		drawGrid( (int)(1024 * scale()), (int)(128 * scale()), 2);
+		drawGrid( 1024.0f * scale(), 16, 2 );
 
 		glPopMatrix();
 	}

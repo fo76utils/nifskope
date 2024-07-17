@@ -609,30 +609,36 @@ void drawBox( const Vector3 & a, const Vector3 & b )
 	glEnd();
 }
 
-void drawGrid( int s /* grid size */, int line /* line spacing */, int sub /* # subdivisions */ )
+void drawGrid( float s /* grid size / 2 */, int lines /* number of lines - 1 */, int sub /* # subdivisions */ )
 {
 	glEnable( GL_BLEND );
 	glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 	glLineWidth( 1.0f );
 	glColor4f( 1.0f, 1.0f, 1.0f, 0.2f );
 
+	float	scale1 = s * 2.0f / float( lines );
 	glBegin( GL_LINES );
-	for ( int i = -s; i <= s; i += line ) {
-		glVertex3f( i, -s, 0.0f );
-		glVertex3f( i, s, 0.0f );
-		glVertex3f( -s, i, 0.0f );
-		glVertex3f( s, i, 0.0f );
+	for ( int i = 0; i <= lines; i++ ) {
+		float	t = float( i ) * scale1 - s;
+		glVertex3f( t, -s, 0.0f );
+		glVertex3f( t, s, 0.0f );
+		glVertex3f( -s, t, 0.0f );
+		glVertex3f( s, t, 0.0f );
 	}
 	glEnd();
 
 	glColor4f( 1.0f, 1.0f, 1.0f, 0.1f );
 	glLineWidth( 0.25f );
+	float	scale2 = s * 2.0f / float( lines * sub );
 	glBegin( GL_LINES );
-	for ( int i = -s; i <= s; i += line/sub ) {
-		glVertex3f( i, -s, 0.0f );
-		glVertex3f( i, s, 0.0f );
-		glVertex3f( -s, i, 0.0f );
-		glVertex3f( s, i, 0.0f );
+	for ( int i = 0; i < lines; i++ ) {
+		for ( int j = 1; j < sub; j++ ) {
+			float	t = float( i * sub + j ) * scale2 - s;
+			glVertex3f( t, -s, 0.0f );
+			glVertex3f( t, s, 0.0f );
+			glVertex3f( -s, t, 0.0f );
+			glVertex3f( s, t, 0.0f );
+		}
 	}
 	glEnd();
 	glDisable( GL_BLEND );
