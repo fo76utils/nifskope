@@ -276,16 +276,16 @@ void spSimplifySFMesh::Meshes::saveGeometryData( NifModel * nif ) const
 			const QVector< Triangle > &	newTriangles = blockTriangles.at( b ).at( l );
 			size_t	newIndicesCnt = size_t( newTriangles.size() ) * 3;
 
-			if ( !isSkinned ) {
-				QModelIndex	iMesh = nif->getIndex( index, "Meshes" );
-				if ( !iMesh.isValid() )
-					continue;
+			QModelIndex	iMesh = nif->getIndex( index, "Meshes" );
+			if ( iMesh.isValid() )
 				iMesh = QModelIndex_child( iMesh, l + 1 );
-				if ( !iMesh.isValid() )
-					continue;
-				nif->set<bool>( iMesh, "Has Mesh", bool(newIndicesCnt) );
-				if ( !newIndicesCnt )
-					continue;
+			if ( iMesh.isValid() )
+				nif->set<bool>( iMesh, "Has Mesh", ( newIndicesCnt && !isSkinned ) );
+			else if ( !isSkinned )
+				continue;
+			if ( !newIndicesCnt )
+				continue;
+			if ( !isSkinned ) {
 				iMesh = nif->getIndex( iMesh, "Mesh" );
 				if ( !iMesh.isValid() )
 					continue;
@@ -338,7 +338,7 @@ void spSimplifySFMesh::Meshes::saveGeometryData( NifModel * nif ) const
 				nif->set<quint32>( iMesh, "Num LODs", 0 );
 				nif->set<quint32>( iMesh, "Num Meshlets", 0 );
 				nif->set<quint32>( iMesh, "Num Cull Data", 0 );
-			} else if ( newIndicesCnt ) {
+			} else {
 				NifItem *	i = nif->getItem( iMeshData );
 				if ( i ) {
 					i->invalidateVersionCondition();
