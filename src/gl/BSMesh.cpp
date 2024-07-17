@@ -142,7 +142,7 @@ void BSMesh::drawSelection() const
 	// Name of this index's parent
 	auto p = idx.parent().data( NifSkopeDisplayRole ).toString();
 
-	float	normalScale = std::max< float >( bounds().radius / 20.0f, 1.0f / 512.0f );
+	float	normalScale = std::max< float >( boundSphere.radius / 20.0f, 1.0f / 512.0f );
 
 	// Draw All Verts lambda
 	auto allv = [this]( float size ) {

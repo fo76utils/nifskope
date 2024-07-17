@@ -128,7 +128,7 @@ bool exportCreateNodes(const NifModel* nif, const Scene* scene, tinygltf::Model&
 				if ( !materialPath.isEmpty() ) {
 					std::string matPath( Game::GameManager::get_full_path( materialPath, "materials/", ".mat" ) );
 					for ( char c : matPath )
-						hashFunctionCRC32( matPathCRC, (unsigned char) ( c != '/' ? char(std::tolower(c)) : '\\' ) );
+						hashFunctionCRC32( matPathCRC, (unsigned char) ( c != '/' ? c : '\\' ) );
 					if ( gltf.materials.find( matPath ) == gltf.materials.end() ) {
 						int materialID = int( gltf.materials.size() );
 						gltf.materials.emplace( matPath, materialID );
