@@ -206,6 +206,48 @@ void spEditStringIndex::browseMaterial( QLineEdit * le, const NifModel * nif )
 
 REGISTER_SPELL( spEditStringIndex )
 
+//! Choose a material path
+class spBrowseMaterialPath final : public Spell
+{
+public:
+	QString name() const override final { return Spell::tr( "Choose" ); }
+	QString page() const override final { return Spell::tr( "Material" ); }
+	QIcon icon() const override final
+	{
+		return QIcon();
+	}
+	bool constant() const override final { return true; }
+	bool instant() const override final { return true; }
+
+	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
+	{
+		if ( !( nif && nif->getBSVersion() >= 130 && index.isValid() ) )
+			return false;
+		if ( nif->getBSVersion() >= 170 )
+			return nif->blockInherits( index, "BSGeometry" ) || nif->blockInherits( index, "BSLightingShaderProperty" );
+		return ( nif->blockInherits( index, "BSTriShape" ) || nif->blockInherits( index, "BSLightingShaderProperty" )
+				|| nif->blockInherits( index, "BSEffectShaderProperty" ) );
+	}
+
+	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
+	{
+		QModelIndex	idx = index;
+		if ( nif->blockInherits( idx, ( nif->getBSVersion() < 170 ? "BSTriShape" : "BSGeometry" ) ) )
+			idx = nif->getBlockIndex( nif->getLink( idx, "Shader Property" ) );
+		if ( nif->blockInherits( idx, "BSShaderProperty" ) )
+			idx = nif->getIndex( idx, "Name" );
+		else
+			return index;
+		if ( idx.isValid() ) {
+			spEditStringIndex	sp;
+			(void) sp.cast( nif, idx );
+		}
+		return index;
+	}
+};
+
+REGISTER_SPELL( spBrowseMaterialPath )
+
 //! Browse a material path stored as header string
 class spBrowseHeaderMaterialPath final : public Spell
 {
@@ -233,7 +275,9 @@ public:
 		if ( !( item && item->valueType() == NifValue::tSizedString ) )
 			return false;
 		QString	s( item->getValueAsString() );
-		return ( s.endsWith( ".bgsm", Qt::CaseInsensitive ) || s.endsWith( ".bgem", Qt::CaseInsensitive ) || s.endsWith( ".mat", Qt::CaseInsensitive ) );
+		if ( nif->getBSVersion() < 170 )
+			return ( s.endsWith( ".bgsm", Qt::CaseInsensitive ) || s.endsWith( ".bgem", Qt::CaseInsensitive ) );
+		return ( s.endsWith( ".mat", Qt::CaseInsensitive ) || s == "MATERIAL_PATH" );
 	}
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
