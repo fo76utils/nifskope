@@ -33,6 +33,7 @@ public:
 	static BSMaterialsCDB::BSResourceID generateResourceID(
 		const BSMaterialsCDB::BSResourceID * id = nullptr, std::set< BSMaterialsCDB::BSResourceID > * idsUsed = nullptr,
 		const BSMaterialsCDB * matDB = nullptr );
+	static inline bool readResourceID( BSMaterialsCDB::BSResourceID & id, const std::string_view & s );
 	static void generateResourceIDs( std::string & matFileData, const BSMaterialsCDB * matDB = nullptr );
 	static void processItem( NifModel * nif, const QModelIndex & index, bool generateIDs = false );
 
@@ -85,6 +86,26 @@ BSMaterialsCDB::BSResourceID spStarfieldMaterialExport::generateResourceID(
 	return newID;
 }
 
+inline bool spStarfieldMaterialExport::readResourceID( BSMaterialsCDB::BSResourceID & id, const std::string_view & s )
+{
+	id = BSMaterialsCDB::BSResourceID( 0, 0, 0 );
+	if ( !( s.length() == 30 && s.starts_with( "res:" ) && s[12] == ':' && s[21] == ':' ) )
+		return false;
+	for ( size_t i = 4; i < 30; i++ ) {
+		if ( i == 12 || i == 21 )
+			continue;
+		char	c = s[i];
+		if ( ( c >= 'A' && c <= 'F' ) || ( c >= 'a' && c <= 'f' ) )
+			c = c + 9;
+		else if ( !( c >= '0' && c <= '9' ) )
+			return false;
+		id.dir = ( id.dir << 4 ) | ( id.file >> 28 );
+		id.file = ( id.file << 4 ) | ( id.ext >> 28 );
+		id.ext = ( id.ext << 4 ) | std::uint32_t( c & 0x0F );
+	}
+	return bool( id );
+}
+
 void spStarfieldMaterialExport::generateResourceIDs( std::string & matFileData, const BSMaterialsCDB * matDB )
 {
 	std::set< BSMaterialsCDB::BSResourceID >	idsUsed;
@@ -93,15 +114,12 @@ void spStarfieldMaterialExport::generateResourceIDs( std::string & matFileData, 
 		if ( !( matFileData[i] == '"' && matFileData[i + 31] == '"' ) )
 			continue;
 		std::string_view	s( matFileData.c_str() + ( i + 1 ), 30 );
-		if ( !( s.starts_with( "res:" ) && s[12] == ':' && s[21] == ':' ) )
+		BSMaterialsCDB::BSResourceID	tmp;
+		if ( !readResourceID( tmp, s ) )
 			continue;
-		BSMaterialsCDB::BSResourceID	tmp( 0, 0, 0 );
-		tmp.fromJSONString( s );
-		if ( tmp ) {
-			idsUsed.insert( tmp );
-			if ( i >= 13 && std::string_view( matFileData.c_str() + ( i - 13 ), 13 ) == "\n      \"ID\": " )
-				idsDefined.emplace( tmp, tmp );
-		}
+		idsUsed.insert( tmp );
+		if ( i >= 13 && std::string_view( matFileData.c_str() + ( i - 13 ), 13 ) == "\n      \"ID\": " )
+			idsDefined.emplace( tmp, tmp );
 	}
 	for ( auto & i : idsDefined )
 		i.second = generateResourceID( &(i.first), &idsUsed, matDB );
@@ -110,11 +128,8 @@ void spStarfieldMaterialExport::generateResourceIDs( std::string & matFileData, 
 		if ( !( matFileData[i] == '"' && matFileData[i + 31] == '"' ) )
 			continue;
 		std::string_view	s( matFileData.c_str() + ( i + 1 ), 30 );
-		if ( !( s.starts_with( "res:" ) && s[12] == ':' && s[21] == ':' ) )
-			continue;
-		BSMaterialsCDB::BSResourceID	tmp( 0, 0, 0 );
-		tmp.fromJSONString( s );
-		if ( !tmp )
+		BSMaterialsCDB::BSResourceID	tmp;
+		if ( !readResourceID( tmp, s ) )
 			continue;
 		auto	j = idsDefined.find( tmp );
 		if ( j == idsDefined.end() || j->second == tmp ) {
