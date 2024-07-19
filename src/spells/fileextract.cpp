@@ -253,7 +253,7 @@ QModelIndex spExtractAllResources::cast( NifModel * nif, const QModelIndex & ind
 
 	std::set< std::string >	fileSet;
 	for ( int b = 0; b < nif->getBlockCount(); b++ ) {
-		const NifItem * item = nif->getBlockItem( quint32(b) );
+		const NifItem * item = nif->getBlockItem( qint32(b) );
 		if ( item )
 			findPaths( fileSet, nif, item );
 	}
@@ -400,7 +400,7 @@ QModelIndex spMeshFileExport::cast( NifModel * nif, const QModelIndex & index )
 		meshesConverted = processItem( nif, item, outputDirectory );
 	} else {
 		for ( int b = 0; b < nif->getBlockCount(); b++ )
-			meshesConverted |= processItem( nif, nif->getBlockItem( quint32(b) ), outputDirectory );
+			meshesConverted |= processItem( nif, nif->getBlockItem( qint32(b) ), outputDirectory );
 	}
 	if ( meshesConverted )
 		Game::GameManager::close_resources();
@@ -432,7 +432,8 @@ public:
 		return ( item->name() == "BSGeometry" && ( nif->get<quint32>(item, "Flags") & 0x0200 ) == 0 );
 	}
 
-	bool processItem( NifModel * nif, NifItem * item );
+	static bool processItem( NifModel * nif, NifItem * item );
+	static bool processAllItems( NifModel * nif );
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final;
 };
 
@@ -486,6 +487,14 @@ bool spMeshFileImport::processItem( NifModel * nif, NifItem * item )
 	return true;
 }
 
+bool spMeshFileImport::processAllItems( NifModel * nif )
+{
+	bool	r = false;
+	for ( int b = 0; b < nif->getBlockCount(); b++ )
+		r = r | processItem( nif, nif->getBlockItem( qint32(b) ) );
+	return r;
+}
+
 QModelIndex spMeshFileImport::cast( NifModel * nif, const QModelIndex & index )
 {
 	if ( !( nif && nif->getBSVersion() >= 170 ) )
@@ -495,12 +504,10 @@ QModelIndex spMeshFileImport::cast( NifModel * nif, const QModelIndex & index )
 	if ( item && !( item->name() == "BSGeometry" && (nif->get<quint32>(item, "Flags") & 0x0200) == 0 ) )
 		return index;
 
-	if ( item ) {
+	if ( item )
 		processItem( nif, item );
-	} else {
-		for ( int b = 0; b < nif->getBlockCount(); b++ )
-			processItem( nif, nif->getBlockItem( quint32(b) ) );
-	}
+	else
+		processAllItems( nif );
 
 	return index;
 }

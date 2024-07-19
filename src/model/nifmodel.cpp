@@ -1813,10 +1813,18 @@ static QString getNIFDataPath( const char * pathName )
 	return QString();
 }
 
+class spMeshFileImport
+{
+public:
+	static bool processAllItems( NifModel * nif );
+};
+
 bool NifModel::load( QIODevice & device, const char* fileName )
 {
 	QSettings settings;
 	bool ignoreSize = settings.value( "Ignore Block Size", true ).toBool();
+	bool convertSFMeshes =
+		settings.value( "Settings/Nif/Convert Starfield meshes to internal geometry on load", true ).toBool();
 
 	clear();
 
@@ -2045,6 +2053,10 @@ bool NifModel::load( QIODevice & device, const char* fileName )
 
 	//qDebug() << t.msecsTo( QTime::currentTime() );
 	reset(); // notify model views that a significant change to the data structure has occurded
+
+	if ( getBSVersion() >= 170 && convertSFMeshes )
+		spMeshFileImport::processAllItems( this );
+
 	return true;
 }
 
@@ -2569,8 +2581,8 @@ void NifModel::updateLinks( int block )
 		for ( int c = 0; c < n; c++ ) {
 			if ( !hasrefs[c] ) {
 				const NifItem *	b;
-				if ( bsVersion >= 151 && ( b = getBlockItem( quint32(c) ) ) != nullptr && b->name() == "BSShaderTextureSet" ) {
-					if ( c > 0 && ( b = getBlockItem( quint32(c - 1) ) ) != nullptr && b->name() == "BSLightingShaderProperty" )
+				if ( bsVersion >= 151 && ( b = getBlockItem( qint32(c) ) ) != nullptr && b->name() == "BSShaderTextureSet" ) {
+					if ( c > 0 && ( b = getBlockItem( qint32(c - 1) ) ) != nullptr && b->name() == "BSLightingShaderProperty" )
 						childLinks[c - 1] += c;
 				} else {
 					rootLinks.append( c );
