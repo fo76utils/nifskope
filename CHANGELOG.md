@@ -1,5 +1,10 @@
  == CHANGELOG ==
 
+* Added a new spell (Material/Clone and Copy to Clipboard) that is available in the right click menu on the name of a Starfield BSLightingShaderProperty, and copies the material to the clipboard in JSON (.mat) format, but with randomly generated new resource IDs. This is useful when creating a new material using an existing one as the base.
+* Starfield NIF files are now automatically converted to internal geometry on load. This is often useful because most geometry editing functionality is not implemented for external .mesh files, but it can be disabled in the general settings under 'NIF'.
+* New 'Material' spell menu for BSGeometry, BSTriShape (Fallout 4 and 76), BSLightingShaderProperty and BSEffectShaderProperty blocks, with shortcuts to material spells.
+* Bug fixes in drawing the normals or tangents of a selected Starfield shape, the Starfield grid scale, and simplifying skinned meshes.
+
 #### NifSkope-2.0.dev9-20240716
 
 * Implemented Starfield glTF import, fixes and improvements to glTF export.
