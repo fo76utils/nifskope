@@ -211,7 +211,7 @@ QModelIndex spResourceCopy::cast(NifModel* nif, const QModelIndex& index)
 	QString projectName = sanitizeFileName(le2->text().trimmed().remove(QRegularExpression("^[\\\\/]+|[\\\\/]+$")));
 
 	for (int b = 0; b < nif->getBlockCount(); b++) {
-		NifItem* item = nif->getBlockItem(quint32(b));
+		NifItem* item = nif->getBlockItem(qint32(b));
 		if (item)
 			copyPaths(nif, item, authorPrefix, projectName, nif->getFolder());
 	}

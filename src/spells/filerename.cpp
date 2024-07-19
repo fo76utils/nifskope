@@ -108,7 +108,7 @@ QModelIndex spResourceRename::cast ( NifModel * nif, const QModelIndex & index )
 	QRegularExpression	filterPattern( le3->text().trimmed(), QRegularExpression::CaseInsensitiveOption );
 
 	for ( int b = 0; b < nif->getBlockCount(); b++ ) {
-		NifItem *	item = nif->getBlockItem( quint32(b) );
+		NifItem *	item = nif->getBlockItem( qint32(b) );
 		if ( item )
 			renamePaths( nif, item, searchPattern, replacementString, filterPattern );
 	}
