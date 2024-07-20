@@ -415,7 +415,7 @@ void GLView::glProjection( int x, int y )
 		bs |= BoundSphere( scene->view * Vector3(), axis );
 	}
 
-	float bounds = (bs.radius > 1024.0 * scale()) ? bs.radius : 1024.0 * scale();
+	float bounds = std::max< float >( bs.radius, 1024.0f * scale() );
 
 
 	GLdouble nr = fabs( bs.center[2] ) - bounds * 1.5;
@@ -423,23 +423,13 @@ void GLView::glProjection( int x, int y )
 
 	if ( perspectiveMode || (view == ViewWalk) ) {
 		// Perspective View
-		if ( nr < 1.0 * scale() )
-			nr = 1.0 * scale();
-		if ( fr < 2.0 * scale() )
-			fr = 2.0 * scale();
-
 		if ( nr > fr ) {
 			// add: swap them when needed
-			GLfloat tmp = nr;
-			nr = fr;
-			fr = tmp;
+			std::swap( nr, fr );
 		}
-
-		if ( (fr - nr) < 0.00001f ) {
-			// add: ensure distance
-			nr = 1.0 * scale();
-			fr = 2.0 * scale();
-		}
+		nr = std::max< GLdouble >( nr, scale() );
+		// ensure distance
+		fr = std::max< GLdouble >( fr, nr + scale() );
 
 		GLdouble h2 = tan( ( cfg.fov / Zoom ) / 360 * M_PI ) * nr;
 		GLdouble w2 = h2 * aspect;
@@ -1078,7 +1068,7 @@ void GLView::setCenter()
 		// Center on entire mesh
 		BoundSphere bs = scene->bounds();
 
-		if ( bs.radius < 1 * scale() )
+		if ( bs.radius < scale() )
 			bs.radius = 1024.0 * scale();
 
 		setDistance( bs.radius * 1.2 );
@@ -1924,7 +1914,7 @@ void GLView::mouseReleaseEvent( QMouseEvent * event )
 void GLView::wheelEvent( QWheelEvent * event )
 {
 	if ( view == ViewWalk )
-		mouseMov += Vector3( 0, 0, double( event->angleDelta().y() ) / 8.0 ) * scale();
+		mouseMov += Vector3( 0, 0, double( event->angleDelta().y() ) / 4.0 ) * scale();
 	else
 	{
 		if (event->angleDelta().y() < 0)
