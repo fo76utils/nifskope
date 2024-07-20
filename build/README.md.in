@@ -2,7 +2,7 @@
 
 NifSkope is a tool for opening and editing the NetImmerse file format (NIF). NIF is used by video games such as Morrowind, Oblivion, Skyrim, Fallout 3/NV/4/76, Starfield, Civilization IV, and more.
 
-This is an experimental fork of 2.0.dev9 with partial support for Starfield materials, and improvements and fixes to Fallout 76 rendering.
+This is an experimental fork of 2.0.dev9 with many improvements to Starfield support, and a number of fixes to issues related to older games. See [CHANGELOG.md](https://github.com/fo76utils/nifskope/blob/develop/CHANGELOG.md) for details.
 
 ### Download
 
@@ -42,7 +42,7 @@ Anyone can report issues specific to this fork at [GitHub](https://github.com/fo
 
 ### Contribute
 
-You can fork the latest source from [GitHub](https://github.com/niftools/nifskope). See [Fork A Repo](https://help.github.com/articles/fork-a-repo) on how to send your contributions upstream. To grab all submodules, make sure to use `--recursive` like so:
+You can fork the latest source from [GitHub](https://github.com/fo76utils/nifskope). See [Fork A Repo](https://help.github.com/articles/fork-a-repo) on how to send your contributions upstream. To grab all submodules, make sure to use `--recursive` like so:
 
 ```
 git clone --recursive git://github.com/<YOUR_USERNAME>/nifskope.git
