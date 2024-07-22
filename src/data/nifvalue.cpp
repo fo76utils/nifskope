@@ -1053,7 +1053,7 @@ QString NifValue::toString() const
 				suf = ")";
 			}
 
-			return ( pre + QString( "Y %1 P %2 R %3" ) + suf )
+			return ( pre + QString( "X %1 Y %2 Z %3" ) + suf )
 			       .arg( NumOrMinMax( rad2deg(x), 'f', ROTATION_COARSE ) )
 			       .arg( NumOrMinMax( rad2deg(y), 'f', ROTATION_COARSE ) )
 			       .arg( NumOrMinMax( rad2deg(z), 'f', ROTATION_COARSE ) );
@@ -1065,7 +1065,7 @@ QString NifValue::toString() const
 			m->decompose( t, r, s );
 			float xr, yr, zr;
 			r.toEuler( xr, yr, zr );
-			return QString( "Trans( X %1 Y %2 Z %3 ) Rot( Y %4 P %5 R %6 ) Scale( X %7 Y %8 Z %9 )" )
+			return QString( "Trans( X %1 Y %2 Z %3 ) Rot( X %4 Y %5 Z %6 ) Scale( X %7 Y %8 Z %9 )" )
 			       .arg( t[0], 0, 'f', 3 )
 			       .arg( t[1], 0, 'f', 3 )
 			       .arg( t[2], 0, 'f', 3 )
