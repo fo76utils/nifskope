@@ -271,15 +271,10 @@ static bool envMapFileListFilterFunction( void * p, const std::string_view & s )
 	return ( s.find("/cubemaps/") != std::string_view::npos );
 }
 
-void GLView::selectPBRCubeMap( quint32 bsVersion )
+bool GLView::selectPBRCubeMapForGame( quint32 bsVersion )
 {
-	if ( !bsVersion ) {
-		if ( !model )
-			return;
-		bsVersion = model->getBSVersion();
-	}
 	if ( bsVersion < 151 )
-		return;
+		return false;
 	bool	isStarfield = ( bsVersion >= 170 );
 	QString	cfgPath( !isStarfield ? "Settings/Render/General/Cube Map Path FO 76" : "Settings/Render/General/Cube Map Path STF" );
 
@@ -295,27 +290,25 @@ void GLView::selectPBRCubeMap( quint32 bsVersion )
 	if ( fileBrowser.exec() == QDialog::Accepted )
 		newPath = fileBrowser.getItemSelected();
 	if ( !newPath || newPath->empty() )
-		return;
+		return false;
 
 	if ( NifSkope::getOptions() )
 		NifSkope::getOptions()->apply();
 	settings.setValue( cfgPath, QString::fromLatin1( newPath->data(), qsizetype(newPath->length()) ) );
 	if ( NifSkope::getOptions() )
 		emit NifSkope::getOptions()->loadSettings();
-	if ( scene && scene->renderer ) {
-		scene->renderer->updateSettings();
-		updateScene();
+
+	return true;
+}
+
+void GLView::selectPBRCubeMap()
+{
+	if ( model && selectPBRCubeMapForGame( model->getBSVersion() ) ) {
+		if ( scene && scene->renderer ) {
+			scene->renderer->updateSettings();
+			updateScene();
+		}
 	}
-}
-
-void GLView::selectF76CubeMap()
-{
-	selectPBRCubeMap( 155 );
-}
-
-void GLView::selectSTFCubeMap()
-{
-	selectPBRCubeMap( 172 );
 }
 
 QColor GLView::clearColor() const

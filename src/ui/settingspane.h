@@ -9,11 +9,9 @@
 
 //! @file settingspane.h SettingsPane, SettingsGeneral, SettingsRender, SettingsResources
 
-class FSManager;
 class SettingsDialog;
 class QStringListModel;
 class QListWidget;
-class GLView;
 
 namespace Ui {
 class SettingsGeneral;
@@ -77,7 +75,10 @@ public:
 	void read() override final;
 	void write() override final;
 	void setDefault() override final;
-	void setGLView( GLView * ogl );
+
+public slots:
+	void selectF76CubeMap();
+	void selectSTFCubeMap();
 
 private:
 	std::unique_ptr<Ui::SettingsRender> ui;

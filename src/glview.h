@@ -146,6 +146,7 @@ public:
 	void flipOrientation();
 
 	void setDebugMode( DebugMode );
+	static bool selectPBRCubeMapForGame( quint32 bsVersion );
 
 	// Starfield: 1 unit = 1 meter
 	// older games: 64 units = 1 yard = 0.9144 m
@@ -179,9 +180,7 @@ public slots:
 	void updateAnimationState( bool checked );
 	void setVisMode( Scene::VisMode, bool checked = true );
 	void updateSettings();
-	void selectPBRCubeMap( quint32 bsVersion = 0 );
-	void selectF76CubeMap();
-	void selectSTFCubeMap();
+	void selectPBRCubeMap();
 
 signals:
 	void clicked( const QModelIndex & );

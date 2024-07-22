@@ -303,9 +303,7 @@
     <addaction name="aVisNormals"/>
     <addaction name="aSilhouette"/>
     <addaction name="separator"/>
-    <addaction name="aTest1Dbg"/>
-    <addaction name="aTest2Dbg"/>
-    <addaction name="aTest3Dbg"/>
+    <addaction name="aSaveLighting"/>
     <addaction name="aDisableShading"/>
     <addaction name="aUpdateView"/>
    </widget>
@@ -1943,6 +1941,11 @@ background: qradialgradient(spread:pad, cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0
     <string>Show Hidden</string>
    </property>
   </action>
+  <action name="aSaveLighting">
+   <property name="text">
+    <string>Save Current Lighting as Default</string>
+   </property>
+  </action>
   <action name="aBrowseArchive">
    <property name="text">
     <string>Browse Archive...</string>
@@ -1962,39 +1965,6 @@ background: qradialgradient(spread:pad, cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0
    </property>
    <property name="text">
     <string>Archive Browser</string>
-   </property>
-  </action>
-  <action name="aTest1Dbg">
-   <property name="text">
-    <string>Test 1 Debug</string>
-   </property>
-   <property name="shortcut">
-    <string>Alt+,</string>
-   </property>
-   <property name="visible">
-    <bool>false</bool>
-   </property>
-  </action>
-  <action name="aTest2Dbg">
-   <property name="text">
-    <string>Test 2 Debug</string>
-   </property>
-   <property name="shortcut">
-    <string>Alt+.</string>
-   </property>
-   <property name="visible">
-    <bool>false</bool>
-   </property>
-  </action>
-  <action name="aTest3Dbg">
-   <property name="text">
-    <string>Test 3 Debug</string>
-   </property>
-   <property name="shortcut">
-    <string>Alt+/</string>
-   </property>
-   <property name="visible">
-    <bool>false</bool>
    </property>
   </action>
   <action name="aSelectObject">

@@ -30,7 +30,6 @@ public:
 
 
 	static void registerPage( QWidget *, const QString & );
-	void setGLView( GLView * ogl );
 
 	QStackedWidget * content;
 	QListWidget * categories;

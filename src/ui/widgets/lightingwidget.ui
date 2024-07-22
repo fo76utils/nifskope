@@ -102,20 +102,6 @@
    <item>
     <widget class="QFrame" name="frame_2">
      <layout class="QGridLayout" name="gridLayout">
-      <item row="1" column="1">
-       <widget class="QSlider" name="sldAmbient">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="1">
-       <widget class="QSlider" name="sldDeclination">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-       </widget>
-      </item>
       <item row="0" column="1">
        <widget class="QSlider" name="sldDirectional">
         <property name="orientation">
@@ -123,22 +109,36 @@
         </property>
        </widget>
       </item>
+      <item row="1" column="1">
+       <widget class="QSlider" name="sldLightColor">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QSlider" name="sldAmbient">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
       <item row="3" column="1">
-       <widget class="QSlider" name="sldPlanarAngle">
+       <widget class="QSlider" name="sldDeclination">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
        </widget>
       </item>
       <item row="4" column="1">
-       <widget class="QSlider" name="sldLightLevel">
+       <widget class="QSlider" name="sldPlanarAngle">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
        </widget>
       </item>
       <item row="5" column="1">
-       <widget class="QSlider" name="sldLightColor">
+       <widget class="QSlider" name="sldLightScale">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
@@ -148,58 +148,6 @@
        <widget class="QSlider" name="sldToneMapping">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="0">
-       <widget class="QPushButton" name="btnDeclination">
-        <property name="maximumSize">
-         <size>
-          <width>24</width>
-          <height>24</height>
-         </size>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-        <property name="icon">
-         <iconset resource="../../../res/nifskope.qrc">
-          <normaloff>:/btn/lightVertical</normaloff>:/btn/lightVertical</iconset>
-        </property>
-        <property name="iconSize">
-         <size>
-          <width>18</width>
-          <height>18</height>
-         </size>
-        </property>
-        <property name="flat">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="0">
-       <widget class="QPushButton" name="btnPlanarAngle">
-        <property name="maximumSize">
-         <size>
-          <width>24</width>
-          <height>24</height>
-         </size>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-        <property name="icon">
-         <iconset resource="../../../res/nifskope.qrc">
-          <normaloff>:/btn/lightHorizontal</normaloff>:/btn/lightHorizontal</iconset>
-        </property>
-        <property name="iconSize">
-         <size>
-          <width>18</width>
-          <height>18</height>
-         </size>
-        </property>
-        <property name="flat">
-         <bool>true</bool>
         </property>
        </widget>
       </item>
@@ -230,6 +178,32 @@
        </widget>
       </item>
       <item row="1" column="0">
+       <widget class="QPushButton" name="btnLightColor">
+        <property name="maximumSize">
+         <size>
+          <width>24</width>
+          <height>24</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../../res/nifskope.qrc">
+          <normaloff>:/btn/lightcolor</normaloff>:/btn/lightcolor</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>18</width>
+          <height>18</height>
+         </size>
+        </property>
+        <property name="flat">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
        <widget class="QPushButton" name="btnAmbient">
         <property name="maximumSize">
          <size>
@@ -255,8 +229,8 @@
         </property>
        </widget>
       </item>
-      <item row="4" column="0">
-       <widget class="QPushButton" name="btnLightLevel">
+      <item row="3" column="0">
+       <widget class="QPushButton" name="btnDeclination">
         <property name="maximumSize">
          <size>
           <width>24</width>
@@ -268,7 +242,33 @@
         </property>
         <property name="icon">
          <iconset resource="../../../res/nifskope.qrc">
-          <normaloff>:/btn/light</normaloff>:/btn/light</iconset>
+          <normaloff>:/btn/lightVertical</normaloff>:/btn/lightVertical</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>18</width>
+          <height>18</height>
+         </size>
+        </property>
+        <property name="flat">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QPushButton" name="btnPlanarAngle">
+        <property name="maximumSize">
+         <size>
+          <width>24</width>
+          <height>24</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../../res/nifskope.qrc">
+          <normaloff>:/btn/lightHorizontal</normaloff>:/btn/lightHorizontal</iconset>
         </property>
         <property name="iconSize">
          <size>
@@ -282,7 +282,7 @@
        </widget>
       </item>
       <item row="5" column="0">
-       <widget class="QPushButton" name="btnLightColor">
+       <widget class="QPushButton" name="btnLightScale">
         <property name="maximumSize">
          <size>
           <width>24</width>
@@ -294,7 +294,7 @@
         </property>
         <property name="icon">
          <iconset resource="../../../res/nifskope.qrc">
-          <normaloff>:/btn/lightcolor</normaloff>:/btn/lightcolor</iconset>
+          <normaloff>:/btn/light</normaloff>:/btn/light</iconset>
         </property>
         <property name="iconSize">
          <size>

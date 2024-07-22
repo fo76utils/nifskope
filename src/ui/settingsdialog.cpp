@@ -72,16 +72,6 @@ void SettingsDialog::registerPage( QWidget * parent, const QString & text )
 		p->categories->addItem( text );
 }
 
-void SettingsDialog::setGLView( GLView * ogl )
-{
-	int	n = content->count();
-	for ( int i = 0; i < n; i++ ) {
-		QWidget *	w = content->widget( i );
-		if ( typeid(*w) == typeid(SettingsRender) )
-			static_cast< SettingsRender * >( w )->setGLView( ogl );
-	}
-}
-
 void SettingsDialog::apply()
 {
 	emit saveSettings();

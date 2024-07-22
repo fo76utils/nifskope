@@ -412,6 +412,9 @@ SettingsRender::SettingsRender( QWidget * parent ) :
 
 	alphaSlider( ui->colorWireframe, ui->wireframe, ui->layAlphaWire );
 	alphaSlider( ui->colorHighlight, ui->highlight, ui->layAlphaHigh );
+
+	connect( ui->btnLoadF76CubeMap, &QPushButton::clicked, this, &SettingsRender::selectF76CubeMap );
+	connect( ui->btnLoadSTFCubeMap, &QPushButton::clicked, this, &SettingsRender::selectSTFCubeMap );
 }
 
 void SettingsRender::read()
@@ -474,10 +477,16 @@ void SettingsRender::setDefault()
 	read();
 }
 
-void SettingsRender::setGLView( GLView * ogl )
+void SettingsRender::selectF76CubeMap()
 {
-	connect( ui->btnLoadF76CubeMap, &QPushButton::clicked, ogl, &GLView::selectF76CubeMap );
-	connect( ui->btnLoadSTFCubeMap, &QPushButton::clicked, ogl, &GLView::selectSTFCubeMap );
+	if ( GLView::selectPBRCubeMapForGame( 155 ) )
+		modifyPane();
+}
+
+void SettingsRender::selectSTFCubeMap()
+{
+	if ( GLView::selectPBRCubeMapForGame( 172 ) )
+		modifyPane();
 }
 
 /*

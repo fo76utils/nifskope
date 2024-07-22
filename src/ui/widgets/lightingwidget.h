@@ -23,6 +23,9 @@ public:
 	void setDefaults();
 	void setActions( QVector<QAction *> actions );
 
+public slots:
+	void saveSettings();
+
 private:
 	std::unique_ptr<Ui::LightingWidget> ui;
 
@@ -33,6 +36,9 @@ private:
 
 		DirMin = 0,
 		DirMax = BRIGHT,
+		LightColorMin = 0,
+		LightColorMax = BRIGHT,
+
 		AmbientMin = 0,
 		AmbientMax = BRIGHT,
 		DeclinationMin = -POS,
@@ -40,19 +46,17 @@ private:
 		PlanarAngleMin = -POS,
 		PlanarAngleMax = POS,
 
+		LightScaleMin = 0,
+		LightScaleMax = BRIGHT,
+		ToneMappingMin = 0,
+		ToneMappingMax = BRIGHT,
+
 		DirDefault = DirMax / 2,
+		LightColorDefault = POS,
 		AmbientDefault = AmbientMax / 2,
 		DeclinationDefault = (DeclinationMax + DeclinationMin),
 		PlanarAngleDefault = (PlanarAngleMax + PlanarAngleMin),
-
-		LightLevelMin = 0,
-		LightLevelMax = BRIGHT,
-		LightLevelDefault = POS,
-		LightColorMin = 0,
-		LightColorMax = BRIGHT,
-		LightColorDefault = POS,
-		ToneMappingMin = 0,
-		ToneMappingMax = BRIGHT,
+		LightScaleDefault = POS,
 		ToneMappingDefault = POS
 	};
 };

@@ -259,9 +259,6 @@ void NifSkope::initActions()
 	connect( shadingActions, &QActionGroup::triggered, ogl->getScene(), &Scene::updateSceneOptionsGroup );
 	connect( shadingActions, &QActionGroup::triggered, ogl, &GLView::updateScene );
 
-	auto testActions = agroup( { ui->aTest1Dbg, ui->aTest2Dbg, ui->aTest3Dbg }, true );
-	connect( testActions, &QActionGroup::triggered, ogl->getScene(), &Scene::updateSceneOptionsGroup );
-
 	// Sync actions to Scene state
 	for ( auto a : showActions->actions() ) {
 		a->setChecked( ogl->scene->options & a->data().toInt() );
@@ -687,8 +684,10 @@ QMenu * NifSkope::lightingWidget()
 	auto aLightingWidget = new QWidgetAction( mLight );
 	aLightingWidget->setDefaultWidget( lightingWidget );
 
-
 	mLight->addAction( aLightingWidget );
+
+
+	connect( ui->aSaveLighting, &QAction::triggered, lightingWidget, &LightingWidget::saveSettings );
 
 	return mLight;
 }
