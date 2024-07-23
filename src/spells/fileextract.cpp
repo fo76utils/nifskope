@@ -115,7 +115,7 @@ std::string spResourceFileExtract::getOutputDirectory()
 		QFileDialog	dialog;
 		dialog.setFileMode( QFileDialog::Directory );
 		if ( !dstPath.isEmpty() )
-			dialog.selectFile( dstPath );
+			dialog.setDirectory( dstPath );
 		if ( !dialog.exec() )
 			return std::string();
 		dstPath = dialog.selectedFiles().at( 0 );
@@ -368,9 +368,13 @@ QModelIndex spExtractAllMaterials::cast( NifModel * nif, const QModelIndex & ind
 			QCoreApplication::processEvents();
 			if ( dlg.result() == QDialog::Rejected )
 				break;
-			(void) materials->loadMaterial( i );
 			matFileData.clear();
-			materials->getJSONMaterial( matFileData, i );
+			try {
+				(void) materials->loadMaterial( i );
+				materials->getJSONMaterial( matFileData, i );
+			} catch ( FO76UtilsError & e ) {
+				QMessageBox::critical( nullptr, "NifSkope error", QString( "Error loading material '%1': %2" ).arg( QLatin1String( i.data(), qsizetype(i.length()) ) ).arg( e.what() ) );
+			}
 			if ( !matFileData.empty() ) {
 				matFileData += '\n';
 				fullPath = dstPath;
