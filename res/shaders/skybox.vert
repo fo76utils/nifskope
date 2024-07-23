@@ -2,7 +2,6 @@
 
 out vec3 LightDir;
 out vec3 ViewDir;
-out vec3 NormalDir;
 
 out vec4 A;
 out vec4 D;
@@ -26,7 +25,6 @@ mat4 rotateEnv( mat4 m, float rz )
 void main( void )
 {
 	vec3 v = vec3(gl_ModelViewMatrix * gl_Vertex);
-	NormalDir = normalize(gl_NormalMatrix * gl_Normal);
 
 	reflMatrix = rotateEnv(mat4(1.0), gl_LightSource[0].position.w * 3.14159265);
 

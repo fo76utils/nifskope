@@ -8,7 +8,6 @@ uniform int	skyCubeMipLevel;
 
 in vec3 LightDir;
 in vec3 ViewDir;
-in vec3 NormalDir;
 
 in vec4 A;
 in vec4 D;
