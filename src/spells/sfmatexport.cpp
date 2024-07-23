@@ -2,10 +2,15 @@
 #include "libfo76utils/src/material.hpp"
 #include "model/nifmodel.h"
 
+#include <cctype>
 #include <random>
 #include <chrono>
 
 #include <QClipboard>
+#include <QDir>
+#include <QFile>
+#include <QFileDialog>
+#include <QSettings>
 
 //! Export Starfield material as JSON format .mat file
 class spStarfieldMaterialExport final : public Spell
@@ -74,9 +79,12 @@ BSMaterialsCDB::BSResourceID spStarfieldMaterialExport::generateResourceID(
 	while ( true ) {
 		std::uint64_t	tmp1 = rndGen();
 		std::uint64_t	tmp2 = rndGen();
-		newID.file = ( newID.file & 0xFFFC0000U ) | ( std::uint32_t(tmp1) & 0x0003FFFFU );
-		newID.ext = 0xA0000000U | std::uint32_t( tmp1 >> 37 );
+		tmp1 = ( tmp1 & 0x07FFFFFF0003FFFFULL ) | 0xA000000000040000ULL;
+		newID.file = std::uint32_t( tmp1 );
+		newID.ext = std::uint32_t( tmp1 >> 32 );
 		newID.dir = std::uint32_t( tmp2 );
+		if ( !( ( newID.dir + 1U ) & 0xFFFFFFFEU ) ) [[unlikely]]
+			continue;
 		if ( matDB && matDB->getMaterial( newID ) ) [[unlikely]]
 			continue;
 		if ( idsUsed && !idsUsed->insert( newID ).second ) [[unlikely]]
@@ -219,4 +227,149 @@ public:
 };
 
 REGISTER_SPELL( spStarfieldMaterialClone )
+
+//! Save Starfield material with new name and resource IDs as JSON format .mat file
+class spStarfieldMaterialSaveAs final : public Spell
+{
+public:
+	QString name() const override final { return Spell::tr( "Save as New..." ); }
+	QString page() const override final { return Spell::tr( "Material" ); }
+	QIcon icon() const override final
+	{
+		return QIcon();
+	}
+	bool constant() const override final { return true; }
+	bool instant() const override final { return true; }
+
+	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
+	{
+		if ( nif && nif->getBSVersion() >= 170 && index.isValid() )
+			return nif->blockInherits( index, "BSGeometry" ) || nif->blockInherits( index, "BSLightingShaderProperty" );
+		return false;
+	}
+
+	static std::string getBaseName( const std::string_view & fullPath );
+	static void renameMaterial(
+		std::string & matFileData, const std::string_view & matPath, const std::string_view & newPath );
+	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final;
+};
+
+std::string spStarfieldMaterialSaveAs::getBaseName( const std::string_view & fullPath )
+{
+	size_t	p1 = fullPath.rfind( '/' );
+	size_t	p2 = fullPath.rfind( '\\' );
+	size_t	p3 = fullPath.rfind( '.' );
+	if ( p1 == std::string_view::npos )
+		p1 = p2;
+	else if ( p2 != std::string_view::npos )
+		p1 = std::max( p1, p2 );
+	if ( p1 == std::string_view::npos )
+		p1 = 0;
+	else
+		p1++;
+	if ( p3 == std::string_view::npos || p3 < p1 )
+		p3 = fullPath.length();
+	std::string	s( fullPath.data() + p1, p3 - p1 );
+	for ( auto & c : s ) {
+		if ( !( (unsigned char) c >= 0x20 && (unsigned char) c < 0x7F ) )
+			c = '_';
+	}
+	return s;
+}
+
+void spStarfieldMaterialSaveAs::renameMaterial(
+	std::string & matFileData, const std::string_view & matPath, const std::string_view & newPath )
+{
+	std::string	matBaseName( getBaseName( matPath ) );
+	std::string	newBaseName( getBaseName( newPath ) );
+	std::string_view	s( matFileData );
+	std::string	newFileData;
+	while ( true ) {
+		size_t	n = s.find( '\n' );
+		if ( n == std::string_view::npos )
+			break;
+		n++;
+		std::string_view	t( s.data(), n );
+		s = std::string_view( s.data() + n, s.length() - n );
+		bool	foundMatch = false;
+		if ( s.starts_with( "          },\n          \"Index\": 0,\n          \"Type\": \"BSComponentDB::CTName\"" ) ) {
+			if ( t.starts_with( "            \"Name\": \"" ) ) {
+				for ( size_t i = 0; true; i++ ) {
+					if ( ( i + 21 ) >= t.length() )
+						break;
+					char	c = t[i + 21];
+					if ( i >= matBaseName.length() ) {
+						t = std::string_view( t.data() + ( i + 21 ), t.length() - ( i + 21 ) );
+						foundMatch = ( c == '"' || c == '_' );
+						break;
+					}
+					if ( std::tolower( c ) != std::tolower( matBaseName[i] ) )
+						break;
+				}
+			}
+		}
+		if ( foundMatch )
+			printToString( newFileData, "            \"Name\": \"%s", newBaseName.c_str() );
+		newFileData += t;
+	}
+	matFileData = newFileData;
+}
+
+QModelIndex spStarfieldMaterialSaveAs::cast( NifModel * nif, const QModelIndex & index )
+{
+	QModelIndex	idx = index;
+	if ( nif->blockInherits( idx, "BSGeometry" ) )
+		idx = nif->getBlockIndex( nif->getLink( idx, "Shader Property" ) );
+	if ( nif->blockInherits( idx, "BSLightingShaderProperty" ) )
+		idx = nif->getIndex( idx, "Name" );
+	else
+		return index;
+	if ( !idx.isValid() )
+		return index;
+
+	QString	materialPath( nif->resolveString( nif->getItem( idx ) ) );
+	if ( !materialPath.isEmpty() ) {
+		std::string	matFilePath( Game::GameManager::get_full_path( materialPath, "materials/", ".mat" ) );
+		std::string	matFileData;
+		try {
+			CE2MaterialDB *	materials = nif->getCE2Materials();
+			if ( !materials )
+				return index;
+			(void) materials->loadMaterial( matFilePath );
+			materials->getJSONMaterial( matFileData, matFilePath );
+			if ( matFileData.empty() )
+				return index;
+
+			QString	dirName = nif->getFolder();
+			if ( dirName.isEmpty() || dirName.contains( ".ba2/", Qt::CaseInsensitive ) || dirName.contains( ".bsa/", Qt::CaseInsensitive ) ) {
+				QSettings	settings;
+				dirName = settings.value( "Spells//Extract File/Last File Path", QString() ).toString();
+			}
+			if ( !dirName.isEmpty() && !dirName.endsWith( '/' ) )
+				dirName.append( QChar('/') );
+			dirName.append( QString::fromStdString( getBaseName( matFilePath ) ) );
+			QString	fileName = QFileDialog::getSaveFileName( qApp->activeWindow(), tr("Choose a .mat file for export"), dirName, "Material (*.mat)" );
+			if ( fileName.isEmpty() )
+				return index;
+			if ( !fileName.endsWith( ".mat", Qt::CaseInsensitive ) )
+				fileName.append( ".mat" );
+
+			spStarfieldMaterialExport::generateResourceIDs( matFileData, materials );
+			matFileData += '\n';
+			renameMaterial( matFileData, matFilePath, fileName.toStdString() );
+
+			QFile	matFile( fileName );
+			if ( matFile.open( QIODevice::WriteOnly ) )
+				matFile.write( matFileData.c_str(), qsizetype( matFileData.length() ) );
+			else
+				throw FO76UtilsError( "could not open output file" );
+		} catch ( std::exception& e ) {
+			QMessageBox::critical( nullptr, "NifSkope error", QString("Error exporting material '%1': %2" ).arg( materialPath ).arg( e.what() ) );
+		}
+	}
+
+	return index;
+}
+
+REGISTER_SPELL( spStarfieldMaterialSaveAs )
 
