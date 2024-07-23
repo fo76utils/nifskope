@@ -2,6 +2,7 @@
 
 * Added a new spell (Material/Clone and Copy to Clipboard) that is available in the right click menu on the name of a Starfield BSLightingShaderProperty, and copies the material to the clipboard in JSON (.mat) format, but with randomly generated new resource IDs. This is useful when creating a new material using an existing one as the base.
 * The 'Material/Save as New...' spell also generates new resource IDs, but it saves the material as a file instead of copying it to the clipboard. Additionally, it replaces the old material name in object names (BSComponentDB::CTName) to match the new path. **Note:** material files should be saved under 'materials' in a resource path, and the asset database needs to be cleared in NifSkope (Alt+Q) to ensure that any new or modified materials are loaded and used.
+* New spell (Material/Extract All...) to extract all Starfield materials.
 * Starfield NIF files are now automatically converted to internal geometry on load. This is often useful because most geometry editing functionality is not implemented for external .mesh files, but it can be disabled in the general settings under 'NIF'.
 * New 'Material' spell menu for BSGeometry, BSTriShape (Fallout 4 and 76), BSLightingShaderProperty and BSEffectShaderProperty blocks, with shortcuts to material spells.
 * The lighting settings can be saved as the default in the Render menu.

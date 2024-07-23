@@ -2,6 +2,10 @@
 
 #include <QDialog>
 #include <QFileDialog>
+#include <QGridLayout>
+#include <QLabel>
+#include <QProgressBar>
+#include <QPushButton>
 #include <QSettings>
 #include <QIODevice>
 #include <QBuffer>
@@ -225,7 +229,7 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
-		return ( nif && !index.isValid() );
+		return ( !index.isValid() && nif );
 	}
 
 	static void findPaths( std::set< std::string > & fileSet, NifModel * nif, const NifItem * item );
@@ -298,6 +302,91 @@ QModelIndex spExtractAllResources::cast( NifModel * nif, const QModelIndex & ind
 }
 
 REGISTER_SPELL( spExtractAllResources )
+
+//! Extract all Starfield materials
+class spExtractAllMaterials final : public Spell
+{
+public:
+	QString name() const override final { return Spell::tr( "Extract All..." ); }
+	QString page() const override final { return Spell::tr( "Material" ); }
+	QIcon icon() const override final
+	{
+		return QIcon();
+	}
+	bool constant() const override final { return true; }
+	bool instant() const override final { return true; }
+
+	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
+	{
+		return ( !index.isValid() && nif && nif->getBSVersion() >= 170 );
+	}
+
+	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final;
+};
+
+QModelIndex spExtractAllMaterials::cast( NifModel * nif, const QModelIndex & index )
+{
+	if ( !nif )
+		return index;
+
+	CE2MaterialDB *	materials = nif->getCE2Materials();
+	if ( !materials )
+		return index;
+
+	AllocBuffers	matPathBuf;
+	std::set< std::string_view >	fileSet;
+	materials->getMaterialList( fileSet, matPathBuf );
+	if ( fileSet.empty() )
+		return index;
+
+	std::string	dstPath( spResourceFileExtract::getOutputDirectory() );
+	if ( dstPath.empty() )
+		return index;
+
+	QDialog	dlg;
+	QLabel *	lb = new QLabel( &dlg );
+	lb->setText( Spell::tr( "Extracting %1 materials..." ).arg( fileSet.size() ) );
+	QProgressBar *	pb = new QProgressBar( &dlg );
+	pb->setMinimum( 0 );
+	pb->setMaximum( int( fileSet.size() ) );
+	QPushButton *	cb = new QPushButton( Spell::tr( "Cancel" ), &dlg );
+	QGridLayout *	grid = new QGridLayout;
+	dlg.setLayout( grid );
+	grid->addWidget( lb, 0, 0, 1, 3 );
+	grid->addWidget( pb, 1, 0, 1, 3 );
+	grid->addWidget( cb, 2, 1, 1, 1 );
+	QObject::connect( cb, &QPushButton::clicked, &dlg, &QDialog::reject );
+	dlg.setModal( true );
+	dlg.setResult( QDialog::Accepted );
+	dlg.show();
+
+	std::string	matFileData;
+	std::string	fullPath;
+	try {
+		int	n = 0;
+		for ( const auto & i : fileSet ) {
+			QCoreApplication::processEvents();
+			if ( dlg.result() == QDialog::Rejected )
+				break;
+			(void) materials->loadMaterial( i );
+			matFileData.clear();
+			materials->getJSONMaterial( matFileData, i );
+			if ( !matFileData.empty() ) {
+				matFileData += '\n';
+				fullPath = dstPath;
+				fullPath += i;
+				spResourceFileExtract::writeFileWithPath( fullPath, matFileData.c_str(), qsizetype(matFileData.length()) );
+			}
+			n++;
+			pb->setValue( n );
+		}
+	} catch ( std::exception & e ) {
+		QMessageBox::critical( nullptr, "NifSkope error", QString("Error extracting file: %1" ).arg( e.what() ) );
+	}
+	return index;
+}
+
+REGISTER_SPELL( spExtractAllMaterials )
 
 //! Convert Starfield BSGeometry block(s) to use external geometry data
 class spMeshFileExport final : public Spell
