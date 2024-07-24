@@ -231,7 +231,7 @@ public:
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
 	{
-		QModelIndex	idx = index;
+		QModelIndex	idx = nif->getBlockIndex( index );
 		if ( nif->blockInherits( idx, ( nif->getBSVersion() < 170 ? "BSTriShape" : "BSGeometry" ) ) )
 			idx = nif->getBlockIndex( nif->getLink( idx, "Shader Property" ) );
 		if ( nif->blockInherits( idx, "BSShaderProperty" ) )

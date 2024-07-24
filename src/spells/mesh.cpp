@@ -1362,7 +1362,8 @@ static void updateCullData( NifModel * nif, const QPersistentModelIndex & iMeshD
 
 QModelIndex spUpdateBounds::cast_Starfield( NifModel * nif, const QModelIndex & index )
 {
-	auto meshes = nif->getIndex( index, "Meshes" );
+	QModelIndex	iBlock = nif->getBlockIndex( index );
+	auto meshes = nif->getIndex( iBlock, "Meshes" );
 	if ( !meshes.isValid() )
 		return index;
 
@@ -1372,7 +1373,7 @@ QModelIndex spUpdateBounds::cast_Starfield( NifModel * nif, const QModelIndex & 
 	FloatVector4	bndDims( -1.0f );
 	QModelIndex	iBoneList;
 	int	numBones = 0;
-	for ( auto iSkin = nif->getBlockIndex( nif->getLink( index, "Skin" ) ); iSkin.isValid(); ) {
+	for ( auto iSkin = nif->getBlockIndex( nif->getLink( iBlock, "Skin" ) ); iSkin.isValid(); ) {
 		bounds.center = Vector3( 0.0f, 0.0f, 0.0f );
 		bounds.radius = 0.0f;
 		bndCenter = FloatVector4( float(FLT_MAX) );
@@ -1415,7 +1416,7 @@ QModelIndex spUpdateBounds::cast_Starfield( NifModel * nif, const QModelIndex & 
 			}
 			boundsCalculated = true;
 		}
-		if ( ( nif->get<quint32>(index, "Flags") & 0x0200 ) == 0 )
+		if ( ( nif->get<quint32>(iBlock, "Flags") & 0x0200 ) == 0 )
 			continue;
 		auto	meshData = nif->getIndex( mesh, "Mesh Data" );
 		// update cull data for version 2 meshlets
@@ -1423,8 +1424,8 @@ QModelIndex spUpdateBounds::cast_Starfield( NifModel * nif, const QModelIndex & 
 			updateCullData( nif, meshData, meshFile );
 	}
 
-	bounds.update( nif, index );
-	setBoundingBox( nif, index, bndCenter, bndDims );
+	bounds.update( nif, iBlock );
+	setBoundingBox( nif, iBlock, bndCenter, bndDims );
 
 	return index;
 }

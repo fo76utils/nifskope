@@ -166,7 +166,7 @@ void spStarfieldMaterialExport::generateResourceIDs( std::string & matFileData, 
 
 void spStarfieldMaterialExport::processItem( NifModel * nif, const QModelIndex & index, bool generateIDs )
 {
-	QModelIndex	idx = index;
+	QModelIndex	idx = nif->getBlockIndex( index );
 	if ( nif->blockInherits( idx, "BSGeometry" ) )
 		idx = nif->getBlockIndex( nif->getLink( idx, "Shader Property" ) );
 	if ( nif->blockInherits( idx, "BSLightingShaderProperty" ) )
@@ -317,7 +317,7 @@ void spStarfieldMaterialSaveAs::renameMaterial(
 
 QModelIndex spStarfieldMaterialSaveAs::cast( NifModel * nif, const QModelIndex & index )
 {
-	QModelIndex	idx = index;
+	QModelIndex	idx = nif->getBlockIndex( index );
 	if ( nif->blockInherits( idx, "BSGeometry" ) )
 		idx = nif->getBlockIndex( nif->getLink( idx, "Shader Property" ) );
 	if ( nif->blockInherits( idx, "BSLightingShaderProperty" ) )
