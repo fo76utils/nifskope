@@ -6,6 +6,8 @@
 * Starfield NIF files are now automatically converted to internal geometry on load. This is often useful because most geometry editing functionality is not implemented for external .mesh files, but it can be disabled in the general settings under 'NIF'.
 * New 'Material' spell menu for BSGeometry, BSTriShape (Fallout 4 and 76), BSLightingShaderProperty and BSEffectShaderProperty blocks, with shortcuts to material spells.
 * The lighting settings can be saved as the default in the Render menu.
+* Trying to edit Fallout 76 or Starfield material data loaded from external files now results in a warning message, instead of the edits being silently reverted.
+* Fixed some mesh and material spells not working when cast on data fields of the parent block.
 * Bug fixes in drawing the normals or tangents of a selected Starfield shape, the Starfield grid scale, and simplifying skinned meshes.
 
 #### NifSkope-2.0.dev9-20240716

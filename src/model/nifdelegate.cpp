@@ -44,6 +44,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QMouseEvent>
 #include <QPainter>
 #include <QListView>
+#include <QMessageBox>
 
 
 //! @file nifdelegate.cpp NifDelegate
@@ -203,6 +204,18 @@ public:
 	{
 		if ( !index.isValid() )
 			return nullptr;
+
+		for ( const NifModel * nif = NifModel::fromValidIndex( index ); nif && nif->getBSVersion() >= 151; ) {
+			for ( const NifItem * i = nif->getItem( index ); i; i = i->parent() ) {
+				if ( i->isAbstract() ) {
+					if ( !nif->blockInherits( i, "BSShaderProperty" ) )
+						break;
+					QMessageBox::warning( nullptr, "NifSkope warning", QString( "Abstract material data cannot be edited" ) );
+					return nullptr;
+				}
+			}
+			break;
+		}
 
 		QVariant v  = index.data( Qt::EditRole );
 		QWidget * w = 0;
