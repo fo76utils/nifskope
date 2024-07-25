@@ -63,7 +63,7 @@ void main( void )
 
 	// Skyrim
 	if ( hasGlowMap ) {
-		color.rgb += tonemap( baseMap.rgb * emissive.rgb * glowColor ) / tonemap( 1.0f / (vec3(glowMult) + 0.001f) );
+		color.rgb += baseMap.rgb * emissive.rgb * glowColor * glowMult;
 	}
 
 	vec3 L = normalize(LightDir);
@@ -131,5 +131,6 @@ void main( void )
 
 	//color = min( color, 1.0 );
 
+	color.rgb = tonemap( color.rgb );
 	gl_FragColor = color;
 }

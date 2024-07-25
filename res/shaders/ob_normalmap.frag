@@ -81,7 +81,7 @@ void main( void )
 
 	// Emissive
 	if ( hasEmit ) {
-		color.rgb += tonemap( baseMap.rgb * glowColor ) / tonemap( 1.0f / vec3(glowMult + 0.001f) );
+		color.rgb += baseMap.rgb * glowColor * glowMult;
 	}
 
 	// Specular
@@ -126,7 +126,7 @@ void main( void )
 		color.rgb += baseMap.rgb * soft;
 	}
 
-	color.rgb = tonemap( color.rgb ) / tonemap( vec3(1.0) );
+	color.rgb = tonemap( color.rgb );
 
 	gl_FragColor = color;
 }
