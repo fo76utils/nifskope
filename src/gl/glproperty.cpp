@@ -83,7 +83,7 @@ Property * Property::create( Scene * scene, const NifModel * nif, const QModelIn
 	} else if ( nif->isNiBlock( index, "BSWaterShaderProperty" ) ) {
 		property = new BSWaterShaderProperty( scene, index );
 	} else if ( nif->isNiBlock( index, "BSShaderNoLightingProperty" ) ) {
-		property = new BSShaderLightingProperty( scene, index );
+		property = new BSEffectShaderProperty( scene, index );
 	} else if ( nif->isNiBlock( index, "BSShaderPPLightingProperty" ) ) {
 		property = new BSShaderLightingProperty( scene, index );
 	} else if ( index.isValid() ) {
@@ -869,6 +869,15 @@ void BSShaderLightingProperty::updateImpl( const NifModel * nif, const QModelInd
 			depthTest = bool( flags1 & ShaderFlags::SLSF1_ZBuffer_Test );
 			depthWrite = bool( flags2 & ShaderFlags::SLSF2_ZBuffer_Write );
 			isDoubleSided = bool( flags2 & ShaderFlags::SLSF2_Double_Sided );
+			clampMode = TexClampMode( nif->get<quint32>( iSPData, "Texture Clamp Mode" ) );
+			environmentReflection = nif->get<float>( iSPData, "Environment Map Scale" );
+			if ( typeid( *this ) == typeid( BSEffectShaderProperty ) ) {
+				BSEffectShaderProperty *	esp = static_cast< BSEffectShaderProperty * >( this );
+				esp->falloff.startAngle = nif->get<float>( iSPData, "Falloff Start Angle" );
+				esp->falloff.stopAngle = nif->get<float>( iSPData, "Falloff Stop Angle" );
+				esp->falloff.startOpacity = nif->get<float>( iSPData, "Falloff Start Opacity" );
+				esp->falloff.stopOpacity = nif->get<float>( iSPData, "Falloff Stop Opacity" );
+			}
 		}
 	}
 }
@@ -881,6 +890,7 @@ void BSShaderLightingProperty::resetParams()
 	uvScale.reset();
 	uvOffset.reset();
 	clampMode = CLAMP_S_CLAMP_T;
+	environmentReflection = 0.0f;
 
 	hasVertexColors = false;
 	hasVertexAlpha = false;
@@ -1173,7 +1183,7 @@ QString BSShaderLightingProperty::fileName( int id ) const
 	if ( nif ) {
 		switch ( id ) {
 		case 0:
-			return nif->get<QString>( iSPData, "Source Texture" );
+			return nif->get<QString>( iSPData, ( bsVersion >= 83 ? "Source Texture" : "File Name" ) );
 		case 1:
 			return nif->get<QString>( iSPData, "Greyscale Texture" );
 		case 2:
@@ -1298,8 +1308,6 @@ void BSLightingShaderProperty::resetParams()
 
 	lightingEffect1 = 0.0;
 	lightingEffect2 = 1.0;
-
-	environmentReflection = 0.0;
 
 	// Multi-layer properties
 	innerThickness = 1.0;
@@ -1492,6 +1500,8 @@ void BSEffectShaderProperty::updateImpl( const NifModel * nif, const QModelIndex
 	BSShaderLightingProperty::updateImpl( nif, index );
 
 	if ( index == iBlock ) {
+		if ( bsVersion < 83 )
+			return;
 		if ( name.endsWith(".bgem", Qt::CaseInsensitive) && bsVersion < 170 ) {
 			setMaterial( new EffectMaterial( name, nif ) );
 			if ( bsVersion >= 151 )
@@ -1500,9 +1510,9 @@ void BSEffectShaderProperty::updateImpl( const NifModel * nif, const QModelIndex
 			setMaterial( nullptr );
 		}
 		updateParams(nif);
-	}
-	else if ( index == iTextureSet )
+	} else if ( index == iTextureSet ) {
 		updateParams(nif);
+	}
 }
 
 void BSEffectShaderProperty::resetParams()
@@ -1534,7 +1544,6 @@ void BSEffectShaderProperty::resetParams()
 	emissiveMult = 1.0;
 
 	lightingInfluence = 0.0;
-	environmentReflection = 0.0;
 }
 
 void BSEffectShaderProperty::updateParams( const NifModel * nif )

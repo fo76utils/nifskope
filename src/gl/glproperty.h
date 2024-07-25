@@ -700,6 +700,7 @@ public:
 	UVScale uvScale;
 	UVOffset uvOffset;
 	TexClampMode clampMode = CLAMP_S_CLAMP_T;
+	float environmentReflection = 0.0f;
 
 	Material * getMaterial() const { return material; }
 	inline bool getSFMaterial( const CE2Material *& m, const NifModel * nif )
@@ -777,8 +778,6 @@ public:
 	float lightingEffect1 = 0.0;
 	float lightingEffect2 = 1.0;
 
-	float environmentReflection = 0.0;
-
 	// Multi-layer properties
 	float innerThickness = 1.0;
 	UVScale innerTextureScale;
@@ -844,7 +843,6 @@ public:
 	float emissiveMult = 1.0;
 
 	float lightingInfluence = 0.0;
-	float environmentReflection = 0.0;
 
 protected:
 	void setController( const NifModel * nif, const QModelIndex & controller ) override final;
