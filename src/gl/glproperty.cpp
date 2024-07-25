@@ -852,13 +852,23 @@ void BSShaderLightingProperty::updateImpl( const NifModel * nif, const QModelInd
 	if ( index == iBlock ) {
 		bsVersion = (unsigned short) nif->getBSVersion();
 		if ( bsVersion >= 170 ) {
+			// Starfield
 			setSFMaterial( name );
-		} else {
-			if ( bsVersion < 83 )
-				iSPData = iBlock;
-			else
-				iSPData = nif->getIndex( iBlock, "Shader Property Data" );
+		} else if ( bsVersion >= 83 ) {
+			// Skyrim, Fallout 4, Fallout 76
+			iSPData = nif->getIndex( iBlock, "Shader Property Data" );
 			iTextureSet = nif->getBlockIndex( nif->getLink( iSPData, "Texture Set" ), "BSShaderTextureSet" );
+		} else {
+			// Fallout 3/New Vegas
+			iSPData = iBlock;
+			iTextureSet = nif->getBlockIndex( nif->getLink( iSPData, "Texture Set" ), "BSShaderTextureSet" );
+			flags1 = ShaderFlags::SF1( nif->get<quint32>( iSPData, "Shader Flags" ) );
+			flags2 = ShaderFlags::SF2( nif->get<quint32>( iSPData, "Shader Flags 2" ) );
+			hasVertexColors = bool( flags2 & ShaderFlags::SLSF2_Vertex_Colors );
+			hasVertexAlpha = bool( flags1 & ShaderFlags::SLSF1_Vertex_Alpha );
+			depthTest = bool( flags1 & ShaderFlags::SLSF1_ZBuffer_Test );
+			depthWrite = bool( flags2 & ShaderFlags::SLSF2_ZBuffer_Write );
+			isDoubleSided = bool( flags2 & ShaderFlags::SLSF2_Double_Sided );
 		}
 	}
 }
