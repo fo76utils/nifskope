@@ -814,7 +814,7 @@ void Mesh::drawShapes( NodeList * secondPass )
 		}
 
 		// Do VCs if legacy or if either bslsp or bsesp is set
-		bool doVCs = ( !bssp || bssp->hasSF2(ShaderFlags::SLSF2_Vertex_Colors) );
+		bool doVCs = ( !bssp || bssp->hasSF2(ShaderFlags::SLSF2_Vertex_Colors) || bssp->bsVersion < 83 );
 
 		if ( transColors.count() && scene->hasOption(Scene::DoVertexColors) && doVCs ) {
 			glEnableClientState( GL_COLOR_ARRAY );
