@@ -913,7 +913,6 @@ bool Renderer::setupProgramSF( Program * prog, Shape * mesh )
 	prog->uni1b_l( prog->uniLocation("isWireframe"), false );
 	prog->uni1i( HAS_SPECULAR, int(scene->hasOption(Scene::DoSpecular)) );
 	prog->uni1i_l( prog->uniLocation("lm.shaderModel"), mat->shaderModel );
-	prog->uni1b_l( prog->uniLocation("lm.isTwoSided"), bool(mat->flags & CE2Material::Flag_TwoSided) );
 	prog->uni4f_l( prog->uniLocation("parallaxOcclusionSettings"), FloatVector4( 8.0f, float(cfg.sfParallaxMaxSteps), cfg.sfParallaxScale, cfg.sfParallaxOffset ) );
 
 	// emissive settings
@@ -1508,7 +1507,6 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 		}
 
 		if ( nifVersion >= 130 ) {
-			prog->uni1i( DOUBLE_SIDE, lsp->isDoubleSided );
 			prog->uni1f( G2P_SCALE, lsp->paletteScale );
 			prog->uni1f( SS_ROLLOFF, lsp->lightingEffect1 );
 			prog->uni1f( POW_FRESNEL, lsp->fresnelPower );
@@ -1588,12 +1586,6 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 
 		prog->uni4m( MAT_WORLD, mesh->worldTrans().toMatrix4() );
 
-		clamp = esp->clampMode;
-
-		prog->uniSampler( bsprop, SAMP_BASE, 0, texunit, white, clamp );
-
-		prog->uni1i( DOUBLE_SIDE, esp->isDoubleSided );
-
 		prog->uni2f( UV_SCALE, esp->uvScale.x, esp->uvScale.y );
 		prog->uni2f( UV_OFFSET, esp->uvOffset.x, esp->uvOffset.y );
 
@@ -1623,7 +1615,11 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 		prog->uni1f( FALL_DEPTH, esp->falloff.softDepth );
 
 		// BSEffectShader textures
-		prog->uniSampler( bsprop, SAMP_GRAYSCALE, 1, texunit, "", TexClampMode::CLAMP_S_CLAMP_T );
+		clamp = esp->clampMode;
+		if ( nifVersion >= 83 ) {
+			prog->uniSampler( bsprop, SAMP_BASE, 0, texunit, white, clamp );
+			prog->uniSampler( bsprop, SAMP_GRAYSCALE, 1, texunit, "", TexClampMode::CLAMP_S_CLAMP_T );
+		}
 
 		if ( nifVersion >= 130 ) {
 
@@ -1669,9 +1665,18 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 	}
 
 	// Defaults for uniforms in older meshes
-	if ( !esp && !lsp ) {
-		prog->uni2f( UV_SCALE, 1.0, 1.0 );
-		prog->uni2f( UV_OFFSET, 0.0, 0.0 );
+	if ( nifVersion < 83 ) {
+		prog->uni2f( UV_SCALE, 1.0f, 1.0f );
+		prog->uni2f( UV_OFFSET, 0.0f, 0.0f );
+		if ( texprop ) {
+			auto	t = texprop->getTexture( 0 );
+			if ( t ) {
+				// FIXME: rotation is not implemented
+				prog->uni2f( UV_SCALE, t->tiling[0], t->tiling[1] );
+				prog->uni2f( UV_OFFSET, t->translation[0] + ( 0.5f - t->tiling[0] * 0.5f ),
+										t->translation[1] + ( 0.5f - t->tiling[1] * 0.5f ) );
+			}
+		}
 	}
 
 	QMapIterator<int, Program::CoordType> itx( prog->texcoords );
@@ -1731,14 +1736,12 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 		}
 	}
 
-#if 0
-	// This path seems to be unused, because nifVersion < 83 already falls back
-	// to setupFixedFunction(). TODO: implement shading for TES4/FO3/FNV.
-	if ( nifVersion < 83 ) {
-		setupFixedFunction( mesh, props );
-		return true;
+	if ( mesh->isDoubleSided ) {
+		glDisable( GL_CULL_FACE );
+	} else {
+		glEnable( GL_CULL_FACE );
+		glCullFace( GL_BACK );
 	}
-#endif
 
 	// setup lighting
 
@@ -1781,6 +1784,15 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 			// If mesh is alpha tested, override threshold
 			glAlphaFunc( GL_GREATER, 0.1f );
 		}
+		if ( nifVersion < 83 ) {
+			// setup material
+			glProperty( mesh->findProperty< MaterialProperty >(), mesh->findProperty< SpecularProperty >() );
+
+			// setup stencil
+			auto	stencilProperty = mesh->findProperty< StencilProperty >();
+			if ( stencilProperty )
+				glProperty( stencilProperty );
+		}
 	}
 
 	glDisable( GL_COLOR_MATERIAL );
@@ -1792,12 +1804,6 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 		glDepthFunc( GL_LEQUAL );
 	}
 	glDepthMask( !mesh->depthWrite || mesh->translucent ? GL_FALSE : GL_TRUE );
-	if ( mesh->isDoubleSided ) {
-		glDisable( GL_CULL_FACE );
-	} else {
-		glEnable( GL_CULL_FACE );
-		glCullFace( GL_BACK );
-	}
 	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 
 	return true;

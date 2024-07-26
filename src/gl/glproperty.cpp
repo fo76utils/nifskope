@@ -621,7 +621,11 @@ void MaterialProperty::updateImpl( const NifModel * nif, const QModelIndex & ind
 		if ( alpha > 1.0 )
 			alpha = 1.0;
 
-		ambient  = Color4( nif->get<Color3>( iBlock, "Ambient Color" ) );
+		const NifItem *	i = nif->getItem( iBlock, "Ambient Color" );
+		if ( !i )
+			ambient = Color4();
+		else
+			ambient = Color4( nif->get<Color3>( i ) );
 		diffuse  = Color4( nif->get<Color3>( iBlock, "Diffuse Color" ) );
 		specular = Color4( nif->get<Color3>( iBlock, "Specular Color" ) );
 		emissive = Color4( nif->get<Color3>( iBlock, "Emissive Color" ) );
@@ -877,6 +881,7 @@ void BSShaderLightingProperty::updateImpl( const NifModel * nif, const QModelInd
 				esp->falloff.stopAngle = nif->get<float>( iSPData, "Falloff Stop Angle" );
 				esp->falloff.startOpacity = nif->get<float>( iSPData, "Falloff Start Opacity" );
 				esp->falloff.stopOpacity = nif->get<float>( iSPData, "Falloff Stop Opacity" );
+				esp->useFalloff = true;
 			}
 		}
 	}

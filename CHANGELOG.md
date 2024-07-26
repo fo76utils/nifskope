@@ -1,5 +1,7 @@
  == CHANGELOG ==
 
+* Restored support for Oblivion, Fallout 3 and New Vegas shading.
+
 #### NifSkope-2.0.dev9-20240724
 
 * Added a new spell (Material/Clone and Copy to Clipboard) that is available in the right click menu on the name of a Starfield BSLightingShaderProperty, and copies the material to the clipboard in JSON (.mat) format, but with randomly generated new resource IDs. This is useful when creating a new material using an existing one as the base.

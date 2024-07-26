@@ -190,14 +190,17 @@ protected:
 
 REGISTER_PROPERTY( ZBufferProperty, ZBuffer )
 
-//! Number of textures; base + dark + detail + gloss + glow + bump + 4 decals
-#define numTextures 10
-
 //! A Property that specifies (multi-)texturing
 class TexturingProperty final : public Property
 {
 	friend class TexFlipController;
 	friend class TexTransController;
+
+public:
+	enum {
+		//! Number of textures; base + dark + detail + gloss + glow + bump + 4 decals
+		numTextures = 10
+	};
 
 	//! The properties of each texture slot
 	struct TexDesc
@@ -216,7 +219,6 @@ class TexturingProperty final : public Property
 		Vector2 center;
 	};
 
-public:
 	TexturingProperty( Scene * scene, const QModelIndex & index ) : Property( scene, index ) {}
 
 	Type type() const override final { return Texturing; }
@@ -233,6 +235,13 @@ public:
 	int coordSet( int id ) const;
 
 	static int getId( const QString & id );
+
+	inline const TexDesc * getTexture( int id ) const
+	{
+		if ( id >= 0 && id < numTextures ) [[likely]]
+			return &( textures[id] );
+		return nullptr;
+	}
 
 protected:
 	TexDesc textures[numTextures];
