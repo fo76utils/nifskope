@@ -1,10 +1,9 @@
 # effect shader
 
-checkgroup begin and
-	# Fallout 76
-    check HEADER/BS Header/BS Version == 155
-	check BSEffectShaderProperty
-checkgroup end
+# Fallout 76
+check HEADER/BS Header/BS Version >= 151
+check HEADER/BS Header/BS Version < 170
+check BSEffectShaderProperty
 
 texcoords 0 base
 texcoords 1 tangents

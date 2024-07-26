@@ -61,6 +61,8 @@ void main( void )
 	vec4 normalMap = texture2D( NormalMap, offset );
 
 	vec3 normal = normalize(normalMap.rgb * 2.0 - 1.0);
+	if ( !gl_FrontFacing )
+		normal *= -1.0;
 
 
 	vec3 L = normalize(LightDir);

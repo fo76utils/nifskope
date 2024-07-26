@@ -1,17 +1,15 @@
 # default shader
 
-checkgroup begin and
-	# Fallout 4
-    check HEADER/BS Header/BS Version == 130
-    check BSLightingShaderProperty
-    #check BSLightingShaderProperty/Shader Type != 1
-    #check BSLightingShaderProperty/Shader Type != 16
-    check BSLightingShaderProperty/Shader Type != 18
-    checkgroup begin or
-        check BSTriShape
-        check BSSubIndexTriShape
-        check BSMeshLODTriShape
-    checkgroup end
+# Fallout 4
+check HEADER/BS Header/BS Version == 130
+check BSLightingShaderProperty
+#check BSLightingShaderProperty/Shader Type != 1
+#check BSLightingShaderProperty/Shader Type != 16
+check BSLightingShaderProperty/Shader Type != 18
+checkgroup begin or
+	check BSTriShape
+	check BSSubIndexTriShape
+	check BSMeshLODTriShape
 checkgroup end
 
 texcoords 0 base

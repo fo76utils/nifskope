@@ -1,8 +1,10 @@
 
 comment normal+parallax mapping, no vertex colors
 
+check HEADER/BS Header/BS Version < 83
 check NiTexturingProperty/Apply Mode == 4
 check NiTriBasedGeom/Has Shader == 0
+check not BSShaderNoLightingProperty
 
 checkgroup begin or
 	check NiTriBasedGeomData/Has Vertex Colors == 0

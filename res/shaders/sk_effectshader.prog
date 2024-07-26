@@ -1,18 +1,9 @@
 # normal mapping, vertex colors -> emissive
 
-checkgroup begin or
-	# Skyrim
-	checkgroup begin and
-		check HEADER/BS Header/BS Version >= 83
-		check HEADER/BS Header/BS Version <= 100
-		check BSEffectShaderProperty
-	checkgroup end
-	# Fallout 3
-	checkgroup begin and
-		check HEADER/BS Header/BS Version < 83
-		check BSShaderNoLightingProperty
-	checkgroup end
-checkgroup end
+# Skyrim
+check HEADER/BS Header/BS Version >= 83
+check HEADER/BS Header/BS Version <= 100
+check BSEffectShaderProperty
 
 texcoords 0 base
 texcoords 1 tangents

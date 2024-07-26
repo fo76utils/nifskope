@@ -1,7 +1,6 @@
 # skybox shader
 
-checkgroup begin and
-	check HEADER/BS Header/BS Version < 0
-checkgroup end
+# never enabled on models
+check HEADER/BS Header/BS Version < 0
 
 shaders skybox.vert skybox.frag

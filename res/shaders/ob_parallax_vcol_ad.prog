@@ -1,8 +1,10 @@
 
 comment normal+parallax mapping, vertex colors -> ambient&diffuse
 
+check HEADER/BS Header/BS Version < 83
 check NiTexturingProperty/Apply Mode == 4
 check NiTriBasedGeom/Has Shader == 0
+check not BSShaderNoLightingProperty
 
 check NiTriBasedGeomData/Has Vertex Colors != 0
 

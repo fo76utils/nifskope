@@ -90,22 +90,22 @@ void main( void )
 	vec4 normalMap = texture2D( NormalMap, offset );
 
 	vec3 normal = normalMap.rgb * 2.0 - 1.0;
-	
+
 	// Convert model space to view space
 	//	Swizzled G/B values!
 	normal = normalize( vec3( viewMatrix * vec4( normal.rbg, 0.0 )));
-	
+
 	// Face Normals
 	//vec3 X = dFdx(v);
 	//vec3 Y = dFdy(v);
 	//vec3 constructedNormal = normalize(cross(X,Y));
-	
-	
+
+
 	vec3 L = normalize(LightDir);
 	vec3 E = normalize(ViewDir);
 	vec3 R = reflect(-L, normal);
 	vec3 H = normalize( L + E );
-	
+
 	float NdotL = max( dot(normal, L), 0.0 );
 	float NdotH = max( dot(normal, H), 0.0 );
 	float EdotN = max( dot(normal, E), 0.0 );
@@ -124,12 +124,12 @@ void main( void )
 	}
 
 	// Specular
-	
+
 	float s = texture2D( SpecularMap, offset ).r;
 	if ( !hasSpecularMap || hasBacklight ) {
 		s = normalMap.a;
 	}
-	
+
 	vec3 spec = clamp( specColor * specStrength * s * pow(NdotH, specGlossiness), 0.0, 1.0 );
 	spec *= D.rgb;
 
@@ -138,7 +138,7 @@ void main( void )
 	if ( hasBacklight ) {
 		backlight = texture2D( BacklightMap, offset ).rgb;
 		backlight *= NdotNegL;
-		
+
 		emissive += backlight * D.rgb;
 	}
 
@@ -151,7 +151,7 @@ void main( void )
 	if ( hasRimlight ) {
 		rim = mask.rgb * pow(vec3((1.0 - EdotN)), vec3(lightingEffect2));
 		rim *= smoothstep( -0.2, 1.0, dot(-L, E) );
-		
+
 		emissive += rim * D.rgb;
 	}
 
@@ -161,32 +161,32 @@ void main( void )
 
 		soft = max( wrap, 0.0 ) * mask.rgb * smoothstep( 1.0, 0.0, NdotL );
 		soft *= sqrt( clamp( lightingEffect1, 0.0, 1.0 ) );
-		
+
 		emissive += soft * D.rgb;
 	}
-	
+
 	vec3 detail = vec3(0.0);
 	if ( hasDetailMask ) {
 		detail = texture2D( DetailMask, offset ).rgb;
-		
+
 		albedo = overlay( albedo, detail );
 	}
-	
+
 	vec3 tint = vec3(0.0);
 	if ( hasTintMask ) {
 		tint = texture2D( TintMask, offset ).rgb;
-		
+
 		albedo = overlay( albedo, tint );
 	}
-	
+
 	if ( hasDetailMask ) {
 		albedo += albedo;
 	}
-	
+
 	if ( hasTintColor ) {
 		albedo *= tintColor;
 	}
-	
+
 	color.rgb = albedo * (diffuse + emissive) + spec;
 	color.rgb = tonemap( color.rgb * D.a, A.a );
 	color.a = C.a * baseMap.a;

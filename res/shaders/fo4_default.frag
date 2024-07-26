@@ -37,7 +37,6 @@ uniform bool hasCubeMap;
 uniform bool hasEnvMask;
 uniform bool hasSpecularMap;
 uniform bool greyscaleColor;
-uniform bool doubleSided;
 
 uniform float subsurfaceRolloff;
 uniform float rimPower;
@@ -218,7 +217,7 @@ void main( void )
 	// Calculate missing blue channel
 	normal.b = sqrt(max(1.0 - dot(normal.rg, normal.rg), 0.0));
 	normal = normalize( btnMatrix_norm * normal );
-	if ( !gl_FrontFacing && doubleSided )
+	if ( !gl_FrontFacing )
 		normal *= -1.0;
 
 	vec3 L = normalize(LightDir);

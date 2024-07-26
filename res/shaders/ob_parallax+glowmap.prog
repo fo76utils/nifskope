@@ -4,6 +4,7 @@ comment normal + glow mapping, vertex colors -> ignore, material emissive color 
 check HEADER/BS Header/BS Version < 83
 check NiTexturingProperty/Apply Mode == 4
 check NiTriBasedGeom/Has Shader == 0
+check not BSShaderNoLightingProperty
 
 texcoords 0 base
 texcoords 1 tangents

@@ -87,7 +87,9 @@ void main( void )
 	vec4 glowMap = texture2D( GlowMap, offset );
 	
 	vec3 normal = normalize(tbnMatrix_norm * (normalMap.rgb * 2.0 - 1.0));
-	
+	if ( !gl_FrontFacing )
+		normal *= -1.0;
+
 	vec3 L = normalize(LightDir);
 	vec3 R = reflect(-L, normal);
 	vec3 H = normalize( L + E );

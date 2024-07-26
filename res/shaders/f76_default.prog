@@ -1,14 +1,13 @@
 # default shader
 
-checkgroup begin and
-	# Fallout 76
-    check HEADER/BS Header/BS Version == 155
-    check BSLightingShaderProperty
-    checkgroup begin or
-        check BSTriShape
-        check BSSubIndexTriShape
-        check BSMeshLODTriShape
-    checkgroup end
+# Fallout 76
+check HEADER/BS Header/BS Version >= 151
+check HEADER/BS Header/BS Version < 170
+check BSLightingShaderProperty
+checkgroup begin or
+	check BSTriShape
+	check BSSubIndexTriShape
+	check BSMeshLODTriShape
 checkgroup end
 
 texcoords 0 base

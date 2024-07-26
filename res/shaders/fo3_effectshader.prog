@@ -1,0 +1,11 @@
+# normal mapping, vertex colors -> emissive
+
+# Fallout 3
+check HEADER/BS Header/BS Version < 83
+check BSShaderNoLightingProperty
+
+texcoords 0 base
+texcoords 1 tangents
+texcoords 2 bitangents
+
+shaders sk_effectshader.vert sk_effectshader.frag

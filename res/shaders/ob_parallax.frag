@@ -20,6 +20,8 @@ void main( void )
 
 	vec4 normal = texture2D( NormalMap, texco );
 	normal.rgb = normal.rgb * 2.0 - 1.0;
+	if ( !gl_FrontFacing )
+		normal *= -1.0;
 
 	float NdotL = max( dot( normal.rgb, normalize( LightDir ) ), 0.0 );
 

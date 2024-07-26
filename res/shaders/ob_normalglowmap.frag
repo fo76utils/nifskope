@@ -56,6 +56,8 @@ void main( void )
 	color.rgb = baseMap.rgb;
 
 	vec3 normal = normalize(nmap.rgb * 2.0 - 1.0);
+	if ( !gl_FrontFacing )
+		normal *= -1.0;
 
 	float spec = 0.0;
 

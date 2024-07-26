@@ -1,15 +1,13 @@
 # default shader
 
-checkgroup begin and
-	# Skyrim
-	check HEADER/BS Header/BS Version >= 83
-	check HEADER/BS Header/BS Version <= 100
-	check BSLightingShaderProperty
-	check BSLightingShaderProperty/Shader Type != 11
-	checkgroup begin or
-		check NiTriBasedGeomData/Has Normals == 1
-		check BSTriShape/Vertex Desc & 0x800000000000
-	checkgroup end
+# Skyrim
+check HEADER/BS Header/BS Version >= 83
+check HEADER/BS Header/BS Version <= 100
+check BSLightingShaderProperty
+check BSLightingShaderProperty/Shader Type != 11
+checkgroup begin or
+	check NiTriBasedGeomData/Has Normals == 1
+	check BSTriShape/Vertex Desc & 0x800000000000
 checkgroup end
 
 texcoords 0 base

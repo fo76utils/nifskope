@@ -210,7 +210,6 @@ struct LayeredMaterial {
 	// shader model IDs are defined in lib/libfo76utils/src/mat_dump.cpp
 	int	shaderModel;
 	bool	isEffect;
-	bool	isTwoSided;
 	bool	hasOpacityComponent;
 	bool	layersEnabled[4];
 	Layer	layers[4];
@@ -594,7 +593,7 @@ void main()
 	}
 
 	normal = normalize( btnMatrix_norm * normal );
-	if ( !gl_FrontFacing && lm.isTwoSided )
+	if ( !gl_FrontFacing )
 		normal *= -1.0;
 
 	vec3	L = normalize(LightDir);

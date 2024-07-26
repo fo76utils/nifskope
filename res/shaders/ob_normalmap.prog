@@ -1,11 +1,13 @@
 # normal mapping, no vertex colors
 
+check HEADER/BS Header/BS Version < 83
+check not BSShaderNoLightingProperty
+
 checkgroup begin or
 	# Fallout 3 and later
-	checkgroup begin and
+	checkgroup begin
 		check HEADER/Version >= 0x14020007
 		check HEADER/User Version >= 11
-		check HEADER/BS Header/BS Version < 83
 	checkgroup end
 
 	checkgroup begin
@@ -16,8 +18,7 @@ checkgroup end
 
 checkgroup begin or
 	# Fallout 3
-	checkgroup begin and
-		check HEADER/BS Header/BS Version < 83
+	checkgroup begin
 		check BSShaderPPLightingProperty
 		check NiTriBasedGeomData/Has Vertex Colors == 0
 	checkgroup end
