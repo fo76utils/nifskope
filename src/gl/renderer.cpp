@@ -1666,17 +1666,28 @@ bool Renderer::setupProgram( Program * prog, Shape * mesh, const PropertyList & 
 
 	// Defaults for uniforms in older meshes
 	if ( nifVersion < 83 ) {
-		prog->uni2f( UV_SCALE, 1.0f, 1.0f );
-		prog->uni2f( UV_OFFSET, 0.0f, 0.0f );
+		FloatVector4	uvScaleAndOffset( 1.0f, 1.0f, 0.0f, 0.0f );
+		FloatVector4	uvCenterAndRotation( 0.5f, 0.5f, 0.0f, 0.0f );
 		if ( texprop ) {
 			auto	t = texprop->getTexture( 0 );
 			if ( t ) {
-				// FIXME: rotation is not implemented
-				prog->uni2f( UV_SCALE, t->tiling[0], t->tiling[1] );
-				prog->uni2f( UV_OFFSET, t->translation[0] + ( 0.5f - t->tiling[0] * 0.5f ),
-										t->translation[1] + ( 0.5f - t->tiling[1] * 0.5f ) );
+				uvScaleAndOffset = FloatVector4( t->tiling[0], t->tiling[1], t->translation[0], t->translation[1] );
+				uvCenterAndRotation = FloatVector4( t->center[0], t->center[1], t->rotation, 0.0f );
 			}
 		}
+		prog->uni1b_l( prog->uniLocation("isEffect"), bool(esp) );
+		prog->uni2f_l( prog->uniLocation("uvCenter"), uvCenterAndRotation[0], uvCenterAndRotation[1] );
+		prog->uni2f_l( prog->uniLocation("uvScale"), uvScaleAndOffset[0], uvScaleAndOffset[1] );
+		prog->uni2f_l( prog->uniLocation("uvOffset"), uvScaleAndOffset[2], uvScaleAndOffset[3] );
+		prog->uni1f_l( prog->uniLocation("uvRotation"), uvCenterAndRotation[2] );
+		// TODO: implement correctly setting all uniforms
+		prog->uni1i_l( prog->uniLocation("colorEmitMode"), 5 );
+		prog->uni1b_l( prog->uniLocation("hasParallax"), false );
+		prog->uni1b_l( prog->uniLocation("hasEmit"), false );
+		prog->uni1b_l( prog->uniLocation("hasGlowMap"), false );
+		prog->uni4f_l( prog->uniLocation("glowColor"), ( !esp ? FloatVector4( 0.0f, 0.0f, 0.0f, 1.0f )
+																: FloatVector4( 1.0f ) ) );
+		prog->uni1f_l( prog->uniLocation("glowMult"), 1.0f );
 	}
 
 	QMapIterator<int, Program::CoordType> itx( prog->texcoords );

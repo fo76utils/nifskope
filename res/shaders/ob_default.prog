@@ -1,0 +1,10 @@
+# Oblivion and Fallout 3/New Vegas
+
+check HEADER/BS Header/BS Version >= 1
+check HEADER/BS Header/BS Version < 83
+
+texcoords 0 base
+texcoords 1 tangents
+texcoords 2 bitangents
+
+shaders ob_default.vert ob_default.frag
