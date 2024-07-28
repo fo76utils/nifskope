@@ -89,6 +89,13 @@ public:
 
 		return nullptr;
 	}
+
+	inline const NifItem * getItem( const NifModel * nif, const char * itemName ) const
+	{
+		if ( nif && iBlock.isValid() )
+			return nif->getItem( iBlock, itemName );
+		return nullptr;
+	}
 };
 
 //! Associate a Property subclass with a Property::Type
@@ -354,10 +361,10 @@ public:
 
 	friend void glProperty( VertexColorProperty *, bool vertexcolors );
 
-protected:
 	int lightmode = 0;
 	int vertexmode = 0;
 
+protected:
 	void updateImpl( const NifModel * nif, const QModelIndex & index ) override final;
 };
 

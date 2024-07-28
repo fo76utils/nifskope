@@ -2,6 +2,12 @@
 
 check HEADER/BS Header/BS Version < 83
 
+checkgroup begin or
+	check NiTexturingProperty
+	check BSShaderPPLightingProperty
+	check BSShaderNoLightingProperty
+checkgroup end
+
 texcoords 0 base
 texcoords 1 tangents
 texcoords 2 bitangents

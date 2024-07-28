@@ -404,14 +404,19 @@ public:
 	QMap<QString, Shader *> shaders;
 	QMap<QString, Program *> programs;
 
-	bool setupProgramSF( Program *, Shape * );
-	bool setupProgram( Program *, Shape *, const PropertyList &, const QVector<QModelIndex> & iBlocks, bool eval = true );
+	// Starfield
+	bool setupProgramCE2( const NifModel *, Program *, Shape * );
+	// Skyrim, Fallout 4, Fallout 76
+	bool setupProgramCE1( const NifModel *, Program *, Shape *, const PropertyList & );
+	// Oblivion, Fallout 3/New Vegas
+	bool setupProgramFO3( const NifModel *, Program *, Shape *, const PropertyList & );
+	// other games
 	void setupFixedFunction( Shape *, const PropertyList & );
 
 	struct Settings
 	{
 		bool	useShaders = true;
-		std::int8_t	cubeBgndMipLevel = -1;
+		std::int8_t	cubeBgndMipLevel = 1;
 		short	sfParallaxMaxSteps = 200;
 		float	sfParallaxScale = 0.0f;
 		float	sfParallaxOffset = 0.5f;

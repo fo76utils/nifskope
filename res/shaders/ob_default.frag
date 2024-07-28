@@ -3,13 +3,27 @@
 uniform sampler2D BaseMap;
 uniform sampler2D NormalMap;
 uniform sampler2D GlowMap;
+uniform sampler2D HeightMap;
+uniform samplerCube CubeMap;
+uniform sampler2D EnvironmentMap;
+
+// bits 0 to 2: color mode
+// bit 3: lighting mode
+// bits 4 to 5: vertex mode
+uniform int vertexColorFlags;
 
 uniform bool isEffect;
-uniform bool hasParallax;
+uniform bool hasSpecular;
 uniform bool hasEmit;
 uniform bool hasGlowMap;
-uniform vec4 glowColor;
+uniform bool hasCubeMap;
+uniform bool hasCubeMask;
+uniform float cubeMapScale;
+// <= 0: disabled, 1: simple parallax mapping using BaseMap.a, >= 2: POM using HeightMap.r
+uniform int parallaxMaxSteps;
+uniform float parallaxScale;
 uniform float glowMult;
+uniform vec4 glowColor;
 
 uniform vec2 uvCenter;
 uniform vec2 uvScale;
@@ -18,12 +32,14 @@ uniform float uvRotation;
 
 uniform vec4 falloffParams;
 
+uniform mat4 worldMatrix;
+
 in vec3 LightDir;
 in vec3 ViewDir;
 
-in vec4 ColorEA;
-in vec4 ColorD;
 in vec4 C;
+in vec4 D;
+in vec4 A;
 in float toneMapScale;
 
 out vec4 fragColor;
@@ -43,6 +59,52 @@ vec3 tonemap(vec3 x)
 	return sqrt(z / (toneMapScale * 0.93333333));
 }
 
+// parallax occlusion mapping based on code from
+// https://web.archive.org/web/20150419215321/http://sunandblackcat.com/tipFullView.php?l=eng&topicid=28
+
+vec2 parallaxMapping( vec3 V, vec2 offset )
+{
+	if ( parallaxMaxSteps < 2 )
+		return offset + V.xy * ( ( 0.5 - texture( BaseMap, offset ).a ) * parallaxScale );
+
+	// determine optimal height of each layer
+	float	layerHeight = 1.0 / mix( max( float(parallaxMaxSteps), 4.0 ), 4.0, abs(V.z) );
+
+	// current height of the layer
+	float	curLayerHeight = 1.0;
+	vec2	dtex = parallaxScale * V.xy / max( abs(V.z), 0.02 );
+	// current texture coordinates
+	vec2	currentTextureCoords = offset + ( dtex * 0.5 );
+	// shift of texture coordinates for each layer
+	dtex *= layerHeight;
+
+	// height from heightmap
+	float	heightFromTexture = texture( HeightMap, currentTextureCoords ).r;
+
+	// while point is above the surface
+	while ( curLayerHeight > heightFromTexture ) {
+		// to the next layer
+		curLayerHeight -= layerHeight;
+		// shift of texture coordinates
+		currentTextureCoords -= dtex;
+		// new height from heightmap
+		heightFromTexture = texture( HeightMap, currentTextureCoords ).r;
+	}
+
+	// previous texture coordinates
+	vec2	prevTCoords = currentTextureCoords + dtex;
+
+	// heights for linear interpolation
+	float	nextH = curLayerHeight - heightFromTexture;
+	float	prevH = curLayerHeight + layerHeight - texture( HeightMap, prevTCoords ).r;
+
+	// proportions for linear interpolation
+	float	weight = nextH / ( nextH - prevH );
+
+	// return interpolation of texture coordinates
+	return mix( currentTextureCoords, prevTCoords, weight );
+}
+
 void main( void )
 {
 	vec3 L = normalize( LightDir );
@@ -52,11 +114,11 @@ void main( void )
 	float r_c = cos( uvRotation );
 	float r_s = sin( uvRotation ) * -1.0;
 	offset = vec2( offset.x * r_c - offset.y * r_s, offset.x * r_s + offset.y * r_c ) * uvScale + uvCenter + uvOffset;
-	if ( hasParallax )
-		offset += E.xy * ( 0.015 - texture( BaseMap, offset ).a * 0.03 );
+	if ( parallaxMaxSteps >= 1 && parallaxScale >= 0.0005 )
+		offset = parallaxMapping( E, offset );
 
 	vec4 baseMap = texture( BaseMap, offset );
-	vec4 color = baseMap * C;
+	vec4 color = baseMap;
 
 	if ( isEffect ) {
 		float startO = min( falloffParams.z, 1.0 );
@@ -68,6 +130,7 @@ void main( void )
 
 		float alphaMult = glowColor.a * glowColor.a;
 
+		color *= C;
 		color.rgb = color.rgb * glowColor.rgb * glowMult;
 		color.a = color.a * falloff * alphaMult;
 	} else {
@@ -81,27 +144,51 @@ void main( void )
 		vec3 H = normalize( L + E );
 		float NdotL = max( dot(normal, L), 0.0 );
 
+		if ( ( vertexColorFlags & 40 ) == 40 ) {
+			color *= C;
+			color.rgb *= A.rgb + ( D.rgb * NdotL );
+		} else if ( ( vertexColorFlags & 8 ) != 0 ) {
+			color.rgb *= ( A.rgb * gl_FrontMaterial.ambient.rgb ) + ( D.rgb * gl_FrontMaterial.diffuse.rgb * NdotL );
+			color.a *= min( gl_FrontMaterial.ambient.a + gl_FrontMaterial.diffuse.a, 1.0 );
+		} else {
+			color.rgb *= A.rgb + ( D.rgb * NdotL );
+		}
 
-		color.rgb *= ColorEA.rgb + ( ColorD.rgb * NdotL );
-		color.a *= ColorD.a;
 
+		// Environment
+		if ( hasCubeMap && cubeMapScale > 0.0 ) {
+			vec3 R = reflect( -E, normal );
+			vec3 reflectedWS = vec3( worldMatrix * ( gl_ModelViewMatrixInverse * vec4( R, 0.0 ) ) );
+			vec3 cube = texture( CubeMap, reflectedWS ).rgb;
+			if ( hasCubeMask )
+				cube *= texture( EnvironmentMap, offset ).r * cubeMapScale;
+			else
+				cube *= normalMap.a * cubeMapScale;
+			color.rgb += cube * sqrt( gl_LightSource[0].ambient.rgb );
+		}
 
 		// Emissive
+		vec3 emissive = glowColor.rgb * glowMult;
+		if ( ( vertexColorFlags & 16 ) == 0 )
+			emissive *= gl_FrontMaterial.emission.rgb;
+		else
+			emissive *= C.rgb;
 		if ( hasGlowMap )
-			color.rgb += baseMap.rgb * texture( GlowMap, offset ).rgb * glowColor.rgb * glowMult;
+			color.rgb += emissive * baseMap.rgb * texture( GlowMap, offset ).rgb;
 		else if ( hasEmit )
-			color.rgb += baseMap.rgb * glowColor.rgb * glowMult;
+			color.rgb += emissive * baseMap.rgb;
 
 		// Specular
-		if ( NdotL > 0.0 && dot( gl_FrontMaterial.specular.rgb, gl_LightSource[0].specular.rgb ) > 0.0 ) {
+		if ( hasSpecular && NdotL > 0.0 ) {
 			float NdotH = dot( normal, H );
 			if ( NdotH > 0.0 ) {
 				vec4 spec = gl_FrontMaterial.specular * pow( NdotH, gl_FrontMaterial.shininess );
-				spec *= gl_LightSource[0].specular * normalMap.a;
-				color.rgb += spec.rgb;
+				color.rgb += spec.rgb * normalMap.a;
 			}
 		}
 	}
 
 	fragColor = vec4( tonemap( color.rgb ), color.a );
 }
+
+// vim: set syntax=gdshader noexpandtab ts=4 :
