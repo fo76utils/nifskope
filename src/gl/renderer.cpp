@@ -514,9 +514,6 @@ void Renderer::releaseShaders()
 
 QString Renderer::setupProgram( Shape * mesh, const QString & hint )
 {
-	PropertyList props;
-	mesh->activeProperties( props );
-
 	auto nif = NifModel::fromValidIndex( mesh->index() );
 	if ( !shader_ready
 			|| hint.isNull()
@@ -525,7 +522,7 @@ QString Renderer::setupProgram( Shape * mesh, const QString & hint )
 			|| !nif
 			|| (nif->getBSVersion() == 0)
 	) {
-		setupFixedFunction( mesh, props );
+		setupFixedFunction( mesh );
 		return QString();
 	}
 
@@ -537,9 +534,9 @@ QString Renderer::setupProgram( Shape * mesh, const QString & hint )
 			if ( nif->getBSVersion() >= 170 )
 				setupStatus = setupProgramCE2( nif, program, mesh );
 			else if ( nif->getBSVersion() >= 83 )
-				setupStatus = setupProgramCE1( nif, program, mesh, props );
+				setupStatus = setupProgramCE1( nif, program, mesh );
 			else
-				setupStatus = setupProgramFO3( nif, program, mesh, props );
+				setupStatus = setupProgramFO3( nif, program, mesh );
 			if ( setupStatus )
 				return program->name;
 			stopProgram();
@@ -549,8 +546,13 @@ QString Renderer::setupProgram( Shape * mesh, const QString & hint )
 	QVector<QModelIndex> iBlocks;
 	iBlocks << mesh->index();
 	iBlocks << mesh->iData;
-	for ( Property * p : props.list() ) {
-		iBlocks.append( p->index() );
+	{
+		PropertyList props;
+		mesh->activeProperties( props );
+
+		for ( Property * p : props.list() ) {
+			iBlocks.append( p->index() );
+		}
 	}
 
 	for ( Program * program : programs ) {
@@ -560,16 +562,16 @@ QString Renderer::setupProgram( Shape * mesh, const QString & hint )
 			if ( nif->getBSVersion() >= 170 )
 				setupStatus = setupProgramCE2( nif, program, mesh );
 			else if ( nif->getBSVersion() >= 83 )
-				setupStatus = setupProgramCE1( nif, program, mesh, props );
+				setupStatus = setupProgramCE1( nif, program, mesh );
 			else
-				setupStatus = setupProgramFO3( nif, program, mesh, props );
+				setupStatus = setupProgramFO3( nif, program, mesh );
 			if ( setupStatus )
 				return program->name;
 			stopProgram();
 		}
 	}
 
-	setupFixedFunction( mesh, props );
+	setupFixedFunction( mesh );
 	return QString();
 }
 
@@ -883,12 +885,7 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 
 	// texturing
 
-	BSShaderLightingProperty * bsprop = mesh->bssp;
-	if ( !bsprop )
-		return false;
-	// BSShaderLightingProperty * bsprop = props.get<BSShaderLightingProperty>();
-	// TODO: BSLSP has been split off from BSShaderLightingProperty so it needs
-	//	to be accessible from here
+	BSShaderLightingProperty * bsprop = lsp;
 
 	int texunit = 0;
 
@@ -1241,7 +1238,7 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 			} else {
 				return false;
 			}
-		} else if ( bsprop ) {
+		} else {
 			int txid = it;
 			if ( txid < 0 )
 				return false;
@@ -1337,112 +1334,46 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 	return true;
 }
 
-bool Renderer::setupProgramCE1( const NifModel * nif, Program * prog, Shape * mesh, const PropertyList & props )
+bool Renderer::setupProgramCE1( const NifModel * nif, Program * prog, Shape * mesh )
 {
 	auto nifVersion = nif->getBSVersion();
 	auto scene = mesh->scene;
 	auto lsp = mesh->bslsp;
 	auto esp = mesh->bsesp;
 
-	Material * mat = nullptr;
+	BSShaderLightingProperty * bsprop;
 	if ( lsp )
-		mat = lsp->getMaterial();
+		bsprop = lsp;
 	else if ( esp )
-		mat = esp->getMaterial();
+		bsprop = esp;
+	else
+		return false;
+	Material * mat = bsprop->getMaterial();
 
 	const QString & default_n = (nifVersion >= 151) ? ::default_ns : ::default_n;
 
 	// texturing
 
-	TexturingProperty * texprop = props.get<TexturingProperty>();
-	BSShaderLightingProperty * bsprop = mesh->bssp;
-	// BSShaderLightingProperty * bsprop = props.get<BSShaderLightingProperty>();
-	// TODO: BSLSP has been split off from BSShaderLightingProperty so it needs
-	//	to be accessible from here
-
-	TexClampMode clamp = TexClampMode::WRAP_S_WRAP_T;
-	if ( lsp )
-		clamp = lsp->clampMode;
+	TexClampMode clamp = bsprop->clampMode;
 
 	QString	emptyString;
 	int texunit = 0;
-	if ( bsprop ) {
+	if ( lsp ) {
+		// BSLightingShaderProperty
+
 		const QString *	forced = &emptyString;
 		if ( scene->hasOption(Scene::DoLighting) && scene->hasVisMode(Scene::VisNormalsOnly) )
 			forced = &white;
-
 		const QString &	alt = ( !scene->hasOption(Scene::DoErrorColor) ? white : magenta );
-
 		prog->uniSampler( bsprop, SAMP_BASE, 0, texunit, alt, clamp, *forced );
-	} else {
-		GLint uniBaseMap = prog->uniformLocations[SAMP_BASE];
-		if ( uniBaseMap >= 0 && (texprop || (bsprop && lsp)) ) {
-			if ( !activateTextureUnit( texunit ) || (texprop && !texprop->bind( 0 )) )
-				prog->uniSamplerBlank( SAMP_BASE, texunit );
-			else
-				fn->glUniform1i( uniBaseMap, texunit++ );
-		}
-	}
 
-	if ( bsprop && !esp ) {
-		const QString *	forced = &emptyString;
+		forced = &emptyString;
 		if ( !scene->hasOption(Scene::DoLighting) )
 			forced = &default_n;
-		prog->uniSampler( bsprop, SAMP_NORMAL, 1, texunit, emptyString, clamp, *forced );
-	} else if ( !bsprop ) {
-		GLint uniNormalMap = prog->uniformLocations[SAMP_NORMAL];
-		if ( uniNormalMap >= 0 && texprop ) {
-			bool result = true;
-			if ( texprop ) {
-				QString fname = texprop->fileName( 0 );
-				if ( !fname.isEmpty() ) {
-					int pos = fname.lastIndexOf( "_" );
-					if ( pos >= 0 )
-						fname = fname.left( pos ) + "_n.dds";
-					else if ( (pos = fname.lastIndexOf( "." )) >= 0 )
-						fname = fname.insert( pos, "_n" );
-				}
+		prog->uniSampler( lsp, SAMP_NORMAL, 1, texunit, emptyString, clamp, *forced );
 
-				if ( !fname.isEmpty() && (!activateTextureUnit( texunit ) || !texprop->bind( 0, fname )) )
-					result = false;
-			}
+		prog->uniSampler( lsp, SAMP_GLOW, 2, texunit, black, clamp );
 
-			if ( !result )
-				prog->uniSamplerBlank( SAMP_NORMAL, texunit );
-			else
-				fn->glUniform1i( uniNormalMap, texunit++ );
-		}
-	}
-
-	if ( bsprop && !esp ) {
-		prog->uniSampler( bsprop, SAMP_GLOW, 2, texunit, black, clamp );
-	} else if ( !bsprop ) {
-		GLint uniGlowMap = prog->uniformLocations[SAMP_GLOW];
-		if ( uniGlowMap >= 0 && texprop ) {
-			bool result = true;
-			if ( texprop ) {
-				QString fname = texprop->fileName( 0 );
-				if ( !fname.isEmpty() ) {
-					int pos = fname.lastIndexOf( "_" );
-					if ( pos >= 0 )
-						fname = fname.left( pos ) + "_g.dds";
-					else if ( (pos = fname.lastIndexOf( "." )) >= 0 )
-						fname = fname.insert( pos, "_g" );
-				}
-
-				if ( !fname.isEmpty() && (!activateTextureUnit( texunit ) || !texprop->bind( 0, fname )) )
-					result = false;
-			}
-
-			if ( !result )
-				prog->uniSamplerBlank( SAMP_GLOW, texunit );
-			else
-				fn->glUniform1i( uniGlowMap, texunit++ );
-		}
-	}
-
-	// BSLightingShaderProperty
-	if ( lsp ) {
 		prog->uni1f( LIGHT_EFF1, lsp->lightingEffect1 );
 		prog->uni1f( LIGHT_EFF2, lsp->lightingEffect2 );
 
@@ -1452,7 +1383,6 @@ bool Renderer::setupProgramCE1( const NifModel * nif, Program * prog, Shape * me
 		prog->uni2f( UV_OFFSET, lsp->uvOffset.x, lsp->uvOffset.y );
 
 		prog->uni4m( MAT_VIEW, mesh->viewTrans().toMatrix4() );
-		prog->uni4m( MAT_WORLD, mesh->worldTrans().toMatrix4() );
 
 		prog->uni1i( G2P_COLOR, lsp->greyscaleColor );
 		prog->uniSampler( bsprop, SAMP_GRAYSCALE, 3, texunit, "", TexClampMode::CLAMP_S_CLAMP_T );
@@ -1582,13 +1512,9 @@ bool Renderer::setupProgramCE1( const NifModel * nif, Program * prog, Shape * me
 		// Parallax
 		prog->uni1i( HAS_MAP_HEIGHT, lsp->hasHeightMap );
 		prog->uniSampler( bsprop, SAMP_HEIGHT, 3, texunit, gray, clamp );
-	}
 
-
-	// BSEffectShaderProperty
-	if ( esp ) {
-
-		prog->uni4m( MAT_WORLD, mesh->worldTrans().toMatrix4() );
+	} else {
+		// BSEffectShaderProperty
 
 		prog->uni2f( UV_SCALE, esp->uvScale.x, esp->uvScale.y );
 		prog->uni2f( UV_OFFSET, esp->uvOffset.x, esp->uvOffset.y );
@@ -1618,8 +1544,8 @@ bool Renderer::setupProgramCE1( const NifModel * nif, Program * prog, Shape * me
 
 		prog->uni1f( FALL_DEPTH, esp->falloff.softDepth );
 
-		// BSEffectShader textures
-		clamp = esp->clampMode;
+		// BSEffectShader textures (FIXME: should implement using error color?)
+
 		prog->uniSampler( bsprop, SAMP_BASE, 0, texunit, white, clamp );
 		prog->uniSampler( bsprop, SAMP_GRAYSCALE, 1, texunit, "", TexClampMode::CLAMP_S_CLAMP_T );
 
@@ -1666,6 +1592,8 @@ bool Renderer::setupProgramCE1( const NifModel * nif, Program * prog, Shape * me
 		}
 	}
 
+	prog->uni4m( MAT_WORLD, mesh->worldTrans().toMatrix4() );
+
 	QMapIterator<int, Program::CoordType> itx( prog->texcoords );
 
 	while ( itx.hasNext() ) {
@@ -1696,19 +1624,7 @@ bool Renderer::setupProgramCE1( const NifModel * nif, Program * prog, Shape * me
 			} else {
 				return false;
 			}
-		} else if ( texprop ) {
-			int txid = it;
-			if ( txid < 0 )
-				return false;
-
-			int set = texprop->coordSet( txid );
-
-			if ( set < 0 || !(set < mesh->coords.count()) || !mesh->coords[set].count() )
-				return false;
-
-			glEnableClientState( GL_TEXTURE_COORD_ARRAY );
-			glTexCoordPointer( 2, GL_FLOAT, 0, mesh->coords[set].constData() );
-		} else if ( bsprop ) {
+		} else {
 			int txid = it;
 			if ( txid < 0 )
 				return false;
@@ -1787,7 +1703,7 @@ bool Renderer::setupProgramCE1( const NifModel * nif, Program * prog, Shape * me
 	return true;
 }
 
-bool Renderer::setupProgramFO3( const NifModel * nif, Program * prog, Shape * mesh, const PropertyList & props )
+bool Renderer::setupProgramFO3( const NifModel * nif, Program * prog, Shape * mesh )
 {
 	auto scene = mesh->scene;
 	auto esp = mesh->bsesp;
@@ -1811,7 +1727,7 @@ bool Renderer::setupProgramFO3( const NifModel * nif, Program * prog, Shape * me
 
 	// texturing
 
-	TexturingProperty * texprop = props.get<TexturingProperty>();
+	TexturingProperty * texprop = mesh->findProperty< TexturingProperty >();
 	BSShaderLightingProperty * bsprop = mesh->bssp;
 	if ( !bsprop && !texprop )
 		return false;
@@ -2078,8 +1994,11 @@ bool Renderer::setupProgramFO3( const NifModel * nif, Program * prog, Shape * me
 	return true;
 }
 
-void Renderer::setupFixedFunction( Shape * mesh, const PropertyList & props )
+void Renderer::setupFixedFunction( Shape * mesh )
 {
+	PropertyList props;
+	mesh->activeProperties( props );
+
 	// setup lighting
 
 	glEnable( GL_LIGHTING );

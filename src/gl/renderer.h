@@ -50,7 +50,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class NifModel;
 class Scene;
 class Shape;
-class PropertyList;
 
 class QOpenGLContext;
 class QOpenGLFunctions;
@@ -407,11 +406,11 @@ public:
 	// Starfield
 	bool setupProgramCE2( const NifModel *, Program *, Shape * );
 	// Skyrim, Fallout 4, Fallout 76
-	bool setupProgramCE1( const NifModel *, Program *, Shape *, const PropertyList & );
+	bool setupProgramCE1( const NifModel *, Program *, Shape * );
 	// Oblivion, Fallout 3/New Vegas
-	bool setupProgramFO3( const NifModel *, Program *, Shape *, const PropertyList & );
+	bool setupProgramFO3( const NifModel *, Program *, Shape * );
 	// other games
-	void setupFixedFunction( Shape *, const PropertyList & );
+	void setupFixedFunction( Shape * );
 
 	struct Settings
 	{
