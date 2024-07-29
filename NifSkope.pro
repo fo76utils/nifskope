@@ -524,12 +524,6 @@ build_pass|!debug_and_release {
 ## QMAKE_POST_LINK
 ###############################
 
-win32:contains(QT_ARCH, i386) {
-	DEP += \
-		dep/NifMopp.dll
-	copyFiles( $$DEP )
-}
-
 	XML += \
 		build/nif.xml \
 		build/docsys/kfmxml/kfm.xml
