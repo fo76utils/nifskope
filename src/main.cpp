@@ -74,7 +74,11 @@ int main( int argc, char * argv[] )
 		a->setOrganizationDomain( "niftools.org" );
 		a->setApplicationName( "NifSkope " + NifSkopeVersion::rawToMajMin( NIFSKOPE_VERSION ) );
 		a->setApplicationVersion( NIFSKOPE_VERSION );
+#ifdef NIFSKOPE_REVISION
 		a->setApplicationDisplayName( "NifSkope " + NifSkopeVersion::rawToDisplay( NIFSKOPE_VERSION, true ) + " (build " + NIFSKOPE_REVISION + ", " + __DATE__ + ")" );
+#else
+		a->setApplicationDisplayName( "NifSkope " + NifSkopeVersion::rawToDisplay( NIFSKOPE_VERSION, true ) + " (" + __DATE__ + ")" );
+#endif
 
 		// Must set current directory or this causes issues with several features
 		QDir::setCurrent( qApp->applicationDirPath() );
