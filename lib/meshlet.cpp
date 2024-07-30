@@ -558,9 +558,9 @@ namespace DirectX
 
 				// Compute new bounding sphere & normal axis
 				if (newPositionBoundsNeeded)
-					positionBounds = BoundSphere(vertices.data(), qsizetype(vertices.size()), true);
+					positionBounds = BoundSphere(vertices.data(), qsizetype(vertices.size()), false);
 				if (isNewMeshlet || !normalBounds.contains(normals.back()))
-					normalBounds = BoundSphere(normals.data(), qsizetype(normals.size()), true);
+					normalBounds = BoundSphere(normals.data(), qsizetype(normals.size()), false);
 
 				FloatVector4  psphere(positionBounds.center[0], positionBounds.center[1], positionBounds.center[2], positionBounds.radius);
 				FloatVector4  normal(normalBounds.center[0], normalBounds.center[1], normalBounds.center[2], normalBounds.radius);

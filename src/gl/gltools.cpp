@@ -239,7 +239,7 @@ BoundSphere::BoundSphere( const Vector3 * vertexData, qsizetype vertexCnt, bool 
 		// bounds2 = center of bounding sphere,
 		bounds2 = bounds1;
 	} else if ( !useMiniball ) {
-		// calculated with Ritter's algorithm,
+		// calculated with an improved version of Ritter's algorithm,
 		maxDistSqr = 0.0f;
 		FloatVector4	p2( p1 );
 		for ( const auto & v : verts ) {
@@ -253,10 +253,40 @@ BoundSphere::BoundSphere( const Vector3 * vertexData, qsizetype vertexCnt, bool 
 
 		bounds2 = ( p1 + p2 ) * 0.5f;
 		float	radiusSqr = maxDistSqr * 0.25f;
+
+		if ( radiusSqr > 1.0e-10f ) {
+			FloatVector4	p3( p1 );
+			maxDistSqr = radiusSqr;
+			for ( const auto & v : verts ) {
+				// find the point (p3) most distant from (p1 + p2) / 2
+				FloatVector4	tmp( v );
+				float	d = ( tmp - p1 ).dotProduct3( tmp - p1 );
+				if ( d > maxDistSqr ) [[unlikely]] {
+					p3 = tmp;
+					maxDistSqr = d;
+				}
+			}
+			if ( maxDistSqr > ( radiusSqr * 1.000001f ) ) {
+				// calculate the circumsphere of p1, p2 and p3
+				FloatVector4	a( p1 - p3 );
+				FloatVector4	b( p2 - p3 );
+				float	a2 = a.dotProduct3( a );
+				float	b2 = b.dotProduct3( b );
+				FloatVector4	axb( a.crossProduct3( b ) );
+				float	d = axb.dotProduct3( axb );
+				if ( d > 0.0f ) {
+					FloatVector4	c( ( b * a2 ) - ( a * b2 ) );
+					c = c.crossProduct3( axb ) / ( d * 2.0f );
+					bounds2 = p3 + c;
+					radiusSqr = c.dotProduct3( c );
+				}
+			}
+		}
+
 		for ( const auto & v : verts ) {
 			FloatVector4	tmp( v );
 			float	d = ( tmp - bounds2 ).dotProduct3( tmp - bounds2 );
-			if ( d > radiusSqr ) {
+			if ( d > radiusSqr ) [[unlikely]] {
 				if ( radiusSqr > 0.0f ) {
 					float	radius1 = float( std::sqrt( radiusSqr ) );
 					float	radius2 = float( std::sqrt( d ) );
