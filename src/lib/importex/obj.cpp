@@ -889,10 +889,6 @@ void importObjMain( NifModel * nif, const QModelIndex & index, bool collision )
 							nif->set<int>( iFmtPrefs, "Pixel Layout", nif->getVersion() == "20.0.0.5" ? 6 : 5 );
 							nif->set<int>( iFmtPrefs, "Use Mipmaps", 2 );
 							nif->set<int>( iFmtPrefs, "Alpha Format", 3 );
-#if 0
-							nif->set<int>( iFmtPrefs, "Unknown Byte", 1 );
-							nif->set<int>( iFmtPrefs, "Unknown Byte 2", 1 );
-#endif
 						}
 
 						nif->set<int>( iTexSource, "Use External", 1 );
