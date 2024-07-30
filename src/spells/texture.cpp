@@ -309,16 +309,25 @@ QModelIndex addTexture( NifModel * nif, const QModelIndex & index, const QString
 
 	nif->set<int>( iTex, "Clamp Mode", 3 );
 	nif->set<int>( iTex, "Filter Mode", 3 );
-	nif->set<int>( iTex, "PS2 K", -75 );
-	nif->set<int>( iTex, "Unknown1", 257 );
+	// these fields exist only in older NIF versions
+	{
+		NifItem *	i = nif->getItem( iTex, "PS2 K" );
+		if ( i )
+			nif->set<int>( i, -75 );
+		i = nif->getItem( iTex, "Unknown Short 1" );
+		if ( i )
+			nif->set<int>( i, 257 );
+	}
 
 	QModelIndex iSrcTex = nif->insertNiBlock( "NiSourceTexture", nif->getBlockNumber( iTexProp ) + 1 );
 	nif->setLink( iTex, "Source", nif->getBlockNumber( iSrcTex ) );
 
-	nif->set<int>( iSrcTex, "Pixel Layout", ( nif->getVersion() == "20.0.0.5" && name == "Base Texture" ? 6 : 5 ) );
-	nif->set<int>( iSrcTex, "Use Mipmaps", 2 );
-	nif->set<int>( iSrcTex, "Alpha Format", 3 );
-	nif->set<int>( iSrcTex, "Unknown Byte", 1 );
+	QModelIndex	iFmtPrefs = nif->getIndex( iSrcTex, "Format Prefs" );
+	if ( iFmtPrefs.isValid() ) {
+		nif->set<int>( iFmtPrefs, "Pixel Layout", ( nif->getVersion() == "20.0.0.5" && name == "Base Texture" ? 6 : 5 ) );
+		nif->set<int>( iFmtPrefs, "Use Mipmaps", 2 );
+		nif->set<int>( iFmtPrefs, "Alpha Format", 3 );
+	}
 	nif->set<int>( iSrcTex, "Is Static", 1 );
 	nif->set<int>( iSrcTex, "Use External", 1 );
 
