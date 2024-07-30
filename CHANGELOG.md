@@ -1,6 +1,7 @@
  == CHANGELOG ==
 
 * Restored support for Oblivion, Fallout 3 and New Vegas shading.
+* Fix to https://github.com/hexabits/nifskope/issues/68
 
 #### NifSkope-2.0.dev9-20240724
 

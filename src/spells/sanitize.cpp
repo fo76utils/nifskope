@@ -168,11 +168,16 @@ public:
 
 				if ( nif->checkVersion( 0x14000005, 0x14000005 ) ) {
 					// adjust format options (oblivion only)
-					nif->set<int>( iTexSrc, "Pixel Layout", 6 );
-					nif->set<int>( iTexSrc, "Use Mipmaps", 1 );
-					nif->set<int>( iTexSrc, "Alpha Format", 3 );
-					nif->set<int>( iTexSrc, "Unknown Byte", 1 );
-					nif->set<int>( iTexSrc, "Unknown Byte 2", 1 );
+					QModelIndex	iFmtPrefs = nif->getIndex( iTexSrc, "Format Prefs" );
+					if ( iFmtPrefs.isValid() ) {
+						nif->set<int>( iFmtPrefs, "Pixel Layout", 6 );
+						nif->set<int>( iFmtPrefs, "Use Mipmaps", 1 );
+						nif->set<int>( iFmtPrefs, "Alpha Format", 3 );
+#if 0
+						nif->set<int>( iFmtPrefs, "Unknown Byte", 1 );
+						nif->set<int>( iFmtPrefs, "Unknown Byte 2", 1 );
+#endif
+					}
 				}
 			}
 		}

@@ -884,11 +884,16 @@ void importObjMain( NifModel * nif, const QModelIndex & index, bool collision )
 					if ( !cBSShaderPPLightingProperty ) {
 						// no need of NiTexturingProperty when BSShaderPPLightingProperty is present
 						nif->setLink( iBaseMap, "Source", nif->getBlockNumber( iTexSource ) );
-						nif->set<int>( iTexSource, "Pixel Layout", nif->getVersion() == "20.0.0.5" ? 6 : 5 );
-						nif->set<int>( iTexSource, "Use Mipmaps", 2 );
-						nif->set<int>( iTexSource, "Alpha Format", 3 );
-						nif->set<int>( iTexSource, "Unknown Byte", 1 );
-						nif->set<int>( iTexSource, "Unknown Byte 2", 1 );
+						QModelIndex	iFmtPrefs = nif->getIndex( iTexSource, "Format Prefs" );
+						if ( iFmtPrefs.isValid() ) {
+							nif->set<int>( iFmtPrefs, "Pixel Layout", nif->getVersion() == "20.0.0.5" ? 6 : 5 );
+							nif->set<int>( iFmtPrefs, "Use Mipmaps", 2 );
+							nif->set<int>( iFmtPrefs, "Alpha Format", 3 );
+#if 0
+							nif->set<int>( iFmtPrefs, "Unknown Byte", 1 );
+							nif->set<int>( iFmtPrefs, "Unknown Byte 2", 1 );
+#endif
+						}
 
 						nif->set<int>( iTexSource, "Use External", 1 );
 						nif->set<QString>( iTexSource, "File Name", TexCache::stripPath( mtl.map_Kd, nif->getFolder() ) );
