@@ -183,6 +183,7 @@ private:
 	TexCache * textures;
 	QStringList texfiles;
 	QModelIndex texsource;
+	QString texfilePath;
 
 	void drawTexCoords();
 

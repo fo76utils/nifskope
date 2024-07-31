@@ -232,6 +232,8 @@ void UVWidget::initializeGL()
 
 	if ( currentTexSlot < texfiles.size() && !texfiles[currentTexSlot].isEmpty() )
 		bindTexture( texfiles[currentTexSlot] );
+	else if ( !texfilePath.isEmpty() )
+		bindTexture( texfilePath );
 	else
 		bindTexture( texsource );
 
@@ -288,6 +290,8 @@ void UVWidget::paintGL()
 
 	if ( currentTexSlot < texfiles.size() && !texfiles[currentTexSlot].isEmpty() )
 		bindTexture( texfiles[currentTexSlot] );
+	else if ( !texfilePath.isEmpty() )
+		bindTexture( texfilePath );
 	else
 		bindTexture( texsource );
 
@@ -873,6 +877,30 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 	}
 }
 
+static QString getTES4NormalOrGlowMap( const NifModel * nif, const QModelIndex & iTexProp, int n )
+{
+	do {
+		if ( !nif->get<bool>( iTexProp, "Has Base Texture" ) )
+			break;
+		QModelIndex	i = nif->getIndex( iTexProp, "Base Texture" );
+		if ( !i.isValid() )
+			break;
+		i = nif->getBlockIndex( nif->getLink( i, "Source" ) );
+		if ( !i.isValid() )
+			break;
+		i = nif->getIndex( i, "File Name" );
+		if ( !i.isValid() )
+			break;
+		QString	texturePath = nif->get<QString>( i );
+		if ( !texturePath.endsWith( ".dds", Qt::CaseInsensitive ) )
+			break;
+		texturePath.chop( 4 );
+		texturePath.append( n == 4 ? "_g.dds" : "_n.dds" );
+		return nif->findResourceFile( TexCache::find( texturePath, nif ), nullptr, nullptr );
+	} while ( false );
+	return QString();
+}
+
 bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 {
 	if ( nif ) {
@@ -1012,6 +1040,7 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 	}
 
 	texfiles.clear();
+	texfilePath.clear();
 	auto props = nif->getLinkArray( iShape, "Properties" );
 	props << nif->getLink( iShape, "Shader Property" );
 	for ( const auto l : props )
@@ -1021,6 +1050,11 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 		if ( iTexProp.isValid() ) {
 			while ( currentTexSlot < texnames.size() ) {
 				iTex = nif->getIndex( iTexProp, texnames[currentTexSlot] );
+
+				if ( !iTex.isValid() && ( currentTexSlot == 4 || currentTexSlot == 5 ) ) {
+					texfilePath = getTES4NormalOrGlowMap( nif, iTexProp, currentTexSlot );
+					iTex = nif->getIndex( iTexProp, texnames[0] );
+				}
 
 				if ( iTex.isValid() ) {
 					QModelIndex iTexSource = nif->getBlockIndex( nif->getLink( iTex, "Source" ) );
@@ -1048,7 +1082,6 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 					return true;
 				}
 			} else {
-				// TODO: use the BSShaderTextureSet
 				iTexProp = nif->getBlockIndex( l, "BSShaderPPLightingProperty" );
 
 				if ( !iTexProp.isValid() ) {
@@ -1064,13 +1097,18 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 
 					if ( iTexSource.isValid() ) {
 						// Assume that a FO3 mesh never has embedded textures...
-						//texsource = iTexSource;
-						//return true;
+#if 0
+						texsource = iTexSource;
+						return true;
+#endif
 						QModelIndex iTextures = nif->getIndex( iTexSource, "Textures" );
 
 						if ( iTextures.isValid() ) {
-							for ( int i = 0; i <= 1; i++ )
-								texfiles.append( TexCache::find( nif->get<QString>( QModelIndex_child( iTextures, i ) ), nif ) );
+							int	n = nif->rowCount( iTextures );
+							for ( int i = 0; i < n; i++ ) {
+								if ( i != 4 )
+									texfiles.append( TexCache::find( nif->get<QString>( QModelIndex_child( iTextures, i ) ), nif ) );
+							}
 							return true;
 						}
 					}
@@ -1740,7 +1778,9 @@ void UVWidget::getTexSlots()
 
 		if ( iTexProp.isValid() ) {
 			for ( const QString& name : texnames ) {
-				if ( nif->get<bool>( iTexProp, QString( "Has %1" ).arg( name ) ) ) {
+				if ( nif->get<bool>( iTexProp, QString( "Has %1" ).arg( name ) )
+					|| ( name == "Glow Texture" && !getTES4NormalOrGlowMap( nif, iTexProp, 4 ).isEmpty() )
+					|| ( name == "Bump Map Texture" && !getTES4NormalOrGlowMap( nif, iTexProp, 5 ).isEmpty() ) ) {
 					if ( validTexs.indexOf( name ) == -1 ) {
 						validTexs << name;
 						QAction * temp;
@@ -1770,6 +1810,7 @@ void UVWidget::selectTexSlot()
 	}
 
 	currentTexSlot = texnames.indexOf( selected );
+	texfilePath.clear();
 
 	auto props = nif->getLinkArray( iShape, "Properties" );
 	props << nif->getLink( iShape, "Shader Property" );
@@ -1779,6 +1820,11 @@ void UVWidget::selectTexSlot()
 
 		if ( iTexProp.isValid() ) {
 			iTex = nif->getIndex( iTexProp, texnames[currentTexSlot] );
+
+			if ( !iTex.isValid() && ( currentTexSlot == 4 || currentTexSlot == 5 ) ) {
+				texfilePath = getTES4NormalOrGlowMap( nif, iTexProp, currentTexSlot );
+				iTex = nif->getIndex( iTexProp, texnames[0] );
+			}
 
 			if ( iTex.isValid() ) {
 				QModelIndex iTexSource = nif->getBlockIndex( nif->getLink( iTex, "Source" ) );

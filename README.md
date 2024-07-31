@@ -32,6 +32,7 @@ All installed MSYS2 packages can be updated anytime later by running the command
 
 Finally, run '**qmake**' and then '**make**' in MSYS2-UCRT64 to build the source code (the -j 8 option sets the number of processes to run in parallel). The resulting binaries and required DLL files and resources are placed under '**release**'.
 
+    cd nifskope
     qmake NifSkope.pro
     make -j 8
 
