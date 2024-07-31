@@ -10,9 +10,13 @@ Binary packages for Windows and Linux can be downloaded from [Releases](https://
 
 You can also download the latest official release from [niftools/nifskope](https://github.com/niftools/nifskope/releases), or development builds from [hexabits/nifskope](https://github.com/hexabits/nifskope/releases).
 
-**Note:** running NifSkope under Wayland on Linux may require setting the QT\_QPA\_PLATFORM environment variable to "xcb":
+**Notes:**
+
+Running NifSkope under Wayland on Linux may require setting the QT\_QPA\_PLATFORM environment variable to "xcb":
 
     QT_QPA_PLATFORM=xcb ./NifSkope
+
+The resource manager in this version of NifSkope is optimized for PCs with solid-state drives. While hard disk drives generally also work, if the number of loose resources is large, load times can be significantly shorter on an SSD when the data is not cached yet by the operating system.
 
 #### Building from source code
 
