@@ -2,6 +2,7 @@
 
 * Restored support for Oblivion, Fallout 3 and New Vegas shading.
 * The UV editor now allows selecting Oblivion and Fallout 3/NV texture slots.
+* Fixed crash on double clicking block names in the block list.
 * Fix to issue https://github.com/hexabits/nifskope/issues/68
 
 #### NifSkope-2.0.dev9-20240724
