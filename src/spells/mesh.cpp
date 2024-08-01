@@ -851,11 +851,25 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
+		if ( nif->getBSVersion() >= 170 && nif->blockInherits( index, "BSGeometry" ) )
+			return bool( nif->get<quint32>( index, "Flags" ) & 0x0200 );
 		return spRemoveWasteVertices::getShape( nif, index ).isValid();
 	}
 
+	static void cast_Starfield( NifModel * nif, const QModelIndex & index );
+
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
 	{
+		if ( nif->getBSVersion() >= 170 && nif->blockInherits( index, "BSGeometry" ) ) {
+			if ( nif->get<quint32>( index, "Flags" ) & 0x0200 ) {
+				nif->setState( BaseModel::Processing );
+				cast_Starfield( nif, index );
+				spRemoveWasteVertices::cast_Starfield( nif, index, false );
+				nif->restoreState();
+			}
+			return index;
+		}
+
 		try
 		{
 			QModelIndex iShape = spRemoveWasteVertices::getShape( nif, index );
@@ -924,35 +938,39 @@ public:
 
 			// adjust the faces
 
-			QVector<Triangle> tris = nif->getArray<Triangle>( iData, "Triangles" );
-			QMutableVectorIterator<Triangle> itri( tris );
+			QModelIndex	iTriangles = nif->getIndex( iData, "Triangles" );
+			if ( iTriangles.isValid() ) {
+				QVector<Triangle> tris = nif->getArray<Triangle>( iTriangles );
+				QMutableVectorIterator<Triangle> itri( tris );
 
-			while ( itri.hasNext() ) {
-				Triangle & t = itri.next();
+				while ( itri.hasNext() ) {
+					Triangle & t = itri.next();
 
-				for ( int p = 0; p < 3; p++ ) {
-					if ( map.contains( t[p] ) )
-						t[p] = map.value( t[p] );
+					for ( int p = 0; p < 3; p++ ) {
+						if ( map.contains( t[p] ) )
+							t[p] = map.value( t[p] );
+					}
+
 				}
 
+				nif->setArray<Triangle>( iData, "Triangles", tris );
 			}
 
-			nif->setArray<Triangle>( iData, "Triangles", tris );
-
 			QModelIndex iPoints = nif->getIndex( iData, "Points" );
+			if ( iPoints.isValid() ) {
+				for ( int r = 0; r < nif->rowCount( iPoints ); r++ ) {
+					QVector<quint16> strip = nif->getArray<quint16>( QModelIndex_child( iPoints, r ) );
+					QMutableVectorIterator<quint16> istrp( strip );
 
-			for ( int r = 0; r < nif->rowCount( iPoints ); r++ ) {
-				QVector<quint16> strip = nif->getArray<quint16>( QModelIndex_child( iPoints, r ) );
-				QMutableVectorIterator<quint16> istrp( strip );
+					while ( istrp.hasNext() ) {
+						quint16 & p = istrp.next();
 
-				while ( istrp.hasNext() ) {
-					quint16 & p = istrp.next();
+						if ( map.contains( p ) )
+							p = map.value( p );
+					}
 
-					if ( map.contains( p ) )
-						p = map.value( p );
+					nif->setArray<quint16>( QModelIndex_child( iPoints, r ), strip );
 				}
-
-				nif->setArray<quint16>( QModelIndex_child( iPoints, r ), strip );
 			}
 
 			// finally, remove the now unused vertices
@@ -967,6 +985,119 @@ public:
 		return index;
 	}
 };
+
+struct SFMeshVertexAttributes
+{
+	std::uint32_t	index;
+	float	xyz[3];
+	std::uint32_t	normal;
+	std::uint32_t	color;
+	std::uint64_t	texCoords;
+	SFMeshVertexAttributes( const MeshFile & meshFile, qsizetype n )
+	{
+		std::memset( this, 0, sizeof( SFMeshVertexAttributes ) );
+		index = std::uint32_t( n );
+		if ( n < meshFile.positions.size() ) {
+			FloatVector4	tmp( meshFile.positions.at( n ) );
+#if ENABLE_X86_64_SIMD
+			// convert -0.0 to 0.0
+			XMM_UInt32	tmp2 = std::bit_cast< XMM_UInt32 >( tmp.v );
+			XMM_UInt32	m = tmp2 << 1;
+			tmp.v = std::bit_cast< XMM_Float >( tmp2 & ( m != ( m >> 1 ) ) );
+#endif
+			tmp.convertToVector3( xyz );
+		}
+		if ( n < meshFile.normals.size() )
+			normal = FloatVector4( meshFile.normals.at( n ) ).convertToX10Y10Z10();
+		if ( n < meshFile.colors.size() )
+			color = std::uint32_t( FloatVector4( meshFile.colors.at( n ) ) * 255.0f );
+		if ( n < meshFile.coords.size() ) {
+			texCoords = FloatVector4( meshFile.coords.at( n ) ).convertToFloat16();
+#if ENABLE_X86_64_SIMD
+			XMM_UInt64	tmp = { texCoords, 0U };
+			XMM_UInt16	tmp2 = std::bit_cast< XMM_UInt16 >( tmp );
+			XMM_UInt16	m = tmp2 << 1;
+			tmp = std::bit_cast< XMM_UInt64 >( tmp2 & ( m != ( m >> 1 ) ) );
+			texCoords = tmp[0];
+#endif
+		}
+		// TODO: should also test weights?
+	}
+	inline bool operator<( const SFMeshVertexAttributes & r ) const
+	{
+		const unsigned char *	p = reinterpret_cast< const unsigned char * >( &( xyz[0] ) );
+		size_t	n = sizeof( SFMeshVertexAttributes ) - size_t( p - reinterpret_cast< const unsigned char * >( this ) );
+		return ( std::memcmp( p, &( r.xyz[0] ), n ) < 0 );
+	}
+};
+
+void spRemoveDuplicateVertices::cast_Starfield( NifModel * nif, const QModelIndex & index )
+{
+	if ( !index.isValid() ) {
+		return;
+	} else {
+		NifItem *	i = nif->getItem( index );
+		if ( !i )
+			return;
+		if ( !i->hasStrType( "BSMesh" ) ) {
+			if ( i->hasStrType( "BSMeshArray" ) ) {
+				if ( nif->get<bool>( i, "Has Mesh" ) )
+					cast_Starfield( nif, nif->getIndex( i, "Mesh" ) );
+			} else if ( nif->blockInherits( index, "BSGeometry" ) && ( nif->get<quint32>( i, "Flags" ) & 0x0200 ) ) {
+				auto	iMeshes = nif->getIndex( i, "Meshes" );
+				if ( iMeshes.isValid() && nif->isArray( iMeshes ) ) {
+					for ( int n = 0; n <= 3; n++ )
+						cast_Starfield( nif, QModelIndex_child( iMeshes, n ) );
+				}
+			}
+			return;
+		}
+	}
+	QModelIndex	iMeshData = nif->getIndex( index, "Mesh Data" );
+	if ( !iMeshData.isValid() )
+		return;
+
+	MeshFile	meshFile( nif, index );
+	size_t	numVerts = size_t( meshFile.positions.size() );
+
+	std::set< SFMeshVertexAttributes >	uniqueVertexSet;
+	std::vector< std::uint32_t >	vertexMap( numVerts );
+	for ( size_t i = 0; i < numVerts; i++ )
+		vertexMap[i] = uniqueVertexSet.emplace( meshFile, qsizetype( i ) ).first->index;
+
+	// remap indices
+	for ( int l = 0; true; l++ ) {
+		QModelIndex	lodIndex;
+		if ( !l ) {
+			lodIndex = iMeshData;
+		} else if ( l <= int( nif->get<quint32>( iMeshData, "Num LODs" ) ) ) {
+			lodIndex = nif->getIndex( iMeshData, "LODs" );
+			if ( lodIndex.isValid() )
+				lodIndex = QModelIndex_child( lodIndex, l - 1 );
+		}
+		if ( !lodIndex.isValid() )
+			break;
+		int	numTriangles = int( nif->get<quint32>( lodIndex, "Indices Size" ) / 3U );
+		if ( numTriangles > 0 ) {
+			NifItem *	trianglesItem = nif->getItem( lodIndex, "Triangles" );
+			if ( trianglesItem ) {
+				for ( int i = 0; i < numTriangles; i++ ) {
+					Triangle	t = nif->get<Triangle>( trianglesItem->child( i ) );
+					bool	indicesChanged = false;
+					for ( int j = 0; j < 3; j++ ) {
+						std::uint32_t	v = t[j];
+						if ( v < numVerts && vertexMap[v] != v && vertexMap[v] < numVerts ) {
+							t[j] = quint16( vertexMap[v] );
+							indicesChanged = true;
+						}
+					}
+					if ( indicesChanged )
+						nif->set<Triangle>( trianglesItem->child( i ), t );
+				}
+			}
+		}
+	}
+}
 
 REGISTER_SPELL( spRemoveDuplicateVertices )
 
