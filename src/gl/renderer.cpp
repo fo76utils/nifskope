@@ -1775,8 +1775,15 @@ bool Renderer::setupProgramFO3( const NifModel * nif, Program * prog, Shape * me
 					fname = fname.insert( pos, "_n" );
 			}
 
-			if ( fname.isEmpty() || !texprop->bind( 0, fname ) )
+			if ( fname.isEmpty() || !texprop->bind( 0, fname ) ) {
 				texprop->bind( 0, default_n );
+			} else {
+				auto	t = scene->getTextureInfo( fname );
+				if ( t && ( t->format.imageEncoding & TexCache::TexFmt::TEXFMT_DXT1 ) != 0 ) {
+					// disable specular for Oblivion normal maps in BC1 format
+					hasSpecular = false;
+				}
+			}
 			fn->glUniform1i( uniNormalMap, texunit++ );
 		}
 	}
