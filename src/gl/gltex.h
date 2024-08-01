@@ -56,6 +56,34 @@ class TexCache final : public QObject
 {
 	Q_OBJECT
 
+public:
+	struct TexFmt
+	{
+		enum {
+			// for imageFormat
+			TEXFMT_UNKNOWN = 0,
+			TEXFMT_BMP = 1,
+			TEXFMT_DDS = 2,
+			TEXFMT_NIF = 3,
+			TEXFMT_TGA = 4,
+			// flags for imageEncoding
+			TEXFMT_DXT1 = 8,
+			TEXFMT_DXT3 = 16,
+			TEXFMT_DXT5 = 32,
+			TEXFMT_GRAYSCALE = 256,
+			TEXFMT_GRAYSCALE_ALPHA = 512,
+			TEXFMT_PAL8 = 1024,
+			TEXFMT_RGB8 = 2048,
+			TEXFMT_RGBA8 = 4096,
+			TEXFMT_RLE = 8192
+		};
+		GLuint internalFormat = 0;	// OpenGL internal format
+		bool isCompressed = false;
+		unsigned char imageFormat = 0;
+		unsigned short imageEncoding = 0;
+		QString toString() const;
+	};
+
 	//! A structure for storing information on a single texture.
 	struct Tex
 	{
@@ -74,7 +102,7 @@ class TexCache final : public QObject
 		//! Number of mipmaps present
 		GLuint mipmaps = 0;
 		//! Format of the texture
-		QString format;
+		TexFmt format;
 		//! Status messages
 		QString status;
 
@@ -87,7 +115,6 @@ class TexCache final : public QObject
 		bool savePixelData( NifModel * nif, const QModelIndex & iSource, QModelIndex & iData );
 	};
 
-public:
 	TexCache( QObject * parent = nullptr );
 	~TexCache();
 
@@ -135,6 +162,15 @@ public slots:
 protected:
 	QHash<QString, Tex *> textures;
 	QHash<QModelIndex, Tex *> embedTextures;
+
+public:
+	inline const Tex * getTextureInfo( const QString & file ) const
+	{
+		auto	i = textures.find( file );
+		if ( i == textures.cend() )
+			return nullptr;
+		return i.value();
+	}
 };
 
 void initializeTextureUnits( const QOpenGLContext * );

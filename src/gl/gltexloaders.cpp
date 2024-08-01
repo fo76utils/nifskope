@@ -442,10 +442,10 @@ int texLoadPal( QIODevice & f, int width, int height, int num_mipmaps, int bpp, 
 #define TGA_GREY_RLE     11
 
 //! Load a TGA texture.
-GLuint texLoadTGA( QIODevice & f, QString & texformat, GLenum & target, GLuint & width, GLuint & height, GLuint * id )
+GLuint texLoadTGA( QIODevice & f, TexCache::TexFmt & texformat, GLenum & target, GLuint & width, GLuint & height, GLuint * id )
 {
 	// see http://en.wikipedia.org/wiki/Truevision_TGA for a lot of this
-	texformat = "TGA";
+	texformat.imageFormat = TexCache::TexFmt::TEXFMT_TGA;
 	target = GL_TEXTURE_2D;
 
 	glBindTexture( target, id[0] );
@@ -515,10 +515,10 @@ GLuint texLoadTGA( QIODevice & f, QString & texformat, GLenum & target, GLuint &
 	case TGA_COLORMAP_RLE:
 
 		if ( depth == 8 && hdr[1] ) {
-			texformat += " (palettized)";
+			texformat.imageEncoding |= TexCache::TexFmt::TEXFMT_PAL8;
 
 			if ( hdr[2] == TGA_COLORMAP_RLE )
-				texformat += " (RLE)";
+				texformat.imageEncoding |= TexCache::TexFmt::TEXFMT_RLE;
 
 			return texLoadPal( f, width, height, 1, depth, depth / 8, colormap, flipV, flipH, hdr[2] == TGA_COLORMAP_RLE );
 		}
@@ -528,17 +528,17 @@ GLuint texLoadTGA( QIODevice & f, QString & texformat, GLenum & target, GLuint &
 	case TGA_GREY_RLE:
 
 		if ( depth == 8 ) {
-			texformat += " (greyscale)";
+			texformat.imageEncoding |= TexCache::TexFmt::TEXFMT_GRAYSCALE;
 
 			if ( hdr[2] == TGA_GREY_RLE )
-				texformat += " (RLE)";
+				texformat.imageEncoding |= TexCache::TexFmt::TEXFMT_RLE;
 
 			return texLoadRaw( f, width, height, 1, 8, 1, TGA_L_MASK, flipV, flipH, hdr[2] == TGA_GREY_RLE );
 		} else if ( depth == 16 ) {
-			texformat += " (greyscale) (alpha)";
+			texformat.imageEncoding |= TexCache::TexFmt::TEXFMT_GRAYSCALE_ALPHA;
 
 			if ( hdr[2] == TGA_GREY_RLE )
-				texformat += " (RLE)";
+				texformat.imageEncoding |= TexCache::TexFmt::TEXFMT_RLE;
 
 			return texLoadRaw( f, width, height, 1, 16, 2, TGA_LA_MASK, flipV, flipH, hdr[2] == TGA_GREY_RLE );
 		}
@@ -548,17 +548,17 @@ GLuint texLoadTGA( QIODevice & f, QString & texformat, GLenum & target, GLuint &
 	case TGA_COLOR_RLE:
 
 		if ( depth == 32 ) {
-			texformat += " (truecolor) (alpha)";
+			texformat.imageEncoding |= TexCache::TexFmt::TEXFMT_RGBA8;
 
 			if ( hdr[2] == TGA_GREY_RLE )
-				texformat += " (RLE)";
+				texformat.imageEncoding |= TexCache::TexFmt::TEXFMT_RLE;
 
 			return texLoadRaw( f, width, height, 1, 32, 4, TGA_RGBA_MASK, flipV, flipH, hdr[2] == TGA_COLOR_RLE );
 		} else if ( depth == 24 ) {
-			texformat += " (truecolor)";
+			texformat.imageEncoding |= TexCache::TexFmt::TEXFMT_RGB8;
 
 			if ( hdr[2] == TGA_COLOR_RLE )
-				texformat += " (RLE)";
+				texformat.imageEncoding |= TexCache::TexFmt::TEXFMT_RLE;
 
 			return texLoadRaw( f, width, height, 1, 24, 3, TGA_RGB_MASK, flipV, flipH, hdr[2] == TGA_COLOR_RLE );
 		}
@@ -583,7 +583,7 @@ quint16 get16( quint8 * x )
 }
 
 //! Load a BMP texture.
-GLuint texLoadBMP( QIODevice & f, QString & texformat, GLenum & target, GLuint & width, GLuint & height, GLuint * id )
+GLuint texLoadBMP( QIODevice & f, TexCache::TexFmt & texformat, GLenum & target, GLuint & width, GLuint & height, GLuint * id )
 {
 	// read in bmp header
 	quint8 hdr[54];
@@ -592,7 +592,7 @@ GLuint texLoadBMP( QIODevice & f, QString & texformat, GLenum & target, GLuint &
 	if ( readBytes != 54 || strncmp( (char *)hdr, "BM", 2 ) != 0 )
 		throw QString( "not a BMP file" );
 
-	texformat = "BMP";
+	texformat.imageFormat = TexCache::TexFmt::TEXFMT_BMP;
 	target = GL_TEXTURE_2D;
 
 	glBindTexture( target, id[0] );
@@ -771,7 +771,7 @@ bool texLoadColor( const NifModel * nif, const QString & filepath, GLenum & targ
 }
 
 // (public function, documented in gltexloaders.h)
-bool texLoad( const QModelIndex & iData, QString & texformat, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint * id )
+bool texLoad( const QModelIndex & iData, TexCache::TexFmt & texformat, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint * id )
 {
 	bool ok = false;
 
@@ -859,20 +859,20 @@ bool texLoad( const QModelIndex & iData, QString & texformat, GLenum & target, G
 		hdr.ddspf.dwRBitMask = mask[3];
 		hdr.dwSurfaceFlags = DDS_SURFACE_FLAGS_TEXTURE | DDS_SURFACE_FLAGS_MIPMAP;
 
-		texformat = "NIF";
+		texformat.imageFormat = TexCache::TexFmt::TEXFMT_NIF;
 
 		switch ( format ) {
 		case 0: // PX_FMT_RGB8
-			texformat += " (RGB8)";
+			texformat.imageEncoding |= TexCache::TexFmt::TEXFMT_RGB8;
 			ok = ( 0 != texLoadRaw( buf, width, height, mipmaps, bpp, bytespp, mask, flipV, flipH, rle ) );
 			break;
 		case 1: // PX_FMT_RGBA8
-			texformat += " (RGBA8)";
+			texformat.imageEncoding |= TexCache::TexFmt::TEXFMT_RGBA8;
 			ok = ( 0 != texLoadRaw( buf, width, height, mipmaps, bpp, bytespp, mask, flipV, flipH, rle ) );
 			break;
 		case 2: // PX_FMT_PAL8
 			{
-				texformat += " (PAL8)";
+				texformat.imageEncoding |= TexCache::TexFmt::TEXFMT_PAL8;
 				// Read the NiPalette entries; change this if we change NiPalette in nif.xml
 				QModelIndex iPalette = nif->getBlockIndex( nif->getLink( iData, "Palette" ) );
 
@@ -898,17 +898,17 @@ bool texLoad( const QModelIndex & iData, QString & texformat, GLenum & target, G
 			}
 			break;
 		case 4: //PX_FMT_DXT1
-			texformat += " (DXT1)";
+			texformat.imageEncoding |= TexCache::TexFmt::TEXFMT_DXT1;
 			hdr.ddspf.dwFourCC = FOURCC_DXT1;
 			hdr.dwPitchOrLinearSize = width * height / 2;
 			break;
 		case 5: //PX_FMT_DXT3
-			texformat += " (DXT3)";
+			texformat.imageEncoding |= TexCache::TexFmt::TEXFMT_DXT3;
 			hdr.ddspf.dwFourCC = FOURCC_DXT3;
 			hdr.dwPitchOrLinearSize = width * height;
 			break;
 		case 6: //PX_FMT_DXT5
-			texformat += " (DXT5)";
+			texformat.imageEncoding |= TexCache::TexFmt::TEXFMT_DXT5;
 			hdr.ddspf.dwFourCC = FOURCC_DXT5;
 			hdr.dwPitchOrLinearSize = width * height;
 			break;
@@ -933,7 +933,7 @@ bool texLoad( const QModelIndex & iData, QString & texformat, GLenum & target, G
 }
 
 //! Load NiPixelData or NiPersistentSrcTextureRendererData from a NifModel
-GLuint texLoadNIF( QIODevice & f, QString & texformat, GLenum & target, GLuint & width, GLuint & height, GLuint * id )
+GLuint texLoadNIF( QIODevice & f, TexCache::TexFmt & texformat, GLenum & target, GLuint & width, GLuint & height, GLuint * id )
 {
 	GLuint mipmaps = 0;
 	target = GL_TEXTURE_2D;
@@ -1244,7 +1244,7 @@ gli::texture load_if_valid( const char * data, unsigned int size )
 }
 
 
-bool texLoad( const NifModel * nif, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint * id)
+bool texLoad( const NifModel * nif, const QString & filepath, TexCache::TexFmt & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint * id)
 {
 	QByteArray	tmp;
 	return texLoad( nif, filepath, format, target, width, height, mipmaps, tmp, id );
@@ -1261,7 +1261,7 @@ static void extract_pbr_lut_data( QByteArray & data )
 	data = pbrLUTData;
 }
 
-bool texLoad( const NifModel * nif, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint * id )
+bool texLoad( const NifModel * nif, const QString & filepath, TexCache::TexFmt & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint * id )
 {
 	width = height = mipmaps = 0;
 
@@ -1335,6 +1335,22 @@ bool texLoad( const NifModel * nif, const QString & filepath, QString & format, 
 
 		glGetTexLevelParameteriv( t, 0, GL_TEXTURE_WIDTH, (GLint *)&width );
 		glGetTexLevelParameteriv( t, 0, GL_TEXTURE_HEIGHT, (GLint *)&height );
+		glGetTexLevelParameteriv( t, 0, GL_TEXTURE_INTERNAL_FORMAT, (GLint *)&format.internalFormat );
+		switch ( format.internalFormat ) {
+		case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
+		case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
+			format.imageEncoding = TexCache::TexFmt::TEXFMT_DXT1;
+			break;
+		case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
+			format.imageEncoding = TexCache::TexFmt::TEXFMT_DXT3;
+			break;
+		case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+			format.imageEncoding = TexCache::TexFmt::TEXFMT_DXT5;
+			break;
+		}
+		GLint tmp = 0;
+		glGetTexLevelParameteriv( t, 0, GL_TEXTURE_COMPRESSED, &tmp );
+		format.isCompressed = bool( tmp );
 	} else {
 		throw QString( "unknown texture format" );
 	}
@@ -1862,14 +1878,14 @@ bool texSaveNIF( NifModel * nif, const QString & filepath, QModelIndex & iData )
 
 		GLuint width, height, mipmaps;
 		GLuint target = GL_TEXTURE_2D;
-		QString format;
+		TexCache::TexFmt format;
 		GLuint id[2];
 		id[0] = 0;
 		id[1] = 0;
 
 		// fastest way to get parameters and ensure texture is active
 		if ( texLoad( nif, filepath, format, target, width, height, mipmaps, id ) ) {
-			//qDebug() << "Width" << width << "height" << height << "mipmaps" << mipmaps << "format" << format;
+			//qDebug() << "Width" << width << "height" << height << "mipmaps" << mipmaps << "format" << format.toString();
 		} else {
 			qCCritical( nsIo ) << QObject::tr( "Error importing %1" ).arg( filepath );
 			return false;

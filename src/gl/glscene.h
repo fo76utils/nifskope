@@ -131,6 +131,11 @@ public:
 		return 0;
 	}
 
+	inline const TexCache::Tex * getTextureInfo( const QString & fname ) const
+	{
+		return textures->getTextureInfo( fname );
+	}
+
 	enum VisModes
 	{
 		VisNone = 0x0,

@@ -37,6 +37,8 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pragma warning(push, 0)
 #endif
 
+#include "gl/gltex.h"
+
 #include <gli.hpp>
 
 #ifdef _MSC_VER
@@ -77,8 +79,8 @@ extern gli::texture load_if_valid( const char * data, unsigned int size );
  * @param mipmaps	Contains the number of mipmaps on successful load.
  * @return			True if the load was successful, false otherwise.
  */
-extern bool texLoad( const NifModel * nif, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint * id );
-extern bool texLoad( const NifModel * nif, const QString & filepath, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint * id );
+extern bool texLoad( const NifModel * nif, const QString & filepath, TexCache::TexFmt & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint * id );
+extern bool texLoad( const NifModel * nif, const QString & filepath, TexCache::TexFmt & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint * id );
 
 /*! A function for loading textures.
  *
@@ -94,7 +96,7 @@ extern bool texLoad( const NifModel * nif, const QString & filepath, QString & f
  * @param mipmaps	Contains the number of mipmaps on successful load.
  * @return			True if the load was successful, false otherwise.
  */
-extern bool texLoad( const QModelIndex & iData, QString & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint * id );
+extern bool texLoad( const QModelIndex & iData, TexCache::TexFmt & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint * id );
 
 /*! A function which checks whether the given file can be loaded.
  *

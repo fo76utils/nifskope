@@ -148,6 +148,53 @@ void resetTextureUnits( int numTex )
  *  TexCache
  */
 
+QString TexCache::TexFmt::toString() const
+{
+	if ( imageFormat != TEXFMT_UNKNOWN ) {
+		QString	format;
+		switch ( imageFormat ) {
+		case TEXFMT_BMP:
+			format = "BMP";
+			break;
+		case TEXFMT_DDS:
+			format = "DDS";
+			break;
+		case TEXFMT_NIF:
+			format = "NIF";
+			break;
+		default:
+			format = "TGA";
+			break;
+		}
+		if ( imageEncoding & TEXFMT_DXT1 )
+			format.append( " (DXT1)" );
+		if ( imageEncoding & TEXFMT_DXT3 )
+			format.append( " (DXT3)" );
+		if ( imageEncoding & TEXFMT_DXT5 )
+			format.append( " (DXT5)" );
+		if ( imageEncoding & TEXFMT_GRAYSCALE )
+			format.append( " (greyscale)" );
+		if ( imageEncoding & TEXFMT_GRAYSCALE_ALPHA )
+			format.append( " (greyscale) (alpha)" );
+		if ( imageEncoding & TEXFMT_PAL8 )
+			format.append( " (PAL8)" );
+		if ( imageEncoding & TEXFMT_RGB8 )
+			format.append( " (RGB8)" );
+		if ( imageEncoding & TEXFMT_RGBA8 )
+			format.append( " (RGBA8)" );
+		if ( imageEncoding & TEXFMT_RLE )
+			format.append( " (RLE)" );
+		return format;
+	}
+	if ( imageEncoding & TEXFMT_DXT1 )
+		return "(DXT1)";
+	if ( imageEncoding & TEXFMT_DXT3 )
+		return "(DXT3)";
+	if ( imageEncoding & TEXFMT_DXT5 )
+		return "(DXT5)";
+	return QString();
+}
+
 TexCache::TexCache( QObject * parent ) : QObject( parent )
 {
 }
@@ -348,7 +395,7 @@ QString TexCache::info( const QModelIndex & iSource )
 			if ( iData.isValid() ) {
 				Tex * tx = embedTextures.value( iData );
 				temp = QString( "Embedded texture: %1\nWidth: %2\nHeight: %3\nMipmaps: %4" )
-						.arg( tx->format )
+						.arg( tx->format.toString() )
 						.arg( tx->width )
 						.arg( tx->height )
 						.arg( tx->mipmaps );
@@ -361,7 +408,7 @@ QString TexCache::info( const QModelIndex & iSource )
 			temp = QString( "External texture file: %1\nTexture path: %2\nFormat: %3\nWidth: %4\nHeight: %5\nMipmaps: %6" )
 					.arg( tx->filename )
 					.arg( tx->filepath )
-					.arg( tx->format )
+					.arg( tx->format.toString() )
 					.arg( tx->width )
 					.arg( tx->height )
 					.arg( tx->mipmaps );
