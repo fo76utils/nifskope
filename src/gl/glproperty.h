@@ -124,12 +124,28 @@ public:
 
 	PropertyList & operator=( const PropertyList & other );
 
-	QList<Property *> list() const { return properties.values(); }
-
 	void merge( const PropertyList & list );
 
 protected:
 	QMultiHash<Property::Type, Property *> properties;
+
+public:
+	inline QMultiHash<Property::Type, Property *>::iterator begin()
+	{
+		return properties.begin();
+	}
+	inline QMultiHash<Property::Type, Property *>::const_iterator begin() const
+	{
+		return properties.cbegin();
+	}
+	inline QMultiHash<Property::Type, Property *>::iterator end()
+	{
+		return properties.end();
+	}
+	inline QMultiHash<Property::Type, Property *>::const_iterator end() const
+	{
+		return properties.cend();
+	}
 };
 
 template <typename T> inline T * PropertyList::get() const

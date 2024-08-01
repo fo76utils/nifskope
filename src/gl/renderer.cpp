@@ -550,7 +550,7 @@ QString Renderer::setupProgram( Shape * mesh, const QString & hint )
 		PropertyList props;
 		mesh->activeProperties( props );
 
-		for ( Property * p : props.list() ) {
+		for ( Property * p : props ) {
 			iBlocks.append( p->index() );
 		}
 	}

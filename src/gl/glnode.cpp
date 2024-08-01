@@ -243,7 +243,7 @@ void Node::clear()
 Controller * Node::findController( const QString & proptype, const QString & ctrltype, const QString & var1, const QString & var2 )
 {
 	if ( proptype != "<empty>" && !proptype.isEmpty() ) {
-		for ( Property * prp : properties.list() ) {
+		for ( Property * prp : properties ) {
 			if ( prp->typeId() == proptype ) {
 				return prp->findController( ctrltype, var1, var2 );
 			}
@@ -258,7 +258,7 @@ Controller * Node::findController( const QString & proptype, const QModelIndex &
 {
 	Controller * c = nullptr;
 
-	for ( Property * prp : properties.list() ) {
+	for ( Property * prp : properties ) {
 		if ( prp->typeId() == proptype ) {
 			if ( c )
 				break;
