@@ -66,6 +66,7 @@ public:
 		return ( nif->blockInherits( index, "BSGeometry" ) && ( nif->get<quint32>(index, "Flags") & 0x0200 ) != 0 );
 	}
 
+	static void clearMeshlets( NifModel * nif, const QModelIndex & iMeshData );
 	static void updateMeshlets( NifModel * nif, const QPersistentModelIndex & iMeshData, const MeshFile & meshFile );
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final;
 };

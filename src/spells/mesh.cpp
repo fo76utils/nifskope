@@ -824,18 +824,7 @@ void spPruneRedundantTriangles::cast_Starfield( NifModel * nif, const QModelInde
 		return;
 
 	// clear meshlets
-	for ( auto i = nif->getItem( index ); i; ) {
-		i->invalidateVersionCondition();
-		i->invalidateCondition();
-		break;
-	}
-	nif->set<quint32>( index, "Num Meshlets", 0 );
-	QModelIndex	i;
-	if ( ( i = nif->getIndex( index, "Meshlets" ) ).isValid() )
-		nif->updateArraySize( i );
-	nif->set<quint32>( index, "Num Cull Data", 0 );
-	if ( ( i = nif->getIndex( index, "Cull Data" ) ).isValid() )
-		nif->updateArraySize( i );
+	spGenerateMeshlets::clearMeshlets( nif, index );
 
 	Message::info( nullptr, Spell::tr( "Removed %1 triangles" ).arg( trianglesRemovedCnt ) );
 }
@@ -993,41 +982,55 @@ struct SFMeshVertexAttributes
 	std::uint32_t	normal;
 	std::uint32_t	color;
 	std::uint64_t	texCoords;
+	static inline FloatVector4 clearDenorm( FloatVector4 v, float minVal = 0.0f )
+	{
+		// convert -0.0 and denormals to 0.0
+		FloatVector4	tmp( v * v );
+#if ENABLE_X86_64_SIMD
+		XMM_UInt32	m = std::bit_cast< XMM_UInt32 >( tmp.v <= FloatVector4( minVal ).v );
+		v.v = std::bit_cast< XMM_Float >( std::bit_cast< XMM_UInt32 >( v.v ) & ~m );
+#else
+		v[0] = ( tmp[0] <= minVal ? 0.0f : v[0] );
+		v[1] = ( tmp[1] <= minVal ? 0.0f : v[1] );
+		v[2] = ( tmp[2] <= minVal ? 0.0f : v[2] );
+		v[3] = ( tmp[3] <= minVal ? 0.0f : v[3] );
+#endif
+		return v;
+	}
 	SFMeshVertexAttributes( const MeshFile & meshFile, qsizetype n )
 	{
 		std::memset( this, 0, sizeof( SFMeshVertexAttributes ) );
 		index = std::uint32_t( n );
-		if ( n < meshFile.positions.size() ) {
-			FloatVector4	tmp( meshFile.positions.at( n ) );
-#if ENABLE_X86_64_SIMD
-			// convert -0.0 to 0.0
-			XMM_UInt32	tmp2 = std::bit_cast< XMM_UInt32 >( tmp.v );
-			XMM_UInt32	m = tmp2 << 1;
-			tmp.v = std::bit_cast< XMM_Float >( tmp2 & ( m != ( m >> 1 ) ) );
-#endif
-			tmp.convertToVector3( xyz );
-		}
+		if ( n < meshFile.positions.size() )
+			clearDenorm( FloatVector4( meshFile.positions.at( n ) ) ).convertToVector3( xyz );
 		if ( n < meshFile.normals.size() )
 			normal = FloatVector4( meshFile.normals.at( n ) ).convertToX10Y10Z10();
 		if ( n < meshFile.colors.size() )
 			color = std::uint32_t( FloatVector4( meshFile.colors.at( n ) ) * 255.0f );
-		if ( n < meshFile.coords.size() ) {
-			texCoords = FloatVector4( meshFile.coords.at( n ) ).convertToFloat16();
-#if ENABLE_X86_64_SIMD
-			XMM_UInt64	tmp = { texCoords, 0U };
-			XMM_UInt16	tmp2 = std::bit_cast< XMM_UInt16 >( tmp );
-			XMM_UInt16	m = tmp2 << 1;
-			tmp = std::bit_cast< XMM_UInt64 >( tmp2 & ( m != ( m >> 1 ) ) );
-			texCoords = tmp[0];
-#endif
-		}
+		if ( n < meshFile.coords.size() )
+			texCoords = clearDenorm( FloatVector4( meshFile.coords.at( n ) ), 1.0e-12f ).convertToFloat16();
 		// TODO: should also test weights?
 	}
-	inline bool operator<( const SFMeshVertexAttributes & r ) const
+	inline const unsigned char * data() const
 	{
-		const unsigned char *	p = reinterpret_cast< const unsigned char * >( &( xyz[0] ) );
-		size_t	n = sizeof( SFMeshVertexAttributes ) - size_t( p - reinterpret_cast< const unsigned char * >( this ) );
-		return ( std::memcmp( p, &( r.xyz[0] ), n ) < 0 );
+		return reinterpret_cast< const unsigned char * >( &( xyz[0] ) );
+	}
+	inline size_t size() const
+	{
+		return sizeof( SFMeshVertexAttributes ) - size_t( data() - reinterpret_cast< const unsigned char * >( this ) );
+	}
+	inline bool operator==( const SFMeshVertexAttributes & r ) const
+	{
+		return ( std::memcmp( data(), r.data(), size() ) == 0 );
+	}
+};
+
+template <> class std::hash< SFMeshVertexAttributes >
+{
+public:
+	inline size_t operator()( const SFMeshVertexAttributes & r ) const
+	{
+		return hashFunctionUInt32( r.data(), r.size() );
 	}
 };
 
@@ -1060,10 +1063,12 @@ void spRemoveDuplicateVertices::cast_Starfield( NifModel * nif, const QModelInde
 	MeshFile	meshFile( nif, index );
 	size_t	numVerts = size_t( meshFile.positions.size() );
 
-	std::set< SFMeshVertexAttributes >	uniqueVertexSet;
+	std::unordered_set< SFMeshVertexAttributes >	uniqueVertexSet;
 	std::vector< std::uint32_t >	vertexMap( numVerts );
 	for ( size_t i = 0; i < numVerts; i++ )
 		vertexMap[i] = uniqueVertexSet.emplace( meshFile, qsizetype( i ) ).first->index;
+	if ( uniqueVertexSet.size() == numVerts )
+		return;
 
 	// remap indices
 	for ( int l = 0; true; l++ ) {
@@ -1097,6 +1102,8 @@ void spRemoveDuplicateVertices::cast_Starfield( NifModel * nif, const QModelInde
 			}
 		}
 	}
+
+	spGenerateMeshlets::clearMeshlets( nif, iMeshData );
 }
 
 REGISTER_SPELL( spRemoveDuplicateVertices )
@@ -1633,6 +1640,22 @@ REGISTER_SPELL( spUpdateAllBounds )
 
 
 //! spGenerateMeshlets: generates Starfield meshlets
+
+void spGenerateMeshlets::clearMeshlets( NifModel * nif, const QModelIndex & iMeshData )
+{
+	for ( auto i = nif->getItem( iMeshData ); i; ) {
+		i->invalidateVersionCondition();
+		i->invalidateCondition();
+		break;
+	}
+	nif->set<quint32>( iMeshData, "Num Meshlets", 0 );
+	QModelIndex	i;
+	if ( ( i = nif->getIndex( iMeshData, "Meshlets" ) ).isValid() )
+		nif->updateArraySize( i );
+	nif->set<quint32>( iMeshData, "Num Cull Data", 0 );
+	if ( ( i = nif->getIndex( iMeshData, "Cull Data" ) ).isValid() )
+		nif->updateArraySize( i );
+}
 
 void spGenerateMeshlets::updateMeshlets(
 	NifModel * nif, const QPersistentModelIndex & iMeshData, const MeshFile & meshFile )
