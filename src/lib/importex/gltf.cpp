@@ -1741,4 +1741,7 @@ void importGltf( NifModel * nif, const QModelIndex & index )
 		QMessageBox::warning( nullptr, "NifSkope warning", QString("glTF import warning: %1").arg(gltfWarn.c_str()) );
 
 	ImportGltf( nif, model, gltfEnableLOD ).importModel( index );
+	NifSkope *	w = dynamic_cast< NifSkope * >( nif->getWindow() );
+	if ( w )
+		w->on_aViewCenter_triggered();
 }

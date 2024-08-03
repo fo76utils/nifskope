@@ -3,6 +3,7 @@
 * Implemented the 'Remove Duplicate Vertices' spell for Starfield, and fixed warnings about missing triangle data for older games.
 * Restored support for Oblivion, Fallout 3 and New Vegas shading.
 * The UV editor now allows selecting Oblivion and Fallout 3/NV texture slots.
+* The view is automatically centered after importing a glTF file.
 * Fixed crash on double clicking block names in the block list.
 * Fix to issue https://github.com/hexabits/nifskope/issues/68
 
