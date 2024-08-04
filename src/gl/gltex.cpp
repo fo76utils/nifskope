@@ -57,6 +57,7 @@ static PFNGLCLIENTACTIVETEXTUREPROC glClientActiveTexture = nullptr;
 int TexCache::num_texture_units = 0;
 int TexCache::num_txtunits_client = 0;
 int TexCache::pbrCubeMapResolution = 256;
+int TexCache::pbrImportanceSamples = 1024;
 
 //! Maximum anisotropy
 float max_anisotropy = 1.0f;

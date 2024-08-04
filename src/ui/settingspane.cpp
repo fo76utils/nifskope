@@ -459,11 +459,14 @@ void SettingsRender::write()
 
 	setModified( false );
 
-	int	tmp = settings.value( "Settings/Render/General/Pbr Cube Map Resolution", 1 ).toInt();
-	tmp = std::min< int >( std::max< int >( tmp, 0 ), 4 );
-	tmp = ( 128 << ( tmp - int(tmp >= 3) ) ) + int( tmp == 3 );	// 128, 256, 512, 513, 1024
-	if ( tmp != TexCache::pbrCubeMapResolution ) {
-		TexCache::pbrCubeMapResolution = tmp;
+	int	tmp1 = settings.value( "Settings/Render/General/Pbr Cube Map Resolution", 1 ).toInt();
+	tmp1 = std::min< int >( std::max< int >( tmp1, 0 ), 4 );
+	tmp1 = ( 128 << ( tmp1 - int(tmp1 >= 3) ) ) + int( tmp1 == 3 );	// 128, 256, 512, 513, 1024
+	int	tmp2 = settings.value( "Settings/Render/General/Importance Sample Count", 3 ).toInt();
+	tmp2 = 128 << std::min< int >( std::max< int >( tmp2, 0 ), 4 );
+	if ( tmp1 != TexCache::pbrCubeMapResolution || tmp2 != TexCache::pbrImportanceSamples ) {
+		TexCache::pbrCubeMapResolution = tmp1;
+		TexCache::pbrImportanceSamples = tmp2;
 		emit dlg->flush3D();
 	}
 }

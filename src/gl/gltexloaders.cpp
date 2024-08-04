@@ -668,11 +668,20 @@ GLuint texLoadDDS( const QString & filepath, GLenum & target, GLuint & mipmaps, 
 }
 
 static SFCubeMapCache	sfCubeMapCache;
+static int	sfCubeMapImportanceSamples = 0;
 
 GLuint texLoadPBRCubeMap( const NifModel * nif, const QString & filepath, GLenum & target, GLuint & mipmaps, QByteArray & data, GLuint * id )
 {
 	if ( data.size() < 148 )
 		return 0;
+
+	if ( TexCache::pbrImportanceSamples != sfCubeMapImportanceSamples ) [[unlikely]] {
+		if ( sfCubeMapImportanceSamples ) {
+			sfCubeMapCache.~SFCubeMapCache();
+			(void) new( &sfCubeMapCache ) SFCubeMapCache();
+		}
+		sfCubeMapImportanceSamples = TexCache::pbrImportanceSamples;
+	}
 
 	const unsigned char *	dataPtr = reinterpret_cast< unsigned char * >( data.data() );
 	bool	filterDisabled = false;
@@ -708,6 +717,7 @@ GLuint texLoadPBRCubeMap( const NifModel * nif, const QString & filepath, GLenum
 		std::uint32_t	width = std::uint32_t( TexCache::pbrCubeMapResolution );
 		sfCubeMapCache.setRoughnessTable( nullptr, 7 );
 		sfCubeMapCache.setImportanceSamplingMipLimit( width < 513U ? 1 : ( width == 513U ? 0 : 2 ) );
+		sfCubeMapCache.setImportanceSamplingQuality( TexCache::pbrImportanceSamples );
 		width = width & ~1U;
 		size_t	dataSize = size_t( data.size() );
 		size_t	spaceRequired = width * width * 8 * 4 + 148;

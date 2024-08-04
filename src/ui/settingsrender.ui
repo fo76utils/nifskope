@@ -276,6 +276,54 @@
               </widget>
              </item>
              <item row="4" column="0">
+              <widget class="QLabel" name="lblISC">
+               <property name="text">
+                <string>Importance Samples</string>
+               </property>
+               <property name="buddy">
+                <cstring>importanceSampleCount</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="1">
+              <widget class="QComboBox" name="importanceSampleCount">
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="currentIndex">
+                <number>3</number>
+               </property>
+               <item>
+                <property name="text">
+                 <string>128</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>256</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>512</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>1024</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>2048 (slow)</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item row="5" column="0">
               <widget class="QLabel" name="lblCubeMapBgnd">
                <property name="text">
                 <string>Cube Map Background</string>
@@ -285,7 +333,7 @@
                </property>
               </widget>
              </item>
-             <item row="4" column="1">
+             <item row="5" column="1">
               <widget class="QSpinBox" name="cubeMapBgnd">
                <property name="minimum">
                 <number>-1</number>
@@ -301,7 +349,7 @@
                </property>
               </widget>
              </item>
-             <item row="5" column="0">
+             <item row="6" column="0">
               <widget class="QLabel" name="lblSFParallaxScale">
                <property name="text">
                 <string>Starfield POM Scale</string>
@@ -311,7 +359,7 @@
                </property>
               </widget>
              </item>
-             <item row="5" column="1">
+             <item row="6" column="1">
               <widget class="QDoubleSpinBox" name="sfParallaxScale">
                <property name="decimals">
                 <number>3</number>
@@ -330,7 +378,7 @@
                </property>
               </widget>
              </item>
-             <item row="6" column="0">
+             <item row="7" column="0">
               <widget class="QLabel" name="lblSFParallaxOffset">
                <property name="text">
                 <string>Starfield POM Offset</string>
@@ -340,7 +388,7 @@
                </property>
               </widget>
              </item>
-             <item row="6" column="1">
+             <item row="7" column="1">
               <widget class="QDoubleSpinBox" name="sfParallaxOffset">
                <property name="decimals">
                 <number>2</number>
@@ -359,7 +407,7 @@
                </property>
               </widget>
              </item>
-             <item row="7" column="0">
+             <item row="8" column="0">
               <widget class="QLabel" name="lblSFParallaxSteps">
                <property name="text">
                 <string>Starfield POM Steps</string>
@@ -369,7 +417,7 @@
                </property>
               </widget>
              </item>
-             <item row="7" column="1">
+             <item row="8" column="1">
               <widget class="QSpinBox" name="sfParallaxSteps">
                <property name="minimum">
                 <number>16</number>

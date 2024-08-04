@@ -145,6 +145,7 @@ public:
 	static int	num_texture_units;	// for glActiveTexture()
 	static int	num_txtunits_client;	// for glClientActiveTexture()
 	static int	pbrCubeMapResolution;	// setting bit 0 disables importance sampling
+	static int	pbrImportanceSamples;
 
 signals:
 	void sigRefresh();

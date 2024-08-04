@@ -4,6 +4,7 @@
 * Restored support for Oblivion, Fallout 3 and New Vegas shading.
 * The UV editor now allows selecting Oblivion and Fallout 3/NV texture slots.
 * The view is automatically centered after importing a glTF file.
+* New render setting for the number of importance samples to use at 512x512 and higher PBR cube map resolutions. The default is 1024, lower values reduce pre-filtering time at the cost of image quality.
 * Fixed crash on double clicking block names in the block list.
 * Fix to issue https://github.com/hexabits/nifskope/issues/68
 * Minor optimizations in the resource manager and renderer.

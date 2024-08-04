@@ -451,6 +451,8 @@ void Renderer::updateSettings()
 	tmp = settings.value( "Settings/Render/General/Pbr Cube Map Resolution", 1 ).toInt();
 	tmp = std::min< int >( std::max< int >( tmp, 0 ), 4 );
 	TexCache::pbrCubeMapResolution = ( 128 << ( tmp - int(tmp >= 3) ) ) + int( tmp == 3 );	// 128, 256, 512, 513, 1024
+	tmp = settings.value( "Settings/Render/General/Importance Sample Count", 3 ).toInt();
+	TexCache::pbrImportanceSamples = 128 << std::min< int >( std::max< int >( tmp, 0 ), 4 );
 
 	bool prevStatus = shader_ready;
 
