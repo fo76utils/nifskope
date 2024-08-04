@@ -191,13 +191,20 @@ defineReplace(QtBins) {
             $$[QT_INSTALL_BINS]/libgraphite2.dll \
             $$[QT_INSTALL_BINS]/libharfbuzz-0.dll \
             $$[QT_INSTALL_BINS]/libiconv-2.dll \
-            $$[QT_INSTALL_BINS]/libicu*.dll \
+            $$[QT_INSTALL_BINS]/libicudt*.dll \
+            $$[QT_INSTALL_BINS]/libicuin*.dll \
+            $$[QT_INSTALL_BINS]/libicuuc*.dll \
             $$[QT_INSTALL_BINS]/libintl-8.dll \
             $$[QT_INSTALL_BINS]/libjpeg-8.dll \
             $$[QT_INSTALL_BINS]/libmd4c.dll \
-            $$[QT_INSTALL_BINS]/libpcre2-*.dll \
+            $$[QT_INSTALL_BINS]/libpcre2-16*.dll \
+            $$[QT_INSTALL_BINS]/libpcre2-8*.dll \
             $$[QT_INSTALL_BINS]/libpng16-*.dll \
+            $$[QT_INSTALL_BINS]/libsharpyuv-*.dll \
             $$[QT_INSTALL_BINS]/libstdc++-6.dll \
+            $$[QT_INSTALL_BINS]/libwebp-*.dll \
+            $$[QT_INSTALL_BINS]/libwebpdemux-*.dll \
+            $$[QT_INSTALL_BINS]/libwebpmux-*.dll \
             $$[QT_INSTALL_BINS]/libwinpthread-1.dll \
             $$[QT_INSTALL_BINS]/libzstd.dll \
             $$[QT_INSTALL_BINS]/zlib1.dll
