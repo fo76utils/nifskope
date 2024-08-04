@@ -6,6 +6,7 @@
 * The view is automatically centered after importing a glTF file.
 * Fixed crash on double clicking block names in the block list.
 * Fix to issue https://github.com/hexabits/nifskope/issues/68
+* Minor optimizations in the resource manager and renderer.
 
 #### NifSkope-2.0.dev9-20240724
 

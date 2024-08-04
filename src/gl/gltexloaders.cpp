@@ -707,7 +707,7 @@ GLuint texLoadPBRCubeMap( const NifModel * nif, const QString & filepath, GLenum
 	if ( !filterDisabled ) {
 		std::uint32_t	width = std::uint32_t( TexCache::pbrCubeMapResolution );
 		sfCubeMapCache.setRoughnessTable( nullptr, 7 );
-		sfCubeMapCache.setImportanceSamplingThreshold( width < 513U ? 0.125f : ( width == 513U ? 0.0f : 0.25f ) );
+		sfCubeMapCache.setImportanceSamplingMipLimit( width < 513U ? 1 : ( width == 513U ? 0 : 2 ) );
 		width = width & ~1U;
 		size_t	dataSize = size_t( data.size() );
 		size_t	spaceRequired = width * width * 8 * 4 + 148;
