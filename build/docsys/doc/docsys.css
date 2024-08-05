@@ -1,0 +1,27 @@
+hr        { border: 1px; color: black; background: black; height: 1px; } 
+body      { font-family: Verdana, Arial, Helvetica, sans-serif; }
+p, td, th, div, pre, li { color: black; font-size: 10pt; }
+td        { vertical-align: text-top; }
+a         { color: #006699; text-decoration: none;}
+a:link    { color: #006699; text-decoration: none;}
+a:visited { color: #006699; text-decoration: none;}
+a:active  { text-decoration: none;}
+a:hover   { color: #DD6900; text-decoration: underline;}
+
+th            { font-weight: bold;  color: black; background: #D3DCE3}
+h1            { text-align: center; color: black; background: #FF6600; }
+h2            { text-align: center; color: black; background: #FFCC33; }
+h3            { text-align: left;   color: black; background: #FFCC66; }
+a:link        { text-decoration: none;      color: #006699; background: transparent; }
+a:visited     { text-decoration: none;      color: #006699; background: transparent; }
+a:hover       { text-decoration: underline; color: #DD6900; background: transparent; }
+a:link.nav    { color: #000000; background: transparent; }
+a:visited.nav { color: #000000; background: transparent; }
+a:hover.nav   { color: #FF0000; background: transparent; }
+.nav          { color: #000000; background: transparent; }
+tr.reg0       { background: #CCCCCC; color: black; }
+tr.reg1       { background: #DDDDDD; color: black; }
+tr.inact0     { background: #CCAAAA; color: black; }
+tr.inact1     { background: #DDBBBB; color: black; }
+tr.extrnl     { background: #AADDAA; color: black; }
+
