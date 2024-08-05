@@ -7,3 +7,9 @@
 [submodule "lib/libfo76utils"]
 	path = lib/libfo76utils
 	url = https://github.com/fo76utils/libfo76utils.git
+[submodule "build/docsys/kfmxml"]
+	path = build/docsys/kfmxml
+	url = https://github.com/niftools/kfmxml.git
+[submodule "build/docsys/nifxml"]
+	path = build/docsys/nifxml
+	url = https://github.com/niftools/nifxml.git
