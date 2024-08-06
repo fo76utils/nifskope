@@ -97,6 +97,9 @@ void BSMesh::drawShapes( NodeList * secondPass )
 
 	glDisable(GL_POLYGON_OFFSET_FILL);
 
+	if ( scene->isSelModeVertex() )
+		drawVerts();
+
 	glPopMatrix();
 }
 
@@ -384,23 +387,108 @@ int BSMesh::meshCount()
 
 void BSMesh::drawVerts() const
 {
-	return;
-	glDisable(GL_LIGHTING);
+	glDisable( GL_LIGHTING );
 	glNormalColor();
 
-	glBegin(GL_POINTS);
+	glPointSize( 7.0f );
+	glBegin( GL_POINTS );
 	for ( int i = 0; i < transVerts.count(); i++ ) {
 		if ( Node::SELECTING ) {
-			int id = ID2COLORKEY((shapeNumber << 16) + i);
-			glColor4ubv((GLubyte*)&id);
+			GLubyte	id[4];
+			FileBuffer::writeUInt32Fast( id, std::uint32_t( ID2COLORKEY( (shapeNumber << 16) + i ) ) );
+			glColor4ubv( id );
 		}
-		glVertex(transVerts.value(i));
+		glVertex( transVerts.value(i) );
 	}
 	glEnd();
+
+	if ( Node::SELECTING || !( scene->currentBlock == iBlock ) )
+		return;
+
+	int	vertexSelected = -1;
+
+	for ( const auto & idx = scene->currentIndex; idx.isValid(); ) {
+		// Name of this index
+		auto n = idx.data( NifSkopeDisplayRole ).toString();
+		if ( !( n == "Vertices" || n == "UVs" || n == "UVs 2" || n == "Vertex Colors"
+				|| n == "Normals" || n == "Tangents" || n == "Weights" ) ) {
+			break;
+		}
+		// Name of this index's parent
+		auto p = idx.parent().data( NifSkopeDisplayRole ).toString();
+		if ( n == p ) {
+			vertexSelected = idx.row();
+			if ( n == "Weights" ) {
+				auto	nif = NifModel::fromValidIndex( idx );
+				int	weightsPerVertex;
+				if ( nif && ( weightsPerVertex = nif->get<int>( idx.parent().parent(), "Weights Per Vertex" ) ) > 0 )
+					vertexSelected /= weightsPerVertex;
+				else
+					vertexSelected = -1;
+			}
+		}
+		break;
+	}
+
+	if ( vertexSelected >= 0 && vertexSelected < transVerts.count() ) {
+		glHighlightColor();
+		glPointSize( 10.0f );
+		glBegin( GL_POINTS );
+		glVertex( transVerts.value(vertexSelected) );
+		glEnd();
+	}
 }
 
-QModelIndex BSMesh::vertexAt(int) const
+QModelIndex BSMesh::vertexAt( int c ) const
 {
+	if ( !( c >= 0 && c < transVerts.count() ) )
+		return QModelIndex();
+
+	QModelIndex	iMeshData = iBlock;
+	if ( !iMeshData.isValid() )
+		return QModelIndex();
+	for ( auto nif = NifModel::fromValidIndex( iMeshData ); nif && nif->blockInherits( iMeshData, "BSGeometry" ); ) {
+		iMeshData = nif->getIndex( iMeshData, "Meshes" );
+		if ( !( iMeshData.isValid() && nif->isArray( iMeshData ) ) )
+			break;
+		int	l = 0;
+		if ( gpuLODs.isEmpty() )
+			l = int( lodLevel );
+		iMeshData = QModelIndex_child( iMeshData, l );
+		if ( !iMeshData.isValid() )
+			break;
+		iMeshData = nif->getIndex( iMeshData, "Mesh" );
+		if ( !iMeshData.isValid() )
+			break;
+		iMeshData = nif->getIndex( iMeshData, "Mesh Data" );
+		if ( !iMeshData.isValid() )
+			break;
+		QModelIndex	iVerts;
+		const auto &	idx = scene->currentIndex;
+		if ( idx.isValid() ) {
+			auto	n = idx.data( NifSkopeDisplayRole ).toString();
+			if ( n == "UVs" )
+				iVerts = nif->getIndex( iMeshData, "UVs" );
+			else if ( n == "UVs 2" )
+				iVerts = nif->getIndex( iMeshData, "UVs 2" );
+			else if ( n == "Vertex Colors" )
+				iVerts = nif->getIndex( iMeshData, "Vertex Colors" );
+			else if ( n == "Normals" )
+				iVerts = nif->getIndex( iMeshData, "Normals" );
+			else if ( n == "Tangents" )
+				iVerts = nif->getIndex( iMeshData, "Tangents" );
+			else if ( n == "Weights" )
+				iVerts = nif->getIndex( iMeshData, "Weights" );
+		}
+		if ( !iVerts.isValid() )
+			iVerts = nif->getIndex( iMeshData, "Vertices" );
+		if ( !( iVerts.isValid() && nif->isArray( iVerts ) ) )
+			break;
+		int	n = nif->rowCount( iVerts );
+		if ( n <= 0 )
+			break;
+		return QModelIndex_child( iVerts, int( std::int64_t( c ) * n / transVerts.count() ) );
+	}
 	return QModelIndex();
 }
 

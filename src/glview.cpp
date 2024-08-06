@@ -893,7 +893,7 @@ int indexAt( /*GLuint *buffer,*/ NifModel * model, Scene * scene, QList<DrawFunc
 	// Create new FBO with multisampling disabled
 	QOpenGLFramebufferObjectFormat fboFmt;
 	fboFmt.setTextureTarget( GL_TEXTURE_2D );
-	fboFmt.setInternalTextureFormat( GL_RGB32F_ARB );
+	fboFmt.setInternalTextureFormat( GL_RGBA16 );
 	fboFmt.setAttachment( QOpenGLFramebufferObject::Attachment::CombinedDepthStencil );
 
 	QOpenGLFramebufferObject fbo( viewport[2], viewport[3], fboFmt );
@@ -908,6 +908,7 @@ int indexAt( /*GLuint *buffer,*/ NifModel * model, Scene * scene, QList<DrawFunc
 	glDisable( GL_TEXTURE_1D );
 	glDisable( GL_TEXTURE_2D );
 	glDisable( GL_TEXTURE_3D );
+	glDisable( GL_ALPHA_TEST );
 	glDisable( GL_BLEND );
 	glDisable( GL_DITHER );
 	glDisable( GL_FOG );
@@ -915,7 +916,7 @@ int indexAt( /*GLuint *buffer,*/ NifModel * model, Scene * scene, QList<DrawFunc
 	glShadeModel( GL_FLAT );
 	glEnable( GL_DEPTH_TEST );
 	glDepthFunc( GL_LEQUAL );
-	glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
+	glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
 	// Rasterize the scene
@@ -928,22 +929,21 @@ int indexAt( /*GLuint *buffer,*/ NifModel * model, Scene * scene, QList<DrawFunc
 	fbo.release();
 
 	QImage img( fbo.toImage() );
-	QColor pixel = img.pixel( pos );
+	QColor pixel = img.pixelColor( pos );
 
 #ifndef QT_NO_DEBUG
 	img.save( "fbo.png" );
 #endif
 
 	// Encode RGB to Int
-	int a = 0;
-	a |= pixel.red()   << 0;
-	a |= pixel.green() << 8;
-	a |= pixel.blue()  << 16;
+	FloatVector4	rgba( pixel.redF(), pixel.greenF(), pixel.blueF(), pixel.alphaF() );
+	std::int32_t	a = std::int32_t( std::uint32_t( rgba * 255.0f ) );
 
 	// Decode:
 	// R = (id & 0x000000FF) >> 0
 	// G = (id & 0x0000FF00) >> 8
 	// B = (id & 0x00FF0000) >> 16
+	// A = (id & 0xFF000000) >> 24
 
 	int choose = COLORKEY2ID( a );
 
@@ -1006,7 +1006,7 @@ QModelIndex GLView::indexAt( const QPoint & pos, int cycle )
 	if ( scene->isSelModeVertex() ) {
 		// Vertex
 		int block = choose >> 16;
-		int vert = choose - (block << 16);
+		int vert = choose & 0xFFFF;
 
 		auto shape = scene->shapes.value( block );
 		if ( shape )

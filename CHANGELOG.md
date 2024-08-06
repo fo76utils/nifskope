@@ -1,5 +1,7 @@
  == CHANGELOG ==
 
+* Vertex selection has been implemented for Starfield, and the maximum number of shapes supported by vertex selection has been increased from 256 to 32768 for all games.
+
 #### NifSkope-2.0.dev9-20240804
 
 * Implemented the 'Remove Duplicate Vertices' spell for Starfield, and fixed warnings about missing triangle data for older games.

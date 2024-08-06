@@ -2271,12 +2271,12 @@ void Renderer::drawSkyBox( Scene * scene )
 		-10.0f, -10.0f,  10.0f,   10.0f, -10.0f,  10.0f,  -10.0f,  10.0f,  10.0f,   10.0f,  10.0f,  10.0f
 	};
 
-	if ( !( cfg.cubeBgndMipLevel >= 0 && scene && scene->nifModel && scene->nifModel->getBSVersion() >= 151 ) )
+	if ( cfg.cubeBgndMipLevel < 0 || !scene->nifModel || scene->nifModel->getBSVersion() < 151 || Node::SELECTING )
 		return;
 
 	const NifModel *	nif = scene->nifModel;
 	quint32	bsVersion = nif->getBSVersion();
-	QString	programName = "skybox.prog";
+	static const QString	programName = "skybox.prog";
 	auto	p = programs.cbegin();
 	for ( ; p != programs.cend(); p++ ) {
 		if ( p.key().compare( programName, Qt::CaseInsensitive ) == 0 )
