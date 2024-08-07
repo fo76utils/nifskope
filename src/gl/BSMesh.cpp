@@ -390,7 +390,7 @@ void BSMesh::drawVerts() const
 	glDisable( GL_LIGHTING );
 	glNormalColor();
 
-	glPointSize( 7.0f );
+	glPointSize( 8.5f );
 	glBegin( GL_POINTS );
 	for ( int i = 0; i < transVerts.count(); i++ ) {
 		if ( Node::SELECTING ) {
