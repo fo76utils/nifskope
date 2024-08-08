@@ -152,7 +152,7 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
-		return nif && !index.isValid();
+		return nif && nif->getBSVersion() < 130 && !index.isValid();
 	}
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & ) override final

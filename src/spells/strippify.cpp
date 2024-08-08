@@ -207,7 +207,7 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
-		return nif->checkVersion( 0x0a000000, 0 ) && !index.isValid();
+		return nif && nif->getBSVersion() < 130 && nif->checkVersion( 0x0a000000, 0 ) && !index.isValid();
 	}
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & ) override final
@@ -339,7 +339,7 @@ public:
 
 	bool isApplicable( [[maybe_unused]] const NifModel * nif, const QModelIndex & index ) override final
 	{
-		return !index.isValid();
+		return nif && nif->getBSVersion() < 130 && !index.isValid();
 	}
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & ) override final
