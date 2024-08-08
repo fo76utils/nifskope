@@ -1,6 +1,9 @@
  == CHANGELOG ==
 
 * Vertex selection has been implemented for Starfield, and the maximum number of shapes supported by vertex selection has been increased from 256 to 32768 for all games.
+* Fixed the 'Add Tangent Spaces and Update' spell for Starfield.
+* Fixes to OBJ import.
+* Disabled some of the spells for newer games where they are not implemented or should not be applicable (e.g. Fallout 4 and newer do not use triangle strips).
 
 #### NifSkope-2.0.dev9-20240804
 

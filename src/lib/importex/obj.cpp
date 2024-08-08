@@ -517,6 +517,10 @@ struct ObjMaterial
 	ObjMaterial() : d( 1.0 ), Ns( 31.0 )
 	{
 	}
+	inline float smoothness() const
+	{
+		return float( std::log2( std::min( std::max( Ns, 1.0f ), 1024.0f ) ) ) * 0.1f;
+	}
 };
 
 static void readMtlLib( const QString & fname, QMap<QString, ObjMaterial> & omaterials )
@@ -775,6 +779,7 @@ void importObjMain( NifModel * nif, const QModelIndex & index, bool collision )
 	}
 
 	// create a NiTriShape foreach material in the object
+	// TODO: create BSTriShape for BS version >= 100
 	int shapecount = 0;
 	bool first_tri_shape = true;
 	QMapIterator<QString, QVector<ObjFace> *> it( ofaces );
@@ -838,7 +843,10 @@ void importObjMain( NifModel * nif, const QModelIndex & index, bool collision )
 				shaderProp = nif->insertNiBlock( "BSLightingShaderProperty" );
 				nif->setLink( iShape, "Shader Property", nif->getBlockNumber( shaderProp ) );
 				shaderProp = nif->getIndex( shaderProp, "Shader Property Data" );
-				nif->set<float>( shaderProp, "Glossiness", mtl.Ns );
+				if ( nif->getBSVersion() < 130 )
+					nif->set<float>( shaderProp, "Glossiness", mtl.Ns );
+				else
+					nif->set<float>( shaderProp, "Smoothness", mtl.smoothness() );
 				nif->set<Color3>( shaderProp, "Specular Color", mtl.Ks );
 			}
 
@@ -951,17 +959,22 @@ void importObjMain( NifModel * nif, const QModelIndex & index, bool collision )
 				triangles.append( tri );
 			}
 
-			nif->set<int>( iData, "Num Vertices", verts.count() );
 			nif->set<int>( iData, "Has Vertices", 1 );
+			nif->set<int>( iData, "Num Vertices", verts.count() );
 			nif->updateArraySize( iData, "Vertices" );
 			nif->setArray<Vector3>( iData, "Vertices", verts );
 			nif->set<int>( iData, "Has Normals", 1 );
 			nif->updateArraySize( iData, "Normals" );
 			nif->setArray<Vector3>( iData, "Normals", norms );
-			nif->set<int>( iData, "Has UV", 1 );
-			nif->set<int>( iData, "Num UV Sets", 1 );
-			nif->set<int>( iData, "Data Flags", 4097 );
-			nif->set<int>( iData, "BS Data Flags", 4097 );
+			// the following fields are version dependent
+			for ( auto i = nif->getItem( iData, "Has UV" ); i; i = nullptr )
+				nif->set<int>( i, 1 );
+			for ( auto i = nif->getItem( iData, "Num UV Sets" ); i; i = nullptr )
+				nif->set<int>( i, 1 );
+			for ( auto i = nif->getItem( iData, "Data Flags" ); i; i = nullptr )
+				nif->set<int>( i, 4097 );
+			for ( auto i = nif->getItem( iData, "BS Data Flags" ); i; i = nullptr )
+				nif->set<int>( i, 4097 );
 
 			if ( nif->getBSVersion() > 34 ) {
 				nif->set<int>( iData, "Has Vertex Colors", 1 );
@@ -980,45 +993,10 @@ void importObjMain( NifModel * nif, const QModelIndex & index, bool collision )
 			nif->setArray<Triangle>( iData, "Triangles", triangles );
 
 			// "find me a center": see nif.xml for details
-			// TODO: extract to a method somewhere...
-			Vector3 center;
+			BoundSphere	bounds( verts, true );
+			bounds.update( nif, iData );
 
-			if ( verts.count() > 0 ) {
-				Vector3 min, max;
-				min[0] = verts[0][0];
-				min[1] = verts[0][1];
-				min[2] = verts[0][2];
-				max[0] = min[0];
-				max[1] = min[1];
-				max[2] = min[2];
-
-				foreach ( Vector3 v, verts ) {
-
-					if ( v[0] < min[0] ) min[0] = v[0];
-					if ( v[1] < min[1] ) min[1] = v[1];
-					if ( v[2] < min[2] ) min[2] = v[2];
-
-					if ( v[0] > max[0] ) max[0] = v[0];
-					if ( v[1] > max[1] ) max[1] = v[1];
-					if ( v[2] > max[2] ) max[2] = v[2];
-				}
-
-				center[0] = min[0] + ( (max[0] - min[0]) / 2 );
-				center[1] = min[1] + ( (max[1] - min[1]) / 2 );
-				center[2] = min[2] + ( (max[2] - min[2]) / 2 );
-			}
-
-			nif->set<Vector3>( iData, "Center", center );
-			float radius = 0;
-			foreach ( Vector3 v, verts ) {
-				float d = ( center - v ).length();
-
-				if ( d > radius )
-					radius = d;
-			}
-			nif->set<float>( iData, "Radius", radius );
-
-			nif->set<int>( iData, "Unknown Short 2", 0x4000 );
+			nif->set<int>( iData, "Consistency Flags", 0x4000 );	// CT_STATIC
 		} else if ( nif->getBSVersion() > 0 ) {
 			// create experimental havok collision mesh
 			QVector<Vector3> verts;
@@ -1055,31 +1033,16 @@ void importObjMain( NifModel * nif, const QModelIndex & index, bool collision )
 
 			QPersistentModelIndex iData = nif->insertNiBlock( "NiTriStripsData" );
 
-			nif->set<int>( iData, "Num Vertices", verts.count() );
 			nif->set<int>( iData, "Has Vertices", 1 );
+			nif->set<int>( iData, "Num Vertices", verts.count() );
 			nif->updateArraySize( iData, "Vertices" );
 			nif->setArray<Vector3>( iData, "Vertices", verts );
 			nif->set<int>( iData, "Has Normals", 1 );
 			nif->updateArraySize( iData, "Normals" );
 			nif->setArray<Vector3>( iData, "Normals", norms );
 
-			Vector3 center;
-			for ( const Vector3 & v : verts ) {
-				center += v;
-			}
-
-			if ( verts.count() > 0 )
-				center /= verts.count();
-
-			nif->set<Vector3>( iData, "Center", center );
-			float radius = 0;
-			for ( const Vector3 & v : verts ) {
-				float d = ( center - v ).length();
-
-				if ( d > radius )
-					radius = d;
-			}
-			nif->set<float>( iData, "Radius", radius );
+			BoundSphere	bounds( verts, true );
+			bounds.update( nif, iData );
 
 			// do not stitch, because it looks better in the cs
 			QVector<QVector<quint16> > strips = stripify( triangles );
@@ -1110,7 +1073,7 @@ void importObjMain( NifModel * nif, const QModelIndex & index, bool collision )
 				iStripsShape = nif->insertNiBlock( "bhkNiTriStripsShape" );
 
 				// For some reason need to update all the fixed arrays...
-				nif->updateArraySize( iStripsShape, "Unused" );
+				nif->updateArraySize( iStripsShape, "Unused 01" );
 				nif->set<int>( iStripsShape, "Num Strips Data", 0 );
 				nif->updateArraySize( iStripsShape, "Strips Data" );
 
