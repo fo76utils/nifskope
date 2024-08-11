@@ -1,10 +1,13 @@
  == CHANGELOG ==
 
+#### NifSkope-2.0.dev9-20240811
+
 * Vertex selection has been implemented for Starfield, and the maximum number of shapes supported by vertex selection has been increased from 256 to 32768 for all games.
 * Fixed the 'Add Tangent Spaces and Update' spell for Starfield.
 * Importing OBJ files to Skyrim SE, Fallout 4 and Fallout 76 models now creates BSTriShape geometry instead of NiTriShape.
 * Added support for vertex colors in exported and imported OBJ files (BSTriShape only).
 * Fixes to OBJ import.
+* Improvements to image based lighting (Fallout 76 and Starfield), including a new option for tone mapping Radiance HDR format images, which reduces importance sampling artifacts around strong lights.
 * Disabled some of the spells for newer games where they are not implemented or should not be applicable (e.g. Fallout 4 and newer do not use triangle strips).
 
 #### NifSkope-2.0.dev9-20240804
