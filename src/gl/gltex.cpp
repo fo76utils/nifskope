@@ -56,8 +56,9 @@ static PFNGLCLIENTACTIVETEXTUREPROC glClientActiveTexture = nullptr;
 
 int TexCache::num_texture_units = 0;
 int TexCache::num_txtunits_client = 0;
-int TexCache::pbrCubeMapResolution = 256;
-int TexCache::pbrImportanceSamples = 1024;
+int TexCache::pbrCubeMapResolution = 512;
+int TexCache::pbrImportanceSamples = 256;
+int TexCache::hdrToneMapLevel = 8;
 
 //! Maximum anisotropy
 float max_anisotropy = 1.0f;
@@ -492,3 +493,24 @@ bool TexCache::Tex::savePixelData( NifModel * nif, const QModelIndex & iSource, 
 	//qDebug() << "TexCache::Tex:savePixelData: Packing" << iSource << "from file" << filepath << "to" << iData;
 	return texSaveNIF( nif, filepath, iData );
 }
+
+bool TexCache::loadSettings( QSettings & settings )
+{
+	int	tmp = settings.value( "Settings/Render/General/Ibl Cube Map Resolution", 2 ).toInt();
+	tmp = 128 << std::min< int >( std::max< int >( tmp, 0 ), 3 );
+	bool	r = ( tmp != pbrCubeMapResolution );
+	pbrCubeMapResolution = tmp;
+
+	tmp = settings.value( "Settings/Render/General/Ibl Importance Sample Cnt", 2 ).toInt();
+	tmp = 64 << std::min< int >( std::max< int >( tmp, 0 ), 6 );
+	r = r | ( tmp != pbrImportanceSamples );
+	pbrImportanceSamples = tmp;
+
+	tmp = settings.value( "Settings/Render/General/Hdr Tone Map", 8 ).toInt();
+	tmp = std::min< int >( std::max< int >( tmp, 0 ), 16 );
+	r = r | ( tmp != hdrToneMapLevel );
+	hdrToneMapLevel = tmp;
+
+	return r;
+}
+

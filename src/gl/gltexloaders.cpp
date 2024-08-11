@@ -668,26 +668,24 @@ GLuint texLoadDDS( const QString & filepath, GLenum & target, GLuint & mipmaps, 
 }
 
 static SFCubeMapCache	sfCubeMapCache;
-static int	sfCubeMapImportanceSamples = 0;
+
+void TexCache::clearCubeCache()
+{
+	sfCubeMapCache.clear();
+}
 
 GLuint texLoadPBRCubeMap( const NifModel * nif, const QString & filepath, GLenum & target, GLuint & mipmaps, QByteArray & data, GLuint * id )
 {
 	if ( data.size() < 148 )
 		return 0;
 
-	if ( TexCache::pbrImportanceSamples != sfCubeMapImportanceSamples ) [[unlikely]] {
-		if ( sfCubeMapImportanceSamples ) {
-			sfCubeMapCache.~SFCubeMapCache();
-			(void) new( &sfCubeMapCache ) SFCubeMapCache();
-		}
-		sfCubeMapImportanceSamples = TexCache::pbrImportanceSamples;
-	}
-
 	const unsigned char *	dataPtr = reinterpret_cast< unsigned char * >( data.data() );
+	float	normalizeLevel = 1.0f / 12.0f;
 	bool	filterDisabled = false;
 	do {
 		if ( FileBuffer::readUInt64Fast( dataPtr ) == 0x4E41494441523F23ULL ) {	// "#?RADIAN"
-			sfCubeMapCache.setNormalizeLevel( 0.25f );
+			normalizeLevel = float( ( 16 - TexCache::hdrToneMapLevel ) * ( 16 - TexCache::hdrToneMapLevel ) + 128 );
+			normalizeLevel *= 3.0f / 4096.0f;
 			if ( nif->getBSVersion() >= 170 )	// not Fallout 76
 				break;
 			for ( size_t i = 0; i <= 144; i++ ) {
@@ -706,7 +704,6 @@ GLuint texLoadPBRCubeMap( const NifModel * nif, const QString & filepath, GLenum
 				// DXGI_FORMAT_R9G9B9E5_SHAREDEXP with mipmaps:
 				// assume the texture is already pre-filtered
 				filterDisabled = ( dataPtr[128] == 0x43 && dataPtr[28] >= 2 );
-				sfCubeMapCache.setNormalizeLevel( 1.0f / 12.5f );
 				break;
 			}
 		}
@@ -715,15 +712,16 @@ GLuint texLoadPBRCubeMap( const NifModel * nif, const QString & filepath, GLenum
 
 	if ( !filterDisabled ) {
 		std::uint32_t	width = std::uint32_t( TexCache::pbrCubeMapResolution );
+		sfCubeMapCache.setOutputWidth( width );
 		sfCubeMapCache.setRoughnessTable( nullptr, 7 );
-		sfCubeMapCache.setImportanceSamplingMipLimit( width < 513U ? 1 : ( width == 513U ? 0 : 2 ) );
+		sfCubeMapCache.setNormalizeLevel( normalizeLevel );
 		sfCubeMapCache.setImportanceSamplingQuality( TexCache::pbrImportanceSamples );
-		width = width & ~1U;
 		size_t	dataSize = size_t( data.size() );
 		size_t	spaceRequired = width * width * 8 * 4 + 148;
 		if ( data.size() < qsizetype(spaceRequired) )
 			data.resize( spaceRequired );
-		size_t	newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(data.data()), dataSize, true, spaceRequired, width );
+		size_t	newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(data.data()), dataSize,
+														true, spaceRequired, TexCache::hdrToneMapLevel );
 		data.resize( newSize );
 	}
 
@@ -736,8 +734,11 @@ GLuint texLoadPBRCubeMap( const NifModel * nif, const QString & filepath, GLenum
 		if ( tmpData.size() < qsizetype(spaceRequired) )
 			tmpData.resize( spaceRequired );
 		static const float  roughnessDiffuse = 1.0f;
+		sfCubeMapCache.setOutputWidth( width );
 		sfCubeMapCache.setRoughnessTable( &roughnessDiffuse, 1 );
-		size_t	newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(tmpData.data()), dataSize, true, spaceRequired, width );
+		sfCubeMapCache.setImportanceSamplingQuality( -1 );
+		size_t	newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(tmpData.data()), dataSize,
+														true, spaceRequired );
 		tmpData.resize( newSize );
 		GLuint	tmpMipmaps = 0;
 		(void) texLoadDDS( filepath, target, tmpMipmaps, tmpData, id + 1 );

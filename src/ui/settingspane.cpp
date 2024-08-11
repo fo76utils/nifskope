@@ -413,6 +413,7 @@ SettingsRender::SettingsRender( QWidget * parent ) :
 	alphaSlider( ui->colorWireframe, ui->wireframe, ui->layAlphaWire );
 	alphaSlider( ui->colorHighlight, ui->highlight, ui->layAlphaHigh );
 
+	connect( ui->btnClearCubeCache, &QPushButton::clicked, this, &SettingsRender::clearCubeCache );
 	connect( ui->btnLoadF76CubeMap, &QPushButton::clicked, this, &SettingsRender::selectF76CubeMap );
 	connect( ui->btnLoadSTFCubeMap, &QPushButton::clicked, this, &SettingsRender::selectSTFCubeMap );
 }
@@ -459,16 +460,8 @@ void SettingsRender::write()
 
 	setModified( false );
 
-	int	tmp1 = settings.value( "Settings/Render/General/Pbr Cube Map Resolution", 1 ).toInt();
-	tmp1 = std::min< int >( std::max< int >( tmp1, 0 ), 4 );
-	tmp1 = ( 128 << ( tmp1 - int(tmp1 >= 3) ) ) + int( tmp1 == 3 );	// 128, 256, 512, 513, 1024
-	int	tmp2 = settings.value( "Settings/Render/General/Importance Sample Count", 3 ).toInt();
-	tmp2 = 128 << std::min< int >( std::max< int >( tmp2, 0 ), 4 );
-	if ( tmp1 != TexCache::pbrCubeMapResolution || tmp2 != TexCache::pbrImportanceSamples ) {
-		TexCache::pbrCubeMapResolution = tmp1;
-		TexCache::pbrImportanceSamples = tmp2;
+	if ( TexCache::loadSettings( settings ) )
 		emit dlg->flush3D();
-	}
 }
 
 SettingsRender::~SettingsRender()
@@ -478,6 +471,11 @@ SettingsRender::~SettingsRender()
 void SettingsRender::setDefault()
 {
 	read();
+}
+
+void SettingsRender::clearCubeCache()
+{
+	TexCache::clearCubeCache();
 }
 
 void SettingsRender::selectF76CubeMap()

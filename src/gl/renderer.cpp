@@ -448,11 +448,7 @@ void Renderer::updateSettings()
 	cfg.sfParallaxOffset = settings.value( "Settings/Render/General/Sf Parallax Offset", 0.5f).toFloat();
 	cfg.cubeMapPathFO76 = settings.value( "Settings/Render/General/Cube Map Path FO 76", "textures/shared/cubemaps/mipblur_defaultoutside1.dds" ).toString();
 	cfg.cubeMapPathSTF = settings.value( "Settings/Render/General/Cube Map Path STF", "textures/cubemaps/cell_cityplazacube.dds" ).toString();
-	tmp = settings.value( "Settings/Render/General/Pbr Cube Map Resolution", 1 ).toInt();
-	tmp = std::min< int >( std::max< int >( tmp, 0 ), 4 );
-	TexCache::pbrCubeMapResolution = ( 128 << ( tmp - int(tmp >= 3) ) ) + int( tmp == 3 );	// 128, 256, 512, 513, 1024
-	tmp = settings.value( "Settings/Render/General/Importance Sample Count", 3 ).toInt();
-	TexCache::pbrImportanceSamples = 128 << std::min< int >( std::max< int >( tmp, 0 ), 4 );
+	TexCache::loadSettings( settings );
 
 	bool prevStatus = shader_ready;
 

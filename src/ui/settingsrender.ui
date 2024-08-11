@@ -180,6 +180,26 @@
               </widget>
              </item>
              <item row="2" column="0">
+              <widget class="QLabel" name="lblDisableMSAALimit">
+               <property name="text">
+                <string>Allow >4x AA on Linux</string>
+               </property>
+               <property name="buddy">
+                <cstring>disableMSAALimit</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QCheckBox" name="disableMSAALimit">
+               <property name="text">
+                <string/>
+               </property>
+               <property name="checked">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="0">
               <widget class="QLabel" name="lblAF">
                <property name="text">
                 <string>Anisotropic Filtering</string>
@@ -189,7 +209,7 @@
                </property>
               </widget>
              </item>
-             <item row="2" column="1">
+             <item row="3" column="1">
               <widget class="QComboBox" name="anisotropicFiltering">
                <property name="maximumSize">
                 <size>
@@ -227,129 +247,23 @@
                </item>
               </widget>
              </item>
-             <item row="3" column="0">
-              <widget class="QLabel" name="lblCMR">
-               <property name="text">
-                <string>PBR Cube Map Size</string>
+             <item row="4" column="0" colspan="2">
+              <spacer name="horizontalSpacer">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
                </property>
-               <property name="buddy">
-                <cstring>pbrCubeMapResolution</cstring>
+               <property name="sizeType">
+                <enum>QSizePolicy::Expanding</enum>
                </property>
-              </widget>
-             </item>
-             <item row="3" column="1">
-              <widget class="QComboBox" name="pbrCubeMapResolution">
-               <property name="maximumSize">
+               <property name="sizeHint" stdset="0">
                 <size>
-                 <width>60</width>
-                 <height>16777215</height>
+                 <width>0</width>
+                 <height>20</height>
                 </size>
                </property>
-               <property name="currentIndex">
-                <number>1</number>
-               </property>
-               <item>
-                <property name="text">
-                 <string>128x128 to 2x2</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>256x256 to 4x4</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>512x512 to 8x8</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>512x512 Max. quality (slow)</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>1024x1024 to 16x16 (slow)</string>
-                </property>
-               </item>
-              </widget>
-             </item>
-             <item row="4" column="0">
-              <widget class="QLabel" name="lblISC">
-               <property name="text">
-                <string>Importance Samples</string>
-               </property>
-               <property name="buddy">
-                <cstring>importanceSampleCount</cstring>
-               </property>
-              </widget>
-             </item>
-             <item row="4" column="1">
-              <widget class="QComboBox" name="importanceSampleCount">
-               <property name="maximumSize">
-                <size>
-                 <width>60</width>
-                 <height>16777215</height>
-                </size>
-               </property>
-               <property name="currentIndex">
-                <number>3</number>
-               </property>
-               <item>
-                <property name="text">
-                 <string>128</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>256</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>512</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>1024</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>2048 (slow)</string>
-                </property>
-               </item>
-              </widget>
+              </spacer>
              </item>
              <item row="5" column="0">
-              <widget class="QLabel" name="lblCubeMapBgnd">
-               <property name="text">
-                <string>Cube Map Background</string>
-               </property>
-               <property name="buddy">
-                <cstring>cubeMapBgnd</cstring>
-               </property>
-              </widget>
-             </item>
-             <item row="5" column="1">
-              <widget class="QSpinBox" name="cubeMapBgnd">
-               <property name="minimum">
-                <number>-1</number>
-               </property>
-               <property name="maximum">
-                <number>6</number>
-               </property>
-               <property name="singleStep">
-                <number>1</number>
-               </property>
-               <property name="value">
-                <number>1</number>
-               </property>
-              </widget>
-             </item>
-             <item row="6" column="0">
               <widget class="QLabel" name="lblSFParallaxScale">
                <property name="text">
                 <string>Starfield POM Scale</string>
@@ -359,7 +273,7 @@
                </property>
               </widget>
              </item>
-             <item row="6" column="1">
+             <item row="5" column="1">
               <widget class="QDoubleSpinBox" name="sfParallaxScale">
                <property name="decimals">
                 <number>3</number>
@@ -378,7 +292,7 @@
                </property>
               </widget>
              </item>
-             <item row="7" column="0">
+             <item row="6" column="0">
               <widget class="QLabel" name="lblSFParallaxOffset">
                <property name="text">
                 <string>Starfield POM Offset</string>
@@ -388,7 +302,7 @@
                </property>
               </widget>
              </item>
-             <item row="7" column="1">
+             <item row="6" column="1">
               <widget class="QDoubleSpinBox" name="sfParallaxOffset">
                <property name="decimals">
                 <number>2</number>
@@ -407,7 +321,7 @@
                </property>
               </widget>
              </item>
-             <item row="8" column="0">
+             <item row="7" column="0">
               <widget class="QLabel" name="lblSFParallaxSteps">
                <property name="text">
                 <string>Starfield POM Steps</string>
@@ -417,7 +331,7 @@
                </property>
               </widget>
              </item>
-             <item row="8" column="1">
+             <item row="7" column="1">
               <widget class="QSpinBox" name="sfParallaxSteps">
                <property name="minimum">
                 <number>16</number>
@@ -487,7 +401,7 @@
            </widget>
           </item>
           <item>
-           <spacer name="horizontalSpacer">
+           <spacer name="horizontalSpacer_2">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
@@ -786,27 +700,251 @@
              </sizepolicy>
             </property>
             <property name="title">
-             <string>Default Environment Maps</string>
+             <string>Image Based Lighting</string>
             </property>
             <property name="flat">
              <bool>true</bool>
             </property>
-            <layout class="QFormLayout" name="formLayout_4">
-             <item row="1" column="0">
-              <widget class="QLabel" name="lblCubeMapPathFO76">
+            <layout class="QGridLayout" name="gridLayout_2">
+             <item row="0" column="0">
+              <widget class="QLabel" name="lblCMR">
+               <property name="maximumSize">
+                <size>
+                 <width>280</width>
+                 <height>26</height>
+                </size>
+               </property>
                <property name="text">
-                <string>Fallout 76</string>
+                <string>PBR Cube Map Size</string>
+               </property>
+               <property name="buddy">
+                <cstring>iblCubeMapResolution</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QComboBox" name="iblCubeMapResolution">
+               <property name="maximumSize">
+                <size>
+                 <width>80</width>
+                 <height>26</height>
+                </size>
+               </property>
+               <property name="currentIndex">
+                <number>2</number>
+               </property>
+               <item>
+                <property name="text">
+                 <string>128x128 to 2x2</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>256x256 to 4x4</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>512x512 to 8x8</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>1024x1024 to 16x16</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <widget class="QPushButton" name="btnClearCubeCache">
+               <property name="maximumSize">
+                <size>
+                 <width>180</width>
+                 <height>26</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>Clear Cube Map Cache</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="lblISC">
+               <property name="maximumSize">
+                <size>
+                 <width>280</width>
+                 <height>26</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>Importance Samples</string>
+               </property>
+               <property name="buddy">
+                <cstring>iblImportanceSampleCnt</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QComboBox" name="iblImportanceSampleCnt">
+               <property name="maximumSize">
+                <size>
+                 <width>80</width>
+                 <height>26</height>
+                </size>
+               </property>
+               <property name="currentIndex">
+                <number>2</number>
+               </property>
+               <item>
+                <property name="text">
+                 <string>64</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>128</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>256</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>512</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>1024</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>2048</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>4096 (slow)</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="lblHDRToneMap">
+               <property name="maximumSize">
+                <size>
+                 <width>280</width>
+                 <height>26</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>HDR Tone Mapping (log2 scale)</string>
+               </property>
+               <property name="buddy">
+                <cstring>hdrToneMap</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QSpinBox" name="hdrToneMap">
+               <property name="maximumSize">
+                <size>
+                 <width>80</width>
+                 <height>26</height>
+                </size>
+               </property>
+               <property name="minimum">
+                <number>0</number>
+               </property>
+               <property name="maximum">
+                <number>16</number>
+               </property>
+               <property name="singleStep">
+                <number>1</number>
+               </property>
+               <property name="value">
+                <number>8</number>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="0">
+              <widget class="QLabel" name="lblCubeMapBgnd">
+               <property name="maximumSize">
+                <size>
+                 <width>280</width>
+                 <height>26</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>Cube Map Background Mip Level</string>
+               </property>
+               <property name="buddy">
+                <cstring>cubeMapBgnd</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="1">
+              <widget class="QSpinBox" name="cubeMapBgnd">
+               <property name="maximumSize">
+                <size>
+                 <width>80</width>
+                 <height>26</height>
+                </size>
+               </property>
+               <property name="minimum">
+                <number>-1</number>
+               </property>
+               <property name="maximum">
+                <number>6</number>
+               </property>
+               <property name="singleStep">
+                <number>1</number>
+               </property>
+               <property name="value">
+                <number>1</number>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="0" colspan="4">
+              <spacer name="horizontalSpacer_3">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::Expanding</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>0</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item row="5" column="0">
+              <widget class="QLabel" name="lblCubeMapPathFO76">
+               <property name="maximumSize">
+                <size>
+                 <width>280</width>
+                 <height>26</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>Fallout 76 Default Environment Map</string>
                </property>
                <property name="buddy">
                 <cstring>cubeMapPathFO76</cstring>
                </property>
               </widget>
              </item>
-             <item row="2" column="0">
+             <item row="5" column="1" colspan="2">
               <widget class="QLineEdit" name="cubeMapPathFO76">
                <property name="minimumSize">
                 <size>
-                 <width>638</width>
+                 <width>400</width>
                  <height>26</height>
                 </size>
                </property>
@@ -815,7 +953,7 @@
                </property>
               </widget>
              </item>
-             <item row="2" column="1">
+             <item row="5" column="3">
               <widget class="QPushButton" name="btnLoadF76CubeMap">
                <property name="maximumSize">
                 <size>
@@ -838,21 +976,27 @@
                </property>
               </widget>
              </item>
-             <item row="3" column="0">
+             <item row="6" column="0">
               <widget class="QLabel" name="lblCubeMapPathSTF">
+               <property name="maximumSize">
+                <size>
+                 <width>280</width>
+                 <height>26</height>
+                </size>
+               </property>
                <property name="text">
-                <string>Starfield</string>
+                <string>Starfield Environment Map</string>
                </property>
                <property name="buddy">
                 <cstring>cubeMapPathSTF</cstring>
                </property>
               </widget>
              </item>
-             <item row="4" column="0">
+             <item row="6" column="1" colspan="2">
               <widget class="QLineEdit" name="cubeMapPathSTF">
                <property name="minimumSize">
                 <size>
-                 <width>638</width>
+                 <width>400</width>
                  <height>26</height>
                 </size>
                </property>
@@ -861,7 +1005,7 @@
                </property>
               </widget>
              </item>
-             <item row="4" column="1">
+             <item row="6" column="3">
               <widget class="QPushButton" name="btnLoadSTFCubeMap">
                <property name="maximumSize">
                 <size>
@@ -896,7 +1040,7 @@
       <attribute name="title">
        <string>Colors</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_2">
+      <layout class="QGridLayout" name="gridLayout_3">
        <item row="2" column="1">
         <widget class="ColorLineEdit" name="highlight" native="true">
          <property name="sizePolicy">

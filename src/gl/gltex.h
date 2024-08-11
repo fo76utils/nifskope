@@ -44,6 +44,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class NifModel;
 class QOpenGLContext;
+class QSettings;
 
 typedef unsigned int GLuint;
 typedef unsigned int GLenum;
@@ -144,8 +145,9 @@ public:
 	enum	{ maxTextureUnits = 32 };
 	static int	num_texture_units;	// for glActiveTexture()
 	static int	num_txtunits_client;	// for glClientActiveTexture()
-	static int	pbrCubeMapResolution;	// setting bit 0 disables importance sampling
+	static int	pbrCubeMapResolution;
 	static int	pbrImportanceSamples;
+	static int	hdrToneMapLevel;
 
 signals:
 	void sigRefresh();
@@ -172,6 +174,10 @@ public:
 			return nullptr;
 		return i.value();
 	}
+
+	// returns true if the settings have changed
+	static bool loadSettings( QSettings & settings );
+	static void clearCubeCache();
 };
 
 void initializeTextureUnits( const QOpenGLContext * );

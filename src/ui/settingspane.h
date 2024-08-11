@@ -77,6 +77,7 @@ public:
 	void setDefault() override final;
 
 public slots:
+	void clearCubeCache();
 	void selectF76CubeMap();
 	void selectSTFCubeMap();
 
