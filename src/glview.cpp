@@ -125,12 +125,9 @@ GLView * GLView::create( NifSkope * window )
 	int	aa = settings.value( "Settings/Render/General/Antialiasing", 4 ).toInt();
 #ifdef Q_OS_LINUX
 	// work around issues with MSAA > 4x on Linux
-	{
-		int	aaLimit = settings.value( "Settings/Render/General/Antialiasing Limit", 2 ).toInt();
-		if ( aa > aaLimit ) {
-			aa = aaLimit;
-			settings.setValue( "Settings/Render/General/Antialiasing", QVariant(aa) );
-		}
+	if ( aa > 2 && !settings.value( "Settings/Render/General/Disable MSAA Limit", false ).toBool() ) {
+		aa = 2;
+		settings.setValue( "Settings/Render/General/Antialiasing", QVariant(aa) );
 	}
 #endif
 	aa = std::min< int >( std::max< int >( aa, 0 ), 4 );
