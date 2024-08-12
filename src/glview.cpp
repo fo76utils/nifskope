@@ -693,7 +693,7 @@ void GLView::paintGL()
 
 	if ( scene->hasOption(Scene::ShowAxes) ) {
 		// Resize viewport to small corner of screen
-		int axesSize = std::min( width() / 10, 125 );
+		int axesSize = int( std::lrint( devicePixelRatioF() * std::min( width() / 10, 125 ) ) );
 		glViewport( 0, 0, axesSize, axesSize );
 
 		// Reset matrices
@@ -734,7 +734,7 @@ void GLView::paintGL()
 		glPopMatrix();
 
 		// Restore viewport size
-		glViewport( 0, 0, width(), height() );
+		glViewport( 0, 0, pixelWidth(), pixelHeight() );
 		// Restore matrices
 		glProjection();
 	}
@@ -764,7 +764,8 @@ void GLView::paintGL()
 
 void GLView::resizeGL( int width, int height )
 {
-	resize( width, height );
+	double	p = 1.0 / devicePixelRatioF();
+	resize( int( std::lrint( p * width ) ), int( std::lrint( p * height ) ) );
 
 	makeCurrent();
 	if ( !isValid() )
@@ -973,7 +974,7 @@ QModelIndex GLView::indexAt( const QPoint & pos, int cycle )
 	glMatrixMode( GL_MODELVIEW );
 	glPushMatrix();
 
-	glViewport( 0, 0, width(), height() );
+	glViewport( 0, 0, pixelWidth(), pixelHeight() );
 	glProjection( pos.x(), pos.y() );
 
 	QList<DrawFunc> df;
@@ -1522,15 +1523,17 @@ void GLView::saveImage()
 	btnOneX->setCheckable( true );
 	btnOneX->setChecked( true );
 	// Disable any of these that would exceed the max viewport size of the platform
+	int	w = pixelWidth();
+	int	h = pixelHeight();
 	auto btnTwoX = new QRadioButton( "2x", dlg );
 	btnTwoX->setCheckable( true );
-	btnTwoX->setDisabled( (width() * 2) > dims[0] || (height() * 2) > dims[1] );
+	btnTwoX->setDisabled( (w * 2) > dims[0] || (h * 2) > dims[1] );
 	auto btnFourX = new QRadioButton( "4x", dlg );
 	btnFourX->setCheckable( true );
-	btnFourX->setDisabled( (width() * 4) > dims[0] || (height() * 4) > dims[1] );
+	btnFourX->setDisabled( (w * 4) > dims[0] || (h * 4) > dims[1] );
 	auto btnEightX = new QRadioButton( "8x", dlg );
 	btnEightX->setCheckable( true );
-	btnEightX->setDisabled( (width() * 8) > dims[0] || (height() * 8) > dims[1] );
+	btnEightX->setDisabled( (w * 8) > dims[0] || (h * 8) > dims[1] );
 
 
 	auto grpBox = new QGroupBox( tr( "Image Size" ), dlg );
@@ -1598,9 +1601,6 @@ void GLView::saveImage()
 
 			// Supersampling
 			int ss = grpSize->checkedId();
-
-			int w = width();
-			int h = height();
 
 			// Resize viewport for supersampling
 			if ( ss > 1 )
@@ -1893,7 +1893,7 @@ void GLView::mouseReleaseEvent( QMouseEvent * event )
 		fboFmt.setMipmap( false );
 		fboFmt.setAttachment( QOpenGLFramebufferObject::Attachment::Depth );
 
-		QOpenGLFramebufferObject fbo( width(), height(), fboFmt );
+		QOpenGLFramebufferObject fbo( pixelWidth(), pixelHeight(), fboFmt );
 		fbo.bind();
 
 		update();

@@ -264,7 +264,7 @@ void UVWidget::paintGL()
 	glPushMatrix();
 	glLoadIdentity();
 
-	setupViewport( width(), height() );
+	setupViewport( pixelWidth(), pixelHeight() );
 
 	glMatrixMode( GL_MODELVIEW );
 	glPushMatrix();
@@ -683,7 +683,7 @@ void UVWidget::mouseMoveEvent( QMouseEvent * e )
 
 	case Qt::MiddleButton:
 		pos += zoom * QPointF( dPos.x(), -dPos.y() );
-		updateViewRect( width(), height() );
+		updateViewRect( pixelWidth(), pixelHeight() );
 
 		setCursor( QCursor( Qt::ClosedHandCursor ) );
 
@@ -698,7 +698,7 @@ void UVWidget::mouseMoveEvent( QMouseEvent * e )
 			zoom = MAXZOOM;
 		}
 
-		updateViewRect( width(), height() );
+		updateViewRect( pixelWidth(), pixelHeight() );
 
 		setCursor( QCursor( Qt::SizeVerCursor ) );
 
@@ -761,7 +761,7 @@ void UVWidget::wheelEvent( QWheelEvent * e )
 			zoom = MAXZOOM;
 		}
 
-		updateViewRect( width(), height() );
+		updateViewRect( pixelWidth(), pixelHeight() );
 
 		break;
 	}

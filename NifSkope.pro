@@ -545,7 +545,7 @@ build_pass|!debug_and_release {
 
 	copyDirs( $$SHADERS, shaders )
 	#copyDirs( $$LANG, lang )
-	copyFiles( $$XML $$QSS )
+	copyFiles( $$XML $$QSS res/qt.conf )
 
 	# Copy Readmes and rename to TXT
 	copyFiles( $$READMES,,,, md:txt )

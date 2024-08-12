@@ -162,6 +162,18 @@ public:
 	QSize minimumSizeHint() const override final { return { 50, 50 }; }
 	QSize sizeHint() const override final { return { 400, 400 }; }
 
+	//! Returns the actual width in pixels (FIXME: it may be inaccurate due to rounding)
+	int pixelWidth() const
+	{
+		return int( std::lrint( devicePixelRatioF() * width() ) );
+	}
+
+	//! Returns the actual height in pixels
+	int pixelHeight() const
+	{
+		return int( std::lrint( devicePixelRatioF() * height() ) );
+	}
+
 public slots:
 	void setCurrentIndex( const QModelIndex & );
 	void setSceneTime( float );

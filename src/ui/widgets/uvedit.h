@@ -91,6 +91,18 @@ public:
 	//! Returns the preferred height for this widget, given the width w.
 	int heightForWidth( int width ) const override final;
 
+	//! Returns the actual width in pixels (FIXME: it may be inaccurate due to rounding)
+	int pixelWidth() const
+	{
+		return int( std::lrint( devicePixelRatioF() * width() ) );
+	}
+
+	//! Returns the actual height in pixels
+	int pixelHeight() const
+	{
+		return int( std::lrint( devicePixelRatioF() * height() ) );
+	}
+
 	//! For future use in realtime mouse-driven scaling
 	enum EditingMode
 	{

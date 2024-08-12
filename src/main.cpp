@@ -48,7 +48,10 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 QCoreApplication * createApplication( int &argc, char *argv[] )
 {
-	QApplication::setAttribute( Qt::AA_UseDesktopOpenGL );
+	QCoreApplication::setAttribute( Qt::AA_UseDesktopOpenGL );
+	QCoreApplication::setAttribute( Qt::AA_EnableHighDpiScaling );
+	QGuiApplication::setHighDpiScaleFactorRoundingPolicy( Qt::HighDpiScaleFactorRoundingPolicy::PassThrough );
+
 	// Iterate over args
 	for ( int i = 1; i < argc; ++i ) {
 		// -no-gui: start as core app without all the GUI overhead

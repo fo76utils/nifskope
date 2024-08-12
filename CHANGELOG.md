@@ -1,5 +1,7 @@
  == CHANGELOG ==
 
+* Implemented high DPI scaling support for displays with higher than 1920x1080 resolution.
+
 #### NifSkope-2.0.dev9-20240811
 
 * Vertex selection has been implemented for Starfield, and the maximum number of shapes supported by vertex selection has been increased from 256 to 32768 for all games.
