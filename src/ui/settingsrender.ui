@@ -753,6 +753,11 @@
                  <string>1024x1024 to 16x16</string>
                 </property>
                </item>
+               <item>
+                <property name="text">
+                 <string>2048x2048 to 32x32 (slow)</string>
+                </property>
+               </item>
               </widget>
              </item>
              <item row="0" column="2">

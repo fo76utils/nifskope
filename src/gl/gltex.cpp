@@ -497,7 +497,7 @@ bool TexCache::Tex::savePixelData( NifModel * nif, const QModelIndex & iSource, 
 bool TexCache::loadSettings( QSettings & settings )
 {
 	int	tmp = settings.value( "Settings/Render/General/Ibl Cube Map Resolution", 2 ).toInt();
-	tmp = 128 << std::min< int >( std::max< int >( tmp, 0 ), 3 );
+	tmp = 128 << std::min< int >( std::max< int >( tmp, 0 ), 4 );
 	bool	r = ( tmp != pbrCubeMapResolution );
 	pbrCubeMapResolution = tmp;
 
