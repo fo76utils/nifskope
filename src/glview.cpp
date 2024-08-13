@@ -898,7 +898,7 @@ void GLView::setVisMode( Scene::VisMode mode, bool checked )
 
 typedef void (Scene::* DrawFunc)( void );
 
-int indexAt( /*GLuint *buffer,*/ NifModel * model, Scene * scene, QList<DrawFunc> drawFunc, int cycle, const QPoint & pos, int & furn )
+int indexAt( /*GLuint *buffer,*/ NifModel * model, Scene * scene, QList<DrawFunc> drawFunc, int cycle, const QPointF & pos, int & furn )
 {
 	Q_UNUSED( model ); Q_UNUSED( cycle );
 	// Color Key O(1) selection
@@ -951,7 +951,7 @@ int indexAt( /*GLuint *buffer,*/ NifModel * model, Scene * scene, QList<DrawFunc
 	fbo.release();
 
 	QImage img( fbo.toImage() );
-	QColor pixel = img.pixelColor( pos );
+	QColor pixel = img.pixelColor( pos.toPoint() );
 
 #ifndef QT_NO_DEBUG
 	img.save( "fbo.png" );
@@ -983,7 +983,7 @@ int indexAt( /*GLuint *buffer,*/ NifModel * model, Scene * scene, QList<DrawFunc
 	return choose;
 }
 
-QModelIndex GLView::indexAt( const QPoint & pos, int cycle )
+QModelIndex GLView::indexAt( const QPointF & pos, int cycle )
 {
 	if ( !(model && isVisible() && height()) )
 		return QModelIndex();
@@ -1001,10 +1001,10 @@ QModelIndex GLView::indexAt( const QPoint & pos, int cycle )
 	double	p = devicePixelRatioF();
 	int	wp = int( p * width() + 0.5 );
 	int	hp = int( p * height() + 0.5 );
-	QPoint	posScaled( pos );
+	QPointF	posScaled( pos );
 	posScaled *= p;
 	glViewport( 0, 0, wp, hp );
-	glProjection( posScaled.x(), posScaled.y() );
+	glProjection( int( posScaled.x() + 0.5 ), int( posScaled.y() + 0.5 ) );
 
 	QList<DrawFunc> df;
 
@@ -1750,7 +1750,7 @@ void GLView::dragMoveEvent( QDragMoveEvent * e )
 		fnDragTexOrg = QString();
 	}
 
-	QModelIndex iObj = model->getBlockIndex( indexAt( e->pos() ), "NiAVObject" );
+	QModelIndex iObj = model->getBlockIndex( indexAt( e->posF() ), "NiAVObject" );
 
 	if ( iObj.isValid() ) {
 		for ( const auto l : model->getChildLinks( model->getBlockNumber( iObj ) ) ) {
@@ -1904,10 +1904,13 @@ void GLView::mouseReleaseEvent( QMouseEvent * event )
 		return;
 	}
 
-	auto mods = event->modifiers();
-
-	if ( !(mods & Qt::AltModifier) ) {
-		QModelIndex idx = indexAt( event->pos(), cycleSelect );
+#ifdef Q_OS_LINUX
+	bool	isColorPicker = bool( event->modifiers() & ( Qt::AltModifier | Qt::ControlModifier ) );
+#else
+	bool	isColorPicker = bool( event->modifiers() & Qt::AltModifier );
+#endif
+	if ( !isColorPicker ) {
+		QModelIndex idx = indexAt( event->localPos(), cycleSelect );
 		scene->currentBlock = model->getBlockIndex( idx );
 		scene->currentIndex = idx.sibling( idx.row(), 0 );
 
@@ -1935,7 +1938,7 @@ void GLView::mouseReleaseEvent( QMouseEvent * event )
 
 		QImage * img = new QImage( fbo.toImage() );
 
-		auto what = img->pixel( event->pos() );
+		auto what = img->pixel( ( event->localPos() * devicePixelRatioF() ).toPoint() );
 
 		qglClearColor( QColor( what ) );
 		// qDebug() << QColor( what );

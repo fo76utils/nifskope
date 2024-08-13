@@ -155,7 +155,7 @@ public:
 	QColor clearColor() const;
 
 
-	QModelIndex indexAt( const QPoint & p, int cycle = 0 );
+	QModelIndex indexAt( const QPointF & p, int cycle = 0 );
 
 	// UI
 

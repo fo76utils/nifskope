@@ -91,14 +91,9 @@ public:
 	//! Returns the preferred height for this widget, given the width w.
 	int heightForWidth( int width ) const override final;
 
-	//! Returns the actual dimensions in pixels (FIXME: it may be inaccurate due to rounding)
-	QSize getSizeInPixels() const
-	{
-		double	p = devicePixelRatioF();
-		int	w = int( p * width() + 0.5 );
-		int	h = int( p * height() + 0.5 );
-		return QSize( w, h );
-	}
+	//! The actual dimensions in pixels
+	int	pixelWidth = 640;
+	int	pixelHeight = 480;
 
 	//! For future use in realtime mouse-driven scaling
 	enum EditingMode
@@ -196,8 +191,8 @@ private:
 
 	void drawTexCoords();
 
-	void setupViewport( const QSize sizeInPixels );
-	void updateViewRect( const QSize sizeInPixels );
+	void setupViewport();
+	void updateViewRect( int width, int height );
 	bool bindTexture( const QString & filename );
 	bool bindTexture( const QModelIndex & iSource );
 

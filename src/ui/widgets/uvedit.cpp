@@ -254,7 +254,9 @@ void UVWidget::initializeGL()
 
 void UVWidget::resizeGL( int width, int height )
 {
-	updateViewRect( QSize( width, height ) );
+	pixelWidth = width;
+	pixelHeight = height;
+	updateViewRect( width, height );
 }
 
 void UVWidget::paintGL()
@@ -265,7 +267,7 @@ void UVWidget::paintGL()
 	glPushMatrix();
 	glLoadIdentity();
 
-	setupViewport( getSizeInPixels() );
+	setupViewport();
 
 	glMatrixMode( GL_MODELVIEW );
 	glPushMatrix();
@@ -485,23 +487,22 @@ void UVWidget::drawTexCoords()
 	glPopMatrix();
 }
 
-void UVWidget::setupViewport( const QSize sizeInPixels )
+void UVWidget::setupViewport()
 {
 	glMatrixMode( GL_PROJECTION );
 	glLoadIdentity();
 
-	glViewport( 0, 0, sizeInPixels.width(), sizeInPixels.height() );
+	glViewport( 0, 0, pixelWidth, pixelHeight );
 
 	glOrtho( glViewRect[0], glViewRect[1], glViewRect[2], glViewRect[3], -10.0, +10.0 );
 }
 
-void UVWidget::updateViewRect( const QSize sizeInPixels )
+void UVWidget::updateViewRect( int width, int height )
 {
-	GLdouble glOffX = glUnit * zoom * 0.5 * sizeInPixels.width();
-	GLdouble glOffY = glUnit * zoom * 0.5 * sizeInPixels.height();
-	double	p = devicePixelRatioF();
-	GLdouble glPosX = glUnit * p * pos.x();
-	GLdouble glPosY = glUnit * p * pos.y();
+	GLdouble glOffX = glUnit * zoom * 0.5 * width;
+	GLdouble glOffY = glUnit * zoom * 0.5 * height;
+	GLdouble glPosX = glUnit * pos.x();
+	GLdouble glPosY = glUnit * pos.y();
 
 	glViewRect[0] = -glOffX - glPosX;
 	glViewRect[1] = +glOffX - glPosX;
@@ -511,16 +512,16 @@ void UVWidget::updateViewRect( const QSize sizeInPixels )
 
 QPoint UVWidget::mapFromContents( const Vector2 & v ) const
 {
-	float x = ( ( v[0] - 0.5 ) - glViewRect[ 0 ] ) / ( glViewRect[ 1 ] - glViewRect[ 0 ] ) * width();
-	float y = ( ( v[1] - 0.5 ) - glViewRect[ 2 ] ) / ( glViewRect[ 3 ] - glViewRect[ 2 ] ) * height() * ( -1 ) + height();
+	float x = ( ( v[0] - 0.5 ) - glViewRect[ 0 ] ) / ( glViewRect[ 1 ] - glViewRect[ 0 ] ) * pixelWidth;
+	float y = ( ( v[1] - 0.5 ) - glViewRect[ 3 ] ) / ( glViewRect[ 2 ] - glViewRect[ 3 ] ) * pixelHeight;
 
 	return QPointF( x, y ).toPoint();
 }
 
 Vector2 UVWidget::mapToContents( const QPoint & p ) const
 {
-	float x = ( (float)p.x() / (float)width() ) * ( glViewRect[ 1 ] - glViewRect[ 0 ] ) + glViewRect[ 0 ];
-	float y = ( (float)p.y() / (float)height() ) * ( glViewRect[ 2 ] - glViewRect[ 3 ] ) + glViewRect[ 3 ];
+	float x = ( float(p.x()) / float(pixelWidth) ) * ( glViewRect[ 1 ] - glViewRect[ 0 ] ) + glViewRect[ 0 ];
+	float y = ( float(p.y()) / float(pixelHeight) ) * ( glViewRect[ 2 ] - glViewRect[ 3 ] ) + glViewRect[ 3 ];
 	return Vector2( x, y );
 }
 
@@ -615,8 +616,10 @@ int UVWidget::heightForWidth( int width ) const
 
 void UVWidget::mousePressEvent( QMouseEvent * e )
 {
-	QPoint dPos( e->pos() - mousePos );
-	mousePos = e->pos();
+	double	p = devicePixelRatioF();
+	QPoint	pixelPos( ( e->localPos() * p ).toPoint() );
+	QPoint	dPos( pixelPos - mousePos );
+	mousePos = pixelPos;
 
 	if ( e->button() == Qt::LeftButton ) {
 		QVector<int> hits = indices( mousePos );
@@ -626,13 +629,13 @@ void UVWidget::mousePressEvent( QMouseEvent * e )
 				selectNone();
 
 			if ( e->modifiers().testFlag( Qt::AltModifier ) ) {
-				selectPoly << e->pos();
+				selectPoly << pixelPos;
 			} else {
 				selectRect.setTopLeft( mousePos );
 				selectRect.setBottomRight( mousePos );
 			}
 		} else {
-			if ( dPos.manhattanLength() > 4 )
+			if ( dPos.manhattanLength() > int( p * 4.0 + 0.5 ) )
 				selectCycle = 0;
 			else
 				selectCycle++;
@@ -661,15 +664,18 @@ void UVWidget::mousePressEvent( QMouseEvent * e )
 
 void UVWidget::mouseMoveEvent( QMouseEvent * e )
 {
-	QPoint dPos( e->pos() - mousePos );
+	double	p = devicePixelRatioF();
+	QPoint	pixelPos( ( e->localPos() * p ).toPoint() );
+	QPoint	dPos( pixelPos - mousePos );
+	mousePos = pixelPos;
 
 	switch ( e->buttons() ) {
 	case Qt::LeftButton:
 
 		if ( !selectRect.isNull() ) {
-			selectRect.setBottomRight( e->pos() );
+			selectRect.setBottomRight( pixelPos );
 		} else if ( !selectPoly.isEmpty() ) {
-			selectPoly << e->pos();
+			selectPoly << pixelPos;
 		} else {
 			auto dPosX = glUnit * zoom * dPos.x();
 			auto dPosY = glUnit * zoom * dPos.y();
@@ -685,7 +691,7 @@ void UVWidget::mouseMoveEvent( QMouseEvent * e )
 
 	case Qt::MiddleButton:
 		pos += zoom * QPointF( dPos.x(), -dPos.y() );
-		updateViewRect( getSizeInPixels() );
+		updateViewRect( pixelWidth, pixelHeight );
 
 		setCursor( QCursor( Qt::ClosedHandCursor ) );
 
@@ -700,7 +706,7 @@ void UVWidget::mouseMoveEvent( QMouseEvent * e )
 			zoom = MAXZOOM;
 		}
 
-		updateViewRect( getSizeInPixels() );
+		updateViewRect( pixelWidth, pixelHeight );
 
 		setCursor( QCursor( Qt::SizeVerCursor ) );
 
@@ -708,7 +714,7 @@ void UVWidget::mouseMoveEvent( QMouseEvent * e )
 
 	default:
 
-		if ( indices( e->pos() ).count() ) {
+		if ( indices( pixelPos ).count() ) {
 			setCursor( QCursor( Qt::PointingHandCursor ) );
 		} else {
 			setCursor( QCursor( Qt::CrossCursor ) );
@@ -716,13 +722,14 @@ void UVWidget::mouseMoveEvent( QMouseEvent * e )
 		return;
 	}
 
-	mousePos = e->pos();
-
 	updateGL();
 }
 
 void UVWidget::mouseReleaseEvent( QMouseEvent * e )
 {
+	double	p = devicePixelRatioF();
+	QPoint	pixelPos( ( e->localPos() * p ).toPoint() );
+
 	switch ( e->button() ) {
 	case Qt::LeftButton:
 
@@ -742,7 +749,7 @@ void UVWidget::mouseReleaseEvent( QMouseEvent * e )
 		break;
 	}
 
-	if ( indices( e->pos() ).count() ) {
+	if ( indices( pixelPos ).count() ) {
 		setCursor( QCursor( Qt::ArrowCursor ) );
 	} else {
 		setCursor( QCursor( Qt::CrossCursor ) );
@@ -763,7 +770,7 @@ void UVWidget::wheelEvent( QWheelEvent * e )
 			zoom = MAXZOOM;
 		}
 
-		updateViewRect( getSizeInPixels() );
+		updateViewRect( pixelWidth, pixelHeight );
 
 		break;
 	}
