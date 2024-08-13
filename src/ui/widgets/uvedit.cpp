@@ -45,6 +45,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "libfo76utils/src/material.hpp"
 #include "lib/nvtristripwrapper.h"
 #include "io/MeshFile.h"
+#include "glview.h"
 
 #include <QUndoStack> // QUndoCommand Inherited
 #include <QActionGroup>
@@ -253,7 +254,7 @@ void UVWidget::initializeGL()
 
 void UVWidget::resizeGL( int width, int height )
 {
-	updateViewRect( width, height );
+	updateViewRect( QSize( width, height ) );
 }
 
 void UVWidget::paintGL()
@@ -264,7 +265,7 @@ void UVWidget::paintGL()
 	glPushMatrix();
 	glLoadIdentity();
 
-	setupViewport( pixelWidth(), pixelHeight() );
+	setupViewport( getSizeInPixels() );
 
 	glMatrixMode( GL_MODELVIEW );
 	glPushMatrix();
@@ -327,7 +328,7 @@ void UVWidget::paintGL()
 
 	glEnable( GL_BLEND );
 
-	glLineWidth( 0.8f );
+	glLineWidth( GLView::Settings::lineWidthGrid1 * 0.8f );
 	glBegin( GL_LINES );
 	int glGridMinX = qRound( qMin( glViewRect[0], glViewRect[1] ) / glGridD );
 	int glGridMaxX = qRound( qMax( glViewRect[0], glViewRect[1] ) / glGridD );
@@ -338,17 +339,17 @@ void UVWidget::paintGL()
 		GLdouble glGridPos = glGridD * i;
 
 		if ( ( i % ( GRIDSEGS * GRIDSEGS ) ) == 0 ) {
-			glLineWidth( 1.4f );
+			glLineWidth( GLView::Settings::lineWidthGrid1 * 1.4f );
 			glColor4f( 1.0f, 1.0f, 1.0f, 0.4f );
 		} else if ( zoom > ( GRIDSEGS * GRIDSEGS / 2.0 ) ) {
 			continue;
 		} else if ( ( i % GRIDSEGS ) == 0 ) {
-			glLineWidth( 1.2f );
+			glLineWidth( GLView::Settings::lineWidthGrid1 * 1.2f );
 			glColor4f( 1.0f, 1.0f, 1.0f, 0.2f );
 		} else if ( zoom > ( GRIDSEGS / 2.0 ) ) {
 			continue;
 		} else {
-			glLineWidth( 0.8f );
+			glLineWidth( GLView::Settings::lineWidthGrid1 * 0.8f );
 			glColor4f( 1.0f, 1.0f, 1.0f, 0.1f );
 		}
 
@@ -360,17 +361,17 @@ void UVWidget::paintGL()
 		GLdouble glGridPos = glGridD * i;
 
 		if ( ( i % ( GRIDSEGS * GRIDSEGS ) ) == 0 ) {
-			glLineWidth( 1.4f );
+			glLineWidth( GLView::Settings::lineWidthGrid1 * 1.4f );
 			glColor4f( 1.0f, 1.0f, 1.0f, 0.4f );
 		} else if ( zoom > ( GRIDSEGS * GRIDSEGS / 2.0 ) ) {
 			continue;
 		} else if ( ( i % GRIDSEGS ) == 0 ) {
-			glLineWidth( 1.2f );
+			glLineWidth( GLView::Settings::lineWidthGrid1 * 1.2f );
 			glColor4f( 1.0f, 1.0f, 1.0f, 0.2f );
 		} else if ( zoom > ( GRIDSEGS / 2.0 ) ) {
 			continue;
 		} else {
-			glLineWidth( 0.8f );
+			glLineWidth( GLView::Settings::lineWidthGrid1 * 0.8f );
 			glColor4f( 1.0f, 1.0f, 1.0f, 0.1f );
 		}
 
@@ -432,8 +433,8 @@ void UVWidget::drawTexCoords()
 	Color4 hlColor( cfg.highlight );
 	hlColor.setAlpha( 0.5f );
 
-	glLineWidth( 1.0f );
-	glPointSize( 3.5f );
+	glLineWidth( GLView::Settings::lineWidthWireframe * 0.625f );
+	glPointSize( GLView::Settings::vertexPointSize * 0.75f );
 
 	glEnable( GL_BLEND );
 	glEnable( GL_DEPTH_TEST );
@@ -484,22 +485,23 @@ void UVWidget::drawTexCoords()
 	glPopMatrix();
 }
 
-void UVWidget::setupViewport( int width, int height )
+void UVWidget::setupViewport( const QSize sizeInPixels )
 {
 	glMatrixMode( GL_PROJECTION );
 	glLoadIdentity();
 
-	glViewport( 0, 0, width, height );
+	glViewport( 0, 0, sizeInPixels.width(), sizeInPixels.height() );
 
 	glOrtho( glViewRect[0], glViewRect[1], glViewRect[2], glViewRect[3], -10.0, +10.0 );
 }
 
-void UVWidget::updateViewRect( int width, int height )
+void UVWidget::updateViewRect( const QSize sizeInPixels )
 {
-	GLdouble glOffX = glUnit * zoom * 0.5 * width;
-	GLdouble glOffY = glUnit * zoom * 0.5 * height;
-	GLdouble glPosX = glUnit * pos.x();
-	GLdouble glPosY = glUnit * pos.y();
+	GLdouble glOffX = glUnit * zoom * 0.5 * sizeInPixels.width();
+	GLdouble glOffY = glUnit * zoom * 0.5 * sizeInPixels.height();
+	double	p = devicePixelRatioF();
+	GLdouble glPosX = glUnit * p * pos.x();
+	GLdouble glPosY = glUnit * p * pos.y();
 
 	glViewRect[0] = -glOffX - glPosX;
 	glViewRect[1] = +glOffX - glPosX;
@@ -683,7 +685,7 @@ void UVWidget::mouseMoveEvent( QMouseEvent * e )
 
 	case Qt::MiddleButton:
 		pos += zoom * QPointF( dPos.x(), -dPos.y() );
-		updateViewRect( pixelWidth(), pixelHeight() );
+		updateViewRect( getSizeInPixels() );
 
 		setCursor( QCursor( Qt::ClosedHandCursor ) );
 
@@ -698,7 +700,7 @@ void UVWidget::mouseMoveEvent( QMouseEvent * e )
 			zoom = MAXZOOM;
 		}
 
-		updateViewRect( pixelWidth(), pixelHeight() );
+		updateViewRect( getSizeInPixels() );
 
 		setCursor( QCursor( Qt::SizeVerCursor ) );
 
@@ -761,7 +763,7 @@ void UVWidget::wheelEvent( QWheelEvent * e )
 			zoom = MAXZOOM;
 		}
 
-		updateViewRect( pixelWidth(), pixelHeight() );
+		updateViewRect( getSizeInPixels() );
 
 		break;
 	}

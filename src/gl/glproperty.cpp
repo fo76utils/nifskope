@@ -40,6 +40,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "gamemanager.h"
 #include "qtcompat.h"
 #include "libfo76utils/src/ddstxt16.hpp"
+#include "glview.h"
 
 #include <QOpenGLContext>
 
@@ -695,7 +696,7 @@ void glProperty( WireframeProperty * p )
 {
 	if ( p && p->wire ) {
 		glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-		glLineWidth( 1.0 );
+		glLineWidth( GLView::Settings::lineWidthWireframe * 0.625f );
 	} else {
 		glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 	}

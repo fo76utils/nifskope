@@ -244,6 +244,17 @@ GLView::~GLView()
 	delete scene;
 }
 
+float	GLView::Settings::vertexPointSize = 5.0f;
+float	GLView::Settings::tbnPointSize = 7.0f;
+float	GLView::Settings::vertexSelectPointSize = 8.5f;
+float	GLView::Settings::vertexPointSizeSelected = 10.0f;
+float	GLView::Settings::lineWidthAxes = 2.0f;
+float	GLView::Settings::lineWidthWireframe = 1.6f;
+float	GLView::Settings::lineWidthHighlight = 2.5f;
+float	GLView::Settings::lineWidthGrid1 = 1.0f;
+float	GLView::Settings::lineWidthGrid2 = 0.25f;
+float	GLView::Settings::lineWidthSelect = 5.0f;
+
 void GLView::updateSettings()
 {
 	QSettings settings;
@@ -256,6 +267,19 @@ void GLView::updateSettings()
 	cfg.upAxis = UpAxis(settings.value( "General/Up Axis", ZAxis ).toInt());
 
 	settings.endGroup();
+
+	// TODO: make these configurable via the UI
+	double	p = devicePixelRatioF();
+	Settings::vertexPointSize = float( p * 5.0 );
+	Settings::tbnPointSize = float( p * 7.0 );
+	Settings::vertexSelectPointSize = float( p * 8.5 );
+	Settings::vertexPointSizeSelected = float( p * 10.0 );
+	Settings::lineWidthAxes = float( p * 2.0 );
+	Settings::lineWidthWireframe = float( p * 1.6 );
+	Settings::lineWidthHighlight = float( p * 2.5 );
+	Settings::lineWidthGrid1 = float( p * 1.0 );
+	Settings::lineWidthGrid2 = float( p * 0.25 );
+	Settings::lineWidthSelect = float( p * 5.0 );
 }
 
 static bool envMapFileListFilterFunction( void * p, const std::string_view & s )
@@ -532,7 +556,6 @@ void GLView::paintGL()
 		glDepthFunc( GL_LESS );
 		glDisable( GL_TEXTURE_2D );
 		glDisable( GL_NORMALIZE );
-		glLineWidth( 2.0f );
 
 		// Keep the grid "grounded" regardless of Up Axis
 		Transform gridTrans = viewTrans;
@@ -587,14 +610,15 @@ void GLView::paintGL()
 				glPushMatrix();
 				glLoadMatrix( viewTrans );
 
-				glLineWidth( 2.0f );
+				glLineWidth( Settings::lineWidthAxes );
 				glColor4f( 1.0f, 1.0f, 1.0f, 0.5f );
 
 				// Scale the distance a bit
-				float l = axis + 64.0;
-				l = (l < 128) ? axis * 1.5 : l;
-				l = (l > 2048) ? axis * 0.66 : l;
-				l = (l > 1024) ? axis * 0.75 : l;
+				float	s = scale() * 64.0f;
+				float	l = axis + s;
+				l = (l < s * 2.0f) ? axis * 1.5f : l;
+				l = (l > s * 32.0f) ? axis * 0.66f : l;
+				l = (l > s * 16.0f) ? axis * 0.75f : l;
 
 				drawDashLine( Vector3( 0, 0, 0 ), v * l, 30 );
 				drawSphere( v * l, axis / 10 );
@@ -693,7 +717,7 @@ void GLView::paintGL()
 
 	if ( scene->hasOption(Scene::ShowAxes) ) {
 		// Resize viewport to small corner of screen
-		int axesSize = int( std::lrint( devicePixelRatioF() * std::min( width() / 10, 125 ) ) );
+		int axesSize = int( devicePixelRatioF() * 0.1 * std::min< int >( width(), 1250 ) + 0.5 );
 		glViewport( 0, 0, axesSize, axesSize );
 
 		// Reset matrices
@@ -734,7 +758,8 @@ void GLView::paintGL()
 		glPopMatrix();
 
 		// Restore viewport size
-		glViewport( 0, 0, pixelWidth(), pixelHeight() );
+		QSize	sizeInPixels( getSizeInPixels() );
+		glViewport( 0, 0, sizeInPixels.width(), sizeInPixels.height() );
 		// Restore matrices
 		glProjection();
 	}
@@ -765,12 +790,12 @@ void GLView::paintGL()
 void GLView::resizeGL( int width, int height )
 {
 	double	p = 1.0 / devicePixelRatioF();
-	resize( int( std::lrint( p * width ) ), int( std::lrint( p * height ) ) );
+	resize( int( p * width + 0.5 ), int( p * height + 0.5 ) );
 
 	makeCurrent();
 	if ( !isValid() )
 		return;
-	aspect = (GLdouble)width / (GLdouble)height;
+	aspect = GLdouble(width) / GLdouble(height);
 	glViewport( 0, 0, width, height );
 
 	glDisable(GL_FRAMEBUFFER_SRGB);
@@ -778,9 +803,8 @@ void GLView::resizeGL( int width, int height )
 	update();
 }
 
-void GLView::resizeEvent( QResizeEvent * e )
+void GLView::resizeEvent( [[maybe_unused]] QResizeEvent * e )
 {
-	Q_UNUSED( e );
 	// This function should never be called.
 	// Moved to NifSkope::eventFilter()
 }
@@ -974,8 +998,13 @@ QModelIndex GLView::indexAt( const QPoint & pos, int cycle )
 	glMatrixMode( GL_MODELVIEW );
 	glPushMatrix();
 
-	glViewport( 0, 0, pixelWidth(), pixelHeight() );
-	glProjection( pos.x(), pos.y() );
+	double	p = devicePixelRatioF();
+	int	wp = int( p * width() + 0.5 );
+	int	hp = int( p * height() + 0.5 );
+	QPoint	posScaled( pos );
+	posScaled *= p;
+	glViewport( 0, 0, wp, hp );
+	glProjection( posScaled.x(), posScaled.y() );
 
 	QList<DrawFunc> df;
 
@@ -991,7 +1020,7 @@ QModelIndex GLView::indexAt( const QPoint & pos, int cycle )
 	df << &Scene::drawShapes;
 
 	int choose = -1, furn = -1;
-	choose = ::indexAt( model, scene, df, cycle, pos, /*out*/ furn );
+	choose = ::indexAt( model, scene, df, cycle, posScaled, /*out*/ furn );
 
 	glPopAttrib();
 	glMatrixMode( GL_MODELVIEW );
@@ -1523,17 +1552,18 @@ void GLView::saveImage()
 	btnOneX->setCheckable( true );
 	btnOneX->setChecked( true );
 	// Disable any of these that would exceed the max viewport size of the platform
-	int	w = pixelWidth();
-	int	h = pixelHeight();
-	auto btnTwoX = new QRadioButton( "2x", dlg );
-	btnTwoX->setCheckable( true );
-	btnTwoX->setDisabled( (w * 2) > dims[0] || (h * 2) > dims[1] );
-	auto btnFourX = new QRadioButton( "4x", dlg );
-	btnFourX->setCheckable( true );
-	btnFourX->setDisabled( (w * 4) > dims[0] || (h * 4) > dims[1] );
-	auto btnEightX = new QRadioButton( "8x", dlg );
-	btnEightX->setCheckable( true );
-	btnEightX->setDisabled( (w * 8) > dims[0] || (h * 8) > dims[1] );
+	int	w = width();
+	int	h = height();
+	double	p = devicePixelRatioF();
+	QRadioButton	*btnTwoX, *btnFourX, *btnEightX;
+	for ( int i = 1; i <= 3; i++ ) {
+		QRadioButton* &	b = ( i == 1 ? btnTwoX : ( i == 2 ? btnFourX : btnEightX ) );
+		b = new QRadioButton( ( i == 1 ? "2x" : ( i == 2 ? "4x" : "8x" ) ), dlg );
+		b->setCheckable( true );
+		int	wp = int( p * ( w << i ) + 0.5 );
+		int	hp = int( p * ( h << i ) + 0.5 );
+		b->setDisabled( wp > dims[0] || hp > dims[1] );
+	}
 
 
 	auto grpBox = new QGroupBox( tr( "Image Size" ), dlg );
@@ -1600,11 +1630,11 @@ void GLView::saveImage()
 				settings.setValue( "Screenshot/Folder", imgPath );
 
 			// Supersampling
-			int ss = grpSize->checkedId();
+			int	ss = grpSize->checkedId();
 
 			// Resize viewport for supersampling
 			if ( ss > 1 )
-				resizeGL( w * ss, h * ss );
+				resizeGL( int( p * ( w * ss ) + 0.5 ), int( p * ( h * ss ) + 0.5 ) );
 
 			QOpenGLFramebufferObjectFormat fboFmt;
 			fboFmt.setTextureTarget( GL_TEXTURE_2D );
@@ -1613,7 +1643,8 @@ void GLView::saveImage()
 			fboFmt.setAttachment( QOpenGLFramebufferObject::Attachment::Depth );
 			fboFmt.setSamples( 16 / ss );
 
-			QOpenGLFramebufferObject fbo( w * ss, h * ss, fboFmt );
+			QSize	sizeInPixels( getSizeInPixels() );
+			QOpenGLFramebufferObject fbo( sizeInPixels.width(), sizeInPixels.height(), fboFmt );
 			fbo.bind();
 
 			const QColor & c = cfg.background;
@@ -1634,7 +1665,7 @@ void GLView::saveImage()
 
 			// Return viewport to original size
 			if ( ss > 1 )
-				resizeGL( w, h );
+				resizeGL( int( p * w + 0.5 ), int( p * h + 0.5 ) );
 
 
 			QImageWriter writer( file->file() );
@@ -1893,7 +1924,8 @@ void GLView::mouseReleaseEvent( QMouseEvent * event )
 		fboFmt.setMipmap( false );
 		fboFmt.setAttachment( QOpenGLFramebufferObject::Attachment::Depth );
 
-		QOpenGLFramebufferObject fbo( pixelWidth(), pixelHeight(), fboFmt );
+		QSize	sizeInPixels( getSizeInPixels() );
+		QOpenGLFramebufferObject fbo( sizeInPixels.width(), sizeInPixels.height(), fboFmt );
 		fbo.bind();
 
 		update();

@@ -40,6 +40,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "io/nifstream.h"
 #include "model/nifmodel.h"
 #include "qtcompat.h"
+#include "glview.h"
 
 #include <QBuffer>
 #include <QDebug>
@@ -888,7 +889,7 @@ void Mesh::drawShapes( NodeList * secondPass )
 
 	glDisable( GL_POLYGON_OFFSET_FILL );
 
-	glPointSize( 8.5 );
+	glPointSize( GLView::Settings::vertexSelectPointSize );
 	if ( scene->isSelModeVertex() ) {
 		drawVerts();
 	}
@@ -965,8 +966,8 @@ void Mesh::drawSelection() const
 	glEnable( GL_POLYGON_OFFSET_FILL );
 	glPolygonOffset( -1.0f, -2.0f );
 
-	glLineWidth( 1.0 );
-	glPointSize( 3.5 );
+	glLineWidth( GLView::Settings::lineWidthWireframe );
+	glPointSize( GLView::Settings::vertexPointSize );
 
 	QString n;
 	int i = -1;
@@ -1148,7 +1149,7 @@ void Mesh::drawSelection() const
 	}
 
 	if ( n == "Faces" || n == "Triangles" ) {
-		glLineWidth( 1.5f );
+		glLineWidth( GLView::Settings::lineWidthWireframe );
 
 		for ( const Triangle& tri : triangles ) {
 			glBegin( GL_TRIANGLES );
@@ -1175,7 +1176,7 @@ void Mesh::drawSelection() const
 	}
 
 	if ( n == "Faces" || n == "Strips" || n == "Strip Lengths" ) {
-		glLineWidth( 1.5f );
+		glLineWidth( GLView::Settings::lineWidthWireframe );
 
 		for ( const TriStrip& strip : tristrips ) {
 			quint16 a = strip.value( 0 );

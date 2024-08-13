@@ -1257,7 +1257,11 @@ void NifSkope::resizeDone()
 	ogl->setDisabled( false );
 	ogl->getScene()->animate = true;
 	ogl->update();
-	ogl->resizeGL( centralWidget()->width(), centralWidget()->height() );
+	auto	w = centralWidget();
+	double	p = w->devicePixelRatioF();
+	int	wp = int( p * w->width() + 0.5 );
+	int	hp = int( p * w->height() + 0.5 );
+	ogl->resizeGL( wp, hp );
 }
 
 

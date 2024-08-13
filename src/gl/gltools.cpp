@@ -34,6 +34,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "model/nifmodel.h"
 #include "qtcompat.h"
+#include "glview.h"
 
 #include <QMap>
 #include <QStack>
@@ -550,7 +551,7 @@ void drawAxesOverlay( const Vector3 & c, float axis, QVector<int> axesOrder )
 	glDisable( GL_BLEND );
 	glDisable( GL_TEXTURE_2D );
 	glDisable( GL_DEPTH_TEST );
-	glLineWidth( 2.0f );
+	glLineWidth( GLView::Settings::lineWidthAxes );
 	glBegin( GL_LINES );
 
 	// Render the X axis
@@ -643,7 +644,7 @@ void drawGrid( float s /* grid size / 2 */, int lines /* number of lines - 1 */,
 {
 	glEnable( GL_BLEND );
 	glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-	glLineWidth( 1.0f );
+	glLineWidth( GLView::Settings::lineWidthGrid1 );
 	glColor4f( 1.0f, 1.0f, 1.0f, 0.2f );
 
 	float	scale1 = s * 2.0f / float( lines );
@@ -658,7 +659,7 @@ void drawGrid( float s /* grid size / 2 */, int lines /* number of lines - 1 */,
 	glEnd();
 
 	glColor4f( 1.0f, 1.0f, 1.0f, 0.1f );
-	glLineWidth( 0.25f );
+	glLineWidth( GLView::Settings::lineWidthGrid2 );
 	float	scale2 = s * 2.0f / float( lines * sub );
 	glBegin( GL_LINES );
 	for ( int i = 0; i < lines; i++ ) {

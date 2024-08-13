@@ -162,16 +162,13 @@ public:
 	QSize minimumSizeHint() const override final { return { 50, 50 }; }
 	QSize sizeHint() const override final { return { 400, 400 }; }
 
-	//! Returns the actual width in pixels (FIXME: it may be inaccurate due to rounding)
-	int pixelWidth() const
+	//! Returns the actual dimensions in pixels (FIXME: it may be inaccurate due to rounding)
+	QSize getSizeInPixels() const
 	{
-		return int( std::lrint( devicePixelRatioF() * width() ) );
-	}
-
-	//! Returns the actual height in pixels
-	int pixelHeight() const
-	{
-		return int( std::lrint( devicePixelRatioF() * height() ) );
+		double	p = devicePixelRatioF();
+		int	w = int( p * width() + 0.5 );
+		int	h = int( p * height() + 0.5 );
+		return QSize( w, h );
 	}
 
 public slots:
@@ -278,6 +275,7 @@ private:
 	QTimer * lightVisTimer;
 	int lightVisTimeout;
 
+public:
 	struct Settings
 	{
 		QColor background;
@@ -286,6 +284,17 @@ private:
 		float rotSpd = 45;
 
 		UpAxis upAxis = ZAxis;
+
+		static float	vertexPointSize;
+		static float	tbnPointSize;
+		static float	vertexSelectPointSize;
+		static float	vertexPointSizeSelected;
+		static float	lineWidthAxes;
+		static float	lineWidthWireframe;
+		static float	lineWidthHighlight;
+		static float	lineWidthGrid1;
+		static float	lineWidthGrid2;
+		static float	lineWidthSelect;
 	} cfg;
 
 private slots:

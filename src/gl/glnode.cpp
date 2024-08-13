@@ -41,6 +41,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "model/nifmodel.h"
 #include "ui/settingsdialog.h"
 #include "qtcompat.h"
+#include "glview.h"
 
 #include "lib/nvtristripwrapper.h"
 
@@ -508,7 +509,7 @@ void Node::draw()
 	if ( Node::SELECTING ) {
 		int s_nodeId = ID2COLORKEY( nodeId );
 		glColor4ubv( (GLubyte *)&s_nodeId );
-		glLineWidth( 5 ); // make hitting a line a litlle bit more easy
+		glLineWidth( GLView::Settings::lineWidthSelect );	// make hitting a line a litlle bit more easy
 	} else {
 		glEnable( GL_DEPTH_TEST );
 		glDepthFunc( GL_LEQUAL );
@@ -522,10 +523,10 @@ void Node::draw()
 		glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 
 		glNormalColor();
-		glLineWidth( 2.5 );
+		glLineWidth( GLView::Settings::lineWidthHighlight );
 	}
 
-	glPointSize( 8.5 );
+	glPointSize( GLView::Settings::vertexSelectPointSize );
 
 	Vector3 a = viewTrans().translation;
 	Vector3 b = a;
@@ -575,7 +576,7 @@ void Node::drawSelection() const
 	if ( Node::SELECTING ) {
 		int s_nodeId = ID2COLORKEY( nodeId );
 		glColor4ubv( (GLubyte *)&s_nodeId );
-		glLineWidth( 5 );
+		glLineWidth( GLView::Settings::lineWidthSelect );
 	} else {
 		glEnable( GL_DEPTH_TEST );
 		glDepthFunc( GL_ALWAYS );
@@ -589,10 +590,10 @@ void Node::drawSelection() const
 		glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 
 		glHighlightColor();
-		glLineWidth( 2.5 );
+		glLineWidth( GLView::Settings::lineWidthHighlight );
 	}
 
-	glPointSize( 8.5 );
+	glPointSize( GLView::Settings::vertexSelectPointSize );
 
 	glPushMatrix();
 	glMultMatrix( viewTrans() );
@@ -699,7 +700,7 @@ void Node::drawSelection() const
 
 void DrawVertexSelection( QVector<Vector3> & verts, int i )
 {
-	glPointSize( 3.5 );
+	glPointSize( GLView::Settings::vertexPointSize );
 	glDepthFunc( GL_LEQUAL );
 	glNormalColor();
 	glBegin( GL_POINTS );
@@ -720,7 +721,7 @@ void DrawVertexSelection( QVector<Vector3> & verts, int i )
 
 void DrawTriangleSelection( QVector<Vector3> const & verts, Triangle const & tri )
 {
-	glLineWidth( 1.5f );
+	glLineWidth( GLView::Settings::lineWidthWireframe );
 	glDepthFunc( GL_ALWAYS );
 	glHighlightColor();
 	glBegin( GL_LINE_STRIP );
@@ -762,11 +763,11 @@ void drawHvkShape( const NifModel * nif, const QModelIndex & iShape, QStack<QMod
 					if ( scene->currentBlock == nif->getBlockIndex( nif->getLink( QModelIndex_child( iShapes, r ) ) ) ) {
 						// fix: add selected visual to havok meshes
 						glHighlightColor();
-						glLineWidth( 2.5 );
+						glLineWidth( GLView::Settings::lineWidthHighlight );
 					} else {
 						if ( scene->currentBlock != iShape ) {
 							// allow group highlighting
-							glLineWidth( 1.0 );
+							glLineWidth( GLView::Settings::lineWidthWireframe * 0.625f );
 							glColor3fv( origin_color3fv );
 						}
 					}
@@ -861,9 +862,9 @@ void drawHvkShape( const NifModel * nif, const QModelIndex & iShape, QStack<QMod
 			if ( scene->currentBlock == nif->getBlockIndex( nif->getLink( iShape, "Shape" ) ) ) {
 				// fix: add selected visual to havok meshes
 				glHighlightColor();
-				glLineWidth( 1.5f ); // taken from "DrawTriangleSelection"
+				glLineWidth( GLView::Settings::lineWidthWireframe );	// taken from "DrawTriangleSelection"
 			} else {
-				glLineWidth( 1.0 );
+				glLineWidth( GLView::Settings::lineWidthWireframe * 0.625f );
 				glColor3fv( origin_color3fv );
 			}
 		}
@@ -921,7 +922,7 @@ void drawHvkShape( const NifModel * nif, const QModelIndex & iShape, QStack<QMod
 					} else if ( nif->itemName( scene->currentIndex ) == "Normal" ) {
 						Triangle tri = nif->get<Triangle>( scene->currentIndex.parent(), "Triangle" );
 						Vector3 triCentre = ( verts.value( tri.v1() ) + verts.value( tri.v2() ) + verts.value( tri.v3() ) ) /  3.0;
-						glLineWidth( 1.5f );
+						glLineWidth( GLView::Settings::lineWidthWireframe );
 						glDepthFunc( GL_ALWAYS );
 						glHighlightColor();
 						glBegin( GL_LINES );
@@ -1063,7 +1064,7 @@ void drawHvkConstraint( const NifModel * nif, const QModelIndex & iConstraint, c
 	if ( Node::SELECTING ) {
 		int s_nodeId = ID2COLORKEY( nif->getBlockNumber( iConstraint ) );
 		glColor4ubv( (GLubyte *)&s_nodeId );
-		glLineWidth( 5 ); // make hitting a line a litlle bit more easy
+		glLineWidth( GLView::Settings::lineWidthSelect );	// make hitting a line a litlle bit more easy
 	} else {
 		if ( scene->currentBlock == nif->getBlockIndex( iConstraint ) ) {
 			// fix: add selected visual to havok meshes
@@ -1374,7 +1375,7 @@ void Node::drawHavok()
 			glDisable( GL_LIGHTING );
 		}
 
-		glLineWidth( 1.0f );
+		glLineWidth( GLView::Settings::lineWidthWireframe * 0.625f );
 		drawBox( rad, -rad );
 
 		glPopMatrix();
@@ -1424,11 +1425,11 @@ void Node::drawHavok()
 			if ( Node::SELECTING ) {
 				int s_nodeId = ID2COLORKEY( nif->getBlockNumber( iBSMultiBoundData ) );
 				glColor4ubv( (GLubyte *)&s_nodeId );
-				glLineWidth( 5 );
+				glLineWidth( GLView::Settings::lineWidthSelect );
 			} else {
 				glColor( Color4( 1.0f, 1.0f, 1.0f, 0.6f ) );
 				glDisable( GL_LIGHTING );
-				glLineWidth( 1.0f );
+				glLineWidth( GLView::Settings::lineWidthWireframe * 0.625f );
 			}
 
 			drawBox( a, b );
@@ -1462,7 +1463,7 @@ void Node::drawHavok()
 				glDisable( GL_LIGHTING );
 			}
 
-			glLineWidth( 1.0f );
+			glLineWidth( GLView::Settings::lineWidthWireframe * 0.625f );
 			drawBox( dim + center, -dim + center );
 
 			glPopMatrix();
@@ -1495,8 +1496,8 @@ void Node::drawHavok()
 		glDisable( GL_ALPHA_TEST );
 	}
 
-	glPointSize( 4.5 );
-	glLineWidth( 1.5 );
+	glPointSize( GLView::Settings::vertexPointSize );
+	glLineWidth( GLView::Settings::lineWidthWireframe );
 
 	static const float colors[8][3] = {
 		{ 0.0f, 1.0f, 0.0f },
@@ -1518,15 +1519,15 @@ void Node::drawHavok()
 			glHighlightColor(); // TODO: idea: I do not recommend mimicking the Open GL API
 			                    // It confuses the one who reads the code. And the Open GL API is
 			                    // in constant development.
-			glLineWidth( 2.5 );
-			//glPointSize( 8.5 );
+			glLineWidth( GLView::Settings::lineWidthHighlight );
+			//glPointSize( GLView::Settings::vertexSelectPointSize );
 		}
 	}
 
 	QStack<QModelIndex> shapeStack;
 
 	if ( Node::SELECTING )
-		glLineWidth( 5 ); // make selection click a little more easy
+		glLineWidth( GLView::Settings::lineWidthSelect );	// make selection click a little more easy
 
 	drawHvkShape( nif, nif->getBlockIndex( nif->getLink( iBody, "Shape" ) ), shapeStack, scene, colors[ color_index ] );
 
@@ -1766,7 +1767,7 @@ void Node::drawFurn()
 		glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 	}
 
-	glLineWidth( 1.0 );
+	glLineWidth( GLView::Settings::lineWidthWireframe * 0.625f );
 
 	glPushMatrix();
 

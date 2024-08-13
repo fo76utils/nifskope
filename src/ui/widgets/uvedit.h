@@ -91,16 +91,13 @@ public:
 	//! Returns the preferred height for this widget, given the width w.
 	int heightForWidth( int width ) const override final;
 
-	//! Returns the actual width in pixels (FIXME: it may be inaccurate due to rounding)
-	int pixelWidth() const
+	//! Returns the actual dimensions in pixels (FIXME: it may be inaccurate due to rounding)
+	QSize getSizeInPixels() const
 	{
-		return int( std::lrint( devicePixelRatioF() * width() ) );
-	}
-
-	//! Returns the actual height in pixels
-	int pixelHeight() const
-	{
-		return int( std::lrint( devicePixelRatioF() * height() ) );
+		double	p = devicePixelRatioF();
+		int	w = int( p * width() + 0.5 );
+		int	h = int( p * height() + 0.5 );
+		return QSize( w, h );
 	}
 
 	//! For future use in realtime mouse-driven scaling
@@ -199,8 +196,8 @@ private:
 
 	void drawTexCoords();
 
-	void setupViewport( int width, int height );
-	void updateViewRect( int width, int height );
+	void setupViewport( const QSize sizeInPixels );
+	void updateViewRect( const QSize sizeInPixels );
 	bool bindTexture( const QString & filename );
 	bool bindTexture( const QModelIndex & iSource );
 

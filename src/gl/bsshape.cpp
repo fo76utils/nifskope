@@ -6,6 +6,7 @@
 #include "io/material.h"
 #include "model/nifmodel.h"
 #include "qtcompat.h"
+#include "glview.h"
 
 void BSShape::updateImpl( const NifModel * nif, const QModelIndex & index )
 {
@@ -251,7 +252,7 @@ void BSShape::drawShapes( NodeList * secondPass )
 	if ( isHidden() )
 		return;
 
-	glPointSize( 8.5 );
+	glPointSize( GLView::Settings::vertexSelectPointSize );
 
 	// TODO: Only run this if BSXFlags has "EditorMarkers present" flag
 	if ( !scene->hasOption(Scene::ShowMarkers) && name.contains( "EditorMarker" ) )
@@ -481,9 +482,8 @@ void BSShape::drawSelection() const
 
 	glDisable( GL_CULL_FACE );
 
-	// TODO: User Settings
-	GLfloat lineWidth = 1.5;
-	GLfloat pointSize = 5.0;
+	GLfloat lineWidth = GLView::Settings::lineWidthWireframe;
+	GLfloat pointSize = GLView::Settings::vertexPointSize;
 
 	glLineWidth( lineWidth );
 	glPointSize( pointSize );
@@ -604,7 +604,7 @@ void BSShape::drawSelection() const
 	}
 
 	if ( n == "Vertex Data" || n == "Vertex" || n == "Vertices" ) {
-		allv( 5.0 );
+		allv( GLView::Settings::vertexPointSize );
 
 		int s = -1;
 		if ( (n == "Vertex Data" && p == "Vertex Data")
@@ -615,7 +615,7 @@ void BSShape::drawSelection() const
 		}
 
 		if ( s >= 0 ) {
-			glPointSize( 10 );
+			glPointSize( GLView::Settings::vertexPointSizeSelected );
 			glDepthFunc( GL_ALWAYS );
 			glHighlightColor();
 			glBegin( GL_POINTS );
@@ -628,7 +628,7 @@ void BSShape::drawSelection() const
 
 	// Draw Lines lambda
 	auto lines = [this, &normalScale, &allv, &lineWidth]( const QVector<Vector3> & v ) {
-		allv( 7.0 );
+		allv( GLView::Settings::tbnPointSize );
 
 		int s = scene->currentIndex.parent().row();
 		glBegin( GL_LINES );
@@ -645,7 +645,7 @@ void BSShape::drawSelection() const
 		if ( s >= 0 ) {
 			glDepthFunc( GL_ALWAYS );
 			glHighlightColor();
-			glLineWidth( 3.0 );
+			glLineWidth( GLView::Settings::lineWidthHighlight * 1.2f );
 			glBegin( GL_LINES );
 			glVertex( transVerts.value( s ) );
 			glVertex( transVerts.value( s ) + v.value( s ) * normalScale * 2 );
@@ -804,7 +804,7 @@ void BSShape::drawSelection() const
 
 	// General wireframe
 	if ( blk == iBlock && idx != iData && p != "Vertex Data" && p != "Vertices" ) {
-		glLineWidth( 1.6f );
+		glLineWidth( lineWidth );
 		glNormalColor();
 		for ( const Triangle& tri : triangles ) {
 			glBegin( GL_TRIANGLES );

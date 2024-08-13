@@ -6,6 +6,7 @@
 #include "io/nifstream.h"
 #include "model/nifmodel.h"
 #include "qtcompat.h"
+#include "glview.h"
 
 #include <QDir>
 #include <QBuffer>
@@ -136,8 +137,8 @@ void BSMesh::drawSelection() const
 	glEnable(GL_POLYGON_OFFSET_FILL);
 	glPolygonOffset(-1.0f, -2.0f);
 
-	glPointSize(1.5f);
-	glLineWidth(1.6f);
+	glPointSize( GLView::Settings::vertexPointSize );
+	glLineWidth( GLView::Settings::lineWidthWireframe );
 	glNormalColor();
 
 	// Name of this index
@@ -162,9 +163,9 @@ void BSMesh::drawSelection() const
 	auto lines = [this, &normalScale, &allv]( const QVector<Vector3> & v, int s, bool isBitangent = false ) {
 		glNormalColor();
 		if ( !isBitangent ) {
-			allv( 7.0f );
+			allv( GLView::Settings::tbnPointSize );
 
-			glLineWidth( 1.25f );
+			glLineWidth( GLView::Settings::lineWidthWireframe * 0.78125f );
 			glBegin( GL_LINES );
 			for ( int j = 0; j < transVerts.count() && j < v.count(); j++ ) {
 				glVertex( transVerts.value( j ) );
@@ -183,7 +184,7 @@ void BSMesh::drawSelection() const
 			} else {
 				glHighlightColor();
 			}
-			glLineWidth( 3.0f );
+			glLineWidth( GLView::Settings::lineWidthHighlight * 1.2f );
 			glBegin( GL_LINES );
 			glVertex( transVerts.value( s ) );
 			glVertex( transVerts.value( s ) + v.value( s ) * normalScale * 2.0f );
@@ -191,7 +192,7 @@ void BSMesh::drawSelection() const
 			glVertex( transVerts.value( s ) - v.value( s ) * normalScale * 0.5f );
 			glEnd();
 		}
-		glLineWidth( 1.6f );
+		glLineWidth( GLView::Settings::lineWidthWireframe );
 	};
 
 	if ( n == "Bounding Sphere" ) {
@@ -214,7 +215,7 @@ void BSMesh::drawSelection() const
 			drawBox( boundsCenter - boundsDims, boundsCenter + boundsDims );
 		}
 	} else if ( n == "Vertices" || n == "UVs" || n == "UVs 2" || n == "Vertex Colors" || n == "Weights" ) {
-		allv( 5.0f );
+		allv( GLView::Settings::vertexPointSize );
 
 		int	s;
 		if ( n == p && ( s = idx.row() ) >= 0 ) {
@@ -223,7 +224,7 @@ void BSMesh::drawSelection() const
 				if ( weightsPerVertex > 1 )
 					s /= weightsPerVertex;
 			}
-			glPointSize( 10 );
+			glPointSize( GLView::Settings::vertexPointSizeSelected );
 			glDepthFunc( GL_ALWAYS );
 			glHighlightColor();
 			glBegin( GL_POINTS );
@@ -390,7 +391,7 @@ void BSMesh::drawVerts() const
 	glDisable( GL_LIGHTING );
 	glNormalColor();
 
-	glPointSize( 8.5f );
+	glPointSize( GLView::Settings::vertexSelectPointSize );
 	glBegin( GL_POINTS );
 	for ( int i = 0; i < transVerts.count(); i++ ) {
 		if ( Node::SELECTING ) {
@@ -432,7 +433,7 @@ void BSMesh::drawVerts() const
 
 	if ( vertexSelected >= 0 && vertexSelected < transVerts.count() ) {
 		glHighlightColor();
-		glPointSize( 10.0f );
+		glPointSize( GLView::Settings::vertexPointSizeSelected );
 		glBegin( GL_POINTS );
 		glVertex( transVerts.value(vertexSelected) );
 		glEnd();
