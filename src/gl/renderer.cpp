@@ -281,7 +281,7 @@ bool Renderer::Shader::load( const QString & filepath )
 
 
 Renderer::Program::Program( const QString & n, QOpenGLFunctions * fn )
-	: f( fn ), name( n ), id( 0 )
+	: f( fn ), name( n.toLower() ), id( 0 )
 {
 	uniLocationsMap = new UniformLocationMapItem[512];
 	uniLocationsMapMask = 511;
@@ -512,14 +512,13 @@ void Renderer::releaseShaders()
 
 QString Renderer::setupProgram( Shape * mesh, const QString & hint )
 {
-	auto nif = NifModel::fromValidIndex( mesh->index() );
+	const NifModel *	nif;
 	if ( !shader_ready
-			|| hint.isNull()
-			|| mesh->scene->hasOption(Scene::DisableShaders)
-			|| mesh->scene->hasVisMode(Scene::VisSilhouette)
-			|| !nif
-			|| (nif->getBSVersion() == 0)
-	) {
+		|| hint.isNull()
+		|| ( nif = mesh->scene->nifModel ) == nullptr
+		|| ( nif->getBSVersion() == 0 )
+		|| mesh->scene->hasOption(Scene::DisableShaders)
+		|| ( mesh->scene->hasVisMode(Scene::VisSilhouette) && nif->getBSVersion() < 170 ) ) {
 		setupFixedFunction( mesh );
 		return QString();
 	}
@@ -2267,20 +2266,17 @@ void Renderer::drawSkyBox( Scene * scene )
 		-10.0f, -10.0f,  10.0f,   10.0f, -10.0f,  10.0f,  -10.0f,  10.0f,  10.0f,   10.0f,  10.0f,  10.0f
 	};
 
-	if ( cfg.cubeBgndMipLevel < 0 || !scene->nifModel || scene->nifModel->getBSVersion() < 151 || Node::SELECTING )
+	if ( cfg.cubeBgndMipLevel < 0 || !scene->nifModel || scene->nifModel->getBSVersion() < 151 || Node::SELECTING
+		|| scene->hasVisMode( Scene::VisSilhouette ) ) {
 		return;
+	}
 
 	const NifModel *	nif = scene->nifModel;
 	quint32	bsVersion = nif->getBSVersion();
 	static const QString	programName = "skybox.prog";
-	auto	p = programs.cbegin();
-	for ( ; p != programs.cend(); p++ ) {
-		if ( p.key().compare( programName, Qt::CaseInsensitive ) == 0 )
-			break;
-	}
-	if ( p == programs.cend() || !p.value() || !fn )
+	Program *	prog = programs.value( programName );
+	if ( !prog || !fn )
 		return;
-	Program *	prog = p.value();
 
 	Transform	vt = scene->view;
 	vt.translation = Vector3( 0.0, 0.0, 0.0 );

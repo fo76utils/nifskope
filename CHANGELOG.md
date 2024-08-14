@@ -1,6 +1,8 @@
  == CHANGELOG ==
 
-* Implemented high DPI scaling support for displays with higher than 1920x1080 resolution.
+* Implemented high DPI scaling support for displays with higher than 1920x1080 resolution. Setting the QT\_SCALE\_FACTOR environment variable to a value other than 1.0 can be used to change the default scaling. Dynamic scale factors (due to multiple monitors with different DPI, or changing the resolution while NifSkope is running) are not supported yet.
+* Fixes to silhouette mode when used with Starfield models and/or cube map background enabled.
+* The maximum cube map resolution for image based lighting has been increased to 2048x2048. Note: it is only recommended to use this resolution with low sample counts like 64.
 
 #### NifSkope-2.0.dev9-20240811
 

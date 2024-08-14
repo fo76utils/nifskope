@@ -587,9 +587,21 @@ void GLView::paintGL()
 	glPopMatrix();
 #endif
 
-	GLfloat mat_spec[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	FloatVector4	mat_amb( 0.0f, 0.0f, 0.0f, 1.0f );
+	FloatVector4	mat_diff( 0.0f, 0.0f, 0.0f, 1.0f );
+	FloatVector4	mat_spec( 0.0f, 0.0f, 0.0f, 1.0f );
 
-	if ( scene->hasOption(Scene::DoLighting) ) {
+	if ( scene->hasVisMode(Scene::VisSilhouette) ) {
+		if ( !scene->hasOption(Scene::DisableShaders) && scene->nifModel && scene->nifModel->getBSVersion() >= 170 )
+			mat_diff[3] = 0.0f;
+
+		glShadeModel( GL_FLAT );
+		//glEnable( GL_LIGHTING );
+		glEnable( GL_LIGHT0 );
+		glLightModelfv( GL_LIGHT_MODEL_AMBIENT, &(mat_diff[0]) );
+		glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, &(mat_diff[0]) );
+
+	} else if ( scene->hasOption(Scene::DoLighting) ) {
 		// Setup light
 		Vector4 lightDir( 0.0, 0.0, 1.0, 0.0 );
 
@@ -633,7 +645,8 @@ void GLView::paintGL()
 		float amb = ambient;
 		if ( scene->hasOption(Scene::DisableShaders) )
 			amb *= 0.375f;
-		GLfloat mat_amb[] = { amb, amb, amb, toneMapping };
+		mat_amb = FloatVector4( amb );
+		mat_amb[3] = toneMapping;
 
 		const FloatVector4	a6( 0.02729229f, -0.03349948f, -0.93633725f, 0.0f );
 		const FloatVector4	a5( 0.18128491f, -0.17835246f, 1.44207620f, 0.0f );
@@ -649,44 +662,31 @@ void GLView::paintGL()
 		c = ( c - d0 ) / ( d1 - d0 );
 		c.maxValues( FloatVector4(0.0f) ).minValues( FloatVector4(1.0f) );
 		c *= brightnessL;
-		GLfloat	mat_diff[] = { c[0], c[1], c[2], brightnessScale };
+		mat_diff = c;
+		mat_diff[3] = brightnessScale;
+		mat_spec = mat_diff;
 
 
 		glShadeModel( GL_SMOOTH );
 		//glEnable( GL_LIGHTING );
 		glEnable( GL_LIGHT0 );
-		glLightfv( GL_LIGHT0, GL_AMBIENT, mat_amb );
-		glLightfv( GL_LIGHT0, GL_DIFFUSE, mat_diff );
-		glLightfv( GL_LIGHT0, GL_SPECULAR, mat_diff );
 		glLightfv( GL_LIGHT0, GL_POSITION, lightDir.data() );
+
 	} else {
 		float amb = scene->hasOption(Scene::DisableShaders) ? 0.0f : 0.5f;
 
-		GLfloat mat_amb[] = { amb, amb, amb, 1.0f };
-		GLfloat mat_diff[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+		mat_amb.blendValues( FloatVector4( amb ), 0x07 );
+		mat_diff = FloatVector4( 1.0f );
 
 
 		glShadeModel( GL_SMOOTH );
 		//glEnable( GL_LIGHTING );
 		glEnable( GL_LIGHT0 );
-		glLightfv( GL_LIGHT0, GL_AMBIENT, mat_amb );
-		glLightfv( GL_LIGHT0, GL_DIFFUSE, mat_diff );
-		glLightfv( GL_LIGHT0, GL_SPECULAR, mat_spec );
 	}
 
-	if ( scene->hasVisMode(Scene::VisSilhouette) ) {
-		GLfloat mat_diff[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-		GLfloat mat_amb[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-
-		glShadeModel( GL_FLAT );
-		//glEnable( GL_LIGHTING );
-		glEnable( GL_LIGHT0 );
-		glLightModelfv( GL_LIGHT_MODEL_AMBIENT, mat_diff );
-		glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, mat_diff );
-		glLightfv( GL_LIGHT0, GL_AMBIENT, mat_amb );
-		glLightfv( GL_LIGHT0, GL_DIFFUSE, mat_diff );
-		glLightfv( GL_LIGHT0, GL_SPECULAR, mat_spec );
-	}
+	glLightfv( GL_LIGHT0, GL_AMBIENT, &(mat_amb[0]) );
+	glLightfv( GL_LIGHT0, GL_DIFFUSE, &(mat_diff[0]) );
+	glLightfv( GL_LIGHT0, GL_SPECULAR, &(mat_spec[0]) );
 
 	if ( scene->hasOption(Scene::DoMultisampling) )
 		glEnable( GL_MULTISAMPLE_ARB );
