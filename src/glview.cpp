@@ -1650,7 +1650,7 @@ void GLView::saveImage()
 				for ( int i = 0; i <= int( useSilhouette ); i++ ) {
 					QOpenGLFramebufferObjectFormat fboFmt;
 					fboFmt.setTextureTarget( GL_TEXTURE_2D );
-					fboFmt.setInternalTextureFormat( !( haveAlpha && !useSilhouette ) ? GL_SRGB8 : GL_SRGB8_ALPHA8 );
+					fboFmt.setInternalTextureFormat( i == 0 ? GL_SRGB8_ALPHA8 : GL_RGBA8 );
 					fboFmt.setMipmap( false );
 					fboFmt.setAttachment( QOpenGLFramebufferObject::Attachment::Depth );
 					fboFmt.setSamples( 16 / ss );
@@ -1695,7 +1695,7 @@ void GLView::saveImage()
 			int	imgHeight = std::min< int >( rgbImg.height(), alphaImg.height() );
 			QImage	img;
 			if ( !haveAlpha )
-				img = rgbImg;	// RGB only: no processing is needed
+				( img = rgbImg ).reinterpretAsFormat( QImage::Format_RGB32 );	// RGB only: no processing is needed
 			else
 				img = QImage( imgWidth, imgHeight, QImage::Format_ARGB32 );
 			for ( int y = 0; haveAlpha && y < imgHeight; y++ ) {
@@ -1714,11 +1714,7 @@ void GLView::saveImage()
 						}
 					} else {
 						FloatVector4	a( alphaPtr + x );
-						if ( !isSRGB )
-							a *= ( 1.0f / 255.0f );
-						else
-							a.srgbExpand();
-						rgba[3] = a.dotProduct3( FloatVector4( -85.0f ) ) + 255.0f;
+						rgba[3] = a.dotProduct3( FloatVector4( -1.0f / 3.0f ) ) + 255.0f;
 					}
 					dstPtr[x] = std::uint32_t( rgba );
 				}
@@ -1743,10 +1739,10 @@ void GLView::saveImage()
 						writer.setProgressiveScanWrite( true );
 						break;
 					case 1:	// PNG
-						writer.setQuality( std::max< int >( 100 - q, 0 ) );
+						writer.setCompression( q );
 						break;
 					case 2:	// WebP
-						writer.setQuality( 75 + q / 4 );
+						writer.setQuality( 50 + q / 2 );
 						break;
 					}
 
