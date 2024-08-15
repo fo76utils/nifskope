@@ -51,10 +51,6 @@ CONFIG(debug, debug|release) {
 	DEFINES += QT_NO_DEBUG_OUTPUT
 }
 
-macx: {
-    QMAKE_CFLAGS = -fno-define-target-os-macros
-}
-
 # TODO: Get rid of this define
 #	uncomment this if you want the text stats gl option
 #	DEFINES += USE_GL_QPAINTER
