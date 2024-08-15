@@ -517,8 +517,7 @@ QString Renderer::setupProgram( Shape * mesh, const QString & hint )
 		|| hint.isNull()
 		|| ( nif = mesh->scene->nifModel ) == nullptr
 		|| ( nif->getBSVersion() == 0 )
-		|| mesh->scene->hasOption(Scene::DisableShaders)
-		|| ( mesh->scene->hasVisMode(Scene::VisSilhouette) && nif->getBSVersion() < 170 ) ) {
+		|| mesh->scene->hasOption(Scene::DisableShaders) ) {
 		setupFixedFunction( mesh );
 		return QString();
 	}
