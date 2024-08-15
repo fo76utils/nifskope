@@ -15,7 +15,7 @@ macx: {
     QMAKE_CXX = /usr/local/opt/llvm/bin/clang++
     INCLUDEPATH += /usr/local/opt/llvm/include
 
-    ICON = nifskope.icns
+    ICON = res/nifskope.icns
 }
 
 QT += xml opengl network widgets
@@ -99,7 +99,6 @@ VISUALSTUDIO = false
 	#	They are never used but get auto-generated because of CONFIG += debug_and_release
 	$$VISUALSTUDIO:OUT_PWD = $${_PRO_FILE_PWD_}/bin
 }
-
 
 
 ###############################
