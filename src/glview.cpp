@@ -1505,7 +1505,7 @@ void GLView::saveImage()
 
 	QString nifFolder = model->getFolder();
 	static const char *	screenshotImgFormats[5] = {
-		".jpg", ".png", ".webp", ".bmp", ".tga"
+		".jpg", ".png", ".webp", ".bmp", ".dds"
 	};
 	QString filename = name + (!name.isEmpty() ? "_" : "") + date + screenshotImgFormats[imgFormat];
 
@@ -1516,7 +1516,7 @@ void GLView::saveImage()
 
 	FileSelector * file = new FileSelector( FileSelector::SaveFile, tr( "File" ), QBoxLayout::LeftToRight );
 	file->setParent( dlg );
-	file->setFilter( { "Images (*.jpg *.png *.webp *.bmp *.tga)", "JPEG (*.jpg)", "PNG (*.png)", "WebP (*.webp)", "BMP (*.bmp)", "TGA (*.tga)" } );
+	file->setFilter( { "Images (*.jpg *.png *.webp *.bmp *.dds)", "JPEG (*.jpg)", "PNG (*.png)", "WebP (*.webp)", "BMP (*.bmp)", "DDS (*.dds)" } );
 	file->setFile( imgPath + "/" + filename  );
 	lay->addWidget( file, 0, 0, 1, -1 );
 
@@ -1639,7 +1639,7 @@ void GLView::saveImage()
 			QSize	fboSize( getSizeInPixels() );
 			auto	savedSceneOptions = scene->options;
 			auto	savedSceneVisMode = scene->visMode;
-			bool	haveAlpha = ( imgFormat == 1 || imgFormat == 4 );	// PNG or TGA
+			bool	haveAlpha = ( imgFormat == 1 || imgFormat == 4 );	// PNG or DDS
 			bool	useSilhouette = ( imgFormat == 1 );
 			std::string	err;
 
@@ -1686,7 +1686,7 @@ void GLView::saveImage()
 				resizeGL( int( p * w + 0.5 ), int( p * h + 0.5 ) );
 
 			if ( !err.empty() ) {
-				QMessageBox::critical( nullptr, "NifSkope error", QString::fromStdString( err ) );
+				QMessageBox::critical( this, "NifSkope error", QString::fromStdString( err ) );
 				return;
 			}
 
@@ -1724,34 +1724,46 @@ void GLView::saveImage()
 				}
 			}
 
-			QImageWriter writer( file->file() );
+			try {
+				if ( imgFormat != 4 ) {
+					QImageWriter writer( file->file() );
 
-			// Set Compression for formats that can use it
-			writer.setCompression( 1 );
+					// Set Compression for formats that can use it
+					writer.setCompression( 1 );
 
-			// Handle JPEG/WebP Quality
-			writer.setFormat( screenshotImgFormats[imgFormat] + 1 );
-			int	q = pixQuality->value();
-			if ( q < 0 )
-				q = 75;
-			switch ( imgFormat ) {
-			case 0:	// JPEG
-				writer.setQuality( 50 + q / 2 );
-				writer.setOptimizedWrite( true );
-				writer.setProgressiveScanWrite( true );
-				break;
-			case 1:	// PNG
-				writer.setQuality( std::max< int >( 100 - q, 0 ) );
-				break;
-			case 2:	// WebP
-				writer.setQuality( 75 + q / 4 );
-				break;
-			}
+					// Handle JPEG/WebP Quality
+					writer.setFormat( screenshotImgFormats[imgFormat] + 1 );
+					int	q = pixQuality->value();
+					if ( q < 0 )
+						q = 75;
+					switch ( imgFormat ) {
+					case 0:	// JPEG
+						writer.setQuality( 50 + q / 2 );
+						writer.setOptimizedWrite( true );
+						writer.setProgressiveScanWrite( true );
+						break;
+					case 1:	// PNG
+						writer.setQuality( std::max< int >( 100 - q, 0 ) );
+						break;
+					case 2:	// WebP
+						writer.setQuality( 75 + q / 4 );
+						break;
+					}
 
-			if ( writer.write( img ) ) {
+					if ( !writer.write( img ) )
+						throw FO76UtilsError( "%s", writer.errorString().toStdString().c_str() );
+
+				} else {	// DDS
+					DDSOutputFile	writer( file->file().toStdString().c_str(), imgWidth, imgHeight,
+											DDSInputFile::pixelFormatRGBA32 );
+					// TODO: portable handling of byte order
+					writer.writeData( img.constBits(), size_t( img.sizeInBytes() ) );
+				}
+
 				dlg->accept();
-			} else {
-				Message::critical( this, tr( "Could not save %1" ).arg( file->file() ) );
+
+			} catch ( std::exception & e ) {
+				QMessageBox::critical( this, "NifSkope error", tr( "Could not save %1: %2" ).arg( file->file() ).arg( e.what() ) );
 			}
 		}
 	);
