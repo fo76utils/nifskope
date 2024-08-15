@@ -66,7 +66,7 @@ void main()
 		color += ambient * 0.08;
 	}
 
-	fragColor = vec4( tonemap( color * D.a, A.a ), 1.0 );
+	fragColor = vec4( tonemap( color * D.a, A.a ), 0.0 );
 }
 
 // vim: set syntax=gdshader noexpandtab ts=4 :
