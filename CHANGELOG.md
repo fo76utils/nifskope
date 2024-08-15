@@ -1,8 +1,10 @@
  == CHANGELOG ==
 
 * Implemented high DPI scaling support for displays with higher than 1920x1080 resolution. Setting the QT\_SCALE\_FACTOR environment variable to a value other than 1.0 can be used to change the default scaling. Dynamic scale factors (due to multiple monitors with different DPI, or changing the resolution while NifSkope is running) are not supported yet.
-* Fixes to silhouette mode when used with Starfield models and/or cube map background enabled.
-* The maximum cube map resolution for image based lighting has been increased to 2048x2048. Note: it is only recommended to use this resolution with low sample counts like 64.
+* Fixes to silhouette mode when used with Starfield models and/or cube map background enabled. Shaders also remain active for all games, this is more expensive to render, but it allows for correct transparency.
+* Improved handling of transparency in PNG screenshots, the alpha channel is now calculated from a second image that is rendered in silhouette mode. The previous method of saving the alpha directly from the OpenGL framebuffer is still available with TGA format screenshots.
+* When saving screenshots with transparency, the grid and axes are temporarily disabled. The skybox remains active if it was enabled, but its opacity has been changed to 0.
+* The maximum cube map resolution for image based lighting has been increased to 2048x2048. Note: this setting is generally only recommended for high resolution skyboxes with 8K HDR files, and should be used with low sample counts like 64.
 
 #### NifSkope-2.0.dev9-20240811
 

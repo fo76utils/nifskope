@@ -546,7 +546,7 @@ void GLView::paintGL()
 	glLoadIdentity();
 
 	// Draw the grid
-	if ( scene->hasOption(Scene::ShowGrid) && !gridDisabled ) {
+	if ( scene->hasOption(Scene::ShowGrid) ) {
 		glDisable( GL_ALPHA_TEST );
 		glDisable( GL_BLEND );
 		glDisable( GL_LIGHTING );
@@ -592,7 +592,7 @@ void GLView::paintGL()
 	FloatVector4	mat_spec( 0.0f, 0.0f, 0.0f, 1.0f );
 
 	if ( scene->hasVisMode(Scene::VisSilhouette) ) {
-		if ( !scene->hasOption(Scene::DisableShaders) && scene->nifModel && scene->nifModel->getBSVersion() >= 170 )
+		if ( !scene->hasOption(Scene::DisableShaders) && scene->nifModel && scene->nifModel->getBSVersion() > 0 )
 			mat_diff[3] = 0.0f;
 
 		glShadeModel( GL_FLAT );
@@ -1636,37 +1636,93 @@ void GLView::saveImage()
 			if ( ss > 1 )
 				resizeGL( int( p * ( w * ss ) + 0.5 ), int( p * ( h * ss ) + 0.5 ) );
 
-			QOpenGLFramebufferObjectFormat fboFmt;
-			fboFmt.setTextureTarget( GL_TEXTURE_2D );
-			fboFmt.setInternalTextureFormat( imgFormat != 1 ? GL_SRGB8 : GL_SRGB8_ALPHA8 );
-			fboFmt.setMipmap( false );
-			fboFmt.setAttachment( QOpenGLFramebufferObject::Attachment::Depth );
-			fboFmt.setSamples( 16 / ss );
+			QSize	fboSize( getSizeInPixels() );
+			auto	savedSceneOptions = scene->options;
+			auto	savedSceneVisMode = scene->visMode;
+			bool	haveAlpha = ( imgFormat == 1 || imgFormat == 4 );	// PNG or TGA
+			bool	useSilhouette = ( imgFormat == 1 );
+			std::string	err;
 
-			QSize	sizeInPixels( getSizeInPixels() );
-			QOpenGLFramebufferObject fbo( sizeInPixels.width(), sizeInPixels.height(), fboFmt );
-			fbo.bind();
-
+			QImage	rgbImg;
+			QImage	alphaImg;
 			const QColor & c = cfg.background;
-			if ( imgFormat == 1 ) {
-				glClearColor( c.redF(), c.greenF(), c.blueF(), 0.0f );
-				gridDisabled = true;
+			try {
+				for ( int i = 0; i <= int( useSilhouette ); i++ ) {
+					QOpenGLFramebufferObjectFormat fboFmt;
+					fboFmt.setTextureTarget( GL_TEXTURE_2D );
+					fboFmt.setInternalTextureFormat( !( haveAlpha && !useSilhouette ) ? GL_SRGB8 : GL_SRGB8_ALPHA8 );
+					fboFmt.setMipmap( false );
+					fboFmt.setAttachment( QOpenGLFramebufferObject::Attachment::Depth );
+					fboFmt.setSamples( 16 / ss );
+
+					QOpenGLFramebufferObject fbo( fboSize.width(), fboSize.height(), fboFmt );
+					fbo.bind();
+
+					if ( haveAlpha ) {
+						if ( !useSilhouette )
+							glClearColor( c.redF(), c.greenF(), c.blueF(), 0.0f );
+						scene->options = savedSceneOptions & ~( Scene::ShowAxes | Scene::ShowGrid );
+						if ( i )
+							scene->visMode = Scene::VisSilhouette;
+					}
+					update();
+					updateGL();
+
+					fbo.release();
+
+					( i == 0 ? rgbImg : alphaImg ) = fbo.toImage();
+					if ( i == 0 && !useSilhouette )
+						alphaImg = rgbImg;
+				}
+			} catch ( std::exception & e ) {
+				err = e.what();
 			}
-			update();
-			updateGL();
-			gridDisabled = false;
+
+			// Restore settings and return viewport to original size
+			scene->options = savedSceneOptions;
+			scene->visMode = savedSceneVisMode;
 			glClearColor( c.redF(), c.greenF(), c.blueF(), c.alphaF() );
-
-			fbo.release();
-
-			QImage fboImg( fbo.toImage() );
-			QImage img( fboImg.constBits(), fboImg.width(), fboImg.height(),
-						( imgFormat != 1 ? QImage::Format_RGB32 : QImage::Format_ARGB32 ) );
-
-			// Return viewport to original size
 			if ( ss > 1 )
 				resizeGL( int( p * w + 0.5 ), int( p * h + 0.5 ) );
 
+			if ( !err.empty() ) {
+				QMessageBox::critical( nullptr, "NifSkope error", QString::fromStdString( err ) );
+				return;
+			}
+
+			// Convert image data (FIXME: possible byte order issues)
+			int	imgWidth = std::min< int >( rgbImg.bytesPerLine(), alphaImg.bytesPerLine() ) >> 2;
+			int	imgHeight = std::min< int >( rgbImg.height(), alphaImg.height() );
+			QImage	img;
+			if ( !haveAlpha )
+				img = rgbImg;	// RGB only: no processing is needed
+			else
+				img = QImage( imgWidth, imgHeight, QImage::Format_ARGB32 );
+			for ( int y = 0; haveAlpha && y < imgHeight; y++ ) {
+				const std::uint32_t *	rgbPtr = reinterpret_cast< const std::uint32_t * >( rgbImg.constScanLine( y ) );
+				const std::uint32_t *	alphaPtr =
+					reinterpret_cast< const std::uint32_t * >( alphaImg.constScanLine( y ) );
+				std::uint32_t *	dstPtr = reinterpret_cast< std::uint32_t * >( img.scanLine( y ) );
+				bool	isSRGB = ( scene->nifModel && scene->nifModel->getBSVersion() >= 151 );
+				for ( int x = 0; x < imgWidth; x++ ) {
+					FloatVector4	rgba( rgbPtr + x );
+					if ( !useSilhouette ) {
+						// work around the alpha channel being incorrectly converted from sRGB
+						if ( isSRGB ) {
+							FloatVector4	a( rgba );
+							rgba.blendValues( ( a * ( 1.0f / 255.0f ) ).srgbCompress(), 0x08 );
+						}
+					} else {
+						FloatVector4	a( alphaPtr + x );
+						if ( !isSRGB )
+							a *= ( 1.0f / 255.0f );
+						else
+							a.srgbExpand();
+						rgba[3] = a.dotProduct3( FloatVector4( -85.0f ) ) + 255.0f;
+					}
+					dstPtr[x] = std::uint32_t( rgba );
+				}
+			}
 
 			QImageWriter writer( file->file() );
 
