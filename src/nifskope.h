@@ -156,6 +156,11 @@ public:
 
 	static void reloadTheme();
 
+	inline GLView * getGLView()
+	{
+		return ogl;
+	}
+
 signals:
 	void beginLoading();
 	void completeLoading( bool, QString & );
