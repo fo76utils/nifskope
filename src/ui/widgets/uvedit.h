@@ -252,7 +252,6 @@ private:
 
 	QAction * aTextureBlend;
 
-	int	sfMeshLOD = 0;	// TODO: implement choosing LOD
 	QPersistentModelIndex	sfMeshIndex;
 
 	struct Settings

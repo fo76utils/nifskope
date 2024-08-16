@@ -1013,6 +1013,12 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 		if ( !meshes.isValid() )
 			return false;
 
+		int	sfMeshLOD = 0;
+		for ( auto w = dynamic_cast< NifSkope * >( nif->getWindow() ); w; w = nullptr ) {
+			auto	ogl = w->getGLView();
+			if ( ogl && ogl->getScene() )
+				sfMeshLOD = ogl->getScene()->lodLevel;
+		}
 		int	lodDiff = 255;
 		for ( int i = 0; i <= 3; i++ ) {
 			auto mesh = QModelIndex_child( meshes, i );
