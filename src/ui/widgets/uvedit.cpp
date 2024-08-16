@@ -527,7 +527,9 @@ Vector2 UVWidget::mapToContents( const QPoint & p ) const
 
 QVector<int> UVWidget::indices( const QPoint & p ) const
 {
-	return indices( QRect( p - QPoint( 2, 2 ), QSize( 5, 5 ) ) );
+	int	d = int( devicePixelRatioF() * 5.0 + 0.5 );
+	int	d2 = d >> 1;
+	return indices( QRect( p - QPoint( d2, d2 ), QSize( d, d ) ) );
 }
 
 QVector<int> UVWidget::indices( const QRegion & region ) const
