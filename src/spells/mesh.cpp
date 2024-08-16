@@ -1729,7 +1729,10 @@ void spGenerateMeshlets::updateMeshlets(
 						auto	iTriangle = QModelIndex_child( iTriangles, int(k) );
 						if ( !iTriangle.isValid() )
 							throw FO76UtilsError( "triangle number is out of range" );
-						Triangle	t( quint16(v[p[0]]), quint16(v[p[1]]), quint16(v[p[2]]) );
+						quint16	v0 = quint16( v[p[0]] );
+						quint16	v1 = quint16( v[p[1]] );
+						quint16	v2 = quint16( v[p[2]] );
+						Triangle	t( v0, v1, v2 );
 						nif->set<Triangle>( iTriangle, t );
 					}
 				}
