@@ -11,9 +11,8 @@
 TARGET   = NifSkope
 
 macx: {
-    QMAKE_CC = /usr/local/opt/llvm/bin/clang
-    QMAKE_CXX = /usr/local/opt/llvm/bin/clang++
-    INCLUDEPATH += /usr/local/opt/llvm/include
+    QMAKE_CC = clang
+    QMAKE_CXX = clang++
 
     ICON = res/nifskope.icns
 }
