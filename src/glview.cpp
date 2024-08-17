@@ -1671,8 +1671,6 @@ void GLView::saveImage()
 					fbo.release();
 
 					( i == 0 ? rgbImg : alphaImg ) = fbo.toImage();
-					if ( i == 0 && !useSilhouette )
-						alphaImg = rgbImg;
 				}
 			} catch ( std::exception & e ) {
 				err = e.what();
@@ -1690,33 +1688,31 @@ void GLView::saveImage()
 				return;
 			}
 
-			// Convert image data (FIXME: possible byte order issues)
-			int	imgWidth = std::min< int >( rgbImg.bytesPerLine(), alphaImg.bytesPerLine() ) >> 2;
-			int	imgHeight = std::min< int >( rgbImg.height(), alphaImg.height() );
-			QImage	img;
-			if ( !haveAlpha )
-				( img = rgbImg ).reinterpretAsFormat( QImage::Format_RGB32 );	// RGB only: no processing is needed
-			else
-				img = QImage( imgWidth, imgHeight, QImage::Format_ARGB32 );
+			rgbImg.reinterpretAsFormat( !haveAlpha ? QImage::Format_RGB32 : QImage::Format_ARGB32 );
+			int	imgWidth = rgbImg.bytesPerLine() >> 2;
+			int	imgHeight = rgbImg.height();
+
 			for ( int y = 0; haveAlpha && y < imgHeight; y++ ) {
-				const std::uint32_t *	rgbPtr = reinterpret_cast< const std::uint32_t * >( rgbImg.constScanLine( y ) );
-				const std::uint32_t *	alphaPtr =
-					reinterpret_cast< const std::uint32_t * >( alphaImg.constScanLine( y ) );
-				std::uint32_t *	dstPtr = reinterpret_cast< std::uint32_t * >( img.scanLine( y ) );
-				bool	isSRGB = ( scene->nifModel && scene->nifModel->getBSVersion() >= 151 );
-				for ( int x = 0; x < imgWidth; x++ ) {
-					FloatVector4	rgba( rgbPtr + x );
-					if ( !useSilhouette ) {
-						// work around the alpha channel being incorrectly converted from sRGB
-						if ( isSRGB ) {
-							FloatVector4	a( rgba );
-							rgba.blendValues( ( a * ( 1.0f / 255.0f ) ).srgbCompress(), 0x08 );
-						}
-					} else {
+				// Convert image data (FIXME: possible byte order issues)
+				std::uint32_t *	rgbPtr = reinterpret_cast< std::uint32_t * >( rgbImg.scanLine( y ) );
+				const std::uint32_t *	alphaPtr = rgbPtr;
+				if ( useSilhouette && alphaImg.width() >= rgbImg.width() && y < alphaImg.height() ) {
+					alphaPtr = reinterpret_cast< const std::uint32_t * >( alphaImg.constScanLine( y ) );
+					for ( int x = 0; x < imgWidth; x++ ) {
+						// combine RGB image with alpha mask from silhouette
+						FloatVector4	rgba( rgbPtr + x );
 						FloatVector4	a( alphaPtr + x );
 						rgba[3] = a.dotProduct3( FloatVector4( -1.0f / 3.0f ) ) + 255.0f;
+						rgbPtr[x] = std::uint32_t( rgba );
 					}
-					dstPtr[x] = std::uint32_t( rgba );
+				} else if ( scene->nifModel && scene->nifModel->getBSVersion() >= 151 ) {
+					for ( int x = 0; x < imgWidth; x++ ) {
+						FloatVector4	rgba( rgbPtr + x );
+						// work around the alpha channel being incorrectly converted from sRGB
+						FloatVector4	a( rgba );
+						rgba.blendValues( ( a * ( 1.0f / 255.0f ) ).srgbCompress(), 0x08 );
+						rgbPtr[x] = std::uint32_t( rgba );
+					}
 				}
 			}
 
@@ -1746,14 +1742,14 @@ void GLView::saveImage()
 						break;
 					}
 
-					if ( !writer.write( img ) )
+					if ( !writer.write( rgbImg ) )
 						throw FO76UtilsError( "%s", writer.errorString().toStdString().c_str() );
 
 				} else {	// DDS
 					DDSOutputFile	writer( file->file().toStdString().c_str(), imgWidth, imgHeight,
 											DDSInputFile::pixelFormatRGBA32 );
 					// TODO: portable handling of byte order
-					writer.writeData( img.constBits(), size_t( img.sizeInBytes() ) );
+					writer.writeData( rgbImg.constBits(), size_t( rgbImg.sizeInBytes() ) );
 				}
 
 				dlg->accept();
