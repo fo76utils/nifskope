@@ -2,6 +2,7 @@
 
 * Implemented high DPI scaling support for displays with higher than 1920x1080 resolution. Setting the QT\_SCALE\_FACTOR environment variable to a value other than 1.0 can be used to change the default scaling. Dynamic scale factors (due to multiple monitors with different DPI, or changing the resolution while NifSkope is running) are not supported yet.
 * Added support for selecting Starfield LOD meshes in the UV editor, using the LOD slider on the main window.
+* macOS binary packages are now available, built with GitHub Actions workflow contributed by DigitalBox98.
 * Fixes to silhouette mode when used with Starfield models and/or cube map background enabled. Shaders also remain active for all games, this is more expensive to render, but it allows for correct transparency.
 * Improved handling of transparency in PNG screenshots, the alpha channel is now calculated from a second image that is rendered in silhouette mode. The previous method of saving the alpha directly from the OpenGL framebuffer is still available with DDS format screenshots.
 * When saving screenshots with transparency, the grid and axes are temporarily disabled. The skybox remains active if it was enabled, but its opacity has been changed to 0.

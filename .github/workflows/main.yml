@@ -29,7 +29,7 @@ jobs:
       shell: msys2 {0}
       run: |
         qmake noavx2=1 NifSkope.pro
-        make -j 12
+        make -j 8
         mv -f release/NifSkope.exe release/NifSkope_noavx2.exe
 
     - name: 'Upload Artifacts'
@@ -60,11 +60,44 @@ jobs:
     - name: 'Build with qmake'
       run: |
         x86_64-linux-gnu-qmake noavx2=1 NifSkope.pro
-        make -j 12
+        make -j 8
         mv -f release/NifSkope release/NifSkope_noavx2
 
     - name: 'Upload Artifacts'
       uses: actions/upload-artifact@v4
       with:
         name: build-linux
+        path: 'release'
+
+  build_macos:
+    runs-on: macos-latest
+    name: Build MacOS
+
+    steps:
+    - name: 'Checkout'
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        submodules: recursive
+
+    - name: 'Install required packages'
+      uses: jurplel/install-qt-action@v4
+
+    - name: 'Install clang'
+      run: brew install llvm
+
+    - name: 'Build with qmake'
+      run: |
+        qmake noavx=1 NifSkope.pro
+        make -j 8
+
+    - name: 'Create DMG image'
+      run: |
+        cp release/*.xml release/NifSkope.app/Contents/MacOS/
+        macdeployqt release/NifSkope.app -dmg
+
+    - name: 'Upload Artifacts'
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-macos
         path: 'release'
