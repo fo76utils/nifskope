@@ -230,6 +230,34 @@ void spFaceNormals::faceNormalsSFMesh( NifModel * nif, const QModelIndex & index
 
 REGISTER_SPELL( spFaceNormals )
 
+//! Recalculates and faces the normals of all meshes
+class spFaceNormalsAll final : public Spell
+{
+public:
+	QString name() const override final { return Spell::tr( "Face Normals" ); }
+	QString page() const override final { return Spell::tr( "Batch" ); }
+
+	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
+	{
+		return ( nif && !index.isValid() && nif->getBlockCount() > 0 );
+	}
+
+	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
+	{
+		spFaceNormals	sp;
+		for ( int n = 0; n < nif->getBlockCount(); n++ ) {
+			QModelIndex idx = nif->getBlockIndex( n );
+
+			if ( sp.isApplicable( nif, idx ) )
+				sp.cast( nif, idx );
+		}
+
+		return index;
+	}
+};
+
+REGISTER_SPELL( spFaceNormalsAll )
+
 //! Flip normals of a mesh, without recalculating them.
 class spFlipNormals final : public Spell
 {
@@ -312,150 +340,207 @@ public:
 		return spFaceNormals::getShapeData( nif, index ).isValid();
 	}
 
+	// maxa = cos( maxAngle ), maxd = pow( maxDistance, 2.0 )
+	// returns false if the dialog was rejected
+	static bool getOptions( float & maxa, float & maxd, bool isSFMesh );
+	static void calculateSmoothNormals( float * snorms, size_t snormSize,
+										float * norms, const float * verts, size_t numVerts, float maxa, float maxd );
+	// for nif->getBSVersion() < 170
+	static void smoothNormals( NifModel * nif, const QModelIndex & index, float maxa, float maxd );
+	// for nif->getBSVersion() >= 170
 	static void smoothNormalsSFMesh( NifModel * nif, const QModelIndex & index, float maxa, float maxd );
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
 	{
-		QModelIndex iData;
-		bool isSFMesh = ( nif->getBSVersion() >= 170 && nif->isNiBlock( index, "BSGeometry" ) );
+		float	maxa = 0.0f;
+		float	maxd = 0.0f;
+		bool	isSFMesh = ( nif->getBSVersion() >= 170 );
+		if ( !getOptions( maxa, maxd, isSFMesh ) )
+			return index;
+
 		if ( !isSFMesh )
-			iData = spFaceNormals::getShapeData( nif, index );
-		else if ( ( nif->get<quint32>( index, "Flags" ) & 0x0200 ) == 0 )
-			return index;
-
-		QVector<Vector3> verts;
-		QVector<Vector3> norms;
-
-		int numVerts = 0;
-
-		if ( nif->getBSVersion() < 100 ) {
-			verts = nif->getArray<Vector3>( iData, "Vertices" );
-			norms = nif->getArray<Vector3>( iData, "Normals" );
-		} else if ( !isSFMesh ) {
-			auto vf = nif->get<BSVertexDesc>( index, "Vertex Desc" );
-			if ( !((vf & VertexFlags::VF_SKINNED) && nif->getBSVersion() == 100) ) {
-				numVerts = nif->get<int>( index, "Num Vertices" );
-			} else {
-				// Skinned SSE
-				// "Num Vertices" does not exist in the partition
-				auto iPart = iData.parent();
-				numVerts = nif->get<uint>( iPart, "Data Size" ) / nif->get<uint>( iPart, "Vertex Size" );
-			}
-
-			verts.reserve( numVerts );
-			norms.reserve( numVerts );
-
-			for ( int i = 0; i < numVerts; i++ ) {
-				auto idx = nif->index( i, 0, iData );
-
-				verts += nif->get<Vector3>( idx, "Vertex" );
-				norms += nif->get<ByteVector3>( idx, "Normal" );
-			}
-		}
-
-		if ( !isSFMesh ) {
-			if ( nif->isNiBlock(index, "BSDynamicTriShape") ) {
-				auto dynVerts = nif->getArray<Vector4>(index, "Vertices");
-				verts.clear();
-				verts.reserve( numVerts );
-				for ( const auto & v : dynVerts )
-					verts << Vector3(v);
-			}
-
-			if ( verts.isEmpty() || verts.count() != norms.count() )
-				return index;
-		}
-
-		QDialog dlg;
-		dlg.setWindowTitle( Spell::tr( "Smooth Normals" ) );
-
-		QGridLayout * grid = new QGridLayout;
-		dlg.setLayout( grid );
-
-		QDoubleSpinBox * angle = new QDoubleSpinBox;
-		angle->setRange( 0, 180 );
-		angle->setValue( 60 );
-		angle->setSingleStep( 5 );
-
-		grid->addWidget( new QLabel( Spell::tr( "Max Smooth Angle" ) ), 0, 0 );
-		grid->addWidget( angle, 0, 1 );
-
-		QDoubleSpinBox * dist = new QDoubleSpinBox;
-		dist->setRange( 0, 1 );
-		dist->setDecimals( 4 );
-		if ( !isSFMesh ) {
-			dist->setSingleStep( 0.001 );
-			dist->setValue( 0.035 );
-		} else {
-			dist->setSingleStep( 0.0001 );
-			dist->setValue( 0.0005 );
-		}
-
-		grid->addWidget( new QLabel( Spell::tr( "Max Vertex Distance" ) ), 1, 0 );
-		grid->addWidget( dist, 1, 1 );
-
-		QPushButton * btOk = new QPushButton;
-		btOk->setText( Spell::tr( "Smooth" ) );
-		QObject::connect( btOk, &QPushButton::clicked, &dlg, &QDialog::accept );
-
-		QPushButton * btCancel = new QPushButton;
-		btCancel->setText( Spell::tr( "Cancel" ) );
-		QObject::connect( btCancel, &QPushButton::clicked, &dlg, &QDialog::reject );
-
-		grid->addWidget( btOk, 2, 0 );
-		grid->addWidget( btCancel, 2, 1 );
-
-		if ( dlg.exec() != QDialog::Accepted )
-			return index;
-
-
-		float maxa = deg2rad( angle->value() );
-		float maxd = dist->value();
-		maxa = float( std::cos( maxa ) );
-		maxd = maxd * maxd;
-
-		if ( isSFMesh ) {
+			smoothNormals( nif, index, maxa, maxd );
+		else
 			smoothNormalsSFMesh( nif, index, maxa, maxd );
-			return index;
-		}
-
-		QVector<Vector3> snorms( norms );
-
-		for ( int i = 0; i < verts.count(); i++ ) {
-			const Vector3 & a = verts[i];
-			Vector3 an = norms[i];
-
-			for ( int j = i + 1; j < verts.count(); j++ ) {
-				const Vector3 & b = verts[j];
-
-				if ( ( a - b ).squaredLength() < maxd ) {
-					Vector3 bn = norms[j];
-
-					// NOTE: this assumes normalized normals
-					if ( Vector3::dotproduct( an, bn ) > maxa ) {
-						snorms[i] += bn;
-						snorms[j] += an;
-					}
-				}
-			}
-		}
-
-		for ( int i = 0; i < verts.count(); i++ )
-			snorms[i].normalize();
-
-		if ( nif->getBSVersion() < 100 ) {
-			nif->setArray<Vector3>( iData, "Normals", snorms );
-		} else {
-			// Pause updates between model/view
-			nif->setState( BaseModel::Processing );
-			for ( int i = 0; i < numVerts; i++ )
-				nif->set<ByteVector3>( nif->index( i, 0, iData ), "Normal", snorms[i] );
-			nif->resetState();
-		}
 
 		return index;
 	}
 };
+
+bool spSmoothNormals::getOptions( float & maxa, float & maxd, bool isSFMesh )
+{
+	QDialog dlg;
+	dlg.setWindowTitle( Spell::tr( "Smooth Normals" ) );
+
+	QGridLayout * grid = new QGridLayout;
+	dlg.setLayout( grid );
+
+	QDoubleSpinBox * angle = new QDoubleSpinBox;
+	angle->setRange( 0, 180 );
+	angle->setValue( 60 );
+	angle->setSingleStep( 5 );
+
+	grid->addWidget( new QLabel( Spell::tr( "Max Smooth Angle" ) ), 0, 0 );
+	grid->addWidget( angle, 0, 1 );
+
+	QDoubleSpinBox * dist = new QDoubleSpinBox;
+	dist->setRange( 0, 1 );
+	dist->setDecimals( 4 );
+	if ( !isSFMesh ) {
+		dist->setSingleStep( 0.001 );
+		dist->setValue( 0.035 );
+	} else {
+		dist->setSingleStep( 0.0001 );
+		dist->setValue( 0.0005 );
+	}
+
+	grid->addWidget( new QLabel( Spell::tr( "Max Vertex Distance" ) ), 1, 0 );
+	grid->addWidget( dist, 1, 1 );
+
+	QPushButton * btOk = new QPushButton;
+	btOk->setText( Spell::tr( "Smooth" ) );
+	QObject::connect( btOk, &QPushButton::clicked, &dlg, &QDialog::accept );
+
+	QPushButton * btCancel = new QPushButton;
+	btCancel->setText( Spell::tr( "Cancel" ) );
+	QObject::connect( btCancel, &QPushButton::clicked, &dlg, &QDialog::reject );
+
+	grid->addWidget( btOk, 2, 0 );
+	grid->addWidget( btCancel, 2, 1 );
+
+	if ( dlg.exec() != QDialog::Accepted )
+		return false;
+
+	maxa = float( std::cos( deg2rad( angle->value() ) ) );
+	maxd = dist->value();
+	maxd = maxd * maxd;
+
+	return true;
+}
+
+void spSmoothNormals::calculateSmoothNormals( float * snorms, size_t snormSize,
+												float * norms, const float * verts, size_t numVerts,
+												float maxa, float maxd )
+{
+	size_t	normStride = sizeof( Vector3 ) / sizeof( float );
+	size_t	snormStride = snormSize / sizeof( float );
+
+	float *	np = norms;
+	float *	sp = snorms;
+	for ( size_t i = 0; i < numVerts; i++, np += normStride, sp += snormStride ) {
+		FloatVector4	n( np );
+		float	r2 = n.dotProduct3( n );
+		if ( !( r2 > 0.999999f && r2 < 1.000001f ) ) {
+			// make sure that input data is normalized
+			if ( r2 > 0.0f )
+				n /= float( std::sqrt( r2 ) );
+			else
+				n = FloatVector4( 0.0f, 0.0f, 1.0f, 0.0f );
+			n.convertToVector3( np );
+		}
+		n.convertToVector3( sp );
+	}
+
+	const float *	vp = verts;
+	np = norms;
+	sp = snorms;
+	for ( size_t i = 0; i < numVerts; i++, vp += normStride, np += normStride, sp += snormStride ) {
+		FloatVector4	a( vp );
+		FloatVector4	an( np );
+		FloatVector4	sn( sp );
+
+		const float *	vp2 = vp;
+		for ( size_t j = i + 1; j < numVerts; j++ ) {
+			vp2 += normStride;
+			FloatVector4	b( vp2 );
+			b -= a;
+			if ( !( b.dotProduct3( b ) < maxd ) ) [[likely]]
+				continue;
+
+			FloatVector4	bn( np + size_t( vp2 - vp ) );
+
+			if ( an.dotProduct3( bn ) > maxa ) {
+				sn += bn;
+				float *	sp2 = snorms + ( j * snormStride );
+				FloatVector4	tmp( sp2 );
+				tmp += an;
+				tmp.convertToVector3( sp2 );
+			}
+		}
+
+		float	r2 = sn.dotProduct3( sn );
+		if ( r2 > 0.0f )
+			sn /= float( std::sqrt( r2 ) );
+		else
+			sn = FloatVector4( 0.0f, 0.0f, 1.0f, 0.0f );
+		sn.convertToVector3( sp );
+	}
+}
+
+void spSmoothNormals::smoothNormals( NifModel * nif, const QModelIndex & index, float maxa, float maxd )
+{
+	QModelIndex	iData = spFaceNormals::getShapeData( nif, index );
+
+	QVector<Vector3> verts;
+	QVector<Vector3> norms;
+
+	int numVerts = 0;
+
+	if ( nif->getBSVersion() < 100 ) {
+		verts = nif->getArray<Vector3>( iData, "Vertices" );
+		norms = nif->getArray<Vector3>( iData, "Normals" );
+	} else {
+		auto vf = nif->get<BSVertexDesc>( index, "Vertex Desc" );
+		if ( !((vf & VertexFlags::VF_SKINNED) && nif->getBSVersion() == 100) ) {
+			numVerts = nif->get<int>( index, "Num Vertices" );
+		} else {
+			// Skinned SSE
+			// "Num Vertices" does not exist in the partition
+			auto iPart = iData.parent();
+			numVerts = nif->get<uint>( iPart, "Data Size" ) / nif->get<uint>( iPart, "Vertex Size" );
+		}
+
+		verts.reserve( numVerts + 1 );
+		norms.reserve( numVerts + 1 );
+
+		for ( int i = 0; i < numVerts; i++ ) {
+			auto idx = nif->index( i, 0, iData );
+
+			verts += nif->get<Vector3>( idx, "Vertex" );
+			norms += nif->get<ByteVector3>( idx, "Normal" );
+		}
+	}
+
+	if ( nif->isNiBlock(index, "BSDynamicTriShape") ) {
+		auto dynVerts = nif->getArray<Vector4>(index, "Vertices");
+		verts.clear();
+		verts.reserve( numVerts + 1 );
+		for ( const auto & v : dynVerts )
+			verts << Vector3(v);
+	}
+
+	numVerts = verts.count();
+	if ( numVerts < 1 || norms.count() != numVerts )
+		return;
+	verts += Vector3();
+	norms += Vector3();
+
+	QVector<Vector3> snorms( norms );
+
+	calculateSmoothNormals( &( snorms[0][0] ), sizeof( Vector3 ),
+							&( norms[0][0] ), &( verts.constFirst()[0] ), size_t( numVerts ), maxa, maxd );
+	snorms.removeLast();
+
+	if ( nif->getBSVersion() < 100 ) {
+		nif->setArray<Vector3>( iData, "Normals", snorms );
+	} else {
+		// Pause updates between model/view
+		nif->setState( BaseModel::Processing );
+		for ( int i = 0; i < numVerts; i++ )
+			nif->set<ByteVector3>( nif->index( i, 0, iData ), "Normal", snorms[i] );
+		nif->resetState();
+	}
+}
 
 void spSmoothNormals::smoothNormalsSFMesh( NifModel * nif, const QModelIndex & index, float maxa, float maxd )
 {
@@ -482,45 +567,64 @@ void spSmoothNormals::smoothNormalsSFMesh( NifModel * nif, const QModelIndex & i
 		}
 
 		QVector< Vector3 >	vertices( nif->getArray<Vector3>( iVertices ) );
-		QVector< UDecVector4 >	normals( nif->getArray<UDecVector4>( iNormals ) );
-		QVector< UDecVector4 >	snorms( normals );
+		QVector< UDecVector4 >	snorms( nif->getArray<UDecVector4>( iNormals ) );
 
-		const Vector3 *	aPtr = vertices.constData();
-		const Vector3 *	endPtr = aPtr + numVerts;
-		const UDecVector4 *	anPtr = normals.constData();
-		for ( ; ( aPtr + 1 ) < endPtr; aPtr++, anPtr++ ) {
-			FloatVector4	a( FloatVector4::convertVector3( &((*aPtr)[0]) ) );
-			FloatVector4	an( &((*anPtr)[0]) );
-
-			const Vector3 *	bPtr = aPtr + 1;
-			for ( ; bPtr < endPtr; bPtr++ ) {
-				FloatVector4	b( FloatVector4::convertVector3( &((*bPtr)[0]) ) );
-				b -= a;
-
-				if ( b.dotProduct3( b ) < maxd ) {
-					const UDecVector4 *	bnPtr = anPtr + size_t( bPtr - aPtr );
-					FloatVector4	bn( &((*bnPtr)[0]) );
-
-					// NOTE: this assumes normalized normals
-					if ( an.dotProduct3( bn ) > maxa ) {
-						int	i = int( anPtr - normals.constData() );
-						int	j = int( bnPtr - normals.constData() );
-						( FloatVector4( &(snorms[i][0]) ) + bn ).convertToFloats( &(snorms[i][0]) );
-						( FloatVector4( &(snorms[j][0]) ) + an ).convertToFloats( &(snorms[j][0]) );
-					}
-				}
-			}
-		}
-
+		QVector< Vector3 >	norms;
+		norms.reserve( snorms.count() + 1 );
 		for ( auto & n : snorms ) {
-			normalizeUDecVector4( n );
-			n[3] = -1.0f / 3.0f;
+			n[3] = float( -1.0 / 3.0 );
+			norms += Vector3( n );
 		}
+
+		vertices += Vector3();
+		norms += Vector3();
+
+		calculateSmoothNormals( &( snorms[0][0] ), sizeof( UDecVector4 ),
+								&( norms[0][0] ), &( vertices.constFirst()[0] ), size_t( numVerts ), maxa, maxd );
+
 		nif->setArray<UDecVector4>( iNormals, snorms );
 	}
 }
 
 REGISTER_SPELL( spSmoothNormals )
+
+//! Smooths the normals of all meshes
+class spSmoothNormalsAll final : public Spell
+{
+public:
+	QString name() const override final { return Spell::tr( "Smooth Normals" ); }
+	QString page() const override final { return Spell::tr( "Batch" ); }
+
+	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
+	{
+		return ( nif && !index.isValid() && nif->getBlockCount() > 0 );
+	}
+
+	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
+	{
+		float	maxa = 0.0f;
+		float	maxd = 0.0f;
+		bool	isSFMesh = ( nif->getBSVersion() >= 170 );
+		if ( !spSmoothNormals::getOptions( maxa, maxd, isSFMesh ) )
+			return index;
+
+		spSmoothNormals	sp;
+		for ( int n = 0; n < nif->getBlockCount(); n++ ) {
+			QModelIndex idx = nif->getBlockIndex( n );
+
+			if ( sp.isApplicable( nif, idx ) ) {
+				if ( !isSFMesh )
+					sp.smoothNormals( nif, idx, maxa, maxd );
+				else
+					sp.smoothNormalsSFMesh( nif, idx, maxa, maxd );
+			}
+		}
+
+		return index;
+	}
+};
+
+REGISTER_SPELL( spSmoothNormalsAll )
 
 //! Normalises any single Vector3 or array.
 /**
