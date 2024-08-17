@@ -26,8 +26,8 @@ QT += xml opengl network widgets
 	error("Minimum required version is Qt 5.15")
 }
 
-# C++ Standard Support (NOTE: this does not actually work with Qt 5)
-CONFIG += c++20
+# C++ Standard Support (NOTE: c++2a is deprecated by GCC, but is needed for compatibility with Qt 5)
+CONFIG += c++2a
 
 # Dependencies
 CONFIG += nvtristrip qhull gli libfo76utils
