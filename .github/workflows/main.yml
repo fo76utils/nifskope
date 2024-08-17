@@ -93,11 +93,11 @@ jobs:
 
     - name: 'Create DMG image'
       run: |
-        cp release/*.xml release/NifSkope.app/Contents/MacOS/
+        mv release/*.xml release/shaders release/qt.conf release/style.qss release/*.txt release/NifSkope.app/Contents/MacOS/
         macdeployqt release/NifSkope.app -dmg
 
     - name: 'Upload Artifacts'
       uses: actions/upload-artifact@v4
       with:
         name: build-macos
-        path: 'release'
+        path: release/NifSkope.dmg
