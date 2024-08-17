@@ -999,7 +999,7 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
-		return nif && nif->getBSVersion() < 170 && !index.isValid();
+		return nif && nif->getBSVersion() < 170 && !index.isValid() && nif->getBlockCount() > 0;
 	}
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final

@@ -766,7 +766,7 @@ public:
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
 		// Apply Mode field is defined in nifs up to version 20.0.0.5
-		return nif->checkVersion( 0, 0x14000005 ) && !index.isValid();
+		return nif->checkVersion( 0, 0x14000005 ) && !index.isValid() && nif->getBlockCount() > 0;
 	}
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final

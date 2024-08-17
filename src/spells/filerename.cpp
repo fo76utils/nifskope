@@ -30,7 +30,7 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
-		return ( nif && !index.isValid() );
+		return ( nif && !index.isValid() && nif->getBlockCount() > 0 );
 	}
 
 	void renamePaths( NifModel * nif, NifItem * item, const QRegularExpression & searchPattern, const QString & replacementString, const QRegularExpression & filterPattern );

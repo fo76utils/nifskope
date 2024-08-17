@@ -451,7 +451,7 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & idx ) override final
 	{
-		if ( !nif || idx.isValid() )
+		if ( !nif || idx.isValid() || nif->getBlockCount() < 1 )
 			return false;
 
 		// If bethesda then we will configure the settings for the mesh.
@@ -497,7 +497,7 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & idx ) override final
 	{
-		return nif && !idx.isValid() && nif->checkVersion( 0x0A010000, 0 );
+		return nif && !idx.isValid() && nif->checkVersion( 0x0A010000, 0 ) && nif->getBlockCount() > 0;
 	}
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & ) override final
