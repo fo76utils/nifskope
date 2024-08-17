@@ -26,12 +26,8 @@ QT += xml opengl network widgets
 	error("Minimum required version is Qt 5.15")
 }
 
-# C++ Standard Support
-!macx: {
-    CONFIG += c++20
-} else {
-    CONFIG += c++2a
-}
+# C++ Standard Support (NOTE: this does not actually work with Qt 5)
+CONFIG += c++20
 
 # Dependencies
 CONFIG += nvtristrip qhull gli libfo76utils
@@ -476,9 +472,9 @@ win32 {
 }
 
 
-# MinGW, GCC
+# MinGW, GCC, Clang
 #  Recommended: GCC 13+
-*-g++ {
+*-g++|*-clang {
 
 	# COMPILER FLAGS
 
@@ -500,10 +496,12 @@ win32 {
 		QMAKE_CXXFLAGS *= -march=sandybridge
 	} else:contains(noavx2, 1) {
 		QMAKE_CXXFLAGS *= -march=sandybridge -mf16c
-	} else {
+	} else:contains(QMAKE_HOST.arch, x86_64) {
 		QMAKE_CXXFLAGS *= -march=haswell
 	}
-	QMAKE_CXXFLAGS *= -mtune=generic
+	contains(QMAKE_HOST.arch, x86_64) {
+		QMAKE_CXXFLAGS *= -mtune=generic
+	}
 }
 
 win32 {
