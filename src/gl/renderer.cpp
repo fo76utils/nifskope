@@ -857,6 +857,24 @@ static int setFlipbookParameters( const CE2Material::Material & m )
 	return materialFlags;
 }
 
+static inline void setupGLBlendModeSF( int blendMode, QOpenGLFunctions * fn )
+{
+	// source RGB, destination RGB, source alpha, destination alpha
+	static const GLenum blendModeMap[32] = {
+		GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA,	// AlphaBlend
+		GL_SRC_ALPHA, GL_ONE, GL_ONE, GL_ONE_MINUS_SRC_ALPHA,	// Additive
+		GL_SRC_ALPHA, GL_ONE, GL_ONE, GL_ONE_MINUS_SRC_ALPHA,	// SourceSoftAdditive (TODO: not implemented yet)
+		GL_DST_COLOR, GL_ZERO, GL_DST_ALPHA, GL_ZERO,	// Multiply
+		GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA,	// TODO: DestinationSoftAdditive
+		GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA,	// TODO: DestinationInvertedSoftAdditive
+		GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA,	// TODO: TakeSmaller
+		GL_ZERO, GL_ONE, GL_ZERO, GL_ONE	// None
+	};
+	const GLenum *	p = &( blendModeMap[blendMode << 2] );
+	glEnable( GL_BLEND );
+	fn->glBlendFuncSeparate( p[0], p[1], p[2], p[3] );
+}
+
 bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * mesh )
 {
 	auto scene = mesh->scene;
@@ -1254,62 +1272,44 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 
 	//glEnable( GL_LIGHTING );
 
-	// setup blending
+	// setup alpha blending and testing
 
+	int	alphaFlags = 0;
 	if ( mat && scene->hasOption(Scene::DoBlending) ) {
-		static const GLenum blendMapS[8] = {
-			GL_SRC_ALPHA,	// "AlphaBlend"
-			GL_SRC_ALPHA,	// "Additive"
-			GL_SRC_ALPHA,	// "SourceSoftAdditive" (TODO: not implemented yet)
-			GL_DST_COLOR,	// "Multiply"
-			GL_SRC_ALPHA,	// "DestinationSoftAdditive" (not implemented)
-			GL_SRC_ALPHA,	// "DestinationInvertedSoftAdditive" (not implemented)
-			GL_SRC_ALPHA,	// "TakeSmaller" (not implemented)
-			GL_ZERO	// "None"
-		};
-		static const GLenum blendMapD[8] = {
-			GL_ONE_MINUS_SRC_ALPHA,	// "AlphaBlend"
-			GL_ONE,	// "Additive"
-			GL_ONE,	// "SourceSoftAdditive"
-			GL_ZERO,	// "Multiply"
-			GL_ONE_MINUS_SRC_ALPHA,	// "DestinationSoftAdditive"
-			GL_ONE_MINUS_SRC_ALPHA,	// "DestinationInvertedSoftAdditive"
-			GL_ONE_MINUS_SRC_ALPHA,	// "TakeSmaller"
-			GL_ONE	// "None"
-		};
-
-		if ( isEffect ) {
-			glEnable( GL_BLEND );
-			if ( mat->effectSettings->flags & (CE2Material::EffectFlag_EmissiveOnly | CE2Material::EffectFlag_EmissiveOnlyAuto) )
-				glBlendFunc( GL_SRC_ALPHA, GL_ONE );
-			else
-				glBlendFunc( blendMapS[mat->effectSettings->blendMode], blendMapD[mat->effectSettings->blendMode] );
-		} else if ( (mat->flags & CE2Material::Flag_IsDecal) && (mat->flags & CE2Material::Flag_AlphaBlending) ) {
-			glEnable( GL_BLEND );
-			glBlendFunc( blendMapS[mat->decalSettings->blendMode], blendMapD[mat->decalSettings->blendMode] );
-		} else {
-			glDisable( GL_BLEND );
+		if ( isEffect || !( ~(mat->flags) & ( CE2Material::Flag_IsDecal | CE2Material::Flag_AlphaBlending ) ) ) {
+			int	blendMode;
+			if ( !isEffect ) {
+				blendMode = mat->decalSettings->blendMode;
+			} else if ( !( mat->effectSettings->flags & (CE2Material::EffectFlag_EmissiveOnly | CE2Material::EffectFlag_EmissiveOnlyAuto) ) ) {
+				blendMode = mat->effectSettings->blendMode;
+			} else {
+				blendMode = 1;	// emissive only: additive blending
+			}
+			setupGLBlendModeSF( blendMode, prog->f );
+			alphaFlags = 2;
 		}
 
-		if ( isEffect && (mat->effectSettings->flags & CE2Material::EffectFlag_IsAlphaTested) ) {
-			glEnable( GL_ALPHA_TEST );
-			glAlphaFunc( GL_GREATER, mat->effectSettings->alphaThreshold );
-		} else if ( mat->flags & CE2Material::Flag_HasOpacity && mat->alphaThreshold > 0.0f ) {
-			glEnable( GL_ALPHA_TEST );
-			glAlphaFunc( GL_GREATER, mat->alphaThreshold );
-		} else {
-			glDisable( GL_ALPHA_TEST );
-		}
+		if ( isEffect )
+			alphaFlags |= int( bool(mat->effectSettings->flags & CE2Material::EffectFlag_IsAlphaTested) );
+		else
+			alphaFlags |= int( bool(mat->flags & CE2Material::Flag_HasOpacity) && mat->alphaThreshold > 0.0f );
 
 		if ( mat->flags & CE2Material::Flag_IsDecal ) {
 			glEnable( GL_POLYGON_OFFSET_FILL );
 			glPolygonOffset( -1.0f, -1.0f );
 		}
 	}
+	prog->uni1i_l( prog->uniLocation("alphaFlags"), alphaFlags );
+	if ( !( alphaFlags & 2 ) )
+		glDisable( GL_BLEND );
+	glDisable( GL_ALPHA_TEST );
 
 	glDisable( GL_COLOR_MATERIAL );
-	glEnable( GL_DEPTH_TEST );
-	glDepthMask( GL_TRUE );
+	if ( !mesh->depthTest ) [[unlikely]]
+		glDisable( GL_DEPTH_TEST );
+	else
+		glEnable( GL_DEPTH_TEST );
+	glDepthMask( !mesh->depthWrite || mesh->translucent ? GL_FALSE : GL_TRUE );
 	glDepthFunc( GL_LEQUAL );
 	if ( mat->flags & CE2Material::Flag_TwoSided ) {
 		glDisable( GL_CULL_FACE );
@@ -1318,14 +1318,6 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 		glCullFace( GL_BACK );
 	}
 	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-
-	if ( !mesh->depthTest ) {
-		glDisable( GL_DEPTH_TEST );
-	}
-
-	if ( !mesh->depthWrite || mesh->translucent ) {
-		glDepthMask( GL_FALSE );
-	}
 
 	return true;
 }

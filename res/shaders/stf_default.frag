@@ -80,12 +80,6 @@ struct EmissiveSettingsComponent {
 	float	minOffsetEmittance;
 };
 
-struct TerrainTintSettingsComponent {
-	bool	isEnabled;
-	float	terrainBlendStrength;
-	float	terrainBlendGradientFactor;
-};
-
 struct DecalSettingsComponent {
 	bool	isDecal;
 	float	materialOverallAlpha;
@@ -189,16 +183,6 @@ struct TranslucencySettingsComponent {
 	int	transmittanceSourceLayer;
 };
 
-struct TerrainSettingsComponent {
-	bool	isEnabled;
-	int	textureMappingType;
-	float	rotationAngle;
-	float	blendSoftness;
-	float	tilingDistance;
-	float	maxDisplacement;
-	float	displacementMidpoint;
-};
-
 struct DetailBlenderSettings {
 	bool	detailBlendMaskSupported;
 	int	maskTexture;
@@ -222,7 +206,6 @@ struct LayeredMaterial {
 	OpacityComponent	opacity;
 	AlphaSettingsComponent	alphaSettings;
 	TranslucencySettingsComponent	translucencySettings;
-	TerrainSettingsComponent	terrainSettings;
 	DetailBlenderSettings	detailBlender;
 };
 
@@ -239,6 +222,8 @@ uniform bool isWireframe;
 uniform bool isSkinned;
 uniform mat4 worldMatrix;
 uniform vec4 parallaxOcclusionSettings;	// min. steps, max. steps, height scale, height offset
+// bit 0: alpha testing, bit 1: alpha blending
+uniform int alphaFlags;
 
 uniform	LayeredMaterial	lm;
 
@@ -592,6 +577,30 @@ void main()
 		}
 	}
 
+	if ( lm.isEffect ) {
+		if ( lm.effectSettings.vertexColorBlend )
+			baseMap *= C;
+		alpha *= lm.effectSettings.materialOverallAlpha;
+	} else if ( lm.alphaSettings.hasOpacity ) {
+		if ( lm.alphaSettings.useDetailBlendMask )
+			alpha *= getDetailBlendMask();
+		if ( lm.alphaSettings.useVertexColor )
+			alpha *= C[lm.alphaSettings.vertexColorChannel];
+	}
+
+	if ( lm.decalSettings.isDecal )
+		alpha = lm.decalSettings.materialOverallAlpha;
+
+	vec3	albedo = baseMap.rgb;
+	vec4	color = vec4(1.0);
+	if ( alphaFlags != 0 ) {
+		alpha = alpha * baseMap.a;
+		if ( ( alphaFlags & 1 ) != 0 && !( alpha > ( !lm.isEffect ? lm.alphaSettings.alphaTestThreshold : lm.effectSettings.alphaTestThreshold ) ) )
+			discard;
+		if ( ( alphaFlags & 2 ) != 0 )
+			color.a = alpha;
+	}
+
 	normal = normalize( btnMatrix_norm * normal );
 	if ( !gl_FrontFacing )
 		normal *= -1.0;
@@ -608,30 +617,6 @@ void main()
 
 	vec3	reflectedWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(R, 0.0)));
 	vec3	normalWS = vec3(reflMatrix * (gl_ModelViewMatrixInverse * vec4(normal, 0.0)));
-
-	if ( lm.isEffect ) {
-		if ( lm.effectSettings.vertexColorBlend )
-			baseMap *= C;
-		alpha *= lm.effectSettings.materialOverallAlpha;
-	} else if ( lm.alphaSettings.hasOpacity ) {
-		if ( lm.alphaSettings.useDetailBlendMask )
-			alpha *= getDetailBlendMask();
-		if ( lm.alphaSettings.useVertexColor )
-			alpha *= C[lm.alphaSettings.vertexColorChannel];
-	}
-
-	if ( lm.decalSettings.isDecal )
-		alpha = lm.decalSettings.materialOverallAlpha;
-
-	vec4	color;
-	vec3	albedo = baseMap.rgb;
-
-	// emissive intensity
-	if ( lm.emissiveSettings.isEnabled ) {
-		emissive *= emissiveIntensity( lm.emissiveSettings.adaptiveEmittance, lm.emissiveSettings.enableAdaptiveLimits, vec4(lm.emissiveSettings.luminousEmittance, lm.emissiveSettings.exposureOffset, lm.emissiveSettings.maxOffsetEmittance, lm.emissiveSettings.minOffsetEmittance) );
-	} else if ( lm.layeredEmissivity.isEnabled ) {
-		emissive *= emissiveIntensity( lm.layeredEmissivity.adaptiveEmittance, lm.layeredEmissivity.enableAdaptiveLimits, vec4(lm.layeredEmissivity.luminousEmittance, lm.layeredEmissivity.exposureOffset, lm.layeredEmissivity.maxOffsetEmittance, lm.layeredEmissivity.minOffsetEmittance) );
-	}
 
 	vec3	f0 = mix(vec3(0.04), albedo, pbrMap.g);
 	albedo = albedo * (1.0 - pbrMap.g);
@@ -685,6 +670,11 @@ void main()
 	color.rgb += refl;
 
 	// Emissive
+	if ( lm.emissiveSettings.isEnabled ) {
+		emissive *= emissiveIntensity( lm.emissiveSettings.adaptiveEmittance, lm.emissiveSettings.enableAdaptiveLimits, vec4(lm.emissiveSettings.luminousEmittance, lm.emissiveSettings.exposureOffset, lm.emissiveSettings.maxOffsetEmittance, lm.emissiveSettings.minOffsetEmittance) );
+	} else if ( lm.layeredEmissivity.isEnabled ) {
+		emissive *= emissiveIntensity( lm.layeredEmissivity.adaptiveEmittance, lm.layeredEmissivity.enableAdaptiveLimits, vec4(lm.layeredEmissivity.luminousEmittance, lm.layeredEmissivity.exposureOffset, lm.layeredEmissivity.maxOffsetEmittance, lm.layeredEmissivity.minOffsetEmittance) );
+	}
 	color.rgb += emissive;
 
 	// Transmissive
@@ -699,7 +689,6 @@ void main()
 	}
 
 	color.rgb = tonemap(color.rgb * D.a, A.a);
-	color.a = baseMap.a * alpha;
 
 	fragColor = color;
 }

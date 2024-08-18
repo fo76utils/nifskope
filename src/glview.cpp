@@ -1692,27 +1692,18 @@ void GLView::saveImage()
 			int	imgWidth = rgbImg.bytesPerLine() >> 2;
 			int	imgHeight = rgbImg.height();
 
-			for ( int y = 0; haveAlpha && y < imgHeight; y++ ) {
-				// Convert image data (FIXME: possible byte order issues)
+			for ( int y = 0; useSilhouette && y < imgHeight; y++ ) {
+				// Combine RGB image with alpha mask from silhouette (FIXME: possible byte order issues)
+				if ( !( alphaImg.width() >= rgbImg.width() && y < alphaImg.height() ) ) [[unlikely]]
+					continue;
 				std::uint32_t *	rgbPtr = reinterpret_cast< std::uint32_t * >( rgbImg.scanLine( y ) );
-				const std::uint32_t *	alphaPtr = rgbPtr;
-				if ( useSilhouette && alphaImg.width() >= rgbImg.width() && y < alphaImg.height() ) {
-					alphaPtr = reinterpret_cast< const std::uint32_t * >( alphaImg.constScanLine( y ) );
-					for ( int x = 0; x < imgWidth; x++ ) {
-						// combine RGB image with alpha mask from silhouette
-						FloatVector4	rgba( rgbPtr + x );
-						FloatVector4	a( alphaPtr + x );
-						rgba[3] = a.dotProduct3( FloatVector4( -1.0f / 3.0f ) ) + 255.0f;
-						rgbPtr[x] = std::uint32_t( rgba );
-					}
-				} else {
-					for ( int x = 0; x < imgWidth; x++ ) {
-						// work around the alpha channel being squared after blending
-						FloatVector4	rgba( rgbPtr + x );
-						FloatVector4	a( rgba );
-						rgba.blendValues( ( a * 255.0f ).squareRoot(), 0x08 );
-						rgbPtr[x] = std::uint32_t( rgba );
-					}
+				const std::uint32_t *	alphaPtr =
+					reinterpret_cast< const std::uint32_t * >( alphaImg.constScanLine( y ) );
+				for ( int x = 0; x < imgWidth; x++ ) {
+					FloatVector4	rgba( rgbPtr + x );
+					FloatVector4	a( alphaPtr + x );
+					rgba[3] = a.dotProduct3( FloatVector4( -1.0f / 3.0f ) ) + 255.0f;
+					rgbPtr[x] = std::uint32_t( rgba );
 				}
 			}
 
