@@ -684,10 +684,10 @@ inline bool Renderer::Program::UniformLocationMapItem::operator==( const Uniform
 
 inline std::uint32_t Renderer::Program::UniformLocationMapItem::hashFunction() const
 {
-	std::uint32_t	h = 0xFFFFFFFFU;
 	// note: this requires fmt to point to a string literal
-	hashFunctionCRC32C< std::uint64_t >( h, reinterpret_cast< std::uintptr_t >( fmt ) );
-	hashFunctionCRC32C< std::uint32_t >( h, args );
+	std::uint64_t	tmp = reinterpret_cast< std::uintptr_t >( fmt ) ^ ( std::uint64_t( args ) << 32 );
+	std::uint32_t	h = 0xFFFFFFFFU;
+	hashFunctionCRC32C< std::uint64_t >( h, tmp );
 	return h;
 }
 
@@ -762,6 +762,38 @@ int Renderer::Program::uniLocation( const char * fmt, int argsX16Y16 )
 	}
 
 	return storeUniformLocation( key, i );
+}
+
+void Renderer::Program::uni1i( const char * name, int x )
+{
+	UniformLocationMapItem	key( name, 0 );
+
+	size_t	hashMask = uniLocationsMapMask;
+	size_t	i = key.hashFunction() & hashMask;
+	for ( ; uniLocationsMap[i].fmt; i = (i + 1) & hashMask ) {
+		if ( uniLocationsMap[i] == key ) {
+			f->glUniform1i( uniLocationsMap[i].l, x );
+			return;
+		}
+	}
+
+	f->glUniform1i( storeUniformLocation( key, i ), x );
+}
+
+void Renderer::Program::uni1f( const char * name, float x )
+{
+	UniformLocationMapItem	key( name, 0 );
+
+	size_t	hashMask = uniLocationsMapMask;
+	size_t	i = key.hashFunction() & hashMask;
+	for ( ; uniLocationsMap[i].fmt; i = (i + 1) & hashMask ) {
+		if ( uniLocationsMap[i] == key ) {
+			f->glUniform1f( uniLocationsMap[i].l, x );
+			return;
+		}
+	}
+
+	f->glUniform1f( storeUniformLocation( key, i ), x );
 }
 
 void Renderer::Program::uni1b_l( int l, bool x )
@@ -936,147 +968,147 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 	defaultUVStream.textureAddressMode = 0;	// "Wrap"
 	defaultUVStream.channel = 1;	// "One"
 
-	prog->uni1b_l( prog->uniLocation("isWireframe"), false );
+	prog->uni1b( "isWireframe", false );
 	prog->uni1i( HAS_SPECULAR, int(scene->hasOption(Scene::DoSpecular)) );
-	prog->uni1i_l( prog->uniLocation("lm.shaderModel"), mat->shaderModel );
+	prog->uni1i( "lm.shaderModel", mat->shaderModel );
 	prog->uni4f_l( prog->uniLocation("parallaxOcclusionSettings"), FloatVector4( 8.0f, float(cfg.sfParallaxMaxSteps), cfg.sfParallaxScale, cfg.sfParallaxOffset ) );
 
 	// emissive settings
 	if ( mat->flags & CE2Material::Flag_LayeredEmissivity && scene->hasOption(Scene::DoGlow) ) {
 		const CE2Material::LayeredEmissiveSettings *	sp = mat->layeredEmissiveSettings;
-		prog->uni1b_l( prog->uniLocation("lm.layeredEmissivity.isEnabled"), sp->isEnabled );
-		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.firstLayerIndex"), sp->layer1Index );
+		prog->uni1b( "lm.layeredEmissivity.isEnabled", sp->isEnabled );
+		prog->uni1i( "lm.layeredEmissivity.firstLayerIndex", sp->layer1Index );
 		prog->uni4c_l( prog->uniLocation("lm.layeredEmissivity.firstLayerTint"), sp->layer1Tint, true );
-		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.firstLayerMaskIndex"), sp->layer1MaskIndex );
-		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.secondLayerIndex"), ( sp->layer2Active ? int(sp->layer2Index) : -1 ) );
+		prog->uni1i( "lm.layeredEmissivity.firstLayerMaskIndex", sp->layer1MaskIndex );
+		prog->uni1i( "lm.layeredEmissivity.secondLayerIndex", ( sp->layer2Active ? int(sp->layer2Index) : -1 ) );
 		prog->uni4c_l( prog->uniLocation("lm.layeredEmissivity.secondLayerTint"), sp->layer2Tint, true );
-		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.secondLayerMaskIndex"), sp->layer2MaskIndex );
-		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.firstBlenderIndex"), sp->blender1Index );
-		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.firstBlenderMode"), sp->blender1Mode );
-		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.thirdLayerIndex"), ( sp->layer3Active ? int(sp->layer3Index) : -1 ) );
+		prog->uni1i( "lm.layeredEmissivity.secondLayerMaskIndex", sp->layer2MaskIndex );
+		prog->uni1i( "lm.layeredEmissivity.firstBlenderIndex", sp->blender1Index );
+		prog->uni1i( "lm.layeredEmissivity.firstBlenderMode", sp->blender1Mode );
+		prog->uni1i( "lm.layeredEmissivity.thirdLayerIndex", ( sp->layer3Active ? int(sp->layer3Index) : -1 ) );
 		prog->uni4c_l( prog->uniLocation("lm.layeredEmissivity.thirdLayerTint"), sp->layer3Tint, true );
-		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.thirdLayerMaskIndex"), sp->layer3MaskIndex );
-		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.secondBlenderIndex"), sp->blender2Index );
-		prog->uni1i_l( prog->uniLocation("lm.layeredEmissivity.secondBlenderMode"), sp->blender2Mode );
-		prog->uni1f_l( prog->uniLocation("lm.layeredEmissivity.emissiveClipThreshold"), sp->clipThreshold );
-		prog->uni1b_l( prog->uniLocation("lm.layeredEmissivity.adaptiveEmittance"), sp->adaptiveEmittance );
-		prog->uni1f_l( prog->uniLocation("lm.layeredEmissivity.luminousEmittance"), sp->luminousEmittance );
-		prog->uni1f_l( prog->uniLocation("lm.layeredEmissivity.exposureOffset"), sp->exposureOffset );
-		prog->uni1b_l( prog->uniLocation("lm.layeredEmissivity.enableAdaptiveLimits"), sp->enableAdaptiveLimits );
-		prog->uni1f_l( prog->uniLocation("lm.layeredEmissivity.maxOffsetEmittance"), sp->maxOffset );
-		prog->uni1f_l( prog->uniLocation("lm.layeredEmissivity.minOffsetEmittance"), sp->minOffset );
+		prog->uni1i( "lm.layeredEmissivity.thirdLayerMaskIndex", sp->layer3MaskIndex );
+		prog->uni1i( "lm.layeredEmissivity.secondBlenderIndex", sp->blender2Index );
+		prog->uni1i( "lm.layeredEmissivity.secondBlenderMode", sp->blender2Mode );
+		prog->uni1f( "lm.layeredEmissivity.emissiveClipThreshold", sp->clipThreshold );
+		prog->uni1b( "lm.layeredEmissivity.adaptiveEmittance", sp->adaptiveEmittance );
+		prog->uni1f( "lm.layeredEmissivity.luminousEmittance", sp->luminousEmittance );
+		prog->uni1f( "lm.layeredEmissivity.exposureOffset", sp->exposureOffset );
+		prog->uni1b( "lm.layeredEmissivity.enableAdaptiveLimits", sp->enableAdaptiveLimits );
+		prog->uni1f( "lm.layeredEmissivity.maxOffsetEmittance", sp->maxOffset );
+		prog->uni1f( "lm.layeredEmissivity.minOffsetEmittance", sp->minOffset );
 	}	else {
-		prog->uni1b_l( prog->uniLocation("lm.layeredEmissivity.isEnabled"), false );
+		prog->uni1b( "lm.layeredEmissivity.isEnabled", false );
 	}
 	if ( mat->flags & CE2Material::Flag_Emissive && scene->hasOption(Scene::DoGlow) ) {
 		const CE2Material::EmissiveSettings *	sp = mat->emissiveSettings;
-		prog->uni1b_l( prog->uniLocation("lm.emissiveSettings.isEnabled"), sp->isEnabled );
-		prog->uni1i_l( prog->uniLocation("lm.emissiveSettings.emissiveSourceLayer"), sp->sourceLayer );
+		prog->uni1b( "lm.emissiveSettings.isEnabled", sp->isEnabled );
+		prog->uni1i( "lm.emissiveSettings.emissiveSourceLayer", sp->sourceLayer );
 		prog->uni4srgb_l( prog->uniLocation("lm.emissiveSettings.emissiveTint"), sp->emissiveTint );
-		prog->uni1i_l( prog->uniLocation("lm.emissiveSettings.emissiveMaskSourceBlender"), sp->maskSourceBlender );
-		prog->uni1f_l( prog->uniLocation("lm.emissiveSettings.emissiveClipThreshold"), sp->clipThreshold );
-		prog->uni1b_l( prog->uniLocation("lm.emissiveSettings.adaptiveEmittance"), sp->adaptiveEmittance );
-		prog->uni1f_l( prog->uniLocation("lm.emissiveSettings.luminousEmittance"), sp->luminousEmittance );
-		prog->uni1f_l( prog->uniLocation("lm.emissiveSettings.exposureOffset"), sp->exposureOffset );
-		prog->uni1b_l( prog->uniLocation("lm.emissiveSettings.enableAdaptiveLimits"), sp->enableAdaptiveLimits );
-		prog->uni1f_l( prog->uniLocation("lm.emissiveSettings.maxOffsetEmittance"), sp->maxOffset );
-		prog->uni1f_l( prog->uniLocation("lm.emissiveSettings.minOffsetEmittance"), sp->minOffset );
+		prog->uni1i( "lm.emissiveSettings.emissiveMaskSourceBlender", sp->maskSourceBlender );
+		prog->uni1f( "lm.emissiveSettings.emissiveClipThreshold", sp->clipThreshold );
+		prog->uni1b( "lm.emissiveSettings.adaptiveEmittance", sp->adaptiveEmittance );
+		prog->uni1f( "lm.emissiveSettings.luminousEmittance", sp->luminousEmittance );
+		prog->uni1f( "lm.emissiveSettings.exposureOffset", sp->exposureOffset );
+		prog->uni1b( "lm.emissiveSettings.enableAdaptiveLimits", sp->enableAdaptiveLimits );
+		prog->uni1f( "lm.emissiveSettings.maxOffsetEmittance", sp->maxOffset );
+		prog->uni1f( "lm.emissiveSettings.minOffsetEmittance", sp->minOffset );
 	}	else {
-		prog->uni1b_l( prog->uniLocation("lm.emissiveSettings.isEnabled"), false );
+		prog->uni1b( "lm.emissiveSettings.isEnabled", false );
 	}
 
 	// translucency settings
 	if ( mat->flags & CE2Material::Flag_Translucency ) {
 		const CE2Material::TranslucencySettings *	sp = mat->translucencySettings;
-		prog->uni1b_l( prog->uniLocation("lm.translucencySettings.isEnabled"), sp->isEnabled );
-		prog->uni1b_l( prog->uniLocation("lm.translucencySettings.isThin"), sp->isThin );
-		prog->uni1b_l( prog->uniLocation("lm.translucencySettings.flipBackFaceNormalsInViewSpace"), sp->flipBackFaceNormalsInVS );
-		prog->uni1b_l( prog->uniLocation("lm.translucencySettings.useSSS"), sp->useSSS );
-		prog->uni1f_l( prog->uniLocation("lm.translucencySettings.sssWidth"), sp->sssWidth );
-		prog->uni1f_l( prog->uniLocation("lm.translucencySettings.sssStrength"), sp->sssStrength );
-		prog->uni1f_l( prog->uniLocation("lm.translucencySettings.transmissiveScale"), sp->transmissiveScale );
-		prog->uni1f_l( prog->uniLocation("lm.translucencySettings.transmittanceWidth"), sp->transmittanceWidth );
-		prog->uni1f_l( prog->uniLocation("lm.translucencySettings.specLobe0RoughnessScale"), sp->specLobe0RoughnessScale );
-		prog->uni1f_l( prog->uniLocation("lm.translucencySettings.specLobe1RoughnessScale"), sp->specLobe1RoughnessScale );
-		prog->uni1i_l( prog->uniLocation("lm.translucencySettings.transmittanceSourceLayer"), sp->sourceLayer );
+		prog->uni1b( "lm.translucencySettings.isEnabled", sp->isEnabled );
+		prog->uni1b( "lm.translucencySettings.isThin", sp->isThin );
+		prog->uni1b( "lm.translucencySettings.flipBackFaceNormalsInViewSpace", sp->flipBackFaceNormalsInVS );
+		prog->uni1b( "lm.translucencySettings.useSSS", sp->useSSS );
+		prog->uni1f( "lm.translucencySettings.sssWidth", sp->sssWidth );
+		prog->uni1f( "lm.translucencySettings.sssStrength", sp->sssStrength );
+		prog->uni1f( "lm.translucencySettings.transmissiveScale", sp->transmissiveScale );
+		prog->uni1f( "lm.translucencySettings.transmittanceWidth", sp->transmittanceWidth );
+		prog->uni1f( "lm.translucencySettings.specLobe0RoughnessScale", sp->specLobe0RoughnessScale );
+		prog->uni1f( "lm.translucencySettings.specLobe1RoughnessScale", sp->specLobe1RoughnessScale );
+		prog->uni1i( "lm.translucencySettings.transmittanceSourceLayer", sp->sourceLayer );
 	} else {
-		prog->uni1b_l( prog->uniLocation("lm.translucencySettings.isEnabled"), false );
+		prog->uni1b( "lm.translucencySettings.isEnabled", false );
 	}
 
 	// decal settings
 	if ( mat->flags & CE2Material::Flag_IsDecal ) {
 		const CE2Material::DecalSettings *	sp = mat->decalSettings;
-		prog->uni1b_l( prog->uniLocation("lm.decalSettings.isDecal"), sp->isDecal );
-		prog->uni1f_l( prog->uniLocation("lm.decalSettings.materialOverallAlpha"), sp->decalAlpha );
-		prog->uni1i_l( prog->uniLocation("lm.decalSettings.writeMask"), int(sp->writeMask) );
-		prog->uni1b_l( prog->uniLocation("lm.decalSettings.isPlanet"), sp->isPlanet );
-		prog->uni1b_l( prog->uniLocation("lm.decalSettings.isProjected"), sp->isProjected );
-		prog->uni1b_l( prog->uniLocation("lm.decalSettings.useParallaxOcclusionMapping"), sp->useParallaxMapping );
+		prog->uni1b( "lm.decalSettings.isDecal", sp->isDecal );
+		prog->uni1f( "lm.decalSettings.materialOverallAlpha", sp->decalAlpha );
+		prog->uni1i( "lm.decalSettings.writeMask", int(sp->writeMask) );
+		prog->uni1b( "lm.decalSettings.isPlanet", sp->isPlanet );
+		prog->uni1b( "lm.decalSettings.isProjected", sp->isProjected );
+		prog->uni1b( "lm.decalSettings.useParallaxOcclusionMapping", sp->useParallaxMapping );
 		int	texUniform = 0;
 		bsprop->getSFTexture( texunit, texUniform, nullptr, sp->surfaceHeightMap, 0, 0, nullptr );
-		prog->uni1i_l( prog->uniLocation("lm.decalSettings.surfaceHeightMap"), texUniform );
-		prog->uni1f_l( prog->uniLocation("lm.decalSettings.parallaxOcclusionScale"), sp->parallaxOcclusionScale );
-		prog->uni1b_l( prog->uniLocation("lm.decalSettings.parallaxOcclusionShadows"), sp->parallaxOcclusionShadows );
-		prog->uni1i_l( prog->uniLocation("lm.decalSettings.maxParralaxOcclusionSteps"), sp->maxParallaxSteps );
-		prog->uni1i_l( prog->uniLocation("lm.decalSettings.renderLayer"), sp->renderLayer );
-		prog->uni1b_l( prog->uniLocation("lm.decalSettings.useGBufferNormals"), sp->useGBufferNormals );
-		prog->uni1i_l( prog->uniLocation("lm.decalSettings.blendMode"), sp->blendMode );
-		prog->uni1b_l( prog->uniLocation("lm.decalSettings.animatedDecalIgnoresTAA"), sp->animatedDecalIgnoresTAA );
+		prog->uni1i( "lm.decalSettings.surfaceHeightMap", texUniform );
+		prog->uni1f( "lm.decalSettings.parallaxOcclusionScale", sp->parallaxOcclusionScale );
+		prog->uni1b( "lm.decalSettings.parallaxOcclusionShadows", sp->parallaxOcclusionShadows );
+		prog->uni1i( "lm.decalSettings.maxParralaxOcclusionSteps", sp->maxParallaxSteps );
+		prog->uni1i( "lm.decalSettings.renderLayer", sp->renderLayer );
+		prog->uni1b( "lm.decalSettings.useGBufferNormals", sp->useGBufferNormals );
+		prog->uni1i( "lm.decalSettings.blendMode", sp->blendMode );
+		prog->uni1b( "lm.decalSettings.animatedDecalIgnoresTAA", sp->animatedDecalIgnoresTAA );
 	} else {
-		prog->uni1b_l( prog->uniLocation("lm.decalSettings.isDecal"), false );
+		prog->uni1b( "lm.decalSettings.isDecal", false );
 	}
 
 	// effect settings
-	prog->uni1b_l( prog->uniLocation("lm.isEffect"), isEffect );
-	prog->uni1b_l( prog->uniLocation("lm.hasOpacityComponent"), ( isEffect && (mat->flags & CE2Material::Flag_HasOpacityComponent) ) );
+	prog->uni1b( "lm.isEffect", isEffect );
+	prog->uni1b( "lm.hasOpacityComponent", ( isEffect && (mat->flags & CE2Material::Flag_HasOpacityComponent) ) );
 	int	layeredEdgeFalloffFlags = 0;
 	if ( isEffect ) {
 		const CE2Material::EffectSettings *	sp = mat->effectSettings;
 		if ( mat->flags & CE2Material::Flag_LayeredEdgeFalloff )
 			layeredEdgeFalloffFlags = mat->layeredEdgeFalloff->activeLayersMask & 0x07;
-		prog->uni1b_l( prog->uniLocation("lm.effectSettings.vertexColorBlend"), bool(sp->flags & CE2Material::EffectFlag_VertexColorBlend) );
-		prog->uni1b_l( prog->uniLocation("lm.effectSettings.isAlphaTested"), bool(sp->flags & CE2Material::EffectFlag_IsAlphaTested) );
-		prog->uni1f_l( prog->uniLocation("lm.effectSettings.alphaTestThreshold"), sp->alphaThreshold );
-		prog->uni1b_l( prog->uniLocation("lm.effectSettings.noHalfResOptimization"), bool(sp->flags & CE2Material::EffectFlag_NoHalfResOpt) );
-		prog->uni1b_l( prog->uniLocation("lm.effectSettings.softEffect"), bool(sp->flags & CE2Material::EffectFlag_SoftEffect) );
-		prog->uni1f_l( prog->uniLocation("lm.effectSettings.softFalloffDepth"), sp->softFalloffDepth );
-		prog->uni1b_l( prog->uniLocation("lm.effectSettings.emissiveOnlyEffect"), bool(sp->flags & CE2Material::EffectFlag_EmissiveOnly) );
-		prog->uni1b_l( prog->uniLocation("lm.effectSettings.emissiveOnlyAutomaticallyApplied"), bool(sp->flags & CE2Material::EffectFlag_EmissiveOnlyAuto) );
-		prog->uni1b_l( prog->uniLocation("lm.effectSettings.receiveDirectionalShadows"), bool(sp->flags & CE2Material::EffectFlag_DirShadows) );
-		prog->uni1b_l( prog->uniLocation("lm.effectSettings.receiveNonDirectionalShadows"), bool(sp->flags & CE2Material::EffectFlag_NonDirShadows) );
-		prog->uni1b_l( prog->uniLocation("lm.effectSettings.isGlass"), bool(sp->flags & CE2Material::EffectFlag_IsGlass) );
-		prog->uni1b_l( prog->uniLocation("lm.effectSettings.frosting"), bool(sp->flags & CE2Material::EffectFlag_Frosting) );
-		prog->uni1f_l( prog->uniLocation("lm.effectSettings.frostingUnblurredBackgroundAlphaBlend"), sp->frostingBgndBlend );
-		prog->uni1f_l( prog->uniLocation("lm.effectSettings.frostingBlurBias"), sp->frostingBlurBias );
-		prog->uni1f_l( prog->uniLocation("lm.effectSettings.materialOverallAlpha"), sp->materialAlpha );
-		prog->uni1b_l( prog->uniLocation("lm.effectSettings.zTest"), bool(sp->flags & CE2Material::EffectFlag_ZTest) );
-		prog->uni1b_l( prog->uniLocation("lm.effectSettings.zWrite"), bool(sp->flags & CE2Material::EffectFlag_ZWrite) );
-		prog->uni1i_l( prog->uniLocation("lm.effectSettings.blendingMode"), sp->blendMode );
-		prog->uni1b_l( prog->uniLocation("lm.effectSettings.backLightingEnable"), bool(sp->flags & CE2Material::EffectFlag_BacklightEnable) );
-		prog->uni1f_l( prog->uniLocation("lm.effectSettings.backlightingScale"), sp->backlightScale );
-		prog->uni1f_l( prog->uniLocation("lm.effectSettings.backlightingSharpness"), sp->backlightSharpness );
-		prog->uni1f_l( prog->uniLocation("lm.effectSettings.backlightingTransparencyFactor"), sp->backlightTransparency );
+		prog->uni1b( "lm.effectSettings.vertexColorBlend", bool(sp->flags & CE2Material::EffectFlag_VertexColorBlend) );
+		prog->uni1b( "lm.effectSettings.isAlphaTested", bool(sp->flags & CE2Material::EffectFlag_IsAlphaTested) );
+		prog->uni1f( "lm.effectSettings.alphaTestThreshold", sp->alphaThreshold );
+		prog->uni1b( "lm.effectSettings.noHalfResOptimization", bool(sp->flags & CE2Material::EffectFlag_NoHalfResOpt) );
+		prog->uni1b( "lm.effectSettings.softEffect", bool(sp->flags & CE2Material::EffectFlag_SoftEffect) );
+		prog->uni1f( "lm.effectSettings.softFalloffDepth", sp->softFalloffDepth );
+		prog->uni1b( "lm.effectSettings.emissiveOnlyEffect", bool(sp->flags & CE2Material::EffectFlag_EmissiveOnly) );
+		prog->uni1b( "lm.effectSettings.emissiveOnlyAutomaticallyApplied", bool(sp->flags & CE2Material::EffectFlag_EmissiveOnlyAuto) );
+		prog->uni1b( "lm.effectSettings.receiveDirectionalShadows", bool(sp->flags & CE2Material::EffectFlag_DirShadows) );
+		prog->uni1b( "lm.effectSettings.receiveNonDirectionalShadows", bool(sp->flags & CE2Material::EffectFlag_NonDirShadows) );
+		prog->uni1b( "lm.effectSettings.isGlass", bool(sp->flags & CE2Material::EffectFlag_IsGlass) );
+		prog->uni1b( "lm.effectSettings.frosting", bool(sp->flags & CE2Material::EffectFlag_Frosting) );
+		prog->uni1f( "lm.effectSettings.frostingUnblurredBackgroundAlphaBlend", sp->frostingBgndBlend );
+		prog->uni1f( "lm.effectSettings.frostingBlurBias", sp->frostingBlurBias );
+		prog->uni1f( "lm.effectSettings.materialOverallAlpha", sp->materialAlpha );
+		prog->uni1b( "lm.effectSettings.zTest", bool(sp->flags & CE2Material::EffectFlag_ZTest) );
+		prog->uni1b( "lm.effectSettings.zWrite", bool(sp->flags & CE2Material::EffectFlag_ZWrite) );
+		prog->uni1i( "lm.effectSettings.blendingMode", sp->blendMode );
+		prog->uni1b( "lm.effectSettings.backLightingEnable", bool(sp->flags & CE2Material::EffectFlag_BacklightEnable) );
+		prog->uni1f( "lm.effectSettings.backlightingScale", sp->backlightScale );
+		prog->uni1f( "lm.effectSettings.backlightingSharpness", sp->backlightSharpness );
+		prog->uni1f( "lm.effectSettings.backlightingTransparencyFactor", sp->backlightTransparency );
 		prog->uni4f_l( prog->uniLocation("lm.effectSettings.backLightingTintColor"), sp->backlightTintColor );
-		prog->uni1b_l( prog->uniLocation("lm.effectSettings.depthMVFixup"), bool(sp->flags & CE2Material::EffectFlag_MVFixup) );
-		prog->uni1b_l( prog->uniLocation("lm.effectSettings.depthMVFixupEdgesOnly"), bool(sp->flags & CE2Material::EffectFlag_MVFixupEdgesOnly) );
-		prog->uni1b_l( prog->uniLocation("lm.effectSettings.forceRenderBeforeOIT"), bool(sp->flags & CE2Material::EffectFlag_RenderBeforeOIT) );
-		prog->uni1i_l( prog->uniLocation("lm.effectSettings.depthBiasInUlp"), sp->depthBias );
+		prog->uni1b( "lm.effectSettings.depthMVFixup", bool(sp->flags & CE2Material::EffectFlag_MVFixup) );
+		prog->uni1b( "lm.effectSettings.depthMVFixupEdgesOnly", bool(sp->flags & CE2Material::EffectFlag_MVFixupEdgesOnly) );
+		prog->uni1b( "lm.effectSettings.forceRenderBeforeOIT", bool(sp->flags & CE2Material::EffectFlag_RenderBeforeOIT) );
+		prog->uni1i( "lm.effectSettings.depthBiasInUlp", sp->depthBias );
 		// opacity component
 		if ( mat->flags & CE2Material::Flag_HasOpacityComponent ) {
-			prog->uni1i_l( prog->uniLocation("lm.opacity.firstLayerIndex"), mat->opacityLayer1 );
-			prog->uni1b_l( prog->uniLocation("lm.opacity.secondLayerActive"), bool(mat->flags & CE2Material::Flag_OpacityLayer2Active) );
+			prog->uni1i( "lm.opacity.firstLayerIndex", mat->opacityLayer1 );
+			prog->uni1b( "lm.opacity.secondLayerActive", bool(mat->flags & CE2Material::Flag_OpacityLayer2Active) );
 			if ( mat->flags & CE2Material::Flag_OpacityLayer2Active ) {
-				prog->uni1i_l( prog->uniLocation("lm.opacity.secondLayerIndex"), mat->opacityLayer2 );
-				prog->uni1i_l( prog->uniLocation("lm.opacity.firstBlenderIndex"), mat->opacityBlender1 );
-				prog->uni1i_l( prog->uniLocation("lm.opacity.firstBlenderMode"), mat->opacityBlender1Mode );
+				prog->uni1i( "lm.opacity.secondLayerIndex", mat->opacityLayer2 );
+				prog->uni1i( "lm.opacity.firstBlenderIndex", mat->opacityBlender1 );
+				prog->uni1i( "lm.opacity.firstBlenderMode", mat->opacityBlender1Mode );
 			}
-			prog->uni1b_l( prog->uniLocation("lm.opacity.thirdLayerActive"), bool(mat->flags & CE2Material::Flag_OpacityLayer3Active) );
+			prog->uni1b( "lm.opacity.thirdLayerActive", bool(mat->flags & CE2Material::Flag_OpacityLayer3Active) );
 			if ( mat->flags & CE2Material::Flag_OpacityLayer3Active ) {
-				prog->uni1i_l( prog->uniLocation("lm.opacity.thirdLayerIndex"), mat->opacityLayer3 );
-				prog->uni1i_l( prog->uniLocation("lm.opacity.secondBlenderIndex"), mat->opacityBlender2 );
-				prog->uni1i_l( prog->uniLocation("lm.opacity.secondBlenderMode"), mat->opacityBlender2Mode );
+				prog->uni1i( "lm.opacity.thirdLayerIndex", mat->opacityLayer3 );
+				prog->uni1i( "lm.opacity.secondBlenderIndex", mat->opacityBlender2 );
+				prog->uni1i( "lm.opacity.secondBlenderMode", mat->opacityBlender2Mode );
 			}
-			prog->uni1f_l( prog->uniLocation("lm.opacity.specularOpacityOverride"), mat->specularOpacityOverride );
+			prog->uni1f( "lm.opacity.specularOpacityOverride", mat->specularOpacityOverride );
 		}
 	}
 	if ( layeredEdgeFalloffFlags ) {
@@ -1088,48 +1120,48 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 		if ( sp->useRGBFalloff )
 			layeredEdgeFalloffFlags = layeredEdgeFalloffFlags | 0x80;
 	}
-	prog->uni1i_l( prog->uniLocation("lm.layeredEdgeFalloff.flags"), layeredEdgeFalloffFlags );
+	prog->uni1i( "lm.layeredEdgeFalloff.flags", layeredEdgeFalloffFlags );
 
 	// alpha settings
 	if ( mat->flags & CE2Material::Flag_HasOpacity ) {
-		prog->uni1b_l( prog->uniLocation("lm.alphaSettings.hasOpacity"), true );
-		prog->uni1f_l( prog->uniLocation("lm.alphaSettings.alphaTestThreshold"), mat->alphaThreshold );
-		prog->uni1i_l( prog->uniLocation("lm.alphaSettings.opacitySourceLayer"), mat->alphaSourceLayer );
-		prog->uni1i_l( prog->uniLocation("lm.alphaSettings.alphaBlenderMode"), mat->alphaBlendMode );
-		prog->uni1b_l( prog->uniLocation("lm.alphaSettings.useDetailBlendMask"), bool(mat->flags & CE2Material::Flag_AlphaDetailBlendMask) );
-		prog->uni1b_l( prog->uniLocation("lm.alphaSettings.useVertexColor"), bool(mat->flags & CE2Material::Flag_AlphaVertexColor) );
-		prog->uni1i_l( prog->uniLocation("lm.alphaSettings.vertexColorChannel"), mat->alphaVertexColorChannel );
+		prog->uni1b( "lm.alphaSettings.hasOpacity", true );
+		prog->uni1f( "lm.alphaSettings.alphaTestThreshold", mat->alphaThreshold );
+		prog->uni1i( "lm.alphaSettings.opacitySourceLayer", mat->alphaSourceLayer );
+		prog->uni1i( "lm.alphaSettings.alphaBlenderMode", mat->alphaBlendMode );
+		prog->uni1b( "lm.alphaSettings.useDetailBlendMask", bool(mat->flags & CE2Material::Flag_AlphaDetailBlendMask) );
+		prog->uni1b( "lm.alphaSettings.useVertexColor", bool(mat->flags & CE2Material::Flag_AlphaVertexColor) );
+		prog->uni1i( "lm.alphaSettings.vertexColorChannel", mat->alphaVertexColorChannel );
 		const CE2Material::UVStream *	uvStream = mat->alphaUVStream;
 		if ( !uvStream )
 			uvStream = &defaultUVStream;
 		prog->uni4f_l( prog->uniLocation("lm.alphaSettings.opacityUVstream.scaleAndOffset"), uvStream->scaleAndOffset );
-		prog->uni1b_l( prog->uniLocation("lm.alphaSettings.opacityUVstream.useChannelTwo"), (uvStream->channel > 1) );
-		prog->uni1f_l( prog->uniLocation("lm.alphaSettings.heightBlendThreshold"), mat->alphaHeightBlendThreshold );
-		prog->uni1f_l( prog->uniLocation("lm.alphaSettings.heightBlendFactor"), mat->alphaHeightBlendFactor );
-		prog->uni1f_l( prog->uniLocation("lm.alphaSettings.position"), mat->alphaPosition );
-		prog->uni1f_l( prog->uniLocation("lm.alphaSettings.contrast"), mat->alphaContrast );
-		prog->uni1b_l( prog->uniLocation("lm.alphaSettings.useDitheredTransparency"), bool(mat->flags & CE2Material::Flag_DitheredTransparency) );
+		prog->uni1b( "lm.alphaSettings.opacityUVstream.useChannelTwo", (uvStream->channel > 1) );
+		prog->uni1f( "lm.alphaSettings.heightBlendThreshold", mat->alphaHeightBlendThreshold );
+		prog->uni1f( "lm.alphaSettings.heightBlendFactor", mat->alphaHeightBlendFactor );
+		prog->uni1f( "lm.alphaSettings.position", mat->alphaPosition );
+		prog->uni1f( "lm.alphaSettings.contrast", mat->alphaContrast );
+		prog->uni1b( "lm.alphaSettings.useDitheredTransparency", bool(mat->flags & CE2Material::Flag_DitheredTransparency) );
 	} else {
-		prog->uni1b_l( prog->uniLocation("lm.alphaSettings.hasOpacity"), false );
+		prog->uni1b( "lm.alphaSettings.hasOpacity", false );
 	}
 
 	// detail blender settings
 	if ( ( mat->flags & CE2Material::Flag_UseDetailBlender ) && mat->detailBlenderSettings->isEnabled ) {
 		const CE2Material::DetailBlenderSettings *	sp = mat->detailBlenderSettings;
-		prog->uni1b_l( prog->uniLocation("lm.detailBlender.detailBlendMaskSupported"), true );
+		prog->uni1b( "lm.detailBlender.detailBlendMaskSupported", true );
 		const CE2Material::UVStream *	uvStream = sp->uvStream;
 		if ( !uvStream )
 			uvStream = &defaultUVStream;
 		int	texUniform = 0;
 		FloatVector4	replUniform( 0.0f );
 		bsprop->getSFTexture( texunit, texUniform, &replUniform, sp->texturePath, sp->textureReplacement, int(sp->textureReplacementEnabled), uvStream );
-		prog->uni1i_l( prog->uniLocation("lm.detailBlender.maskTexture"), texUniform );
+		prog->uni1i( "lm.detailBlender.maskTexture", texUniform );
 		if ( texUniform < 0 )
 			prog->uni4f_l( prog->uniLocation("lm.detailBlender.maskTextureReplacement"), replUniform );
 		prog->uni4f_l( prog->uniLocation("lm.detailBlender.uvStream.scaleAndOffset"), uvStream->scaleAndOffset );
-		prog->uni1b_l( prog->uniLocation("lm.detailBlender.uvStream.useChannelTwo"), (uvStream->channel > 1) );
+		prog->uni1b( "lm.detailBlender.uvStream.useChannelTwo", (uvStream->channel > 1) );
 	} else {
-		prog->uni1b_l( prog->uniLocation("lm.detailBlender.detailBlendMaskSupported"), false );
+		prog->uni1b( "lm.detailBlender.detailBlendMaskSupported", false );
 	}
 
 	// material layers
@@ -1299,7 +1331,7 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 			glPolygonOffset( -1.0f, -1.0f );
 		}
 	}
-	prog->uni1i_l( prog->uniLocation("alphaFlags"), alphaFlags );
+	prog->uni1i( "alphaFlags", alphaFlags );
 	if ( !( alphaFlags & 2 ) )
 		glDisable( GL_BLEND );
 	glDisable( GL_ALPHA_TEST );
@@ -1867,22 +1899,22 @@ bool Renderer::setupProgramFO3( const NifModel * nif, Program * prog, Shape * me
 		vertexColorFlags = ( ( p->lightmode & 1 ) << 3 ) | ( ( p->vertexmode & 3 ) << 4 );
 		break;
 	}
-	prog->uni1i_l( prog->uniLocation("vertexColorFlags"), vertexColorFlags );
-	prog->uni1b_l( prog->uniLocation("isEffect"), bool(esp) );
-	prog->uni1b_l( prog->uniLocation("hasSpecular"), hasSpecular );
-	prog->uni1b_l( prog->uniLocation("hasEmit"), hasEmit );
-	prog->uni1b_l( prog->uniLocation("hasGlowMap"), hasGlowMap );
-	prog->uni1b_l( prog->uniLocation("hasCubeMap"), hasCubeMap );
-	prog->uni1b_l( prog->uniLocation("hasCubeMask"), hasCubeMask );
-	prog->uni1f_l( prog->uniLocation("cubeMapScale"), cubeMapScale );
-	prog->uni1i_l( prog->uniLocation("parallaxMaxSteps"), parallaxMaxSteps );
-	prog->uni1f_l( prog->uniLocation("parallaxScale"), parallaxScale );
-	prog->uni1f_l( prog->uniLocation("glowMult"), glowMult );
+	prog->uni1i( "vertexColorFlags", vertexColorFlags );
+	prog->uni1b( "isEffect", bool(esp) );
+	prog->uni1b( "hasSpecular", hasSpecular );
+	prog->uni1b( "hasEmit", hasEmit );
+	prog->uni1b( "hasGlowMap", hasGlowMap );
+	prog->uni1b( "hasCubeMap", hasCubeMap );
+	prog->uni1b( "hasCubeMask", hasCubeMask );
+	prog->uni1f( "cubeMapScale", cubeMapScale );
+	prog->uni1i( "parallaxMaxSteps", parallaxMaxSteps );
+	prog->uni1f( "parallaxScale", parallaxScale );
+	prog->uni1f( "glowMult", glowMult );
 	prog->uni4f_l( prog->uniLocation("glowColor"), glowColor );
 	prog->uni2f_l( prog->uniLocation("uvCenter"), uvCenterAndRotation[0], uvCenterAndRotation[1] );
 	prog->uni2f_l( prog->uniLocation("uvScale"), uvScaleAndOffset[0], uvScaleAndOffset[1] );
 	prog->uni2f_l( prog->uniLocation("uvOffset"), uvScaleAndOffset[2], uvScaleAndOffset[3] );
-	prog->uni1f_l( prog->uniLocation("uvRotation"), uvCenterAndRotation[2] );
+	prog->uni1f( "uvRotation", uvCenterAndRotation[2] );
 	prog->uni4f_l( prog->uniLocation("falloffParams"), falloffParams );
 
 	prog->uni4m( MAT_WORLD, mesh->worldTrans().toMatrix4() );
@@ -2313,8 +2345,8 @@ void Renderer::drawSkyBox( Scene * scene )
 	glMatrixMode( GL_MODELVIEW );
 
 	prog->uni1i( HAS_MAP_CUBE, hasCubeMap );
-	prog->uni1b_l( prog->uniLocation("invertZAxis"), ( bsVersion < 170 ) );
-	prog->uni1i_l( prog->uniLocation("skyCubeMipLevel"), cfg.cubeBgndMipLevel );
+	prog->uni1b( "invertZAxis", ( bsVersion < 170 ) );
+	prog->uni1i( "skyCubeMipLevel", cfg.cubeBgndMipLevel );
 
 	prog->uni4m( MAT_VIEW, vt.toMatrix4() );
 

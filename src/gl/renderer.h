@@ -386,6 +386,14 @@ public:
 		{
 			return uniLocation( fmt, arg1 | ( arg2 << 16 ) );
 		}
+		// name must be a string literal
+		void uni1i( const char * name, int x );
+		inline void uni1b( const char * name, bool x )
+		{
+			uni1i( name, int(x) );
+		}
+		void uni1f( const char * name, float x );
+		// l = location returned by uniLocation()
 		void uni1b_l( int l, bool x );
 		void uni1i_l( int l, int x );
 		void uni1f_l( int l, float x );
