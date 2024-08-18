@@ -26,7 +26,11 @@ QT += xml opengl network widgets
 }
 
 # C++ Standard Support (NOTE: c++2a is deprecated by GCC, but is needed for compatibility with Qt 5)
-CONFIG += c++2a
+contains(QT_VERSION, ^6.*) {
+    CONFIG += c++20
+} else:macx {
+    CONFIG += c++2a
+}
 
 # Dependencies
 CONFIG += nvtristrip qhull gli libfo76utils
