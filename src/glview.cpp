@@ -1705,7 +1705,7 @@ void GLView::saveImage()
 						rgba[3] = a.dotProduct3( FloatVector4( -1.0f / 3.0f ) ) + 255.0f;
 						rgbPtr[x] = std::uint32_t( rgba );
 					}
-				} else if ( scene->nifModel && scene->nifModel->getBSVersion() >= 151 ) {
+				} else {
 					for ( int x = 0; x < imgWidth; x++ ) {
 						// work around the alpha channel being squared after blending
 						FloatVector4	rgba( rgbPtr + x );
