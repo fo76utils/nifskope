@@ -1707,10 +1707,10 @@ void GLView::saveImage()
 					}
 				} else if ( scene->nifModel && scene->nifModel->getBSVersion() >= 151 ) {
 					for ( int x = 0; x < imgWidth; x++ ) {
+						// work around the alpha channel being squared after blending
 						FloatVector4	rgba( rgbPtr + x );
-						// work around the alpha channel being incorrectly converted from sRGB
 						FloatVector4	a( rgba );
-						rgba.blendValues( ( a * ( 1.0f / 255.0f ) ).srgbCompress(), 0x08 );
+						rgba.blendValues( ( a * 255.0f ).squareRoot(), 0x08 );
 						rgbPtr[x] = std::uint32_t( rgba );
 					}
 				}
