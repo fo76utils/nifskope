@@ -75,7 +75,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define BASESIZE 1024.0
 #define GRIDSIZE 16.0
 #define GRIDSEGS 4
-#define ZOOMUNIT -64.0
 #define MINZOOM 0.1
 #define MAXZOOM 20.0
 #define MAXSCALE 10.0
@@ -700,13 +699,10 @@ void UVWidget::mouseMoveEvent( QMouseEvent * e )
 		break;
 
 	case Qt::RightButton:
-		zoom *= 1.0 + ( dPos.y() / ZOOMUNIT );
+		// FIXME: this does not work on Linux because the right button activates the menu instead
+		zoom *= std::pow( GLView::Settings::zoomInScale, double( dPos.y() ) / ( p * 4.0 ) );
 
-		if ( zoom < MINZOOM ) {
-			zoom = MINZOOM;
-		} else if ( zoom > MAXZOOM ) {
-			zoom = MAXZOOM;
-		}
+		zoom = std::min< double >( std::max< double >( zoom, MINZOOM ), MAXZOOM );
 
 		updateViewRect( pixelWidth, pixelHeight );
 
@@ -764,13 +760,9 @@ void UVWidget::wheelEvent( QWheelEvent * e )
 {
 	switch ( e->modifiers() ) {
 	case Qt::NoModifier:
-		zoom *= 1.0 + ( double( e->angleDelta().y() ) / 16.0 ) / ZOOMUNIT;
+		zoom *= std::pow( GLView::Settings::zoomInScale, double( e->angleDelta().y() ) / 60.0 );
 
-		if ( zoom < MINZOOM ) {
-			zoom = MINZOOM;
-		} else if ( zoom > MAXZOOM ) {
-			zoom = MAXZOOM;
-		}
+		zoom = std::min< double >( std::max< double >( zoom, MINZOOM ), MAXZOOM );
 
 		updateViewRect( pixelWidth, pixelHeight );
 

@@ -506,11 +506,44 @@
                </property>
               </widget>
              </item>
-             <item row="3" column="1">
-              <widget class="QComboBox" name="startupDirection">
-               <property name="enabled">
-                <bool>false</bool>
+             <item row="3" column="0">
+              <widget class="QLabel" name="lblMWheelZoomSpeed">
+               <property name="text">
+                <string>Zoom Speed</string>
                </property>
+               <property name="buddy">
+                <cstring>mwheelZoomSpeed</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="1">
+              <widget class="QSpinBox" name="mwheelZoomSpeed">
+               <property name="minimum">
+                <number>0</number>
+               </property>
+               <property name="maximum">
+                <number>16</number>
+               </property>
+               <property name="singleStep">
+                <number>1</number>
+               </property>
+               <property name="value">
+                <number>8</number>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="0">
+              <widget class="QLabel" name="lblStartupDirection">
+               <property name="text">
+                <string>Startup Direction</string>
+               </property>
+               <property name="buddy">
+                <cstring>startupDirection</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="1">
+              <widget class="QComboBox" name="startupDirection">
                <property name="currentIndex">
                 <number>1</number>
                </property>
@@ -544,19 +577,6 @@
                  <string>-Z</string>
                 </property>
                </item>
-              </widget>
-             </item>
-             <item row="3" column="0">
-              <widget class="QLabel" name="lblStartupDirection">
-               <property name="enabled">
-                <bool>false</bool>
-               </property>
-               <property name="text">
-                <string>Startup Direction</string>
-               </property>
-               <property name="buddy">
-                <cstring>startupDirection</cstring>
-               </property>
               </widget>
              </item>
             </layout>

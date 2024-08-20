@@ -89,10 +89,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define ZOOM_MIN 1.0
 #define ZOOM_MAX 1000.0
-#define ZOOM_PAGE_KEY_MULT 1.025
-
-#define ZOOM_QE_KEY_MULT 1.025
-#define ZOOM_MOUSE_WHEEL_MULT 0.95
 
 
 //! @file glview.cpp GLView implementation
@@ -254,6 +250,8 @@ float	GLView::Settings::lineWidthHighlight = 2.5f;
 float	GLView::Settings::lineWidthGrid1 = 1.0f;
 float	GLView::Settings::lineWidthGrid2 = 0.25f;
 float	GLView::Settings::lineWidthSelect = 5.0f;
+float	GLView::Settings::zoomInScale = 0.95f;
+float	GLView::Settings::zoomOutScale = 1.0f / 0.95f;
 
 void GLView::updateSettings()
 {
@@ -265,6 +263,9 @@ void GLView::updateSettings()
 	cfg.moveSpd = settings.value( "General/Camera/Movement Speed" ).toFloat();
 	cfg.rotSpd = settings.value( "General/Camera/Rotation Speed" ).toFloat();
 	cfg.upAxis = UpAxis(settings.value( "General/Up Axis", ZAxis ).toInt());
+	cfg.startupDirection = settings.value( "General/Camera/Startup Direction", 1 ).toInt();
+	int	z = settings.value( "General/Camera/Mwheel Zoom Speed", 8 ).toInt();
+	z = std::min< int >( std::max< int >( z, 0 ), 16 );
 
 	settings.endGroup();
 
@@ -280,6 +281,10 @@ void GLView::updateSettings()
 	Settings::lineWidthGrid1 = float( p * 1.0 );
 	Settings::lineWidthGrid2 = float( p * 0.25 );
 	Settings::lineWidthSelect = float( p * 5.0 );
+
+	double	tmp = std::pow( 0.95, std::sqrt( double(1 << z) * (1.0 / 256.0) ) );
+	Settings::zoomInScale = float( tmp );
+	Settings::zoomOutScale = float( 1.0 / tmp );
 }
 
 static bool envMapFileListFilterFunction( void * p, const std::string_view & s )
@@ -1132,13 +1137,7 @@ void GLView::setRotation( float x, float y, float z )
 
 void GLView::setZoom( float z )
 {
-	Zoom = z;
-
-	if (Zoom < ZOOM_MIN)
-		Zoom = ZOOM_MIN;
-
-	if (Zoom > ZOOM_MAX)
-		Zoom = ZOOM_MAX;
+	Zoom = std::min< float >( std::max< float >( z, ZOOM_MIN ), ZOOM_MAX );
 
 	update();
 }
@@ -1457,13 +1456,9 @@ void GLView::advanceGears()
 	if ( kbd[ Qt::Key_Q ] ) move( 0, +cfg.moveSpd * dT, 0 );
 	if ( kbd[ Qt::Key_E ] ) move( 0, -cfg.moveSpd * dT, 0 );
 
-	// Zoom
-	//if ( kbd[ Qt::Key_R ] ) setDistance( Dist / ZOOM_QE_KEY_MULT );
-	//if ( kbd[ Qt::Key_F ] ) setDistance( Dist * ZOOM_QE_KEY_MULT );
-
 	// Focal Length
-	if ( kbd[ Qt::Key_PageUp ] )   setZoom( Zoom * ZOOM_PAGE_KEY_MULT );
-	if ( kbd[ Qt::Key_PageDown ] ) setZoom( Zoom / ZOOM_PAGE_KEY_MULT );
+	if ( kbd[ Qt::Key_PageUp ] )   setZoom( Zoom * std::sqrt( Settings::zoomOutScale ) );
+	if ( kbd[ Qt::Key_PageDown ] ) setZoom( Zoom * std::sqrt( Settings::zoomInScale ) );
 
 	if ( mouseMov[0] != 0 || mouseMov[1] != 0 || mouseMov[2] != 0 ) {
 		move( mouseMov[0], mouseMov[1], mouseMov[2] );
@@ -2002,14 +1997,13 @@ void GLView::mouseReleaseEvent( QMouseEvent * event )
 
 void GLView::wheelEvent( QWheelEvent * event )
 {
-	if ( view == ViewWalk )
+	if ( view == ViewWalk ) {
 		mouseMov += Vector3( 0, 0, double( event->angleDelta().y() ) / 4.0 ) * scale();
-	else
-	{
+	} else {
 		if (event->angleDelta().y() < 0)
-			setDistance( Dist / ZOOM_MOUSE_WHEEL_MULT );
+			setDistance( Dist * Settings::zoomOutScale );
 		else
-			setDistance( Dist * ZOOM_MOUSE_WHEEL_MULT );
+			setDistance( Dist * Settings::zoomInScale );
 	}
 }
 

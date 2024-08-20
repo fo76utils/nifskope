@@ -1,5 +1,6 @@
  == CHANGELOG ==
 
+* New render setting for the mouse wheel zoom speed in the main window and UV editor.
 * Skyrim and Fallout 4 shader property data is no longer moved to a sub-structure of BSLightingShaderProperty or BSEffectShaderProperty.
 * Fixed the geometry of docked widgets not being restored.
 
