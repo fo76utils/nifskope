@@ -861,7 +861,10 @@ void BSShaderLightingProperty::updateImpl( const NifModel * nif, const QModelInd
 			setSFMaterial( name );
 		} else if ( bsVersion >= 83 ) {
 			// Skyrim, Fallout 4, Fallout 76
-			iSPData = nif->getIndex( iBlock, "Shader Property Data" );
+			if ( bsVersion >= 151 )
+				iSPData = nif->getIndex( iBlock, "Shader Property Data" );
+			else
+				iSPData = iBlock;
 			iTextureSet = nif->getBlockIndex( nif->getLink( iSPData, "Texture Set" ), "BSShaderTextureSet" );
 		} else {
 			// Fallout 3/New Vegas

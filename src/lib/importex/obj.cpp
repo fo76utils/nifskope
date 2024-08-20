@@ -255,7 +255,7 @@ static void writeShape( const NifModel * nif, const QModelIndex & iShape, QTextS
 				iMaterial = nif->getIndex( iProp, "Material" );
 			if ( iMaterial.isValid() )
 				iProp = iMaterial;
-			else
+			else if ( nif->getBSVersion() >= 151 )
 				iProp = nif->getIndex( iProp, "Shader Property Data" );
 			map_Kd = TexCache::find( nif->get<QString>( iProp, "Source Texture" ) );
 		} else if ( nif->isNiBlock( iProp, { "BSShaderPPLightingProperty", "Lighting30ShaderProperty", "BSLightingShaderProperty" } ) ) {
@@ -267,7 +267,7 @@ static void writeShape( const NifModel * nif, const QModelIndex & iShape, QTextS
 				map_Kd = TexCache::find( nif->get<QString>( iProp, "Texture 0" ) );
 				map_Kn = TexCache::find( nif->get<QString>( iProp, "Texture 1" ) );
 			} else {
-				if ( nif->isNiBlock( iProp, "BSLightingShaderProperty" ) )
+				if ( nif->getBSVersion() >= 151 && nif->isNiBlock( iProp, "BSLightingShaderProperty" ) )
 					iProp = nif->getIndex( iProp, "Shader Property Data" );
 				QModelIndex iArray = nif->getIndex( nif->getBlockIndex( nif->getLink( iProp, "Texture Set" ) ), "Textures" );
 				map_Kd = TexCache::find( nif->get<QString>( QModelIndex_child( iArray, 0, 0 ) ) );
@@ -902,12 +902,13 @@ void importObjMain( NifModel * nif, const QModelIndex & index, bool collision )
 				if ( !newiShape )
 					shaderProp = nif->getBlockIndex( nif->getLink( iShape, "Shader Property" ) );
 				if ( shaderProp.isValid() ) {
-					shaderProp = nif->getIndex( shaderProp, "Shader Property Data" );
+					if ( nif->getBSVersion() >= 151 )
+						shaderProp = nif->getIndex( shaderProp, "Shader Property Data" );
 				} else {
 					shaderProp = nif->insertNiBlock( "BSLightingShaderProperty" );
 					nif->setLink( iShape, "Shader Property", nif->getBlockNumber( shaderProp ) );
-					shaderProp = nif->getIndex( shaderProp, "Shader Property Data" );
 					if ( nif->getBSVersion() >= 151 ) {
+						shaderProp = nif->getIndex( shaderProp, "Shader Property Data" );
 						nif->set<quint32>( shaderProp, "Num SF1", quint32( haveVertexColors ) + 4 );
 						QModelIndex	iSF1 = nif->getIndex( shaderProp, "SF1" );
 						nif->updateArraySize( iSF1 );

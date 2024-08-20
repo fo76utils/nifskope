@@ -1,5 +1,6 @@
  == CHANGELOG ==
 
+* Skyrim and Fallout 4 shader property data is no longer moved to a sub-structure of BSLightingShaderProperty or BSEffectShaderProperty.
 * Fixed the geometry of docked widgets not being restored.
 
 #### NifSkope-2.0.dev9-20240818

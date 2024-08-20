@@ -860,7 +860,10 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 		return;
 	}
 
-	iTexPropData = nif->getIndex( iTexProp, "Shader Property Data" );
+	if ( nif->getBSVersion() >= 151 )
+		iTexPropData = nif->getIndex( iTexProp, "Shader Property Data" );
+	else
+		iTexPropData = iTexProp;
 	if ( !iTexPropData.isValid() )
 		return;
 	if ( blockType == "BSLightingShaderProperty" ) {
