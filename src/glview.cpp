@@ -263,8 +263,12 @@ void GLView::updateSettings()
 	cfg.moveSpd = settings.value( "General/Camera/Movement Speed" ).toFloat();
 	cfg.rotSpd = settings.value( "General/Camera/Rotation Speed" ).toFloat();
 	cfg.upAxis = UpAxis(settings.value( "General/Up Axis", ZAxis ).toInt());
-	cfg.startupDirection = settings.value( "General/Camera/Startup Direction", 1 ).toInt();
-	int	z = settings.value( "General/Camera/Mwheel Zoom Speed", 8 ).toInt();
+	int	z = settings.value( "General/Camera/Startup Direction", 1 ).toInt();
+	static const ViewState	startupDirections[6] = {
+		ViewLeft, ViewFront, ViewTop, ViewRight, ViewBack, ViewBottom
+	};
+	cfg.startupDirection = startupDirections[std::min< int >( std::max< int >( z, 0 ), 5 )];
+	z = settings.value( "General/Camera/Mwheel Zoom Speed", 8 ).toInt();
 	z = std::min< int >( std::max< int >( z, 0 ), 16 );
 
 	settings.endGroup();

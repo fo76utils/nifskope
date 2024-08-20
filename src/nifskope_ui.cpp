@@ -839,7 +839,7 @@ void NifSkope::onLoadComplete( bool success, QString & fname )
 		// Refresh the header rows
 		header->updateConditions( QModelIndex_child( nif->getHeaderIndex() ), QModelIndex_child( nif->getHeaderIndex(), 20 ) );
 
-		ogl->setOrientation( GLView::ViewFront );
+		ogl->setOrientation( ogl->cfg.startupDirection );
 
 		enableUi();
 

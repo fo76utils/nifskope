@@ -549,32 +549,32 @@
                </property>
                <item>
                 <property name="text">
-                 <string>+X</string>
+                 <string>Left</string>
                 </property>
                </item>
                <item>
                 <property name="text">
-                 <string>+Y</string>
+                 <string>Front</string>
                 </property>
                </item>
                <item>
                 <property name="text">
-                 <string>+Z</string>
+                 <string>Top</string>
                 </property>
                </item>
                <item>
                 <property name="text">
-                 <string>-X</string>
+                 <string>Right</string>
                 </property>
                </item>
                <item>
                 <property name="text">
-                 <string>-Y</string>
+                 <string>Back</string>
                 </property>
                </item>
                <item>
                 <property name="text">
-                 <string>-Z</string>
+                 <string>Bottom</string>
                 </property>
                </item>
               </widget>

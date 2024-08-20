@@ -283,7 +283,7 @@ public:
 		float rotSpd = 45;
 
 		UpAxis upAxis = ZAxis;
-		int	startupDirection = 1;	// +Y
+		ViewState startupDirection = ViewFront;
 
 		static float	vertexPointSize;
 		static float	tbnPointSize;
