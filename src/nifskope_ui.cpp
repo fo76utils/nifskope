@@ -122,10 +122,10 @@ NifSkope * NifSkope::createWindow( const QString & fname )
 {
 	NifSkope * skope = new NifSkope;
 	skope->setAttribute( Qt::WA_DeleteOnClose );
-	skope->restoreUi();
 	skope->loadTheme();
 	skope->show();
 	skope->raise();
+	skope->restoreUi();
 
 	if ( !fname.isEmpty() ) {
 		skope->loadFile( fname );
@@ -981,6 +981,8 @@ void NifSkope::restoreUi()
 {
 	QSettings settings;
 	restoreGeometry( settings.value( "Window Geometry"_uip ).toByteArray() );
+	if ( isMaximized() )
+		QApplication::processEvents();
 	restoreState( settings.value( "Window State"_uip ).toByteArray(), 0x073 );
 
 	aSanitize->setChecked( settings.value( "File/Auto Sanitize", true ).toBool() );

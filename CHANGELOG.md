@@ -1,5 +1,7 @@
  == CHANGELOG ==
 
+* Fixed the geometry of docked widgets not being restored.
+
 #### NifSkope-2.0.dev9-20240818
 
 * Implemented high DPI scaling support for displays with higher than 1920x1080 resolution. Setting the QT\_SCALE\_FACTOR environment variable to a value other than 1.0 can be used to change the default scaling. Dynamic scale factors (due to multiple monitors with different DPI, or changing the resolution while NifSkope is running) are not supported yet.
