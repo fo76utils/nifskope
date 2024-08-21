@@ -944,7 +944,7 @@ bool BSShaderLightingProperty::getSFTexture( int & texunit, int & texUniform, Fl
 		if ( uvStream && uvStream->textureAddressMode ) {
 			if ( uvStream->textureAddressMode == 3 ) {
 				// this may be incorrect
-				glTexParameterfv( GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, &(c.v[0]) );
+				glTexParameterfv( GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, &(c[0]) );
 				clampMode = TexClampMode::BORDER_S_BORDER_T;
 			} else if ( uvStream->textureAddressMode == 2 )
 				clampMode = TexClampMode::MIRRORED_S_MIRRORED_T;

@@ -857,7 +857,7 @@ void Renderer::Program::uni1fv_l( int l, const float * x, size_t n )
 
 void Renderer::Program::uni4fv_l( int l, const FloatVector4 * x, size_t n )
 {
-	f->glUniform4fv( l, GLsizei(n), &(x[0].v[0]) );
+	f->glUniform4fv( l, GLsizei(n), &(x[0][0]) );
 }
 
 void Renderer::Program::uniSampler_l( int l, int firstTextureUnit, int textureCnt, int arraySize )
