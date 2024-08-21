@@ -60,17 +60,18 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 static bool shader_initialized = false;
 static bool shader_ready = true;
 
-static QString white = "#FFFFFFFF";
-static QString black = "#FF000000";
-static QString lighting = "#FF00F040";
-static QString reflectivity = "#FF0A0A0A";
-static QString gray = "#FF808080s";
-static QString magenta = "#FFFF00FF";
-static QString default_n = "#FFFF8080";
-static QString default_ns = "#FFFF8080n";
-static QString cube_sk = "textures/cubemaps/bleakfallscube_e.dds";
-static QString cube_fo4 = "textures/shared/cubemaps/mipblur_defaultoutside1.dds";
-static QString pbr_lut_sf = "#sfpbr.dds";
+static const QString white = "#FFFFFFFF";
+static const QString black = "#FF000000";
+static const QString lighting = "#FF00F040";
+static const QString reflectivity = "#FF0A0A0A";
+static const QString gray = "#FF808080s";
+static const QString magenta = "#FFFF00FF";
+static const QString default_n = "#FFFF8080";
+static const QString default_ns = "#FFFF8080n";
+static const QString cube_sk = "textures/cubemaps/bleakfallscube_e.dds";
+static const QString cube_fo4 = "textures/shared/cubemaps/mipblur_defaultoutside1.dds";
+static const QString grayCube = "#FF555555c";
+static const QString pbr_lut_sf = "#sfpbr.dds";
 
 static const std::uint32_t defaultSFTextureSet[21] = {
 	0xFFFF00FFU, 0xFFFF8080U, 0xFFFFFFFFU, 0xFFC0C0C0U, 0xFF000000U, 0xFFFFFFFFU,
@@ -1808,6 +1809,11 @@ bool Renderer::setupProgramFO3( const NifModel * nif, Program * prog, Shape * me
 		}
 	}
 
+	GLint	uniCubeMap = prog->uniformLocations[SAMP_CUBE];
+	if ( uniCubeMap < 0 )
+		hasCubeMap = false;
+	bool	cubeBound = false;
+
 	if ( bsprop && !esp ) {
 		hasGlowMap = !bsprop->fileName( 2 ).isEmpty();
 		prog->uniSampler( bsprop, SAMP_GLOW, 2, texunit, black, clamp );
@@ -1817,18 +1823,16 @@ bool Renderer::setupProgramFO3( const NifModel * nif, Program * prog, Shape * me
 
 		// Environment Mapping (always bind cube and mask regardless of shader settings)
 
-		GLint uniCubeMap = prog->uniformLocations[SAMP_CUBE];
-		if ( uniCubeMap < 0 ) {
-			hasCubeMap = false;
-		} else {
+		if ( uniCubeMap >= 0 ) {
 			if ( !activateTextureUnit( texunit ) )
 				return false;
 			QString	fname = bsprop->fileName( 4 );
 			if ( hasCubeMap && !fname.isEmpty() )
 				hasCubeMap = bsprop->bindCube( fname );
 			if ( !hasCubeMap )
-				bsprop->bindCube( "#FF555555c" );
+				bsprop->bindCube( grayCube );
 			fn->glUniform1i( uniCubeMap, texunit++ );
+			cubeBound = true;
 		}
 
 		hasCubeMask = !bsprop->fileName( 5 ).isEmpty();
@@ -1855,6 +1859,14 @@ bool Renderer::setupProgramFO3( const NifModel * nif, Program * prog, Shape * me
 				texprop->bind( 0, black );
 			fn->glUniform1i( uniGlowMap, texunit++ );
 		}
+	}
+
+	if ( !cubeBound && uniCubeMap >= 0 ) {
+		// make sure that a cube map is always bound to the cube sampler uniform to avoid invalid operation error
+		if ( !activateTextureUnit( texunit ) )
+			return false;
+		BSShaderLightingProperty::bindCube( scene, grayCube );
+		fn->glUniform1i( uniCubeMap, texunit++ );
 	}
 
 	if ( texprop ) {
@@ -2330,7 +2342,7 @@ void Renderer::drawSkyBox( Scene * scene )
 	if ( hasCubeMap )
 		hasCubeMap = scene->bindTexture( bsVersion < 170 ? cfg.cubeMapPathFO76 : cfg.cubeMapPathSTF );
 	if ( !hasCubeMap )
-		scene->bindTexture( "#FF555555c", false, true );
+		scene->bindTexture( grayCube, false, true );
 	fn->glUniform1i( uniCubeMap, texunit++ );
 
 	glEnable( GL_TEXTURE_CUBE_MAP_SEAMLESS );
