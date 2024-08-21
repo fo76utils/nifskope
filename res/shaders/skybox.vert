@@ -1,12 +1,12 @@
-#version 400 compatibility
+#version 120
 
-out vec3 LightDir;
-out vec3 ViewDir;
+varying vec3 LightDir;
+varying vec3 ViewDir;
 
-out vec4 A;
-out vec4 D;
+varying vec4 A;
+varying vec4 D;
 
-out mat4 reflMatrix;
+varying mat4 reflMatrix;
 
 mat4 rotateEnv( mat4 m, float rz )
 {

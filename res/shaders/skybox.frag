@@ -1,4 +1,4 @@
-#version 400 compatibility
+#version 120
 #extension GL_ARB_shader_texture_lod : require
 
 uniform samplerCube	CubeMap;
@@ -6,15 +6,13 @@ uniform bool	hasCubeMap;
 uniform bool	invertZAxis;
 uniform int	skyCubeMipLevel;
 
-in vec3 LightDir;
-in vec3 ViewDir;
+varying vec3 LightDir;
+varying vec3 ViewDir;
 
-in vec4 A;
-in vec4 D;
+varying vec4 A;
+varying vec4 D;
 
-in mat4 reflMatrix;
-
-out vec4 fragColor;
+varying mat4 reflMatrix;
 
 float LightingFuncGGX_REF( float LdotR, float roughness )
 {
@@ -61,12 +59,10 @@ void main()
 	// Environment
 	vec3	ambient = A.rgb;
 	if ( hasCubeMap ) {
-		color += textureLod( CubeMap, viewWS, m ).rgb * ambient;
+		color += textureCubeLod( CubeMap, viewWS, m ).rgb * ambient;
 	} else {
 		color += ambient * 0.08;
 	}
 
-	fragColor = vec4( tonemap( color * D.a, A.a ), 0.0 );
+	gl_FragColor = vec4( tonemap( color * D.a, A.a ), 0.0 );
 }
-
-// vim: set syntax=gdshader noexpandtab ts=4 :

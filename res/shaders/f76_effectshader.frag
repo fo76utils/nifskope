@@ -1,4 +1,5 @@
-#version 130
+#version 120
+#extension GL_ARB_shader_texture_lod : require
 
 uniform sampler2D BaseMap;
 uniform sampler2D GreyscaleMap;
@@ -42,15 +43,15 @@ uniform float fLumEmittance;
 
 uniform mat4 worldMatrix;
 
-in vec3 LightDir;
-in vec3 ViewDir;
+varying vec3 LightDir;
+varying vec3 ViewDir;
 
-in vec4 A;
-in vec4 C;
-in vec4 D;
+varying vec4 A;
+varying vec4 C;
+varying vec4 D;
 
-in mat3 btnMatrix;
-in mat4 reflMatrix;
+varying mat3 btnMatrix;
+varying mat4 reflMatrix;
 
 vec3 ViewDir_norm = normalize( ViewDir );
 mat3 btnMatrix_norm = mat3( normalize( btnMatrix[0] ), normalize( btnMatrix[1] ), normalize( btnMatrix[2] ) );
@@ -157,11 +158,11 @@ void main( void )
 	// Environment
 	if ( hasCubeMap ) {
 		float	m = roughness * (roughness * -4.0 + 10.0);
-		vec3	cube = textureLod( CubeMap, reflectedWS, max(m, 0.0) ).rgb;
+		vec3	cube = textureCubeLod( CubeMap, reflectedWS, max(m, 0.0) ).rgb;
 		cube.rgb *= envReflection * g;
 		cube.rgb = mix( cube.rgb, cube.rgb * D.rgb, lightingInfluence );
 		if ( hasEnvMask )
-			cube.rgb *= texture( EnvironmentMap, offset ).rgb;
+			cube.rgb *= texture2D( EnvironmentMap, offset ).rgb;
 		color.rgb += cube.rgb * falloff;
 	}
 

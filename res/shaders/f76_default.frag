@@ -1,4 +1,4 @@
-#version 130
+#version 120
 #extension GL_ARB_shader_texture_lod : require
 
 uniform sampler2D BaseMap;
@@ -47,15 +47,15 @@ uniform bool isWireframe;
 uniform bool isSkinned;
 uniform mat4 worldMatrix;
 
-in vec3 LightDir;
-in vec3 ViewDir;
+varying vec3 LightDir;
+varying vec3 ViewDir;
 
-in vec4 A;
-in vec4 C;
-in vec4 D;
+varying vec4 A;
+varying vec4 C;
+varying vec4 D;
 
-in mat3 btnMatrix;
-in mat4 reflMatrix;
+varying mat3 btnMatrix;
+varying mat4 reflMatrix;
 
 vec3 ViewDir_norm = normalize( ViewDir );
 mat3 btnMatrix_norm = mat3( normalize( btnMatrix[0] ), normalize( btnMatrix[1] ), normalize( btnMatrix[2] ) );
@@ -143,7 +143,7 @@ void main(void)
 	vec3 albedo = baseMap.rgb * C.rgb;
 	if ( greyscaleColor ) {
 		// work around incorrect format used by Fallout 76 grayscale textures
-		albedo = textureLod(GreyscaleMap, vec2(srgbCompress(baseMap.g), paletteScale * C.r), 0.0).rgb;
+		albedo = texture2DLod(GreyscaleMap, vec2(srgbCompress(baseMap.g), paletteScale * C.r), 0.0).rgb;
 	}
 
 	// Emissive
@@ -168,9 +168,9 @@ void main(void)
 	vec3	diffuse = vec3(NdotL0);
 	float	LdotH = sqrt(max(LdotV * 0.5 + 0.5, 0.0));
 	// Fresnel
-	vec2	fDirect = textureLod(EnvironmentMap, vec2(LdotH, NdotL0), 0.0).ba;
+	vec2	fDirect = texture2DLod(EnvironmentMap, vec2(LdotH, NdotL0), 0.0).ba;
 	spec *= mix(f0, vec3(1.0), fDirect.x);
-	vec4	envLUT = textureLod(EnvironmentMap, vec2(NdotV, roughness), 0.0);
+	vec4	envLUT = texture2DLod(EnvironmentMap, vec2(NdotV, roughness), 0.0);
 	vec2	fDiff = vec2(fDirect.y, envLUT.b);
 	fDiff = fDiff * (LdotH * LdotH * roughness * 2.0 - 0.5) + 1.0;
 	diffuse *= (vec3(1.0) - f0) * fDiff.x * fDiff.y;
@@ -180,10 +180,10 @@ void main(void)
 	vec3	ambient = A.rgb;
 	if ( hasCubeMap ) {
 		float	m = roughness * (roughness * -4.0 + 10.0);
-		refl = textureLod(CubeMap, reflectedWS, max(m, 0.0)).rgb;
+		refl = textureCubeLod(CubeMap, reflectedWS, max(m, 0.0)).rgb;
 		refl *= envReflection * specStrength;
 		refl *= ambient;
-		ambient *= textureLod(CubeMap2, normalWS, 0.0).rgb;
+		ambient *= textureCubeLod(CubeMap2, normalWS, 0.0).rgb;
 	} else {
 		ambient /= 15.0;
 		refl = ambient;

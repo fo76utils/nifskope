@@ -1,4 +1,4 @@
-#version 130
+#version 120
 
 uniform sampler2D BaseMap;
 uniform sampler2D NormalMap;
@@ -40,14 +40,14 @@ uniform float envReflection;
 
 uniform mat4 worldMatrix;
 
-in vec3 LightDir;
-in vec3 ViewDir;
+varying vec3 LightDir;
+varying vec3 ViewDir;
 
-in vec4 A;
-in vec4 C;
-in vec4 D;
+varying vec4 A;
+varying vec4 C;
+varying vec4 D;
 
-in mat3 tbnMatrix;
+varying mat3 tbnMatrix;
 
 mat3 tbnMatrix_norm = mat3(normalize(tbnMatrix[0]), normalize(tbnMatrix[1]), normalize(tbnMatrix[2]));
 

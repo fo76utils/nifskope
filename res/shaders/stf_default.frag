@@ -692,5 +692,3 @@ void main()
 
 	fragColor = color;
 }
-
-// vim: set syntax=gdshader noexpandtab ts=4 :

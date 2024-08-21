@@ -88,11 +88,12 @@ jobs:
 
     - name: 'Build with qmake'
       run: |
-        qmake noavx=1 NifSkope.pro
+        qmake noavx2=1 NifSkope.pro
         make -j 8
 
     - name: 'Create DMG image'
       run: |
+        rm release/shaders/stf_default.*
         mv release/*.xml release/shaders release/qt.conf release/style.qss release/*.txt release/NifSkope.app/Contents/MacOS/
         macdeployqt release/NifSkope.app -dmg
 

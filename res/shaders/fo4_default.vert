@@ -1,13 +1,13 @@
-#version 130
+#version 120
 
-out vec3 LightDir;
-out vec3 ViewDir;
+varying vec3 LightDir;
+varying vec3 ViewDir;
 
-out mat3 btnMatrix;
+varying mat3 btnMatrix;
 
-out vec4 A;
-out vec4 C;
-out vec4 D;
+varying vec4 A;
+varying vec4 C;
+varying vec4 D;
 
 
 uniform bool isGPUSkinned;

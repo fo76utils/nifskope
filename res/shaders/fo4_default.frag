@@ -1,4 +1,4 @@
-#version 130
+#version 120
 #extension GL_ARB_shader_texture_lod : require
 
 uniform sampler2D BaseMap;
@@ -46,14 +46,14 @@ uniform float envReflection;
 
 uniform mat4 worldMatrix;
 
-in vec3 LightDir;
-in vec3 ViewDir;
+varying vec3 LightDir;
+varying vec3 ViewDir;
 
-in vec4 A;
-in vec4 C;
-in vec4 D;
+varying vec4 A;
+varying vec4 C;
+varying vec4 D;
 
-in mat3 btnMatrix;
+varying mat3 btnMatrix;
 
 vec3 ViewDir_norm = normalize( ViewDir );
 mat3 btnMatrix_norm = mat3( normalize( btnMatrix[0] ), normalize( btnMatrix[1] ), normalize( btnMatrix[2] ) );
@@ -270,7 +270,7 @@ void main( void )
 	}
 
 	// Environment
-	vec4 cube = textureLod( CubeMap, reflectedWS, 8.0 - smoothness * 8.0 );
+	vec4 cube = textureCubeLod( CubeMap, reflectedWS, 8.0 - smoothness * 8.0 );
 	vec4 env = texture2D( EnvironmentMap, offset );
 	if ( hasCubeMap ) {
 		cube.rgb *= envReflection * specStrength;
