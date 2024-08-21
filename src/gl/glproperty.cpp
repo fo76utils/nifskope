@@ -1056,7 +1056,7 @@ bool BSShaderLightingProperty::bind( int id, const QVector<QVector<Vector2> > & 
 	return false;
 }
 
-bool BSShaderLightingProperty::bindCube( const QString & fname, bool useSecondTexture )
+bool BSShaderLightingProperty::bindCube( Scene * scene, const QString & fname, bool useSecondTexture )
 {
 	GLuint result = 0;
 

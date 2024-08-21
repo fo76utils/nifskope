@@ -873,7 +873,7 @@ void Mesh::drawShapes( NodeList * secondPass )
 	}
 
 	// render the tristrips
-	for ( auto & s : tristrips )
+	for ( const auto & s : tristrips )
 		glDrawElements( GL_TRIANGLE_STRIP, s.count(), GL_UNSIGNED_SHORT, s.constData() );
 
 	if ( isDoubleSided ) {

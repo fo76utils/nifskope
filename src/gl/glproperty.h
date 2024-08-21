@@ -702,7 +702,11 @@ public:
 		return bind( ( !fname.isEmpty() ? fname : this->fileName( id ) ), false, mode );
 	}
 
-	bool bindCube( const QString & fname = QString(), bool useSecondTexture = false );
+	static bool bindCube( Scene * scene, const QString & fname, bool useSecondTexture = false );
+	inline bool bindCube( const QString & fname, bool useSecondTexture = false )
+	{
+		return bindCube( scene, fname, useSecondTexture );
+	}
 
 	//! Checks if the params of the shader depend on data from block
 	bool isParamBlock( const QModelIndex & block ) { return ( block == iBlock || block == iTextureSet ); }
