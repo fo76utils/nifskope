@@ -494,15 +494,15 @@ win32 {
 	} else {
 		QMAKE_CXXFLAGS *= -O3
 	}
-	contains(noavx, 1) {
-	} else:contains(nof16c, 1) {
-		QMAKE_CXXFLAGS *= -march=sandybridge
-	} else:contains(noavx2, 1) {
-		QMAKE_CXXFLAGS *= -march=sandybridge -mf16c
-	} else:contains(QMAKE_HOST.arch, x86_64) {
-		QMAKE_CXXFLAGS *= -march=haswell
-	}
 	contains(QMAKE_HOST.arch, x86_64) {
+		contains(noavx, 1) {
+		} else:contains(nof16c, 1) {
+			QMAKE_CXXFLAGS *= -march=sandybridge
+		} else:contains(noavx2, 1) {
+			QMAKE_CXXFLAGS *= -march=sandybridge -mf16c
+		} else {
+			QMAKE_CXXFLAGS *= -march=haswell
+		}
 		QMAKE_CXXFLAGS *= -mtune=generic
 	}
 }
