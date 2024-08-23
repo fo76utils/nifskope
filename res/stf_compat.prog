@@ -1,0 +1,17 @@
+# compatibility (GLSL 1.20) shader for macOS
+
+# Starfield
+check HEADER/BS Header/BS Version >= 170
+check BSGeometry
+checkgroup begin or
+	check BSLightingShaderProperty
+	check BSEffectShaderProperty
+checkgroup end
+
+texcoords 0 base
+texcoords 1 tangents
+texcoords 2 bitangents
+texcoords 3 indices
+texcoords 4 weights
+
+shaders stf_compat.vert stf_compat.frag

@@ -874,7 +874,7 @@ void Renderer::Program::uniSampler_l( int l, int firstTextureUnit, int textureCn
 	f->glUniform1iv( l, arraySize, tmp );
 }
 
-static int setFlipbookParameters( const CE2Material::Material & m )
+static int setFlipbookParameters( const CE2Material::Material & m, FloatVector4 & uvScaleAndOffset )
 {
 	int	flipbookColumns = std::min< int >( m.flipbookColumns, 127 );
 	int	flipbookRows = std::min< int >( m.flipbookRows, 127 );
@@ -885,9 +885,12 @@ static int setFlipbookParameters( const CE2Material::Material & m )
 	double	flipbookFrame = double( std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::steady_clock::now().time_since_epoch() ).count() );
 	flipbookFrame = flipbookFrame * flipbookFPMS / double( flipbookFrames );
 	flipbookFrame = flipbookFrame - std::floor( flipbookFrame );
-	int	materialFlags = ( flipbookColumns << 2 ) | ( flipbookRows << 9 );
-	materialFlags = materialFlags | ( std::min< int >( int( flipbookFrame * double( flipbookFrames ) ), flipbookFrames - 1 ) << 16 );
-	return materialFlags;
+	int	n = std::min< int >( int( flipbookFrame * double( flipbookFrames ) ), flipbookFrames - 1 );
+	uvScaleAndOffset += FloatVector4( 0.0f, 0.0f, float(n % flipbookColumns), float(n / flipbookColumns) );
+	float	w = float( flipbookColumns );
+	float	h = float( flipbookRows );
+	uvScaleAndOffset /= FloatVector4( w, h, w, h );
+	return 4;
 }
 
 static inline void setupGLBlendModeSF( int blendMode, QOpenGLFunctions * fn )
@@ -1176,16 +1179,6 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 		if ( !( layerMask & 1 ) )
 			continue;
 		const CE2Material::Layer *	layer = mat->layers[i];
-		if ( layer->material ) {
-			prog->uni4srgb_l( prog->uniLocation("lm.layers[%d].material.color", i), layer->material->color );
-			int	materialFlags = layer->material->colorModeFlags & 3;
-			if ( layer->material->flipbookFlags & 1 ) [[unlikely]]
-				materialFlags = materialFlags | setFlipbookParameters( *(layer->material) );
-			prog->uni1i_l( prog->uniLocation("lm.layers[%d].material.flags", i), materialFlags );
-		} else {
-			prog->uni4f_l( prog->uniLocation("lm.layers[%d].material.color", i), FloatVector4(1.0f) );
-			prog->uni1i_l( prog->uniLocation("lm.layers[%d].material.flags", i), 0 );
-		}
 		for ( int j = 0; j < 11; j++ ) {
 			texUniforms[j] = 0;
 			replUniforms[j] = FloatVector4( 0.0f );
@@ -1224,10 +1217,22 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 		}
 		prog->uni1iv_l( prog->uniLocation("lm.layers[%d].material.textureSet.textures", i), texUniforms, 11 );
 		prog->uni4fv_l( prog->uniLocation("lm.layers[%d].material.textureSet.textureReplacements", i), replUniforms, 11 );
+
 		const CE2Material::UVStream *	uvStream = layer->uvStream;
 		if ( !uvStream )
 			uvStream = &defaultUVStream;
-		prog->uni4f_l( prog->uniLocation("lm.layers[%d].uvStream.scaleAndOffset", i), uvStream->scaleAndOffset );
+		FloatVector4	uvScaleAndOffset( uvStream->scaleAndOffset );
+		if ( layer->material ) [[likely]] {
+			prog->uni4srgb_l( prog->uniLocation("lm.layers[%d].material.color", i), layer->material->color );
+			int	materialFlags = layer->material->colorModeFlags & 3;
+			if ( layer->material->flipbookFlags & 1 ) [[unlikely]]
+				materialFlags = materialFlags | setFlipbookParameters( *(layer->material), uvScaleAndOffset );
+			prog->uni1i_l( prog->uniLocation("lm.layers[%d].material.flags", i), materialFlags );
+		} else {
+			prog->uni4f_l( prog->uniLocation("lm.layers[%d].material.color", i), FloatVector4(1.0f) );
+			prog->uni1i_l( prog->uniLocation("lm.layers[%d].material.flags", i), 0 );
+		}
+		prog->uni4f_l( prog->uniLocation("lm.layers[%d].uvStream.scaleAndOffset", i), uvScaleAndOffset );
 		prog->uni1b_l( prog->uniLocation("lm.layers[%d].uvStream.useChannelTwo", i), (uvStream->channel > 1) );
 
 		const CE2Material::Blender *	blender;

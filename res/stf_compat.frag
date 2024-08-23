@@ -1,4 +1,4 @@
-#version 400 compatibility
+#version 120
 #extension GL_ARB_shader_texture_lod : require
 
 struct UVStream {
@@ -225,17 +225,15 @@ uniform int alphaFlags;
 
 uniform	LayeredMaterial	lm;
 
-in vec3 LightDir;
-in vec3 ViewDir;
+varying vec3 LightDir;
+varying vec3 ViewDir;
 
-in vec4 A;
-in vec4 C;
-in vec4 D;
+varying vec4 A;
+varying vec4 C;
+varying vec4 D;
 
-in mat3 btnMatrix;
-in mat4 reflMatrix;
-
-out vec4 fragColor;
+varying mat3 btnMatrix;
+varying mat4 reflMatrix;
 
 vec3 ViewDir_norm = normalize( ViewDir );
 mat3 btnMatrix_norm = mat3( normalize( btnMatrix[0] ), normalize( btnMatrix[1] ), normalize( btnMatrix[2] ) );
@@ -306,7 +304,7 @@ vec4 getLayerTexture(int layerNum, int textureNum, vec2 offset)
 	int	n = lm.layers[layerNum].material.textureSet.textures[textureNum];
 	if ( n < 0 )
 		return lm.layers[layerNum].material.textureSet.textureReplacements[textureNum];
-	return texture(textureUnits[n], offset);
+	return texture2D(textureUnits[n], offset);
 }
 
 float getDetailBlendMask()
@@ -315,7 +313,7 @@ float getDetailBlendMask()
 		return 1.0;
 	if ( lm.detailBlender.maskTexture < 0 )
 		return lm.detailBlender.maskTextureReplacement.r;
-	return texture( textureUnits[lm.detailBlender.maskTexture], getTexCoord( lm.detailBlender.uvStream ) ).r;
+	return texture2D( textureUnits[lm.detailBlender.maskTexture], getTexCoord( lm.detailBlender.uvStream ) ).r;
 }
 
 float getBlenderMask(int n)
@@ -326,7 +324,7 @@ float getBlenderMask(int n)
 			r = lm.blenders[n].maskTextureReplacement.r;
 		} else {
 			vec2	offset = getTexCoord(lm.blenders[n].uvStream);
-			r = texture(textureUnits[lm.blenders[n].maskTexture], offset).r;
+			r = texture2D(textureUnits[lm.blenders[n].maskTexture], offset).r;
 		}
 	}
 	if ( lm.blenders[n].boolParams[5] )
@@ -356,7 +354,7 @@ vec2 parallaxMapping( int n, vec3 V, vec2 offset )
 	dtex *= layerHeight;
 
 	// height from heightmap
-	float	heightFromTexture = texture( textureUnits[n], currentTextureCoords ).r;
+	float	heightFromTexture = texture2D( textureUnits[n], currentTextureCoords ).r;
 
 	// while point is above the surface
 	while ( curLayerHeight > heightFromTexture ) {
@@ -365,7 +363,7 @@ vec2 parallaxMapping( int n, vec3 V, vec2 offset )
 		// shift of texture coordinates
 		currentTextureCoords -= dtex;
 		// new height from heightmap
-		heightFromTexture = texture( textureUnits[n], currentTextureCoords ).r;
+		heightFromTexture = texture2D( textureUnits[n], currentTextureCoords ).r;
 	}
 
 	// previous texture coordinates
@@ -373,7 +371,7 @@ vec2 parallaxMapping( int n, vec3 V, vec2 offset )
 
 	// heights for linear interpolation
 	float	nextH = curLayerHeight - heightFromTexture;
-	float	prevH = curLayerHeight + layerHeight - texture( textureUnits[n], prevTCoords ).r;
+	float	prevH = curLayerHeight + layerHeight - texture2D( textureUnits[n], prevTCoords ).r;
 
 	// proportions for linear interpolation
 	float	weight = nextH / ( nextH - prevH );
@@ -391,11 +389,11 @@ void getLayer(int n, vec2 offset, inout vec4 baseMap, inout vec3 normalMap, inou
 	if ( lm.layers[n].material.textureSet.textures[0] != 0 )
 		baseMap.rgb = getLayerTexture(n, 0, offset).rgb;
 	if ( n == 0 || lm.layers[n].material.textureSet.textures[0] != 0 ) {
-		if ( (lm.layers[n].material.flags & 1) == 0 )
+		if ( fract( float(lm.layers[n].material.flags) * 0.5 ) < 0.499 )
 			baseMap.rgb *= lm.layers[n].material.color.rgb;
 		else
 			baseMap.rgb = mix( baseMap.rgb, lm.layers[n].material.color.rgb, lm.layers[n].material.color.a );
-		if ( (lm.layers[n].material.flags & 2) != 0 )
+		if ( fract( float(lm.layers[n].material.flags) * 0.25 ) > 0.499 )
 			baseMap.rgb *= C.rgb;
 	}
 	// _normal.dds
@@ -418,7 +416,7 @@ void getLayer(int n, vec2 offset, inout vec4 baseMap, inout vec3 normalMap, inou
 void main()
 {
 	if ( isWireframe ) {
-		fragColor = solidColor;
+		gl_FragColor = solidColor;
 		return;
 	}
 	if ( lm.shaderModel == 45 )	// "Invisible"
@@ -432,6 +430,7 @@ void main()
 	float	alpha = 1.0;
 	vec3	emissive = vec3(0.0);
 	vec3	transmissive = vec3(0.0);
+	float	falloffLayerMask = float(lm.layeredEdgeFalloff.flags);
 
 	for (int i = 0; i < 4; i++) {
 		if ( !lm.layersEnabled[i] )
@@ -441,7 +440,8 @@ void main()
 
 		float	layerMask = 1.0;
 		float	f = 1.0;
-		if ( ( lm.layeredEdgeFalloff.flags & ( 1 << i ) ) != 0 ) {
+		falloffLayerMask *= 0.5;
+		if ( fract( falloffLayerMask ) > 0.499 ) {
 			float	startAngle = cos( radians(lm.layeredEdgeFalloff.falloffStartAngles[i]) );
 			float	stopAngle = cos( radians(lm.layeredEdgeFalloff.falloffStopAngles[i]) );
 			float	startOpacity = lm.layeredEdgeFalloff.falloffStartOpacities[i];
@@ -458,7 +458,7 @@ void main()
 			if ( lm.decalSettings.isDecal && lm.layers[0].material.textureSet.textures[0] == 0 )
 				discard;
 			getLayer( 0, offset, baseMap, normal, pbrMap );
-			if ( (lm.layeredEdgeFalloff.flags & 0x80) != 0 )
+			if ( lm.layeredEdgeFalloff.flags >= 128 )
 				baseMap.rgb *= f;
 			alpha = f;
 		} else {
@@ -466,7 +466,7 @@ void main()
 			vec3	layerNormal = normal;
 			vec3	layerPBRMap = pbrMap;
 			getLayer( i, offset, layerBaseMap, layerNormal, layerPBRMap );
-			if ( (lm.layeredEdgeFalloff.flags & 0x80) != 0 )
+			if ( lm.layeredEdgeFalloff.flags >= 128 )
 				layerBaseMap.rgb *= f;
 
 			layerMask = getBlenderMask( i - 1 );
@@ -519,25 +519,19 @@ void main()
 						else if ( lm.opacity.thirdLayerActive && i == lm.opacity.thirdLayerIndex )
 							opacityBlendMode = lm.opacity.secondBlenderMode;
 					}
-					switch ( opacityBlendMode ) {
-					case 0:
+					if ( opacityBlendMode == 0 )
 						baseMap.a = mix( baseMap.a, a, layerMask );
-						break;
-					case 1:
+					else if ( opacityBlendMode == 1 )
 						baseMap.a = min( baseMap.a + a * layerMask, 1.0 );
-						break;
-					case 2:
+					else if ( opacityBlendMode == 2 )
 						baseMap.a = max( baseMap.a - a * layerMask, 0.0 );
-						break;
-					case 3:
+					else if ( opacityBlendMode == 3 )
 						baseMap.a *= a * layerMask;
-						break;
-					}
 				} else if ( i == 0 ) {
 					baseMap.a = a;
 				}
 			} else if ( lm.alphaSettings.hasOpacity && i == lm.alphaSettings.opacitySourceLayer ) {
-				if ( (lm.layers[i].material.flags & 4) == 0 )
+				if ( lm.layers[i].material.flags < 4 )
 					baseMap.a = getLayerTexture( i, 2, getTexCoord(lm.alphaSettings.opacityUVstream) ).r;
 				else
 					baseMap.a = getLayerTexture( i, 2, offset ).r;
@@ -586,9 +580,9 @@ void main()
 	vec4	color = vec4(1.0);
 	if ( alphaFlags != 0 ) {
 		alpha = alpha * baseMap.a;
-		if ( ( alphaFlags & 1 ) != 0 && !( alpha > ( !lm.isEffect ? lm.alphaSettings.alphaTestThreshold : lm.effectSettings.alphaTestThreshold ) ) )
+		if ( ( alphaFlags == 1 || alphaFlags == 3 ) && !( alpha > ( !lm.isEffect ? lm.alphaSettings.alphaTestThreshold : lm.effectSettings.alphaTestThreshold ) ) )
 			discard;
-		if ( ( alphaFlags & 2 ) != 0 )
+		if ( alphaFlags >= 2 )
 			color.a = alpha;
 	}
 
@@ -620,9 +614,9 @@ void main()
 	vec3	diffuse = vec3(NdotL0);
 	// Fresnel
 	float	LdotH = sqrt( max(LdotV * 0.5 + 0.5, 0.0) );
-	vec2	fDirect = textureLod(textureUnits[0], vec2(LdotH, NdotL0), 0.0).ba;
+	vec2	fDirect = texture2DLod(textureUnits[0], vec2(LdotH, NdotL0), 0.0).ba;
 	spec *= mix(f0, vec3(1.0), fDirect.x);
-	vec4	envLUT = textureLod(textureUnits[0], vec2(NdotV, roughness), 0.0);
+	vec4	envLUT = texture2DLod(textureUnits[0], vec2(NdotV, roughness), 0.0);
 	vec2	fDiff = vec2(fDirect.y, envLUT.b);
 	fDiff = fDiff * (LdotH * LdotH * roughness * 2.0 - 0.5) + 1.0;
 	diffuse *= (vec3(1.0) - f0) * fDiff.x * fDiff.y;
@@ -632,9 +626,9 @@ void main()
 	vec3	ambient = A.rgb;
 	if ( hasCubeMap ) {
 		float	m = roughness * (roughness * -4.0 + 10.0);
-		refl = textureLod(CubeMap, reflectedWS, max(m, 0.0)).rgb;
+		refl = textureCubeLod(CubeMap, reflectedWS, max(m, 0.0)).rgb;
 		refl *= ambient;
-		ambient *= textureLod(CubeMap2, normalWS, 0.0).rgb;
+		ambient *= textureCubeLod(CubeMap2, normalWS, 0.0).rgb;
 	} else {
 		ambient *= 0.08;
 		refl = ambient;
@@ -674,12 +668,12 @@ void main()
 		// TODO: implement flipBackFaceNormalsInViewSpace
 		color.rgb += transmissive * D.rgb * max( -NdotL, 0.0 );
 		if ( hasCubeMap )
-			color.rgb += textureLod( CubeMap2, -normalWS, 0.0 ).rgb * transmissive * A.rgb * ao;
+			color.rgb += textureCubeLod( CubeMap2, -normalWS, 0.0 ).rgb * transmissive * A.rgb * ao;
 		else
 			color.rgb += transmissive * A.rgb * ( ao * 0.08 );
 	}
 
 	color.rgb = tonemap(color.rgb * D.a, A.a);
 
-	fragColor = color;
+	gl_FragColor = color;
 }

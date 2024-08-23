@@ -94,6 +94,7 @@ jobs:
     - name: 'Create DMG image'
       run: |
         rm release/shaders/stf_default.*
+        cp res/stf_compat.* release/shaders/
         mv release/*.xml release/shaders release/qt.conf release/style.qss release/*.txt release/NifSkope.app/Contents/MacOS/
         macdeployqt release/NifSkope.app -dmg
 

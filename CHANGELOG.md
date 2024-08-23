@@ -5,7 +5,7 @@
 * Skyrim and Fallout 4 shader property data is no longer moved to a sub-structure of BSLightingShaderProperty or BSEffectShaderProperty.
 * Fixed the geometry of docked widgets not being restored.
 * Fixed invisible Oblivion models with Mesa (and possibly other) OpenGL drivers.
-* Fixed error messages on macOS about unsupported GLSL version in the shaders. Note that Starfield shading is currently disabled on macOS.
+* Fixed error messages on macOS about unsupported GLSL version in the shaders.
 
 #### NifSkope-2.0.dev9-20240818
 
