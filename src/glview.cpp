@@ -924,13 +924,13 @@ int indexAt( /*GLuint *buffer,*/ NifModel * model, Scene * scene, QList<DrawFunc
 	// Create new FBO with multisampling disabled
 	QOpenGLFramebufferObjectFormat fboFmt;
 	fboFmt.setTextureTarget( GL_TEXTURE_2D );
-	fboFmt.setInternalTextureFormat( GL_RGBA16 );
+	fboFmt.setInternalTextureFormat( GL_RGBA8 );
 	fboFmt.setAttachment( QOpenGLFramebufferObject::Attachment::CombinedDepthStencil );
 
 	QOpenGLFramebufferObject fbo( viewport[2], viewport[3], fboFmt );
 	fbo.bind();
 
-	glEnable( GL_LIGHTING );
+	glDisable( GL_LIGHTING );
 	glDisable( GL_MULTISAMPLE );
 	glDisable( GL_MULTISAMPLE_ARB );
 	glDisable( GL_LINE_SMOOTH );
@@ -943,7 +943,6 @@ int indexAt( /*GLuint *buffer,*/ NifModel * model, Scene * scene, QList<DrawFunc
 	glDisable( GL_BLEND );
 	glDisable( GL_DITHER );
 	glDisable( GL_FOG );
-	glDisable( GL_LIGHTING );
 	glShadeModel( GL_FLAT );
 	glEnable( GL_DEPTH_TEST );
 	glDepthFunc( GL_LEQUAL );
@@ -960,15 +959,16 @@ int indexAt( /*GLuint *buffer,*/ NifModel * model, Scene * scene, QList<DrawFunc
 	fbo.release();
 
 	QImage img( fbo.toImage() );
-	QColor pixel = img.pixelColor( pos.toPoint() );
+	// disable premultiplied alpha
+	img.reinterpretAsFormat( QImage::Format_ARGB32 );
+	std::uint32_t pixel = std::uint32_t( img.pixel( pos.toPoint() ) );
 
 #ifndef QT_NO_DEBUG
 	img.save( "fbo.png" );
 #endif
 
-	// Encode RGB to Int
-	FloatVector4	rgba( pixel.redF(), pixel.greenF(), pixel.blueF(), pixel.alphaF() );
-	std::int32_t	a = std::int32_t( std::uint32_t( rgba * 255.0f ) );
+	// Encode BGRA to Int
+	std::int32_t	a = std::int32_t( ( pixel & 0xFF00FF00U ) | ( ( pixel >> 16 ) & 0xFFU ) | ( ( pixel & 0xFFU ) << 16 ) );
 
 	// Decode:
 	// R = (id & 0x000000FF) >> 0
