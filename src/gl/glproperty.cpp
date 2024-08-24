@@ -941,7 +941,7 @@ bool BSShaderLightingProperty::getSFTexture( int & texunit, int & texUniform, Fl
 	}
 	do {
 		size_t	n;
-		if ( !( texturePath && ( n = texturePath->length() ) > 0 && n <= 512 ) )
+		if ( !( texturePath && ( n = texturePath->length() ) > 0 && n <= 1024 ) )
 			break;
 		if ( !( texunit >= 3 && texunit < TexCache::num_texture_units && activateTextureUnit(texunit, true) ) )
 			break;
@@ -959,7 +959,7 @@ bool BSShaderLightingProperty::getSFTexture( int & texunit, int & texUniform, Fl
 		}
 
 		// convert std::string_view to a temporary array of QChar
-		std::uint16_t	tmpBuf[512];
+		std::uint16_t	tmpBuf[1024];
 		convertStringToUInt16( tmpBuf, texturePath->data(), n );
 
 		if ( !bind( QStringView( tmpBuf, qsizetype( n ) ), false, clampMode ) )

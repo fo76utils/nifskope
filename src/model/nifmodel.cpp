@@ -616,6 +616,9 @@ bool NifModel::updateArraySizeImpl( NifItem * array )
 	}
 
 	int nOldSize = array->childCount();
+	if ( nNewSize == nOldSize )
+		return true;
+
 	bool bOldHasChildLinks = array->hasChildLinks();
 
 	if ( nNewSize > nOldSize ) { // Add missing items
@@ -637,22 +640,24 @@ bool NifModel::updateArraySizeImpl( NifItem * array )
 		for ( int c = nOldSize; c < nNewSize; c++ )
 			insertType( array, data );
 		endInsertRows();
-	}
 
-	if ( nNewSize < nOldSize ) { // Remove excess items
+	} else {					// Remove excess items
 		beginRemoveRows( itemToIndex(array), nNewSize, nOldSize - 1 );
 		array->removeChildren( nNewSize, nOldSize - nNewSize );
 		endRemoveRows();
 	}
 
-	if ( nNewSize != nOldSize
-		&& state != Loading
+	if ( state != Loading
 		&& ( bOldHasChildLinks || array->hasChildLinks() ) // had or has any links inside
 		&& !array->isDescendantOf( getFooterItem() )
 	) {
 		updateLinks();
 		updateFooter();
 		emit linksChanged();
+	}
+
+	if ( state == Default ) {
+		onItemValueChange( array );
 	}
 
 	return true;

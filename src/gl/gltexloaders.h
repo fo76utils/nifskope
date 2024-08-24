@@ -68,35 +68,30 @@ extern gli::texture load_if_valid( const char * data, unsigned int size );
 /*! A function for loading textures.
  *
  * Loads a texture pointed to by filepath.
- * Returns true on success, and throws a QString otherwise.
- * The parameters format, width, height and mipmaps will be filled with information about
- * the loaded texture.
+ * Returns the number of mipmaps on success, and throws a QString otherwise.
+ * The parameters format, width and height will be filled with information about the loaded texture.
  *
  * @param filepath	The full path to the texture that must be loaded. Can also be a color in the format "#AABBGGRR", "#AABBGGRRs" or "#AABBGGRRn" (hexadecimal) to generate a 1x1 texture from a solid color. Adding the 's' or 'n' suffix creates an sRGB or signed texture from the color, respectively.
  * @param format	Contain the format, for instance "DDS (DXT3)" or "TGA", on successful load.
  * @param width		Contains the texture width on successful load.
  * @param height	Contains the texture height on successful load.
- * @param mipmaps	Contains the number of mipmaps on successful load.
- * @return			True if the load was successful, false otherwise.
+ * @return			The number of mipmaps on successful load, 0 otherwise.
  */
-extern bool texLoad( const NifModel * nif, const QString & filepath, TexCache::TexFmt & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint * id );
-extern bool texLoad( const NifModel * nif, const QString & filepath, TexCache::TexFmt & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint * id );
+extern GLuint texLoad( const NifModel * nif, const QString & filepath, TexCache::TexFmt & format, GLenum & target, GLuint & width, GLuint & height, GLuint * id );
 
 /*! A function for loading textures.
  *
  * Loads a texture pointed to by model index.
- * Returns true on success, and throws a QString otherwise.
- * The parameters format, width, height and mipmaps will be filled with information about
- * the loaded texture.
+ * Returns the number of mipmaps on success, and throws a QString otherwise.
+ * The parameters format, width and height will be filled with information about the loaded texture.
  *
  * @param iData		Reference to pixel data block
  * @param format	Contain the format, for instance "DDS (DXT3)" or "TGA", on successful load.
  * @param width		Contains the texture width on successful load.
  * @param height	Contains the texture height on successful load.
- * @param mipmaps	Contains the number of mipmaps on successful load.
- * @return			True if the load was successful, false otherwise.
+ * @return			The number of mipmaps on successful load, 0 otherwise.
  */
-extern bool texLoad( const QModelIndex & iData, TexCache::TexFmt & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint * id );
+extern GLuint texLoad( const QModelIndex & iData, TexCache::TexFmt & format, GLenum & target, GLuint & width, GLuint & height, GLuint * id );
 
 /*! A function which checks whether the given file can be loaded.
  *

@@ -128,7 +128,7 @@ BoundSphere Particles::bounds() const
 
 void Particles::drawShapes( NodeList * secondPass )
 {
-	if ( isHidden() )
+	if ( isHidden() || Node::SELECTING )
 		return;
 
 	AlphaProperty * aprop = findProperty<AlphaProperty>();

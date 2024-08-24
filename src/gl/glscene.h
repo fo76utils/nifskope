@@ -131,7 +131,7 @@ public:
 		return 0;
 	}
 
-	inline const TexCache::Tex * getTextureInfo( const QStringView & fname ) const
+	inline const TexCache::Tex::ImageInfo * getTextureInfo( const QStringView & fname ) const
 	{
 		return textures->getTextureInfo( fname );
 	}

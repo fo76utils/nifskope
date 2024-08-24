@@ -629,11 +629,12 @@ GLuint texLoadBMP( QIODevice & f, TexCache::TexFmt & texformat, GLenum & target,
 	return 0;
 }
 
-GLuint texLoadDDS( const QString & filepath, GLenum & target, GLuint & mipmaps, QByteArray & data, GLuint * id )
+GLuint texLoadDDS( const QString & filepath, GLenum & target, QByteArray & data, GLuint * id )
 {
 	if ( data.size() < 128 )
 		return 0;
 
+	GLuint mipmaps = 0;
 	GLuint result = 0;
 	gli::texture texture;
 	if ( extStorageSupported ) {
@@ -654,7 +655,6 @@ GLuint texLoadDDS( const QString & filepath, GLenum & target, GLuint & mipmaps, 
 		id[0] = result;
 		mipmaps = (GLuint)texture.levels();
 	} else {
-		mipmaps = 0;
 		QString file = filepath;
 		Message::append( "One or more textures failed to load.",
 							QString( "'%1' is corrupt or unsupported." ).arg( file )
@@ -674,7 +674,7 @@ void TexCache::clearCubeCache()
 	sfCubeMapCache.clear();
 }
 
-GLuint texLoadPBRCubeMap( const NifModel * nif, const QString & filepath, GLenum & target, GLuint & mipmaps, QByteArray & data, GLuint * id )
+GLuint texLoadPBRCubeMap( const NifModel * nif, const QString & filepath, GLenum & target, QByteArray & data, GLuint * id )
 {
 	if ( data.size() < 148 )
 		return 0;
@@ -740,14 +740,13 @@ GLuint texLoadPBRCubeMap( const NifModel * nif, const QString & filepath, GLenum
 		size_t	newSize = sfCubeMapCache.convertImage( reinterpret_cast< unsigned char * >(tmpData.data()), dataSize,
 														true, spaceRequired );
 		tmpData.resize( newSize );
-		GLuint	tmpMipmaps = 0;
-		(void) texLoadDDS( filepath, target, tmpMipmaps, tmpData, id + 1 );
+		(void) texLoadDDS( filepath, target, tmpData, id + 1 );
 	}
 
-	return texLoadDDS( filepath, target, mipmaps, data, id );
+	return texLoadDDS( filepath, target, data, id );
 }
 
-bool texLoadColor( const NifModel * nif, const QString & filepath, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint * id )
+GLuint texLoadColor( const NifModel * nif, const QString & filepath, GLenum & target, GLuint & width, GLuint & height, QByteArray & data, GLuint * id )
 {
 	// generate 1x1 texture from an RGBA color in "#AABBGGRR" format
 	QChar	c;
@@ -777,14 +776,14 @@ bool texLoadColor( const NifModel * nif, const QString & filepath, GLenum & targ
 		FileBuffer::writeUInt32Fast( dataPtr + ( 148 + (i << 2) ), color );
 
 	if ( isCubeMap && nif && nif->getBSVersion() >= 151 )
-		return bool( texLoadPBRCubeMap( nif, filepath, target, mipmaps, data, id ) );
-	return bool( texLoadDDS( filepath, target, mipmaps, data, id ) );
+		return texLoadPBRCubeMap( nif, filepath, target, data, id );
+	return texLoadDDS( filepath, target, data, id );
 }
 
 // (public function, documented in gltexloaders.h)
-bool texLoad( const QModelIndex & iData, TexCache::TexFmt & texformat, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint * id )
+GLuint texLoad( const QModelIndex & iData, TexCache::TexFmt & texformat, GLenum & target, GLuint & width, GLuint & height, GLuint * id )
 {
-	bool ok = false;
+	GLuint mipmaps = 0;
 
 	auto nif = NifModel::fromValidIndex(iData);
 	if ( nif ) {
@@ -875,11 +874,11 @@ bool texLoad( const QModelIndex & iData, TexCache::TexFmt & texformat, GLenum & 
 		switch ( format ) {
 		case 0: // PX_FMT_RGB8
 			texformat.imageEncoding |= TexCache::TexFmt::TEXFMT_RGB8;
-			ok = ( 0 != texLoadRaw( buf, width, height, mipmaps, bpp, bytespp, mask, flipV, flipH, rle ) );
+			mipmaps = texLoadRaw( buf, width, height, mipmaps, bpp, bytespp, mask, flipV, flipH, rle );
 			break;
 		case 1: // PX_FMT_RGBA8
 			texformat.imageEncoding |= TexCache::TexFmt::TEXFMT_RGBA8;
-			ok = ( 0 != texLoadRaw( buf, width, height, mipmaps, bpp, bytespp, mask, flipV, flipH, rle ) );
+			mipmaps = texLoadRaw( buf, width, height, mipmaps, bpp, bytespp, mask, flipV, flipH, rle );
 			break;
 		case 2: // PX_FMT_PAL8
 			{
@@ -904,7 +903,7 @@ bool texLoad( const QModelIndex & iData, TexCache::TexFmt & texformat, GLenum & 
 						}
 					}
 
-					ok = ( 0 != texLoadPal( buf, width, height, mipmaps, bpp, bytespp, map.data(), flipV, flipH, rle ) );
+					mipmaps = texLoadPal( buf, width, height, mipmaps, bpp, bytespp, map.data(), flipV, flipH, rle );
 				}
 			}
 			break;
@@ -934,13 +933,11 @@ bool texLoad( const QModelIndex & iData, TexCache::TexFmt & texformat, GLenum & 
 			buf.buffer().prepend( QByteArray::fromStdString( "DDS " ) );
 
 			mipmaps = texLoadDDS( QString( "[%1] NiPixelData" ).arg( nif->getBlockNumber( iData ) ),
-									target, mipmaps, buf.buffer(), id );
-
-			ok = (mipmaps > 0);
+									target, buf.buffer(), id );
 		}
 	}
 
-	return ok;
+	return mipmaps;
 }
 
 //! Load NiPixelData or NiPersistentSrcTextureRendererData from a NifModel
@@ -964,7 +961,7 @@ GLuint texLoadNIF( QIODevice & f, TexCache::TexFmt & texformat, GLenum & target,
 		if ( !iData.isValid() || iData == QModelIndex() )
 			throw QString( "this is not a normal .nif file; there should be only pixel data as root blocks" );
 
-		texLoad( iData, texformat, target, width, height, mipmaps, id );
+		mipmaps = texLoad( iData, texformat, target, width, height, id );
 	}
 
 	return mipmaps;
@@ -1255,12 +1252,6 @@ gli::texture load_if_valid( const char * data, unsigned int size )
 }
 
 
-bool texLoad( const NifModel * nif, const QString & filepath, TexCache::TexFmt & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, GLuint * id)
-{
-	QByteArray	tmp;
-	return texLoad( nif, filepath, format, target, width, height, mipmaps, tmp, id );
-}
-
 static void extract_pbr_lut_data( QByteArray & data )
 {
 	static QByteArray	pbrLUTData;
@@ -1272,31 +1263,30 @@ static void extract_pbr_lut_data( QByteArray & data )
 	data = pbrLUTData;
 }
 
-bool texLoad( const NifModel * nif, const QString & filepath, TexCache::TexFmt & format, GLenum & target, GLuint & width, GLuint & height, GLuint & mipmaps, QByteArray & data, GLuint * id )
+GLuint texLoad( const NifModel * nif, const QString & filepath, TexCache::TexFmt & format, GLenum & target, GLuint & width, GLuint & height, GLuint * id )
 {
-	width = height = mipmaps = 0;
+	width = height = 0;
+	GLuint	mipmaps = 0;
 
-	if ( data.isEmpty() ) {
-		if ( filepath.startsWith('#') && (filepath.length() == 9 || filepath.length() == 10) ) {
-			if ( filepath == "#sfpbr.dds" )
-				extract_pbr_lut_data( data );
-			else
-				return texLoadColor( nif, filepath, target, width, height, mipmaps, data, id );
-		} else {
-			bool	fileFound;
-			if ( !nif )
-				fileFound = Game::GameManager::get_file( data, Game::OTHER, filepath, "textures", "" );
-			else
-				fileFound = nif->getResourceFile( data, filepath, "textures", "" );
-			if ( !fileFound )
-				throw QString( "could not open file" );
-		}
-
-		if ( data.isEmpty() )
-			return false;
+	QByteArray	data;
+	if ( filepath.startsWith('#') && (filepath.length() == 9 || filepath.length() == 10) ) {
+		if ( filepath == "#sfpbr.dds" )
+			extract_pbr_lut_data( data );
+		else
+			return texLoadColor( nif, filepath, target, width, height, data, id );
+	} else {
+		bool	fileFound;
+		if ( !nif )
+			fileFound = Game::GameManager::get_file( data, Game::OTHER, filepath, "textures", "" );
+		else
+			fileFound = nif->getResourceFile( data, filepath, "textures", "" );
+		if ( !fileFound )
+			throw QString( "could not open file" );
 	}
 
-	bool isSupported = true;
+	if ( data.isEmpty() )
+		return 0;
+
 	if ( filepath.endsWith( ".dds", Qt::CaseInsensitive ) || ( filepath.endsWith( ".hdr", Qt::CaseInsensitive ) && nif && nif->getBSVersion() >= 151 ) ) {
 		bool	isCubeMap = false;
 		if ( data.size() >= 148 ) {
@@ -1311,9 +1301,9 @@ bool texLoad( const NifModel * nif, const QString & filepath, TexCache::TexFmt &
 			}
 		}
 		if ( isCubeMap && nif && nif->getBSVersion() >= 151 ) {
-			mipmaps = texLoadPBRCubeMap( nif, filepath, target, mipmaps, data, id );
+			mipmaps = texLoadPBRCubeMap( nif, filepath, target, data, id );
 		} else {
-			mipmaps = texLoadDDS( filepath, target, mipmaps, data, id );
+			mipmaps = texLoadDDS( filepath, target, data, id );
 		}
 	} else {
 		QBuffer f( &data );
@@ -1326,20 +1316,15 @@ bool texLoad( const NifModel * nif, const QString & filepath, TexCache::TexFmt &
 			mipmaps = texLoadBMP( f, format, target, width, height, id );
 		else if ( filepath.endsWith( ".nif", Qt::CaseInsensitive ) || filepath.endsWith( ".texcache", Qt::CaseInsensitive ) )
 			mipmaps = texLoadNIF( f, format, target, width, height, id );
-		else
-			isSupported = false;
 
 		f.close();
 	}
 	data.clear();
 
-	if ( mipmaps == 0 )
-		isSupported = false;
-
 	if ( !target )
 		target = GL_TEXTURE_2D;
 
-	if ( isSupported ) {
+	if ( mipmaps > 0 ) {
 		GLenum t = target;
 		if ( target == GL_TEXTURE_CUBE_MAP )
 			t = GL_TEXTURE_CUBE_MAP_POSITIVE_X;
@@ -1374,7 +1359,7 @@ bool texLoad( const NifModel * nif, const QString & filepath, TexCache::TexFmt &
 		);
 	}
 
-	return isSupported;
+	return mipmaps;
 }
 
 bool texIsSupported( const QString & filepath )
@@ -1895,7 +1880,7 @@ bool texSaveNIF( NifModel * nif, const QString & filepath, QModelIndex & iData )
 		id[1] = 0;
 
 		// fastest way to get parameters and ensure texture is active
-		if ( texLoad( nif, filepath, format, target, width, height, mipmaps, id ) ) {
+		if ( ( mipmaps = texLoad( nif, filepath, format, target, width, height, id ) ) > 0 ) {
 			//qDebug() << "Width" << width << "height" << height << "mipmaps" << mipmaps << "format" << format.toString();
 		} else {
 			qCCritical( nsIo ) << QObject::tr( "Error importing %1" ).arg( filepath );
