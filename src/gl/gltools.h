@@ -34,6 +34,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define GLTOOLS_H
 
 #include "data/niftypes.h"
+#include "filebuf.hpp"
 
 #include <QOpenGLContext>
 #include <QPair>
@@ -283,7 +284,16 @@ inline GLuint glClosestMatch( GLuint * buffer, GLint hits )
 void renderText( double x, double y, double z, const QString & str );
 void renderText( const Vector3 & c, const QString & str );
 
-#define ID2COLORKEY( id ) (id + 1)
-#define COLORKEY2ID( id ) (id - 1)
+static inline void setColorKeyFromID( int id )
+{
+	GLubyte	idBuf[4];
+	FileBuffer::writeUInt32Fast( idBuf, std::uint32_t( id + 1 ) );
+	glColor4ubv( idBuf );
+}
+
+static inline int getIDFromColorKey( std::uint32_t rgba )
+{
+	return int( rgba ) - 1;
+}
 
 #endif

@@ -507,8 +507,7 @@ void Node::draw()
 		return;
 
 	if ( Node::SELECTING ) {
-		int s_nodeId = ID2COLORKEY( nodeId );
-		glColor4ubv( (GLubyte *)&s_nodeId );
+		setColorKeyFromID( nodeId );
 		glLineWidth( GLView::Settings::lineWidthSelect );	// make hitting a line a litlle bit more easy
 	} else {
 		glEnable( GL_DEPTH_TEST );
@@ -574,8 +573,7 @@ void Node::drawSelection() const
 	auto n = scene->currentIndex.data( NifSkopeDisplayRole ).toString();
 
 	if ( Node::SELECTING ) {
-		int s_nodeId = ID2COLORKEY( nodeId );
-		glColor4ubv( (GLubyte *)&s_nodeId );
+		setColorKeyFromID( nodeId );
 		glLineWidth( GLView::Settings::lineWidthSelect );
 	} else {
 		glEnable( GL_DEPTH_TEST );
@@ -585,6 +583,7 @@ void Node::drawSelection() const
 		glDisable( GL_NORMALIZE );
 		glDisable( GL_LIGHTING );
 		glDisable( GL_COLOR_MATERIAL );
+		glEnable( GL_POINT_SMOOTH );
 		glEnable( GL_BLEND );
 		glDisable( GL_ALPHA_TEST );
 		glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
@@ -789,15 +788,13 @@ void drawHvkShape( const NifModel * nif, const QModelIndex & iShape, QStack<QMod
 		glPopMatrix();
 	} else if ( name == "bhkSphereShape" ) {
 		if ( Node::SELECTING ) {
-			int s_nodeId = ID2COLORKEY( nif->getBlockNumber( iShape ) );
-			glColor4ubv( (GLubyte *)&s_nodeId );
+			setColorKeyFromID( nif->getBlockNumber( iShape ) );
 		}
 
 		drawSphere( Vector3(), nif->get<float>( iShape, "Radius" ) );
 	} else if ( name == "bhkMultiSphereShape" ) {
 		if ( Node::SELECTING ) {
-			int s_nodeId = ID2COLORKEY( nif->getBlockNumber( iShape ) );
-			glColor4ubv( (GLubyte *)&s_nodeId );
+			setColorKeyFromID( nif->getBlockNumber( iShape ) );
 		}
 
 		QModelIndex iSpheres = nif->getIndex( iShape, "Spheres" );
@@ -807,16 +804,14 @@ void drawHvkShape( const NifModel * nif, const QModelIndex & iShape, QStack<QMod
 		}
 	} else if ( name == "bhkBoxShape" ) {
 		if ( Node::SELECTING ) {
-			int s_nodeId = ID2COLORKEY( nif->getBlockNumber( iShape ) );
-			glColor4ubv( (GLubyte *)&s_nodeId );
+			setColorKeyFromID( nif->getBlockNumber( iShape ) );
 		}
 
 		Vector3 v = nif->get<Vector3>( iShape, "Dimensions" );
 		drawBox( v, -v );
 	} else if ( name == "bhkCapsuleShape" ) {
 		if ( Node::SELECTING ) {
-			int s_nodeId = ID2COLORKEY( nif->getBlockNumber( iShape ) );
-			glColor4ubv( (GLubyte *)&s_nodeId );
+			setColorKeyFromID( nif->getBlockNumber( iShape ) );
 		}
 
 		drawCapsule( nif->get<Vector3>( iShape, "First Point" ), nif->get<Vector3>( iShape, "Second Point" ), nif->get<float>( iShape, "Radius" ) );
@@ -826,8 +821,7 @@ void drawHvkShape( const NifModel * nif, const QModelIndex & iShape, QStack<QMod
 		glScalef( s, s, s );
 
 		if ( Node::SELECTING ) {
-			int s_nodeId = ID2COLORKEY( nif->getBlockNumber( iShape ) );
-			glColor4ubv( (GLubyte *)&s_nodeId );
+			setColorKeyFromID( nif->getBlockNumber( iShape ) );
 		}
 
 		drawNiTSS( nif, iShape );
@@ -843,8 +837,7 @@ void drawHvkShape( const NifModel * nif, const QModelIndex & iShape, QStack<QMod
 		glPopMatrix();
 	} else if ( name == "bhkConvexVerticesShape" ) {
 		if ( Node::SELECTING ) {
-			int s_nodeId = ID2COLORKEY( nif->getBlockNumber( iShape ) );
-			glColor4ubv( (GLubyte *)&s_nodeId );
+			setColorKeyFromID( nif->getBlockNumber( iShape ) );
 		}
 
 		drawConvexHull( nif, iShape, 1.0 );
@@ -872,8 +865,7 @@ void drawHvkShape( const NifModel * nif, const QModelIndex & iShape, QStack<QMod
 		drawHvkShape( nif, nif->getBlockIndex( nif->getLink( iShape, "Shape" ) ), stack, scene, origin_color3fv );
 	} else if ( name == "bhkPackedNiTriStripsShape" || name == "hkPackedNiTriStripsData" ) {
 		if ( Node::SELECTING ) {
-			int s_nodeId = ID2COLORKEY( nif->getBlockNumber( iShape ) );
-			glColor4ubv( (GLubyte *)&s_nodeId );
+			setColorKeyFromID( nif->getBlockNumber( iShape ) );
 		}
 
 		QModelIndex iData = nif->getBlockIndex( nif->getLink( iShape, "Data" ) );
@@ -1010,8 +1002,7 @@ void drawHvkShape( const NifModel * nif, const QModelIndex & iShape, QStack<QMod
 		}
 	} else if ( name == "bhkCompressedMeshShape" ) {
 		if ( Node::SELECTING ) {
-			int s_nodeId = ID2COLORKEY( nif->getBlockNumber( iShape ) );
-			glColor4ubv( (GLubyte *)&s_nodeId );
+			setColorKeyFromID( nif->getBlockNumber( iShape ) );
 		}
 
 		drawCMS( nif, iShape );
@@ -1062,8 +1053,7 @@ void drawHvkConstraint( const NifModel * nif, const QModelIndex & iConstraint, c
 	Color3 color_b( 0.6f, 0.8f, 0.0f );
 
 	if ( Node::SELECTING ) {
-		int s_nodeId = ID2COLORKEY( nif->getBlockNumber( iConstraint ) );
-		glColor4ubv( (GLubyte *)&s_nodeId );
+		setColorKeyFromID( nif->getBlockNumber( iConstraint ) );
 		glLineWidth( GLView::Settings::lineWidthSelect );	// make hitting a line a litlle bit more easy
 	} else {
 		if ( scene->currentBlock == nif->getBlockIndex( iConstraint ) ) {
@@ -1368,8 +1358,7 @@ void Node::drawHavok()
 		glMultMatrix( bt );
 
 		if ( Node::SELECTING ) {
-			int s_nodeId = ID2COLORKEY( nodeId );
-			glColor4ubv( (GLubyte *)&s_nodeId );
+			setColorKeyFromID( nodeId );
 		} else {
 			glColor( Color3( 1.0f, 0.0f, 0.0f ) );
 			glDisable( GL_LIGHTING );
@@ -1423,8 +1412,7 @@ void Node::drawHavok()
 			}
 
 			if ( Node::SELECTING ) {
-				int s_nodeId = ID2COLORKEY( nif->getBlockNumber( iBSMultiBoundData ) );
-				glColor4ubv( (GLubyte *)&s_nodeId );
+				setColorKeyFromID( nif->getBlockNumber( iBSMultiBoundData ) );
 				glLineWidth( GLView::Settings::lineWidthSelect );
 			} else {
 				glColor( Color4( 1.0f, 1.0f, 1.0f, 0.6f ) );
@@ -1456,8 +1444,7 @@ void Node::drawHavok()
 			glMultMatrix( worldTrans() );
 
 			if ( Node::SELECTING ) {
-				int s_nodeId = ID2COLORKEY( nif->getBlockNumber( iBound ) );
-				glColor4ubv( (GLubyte *)&s_nodeId );
+				setColorKeyFromID( nif->getBlockNumber( iBound ) );
 			} else {
 				glColor( Color3( 1.0f, 0.0f, 0.0f ) );
 				glDisable( GL_LIGHTING );
@@ -1532,8 +1519,7 @@ void Node::drawHavok()
 	drawHvkShape( nif, nif->getBlockIndex( nif->getLink( iBody, "Shape" ) ), shapeStack, scene, colors[ color_index ] );
 
 	if ( Node::SELECTING && scene->hasOption(Scene::ShowAxes) ) {
-		int s_nodeId = ID2COLORKEY( nif->getBlockNumber( iBody ) );
-		glColor4ubv( (GLubyte *)&s_nodeId );
+		setColorKeyFromID( nif->getBlockNumber( iBody ) );
 		glDepthFunc( GL_ALWAYS );
 		drawAxes( Vector3( nif->get<Vector4>( iBody, "Center" ) ), 1.0f / bhkScaleMult( nif ), false );
 		glDepthFunc( GL_LEQUAL );
@@ -1710,8 +1696,7 @@ void drawFurnitureMarker( const NifModel * nif, const QModelIndex & iPosition )
 
 	if ( Node::SELECTING ) {
 		GLint id = ( nif->getBlockNumber( iPosition ) & 0xffff ) | ( ( iPosition.row() & 0xffff ) << 16 );
-		int s_nodeId = ID2COLORKEY( id );
-		glColor4ubv( (GLubyte *)&s_nodeId );
+		setColorKeyFromID( id );
 	}
 
 	for ( int n = 0; n < i; n++ ) {

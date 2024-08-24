@@ -967,8 +967,8 @@ int indexAt( /*GLuint *buffer,*/ NifModel * model, Scene * scene, QList<DrawFunc
 	img.save( "fbo.png" );
 #endif
 
-	// Encode BGRA to Int
-	std::int32_t	a = std::int32_t( ( pixel & 0xFF00FF00U ) | ( ( pixel >> 16 ) & 0xFFU ) | ( ( pixel & 0xFFU ) << 16 ) );
+	// Convert BGRA to RGBA
+	pixel = ( pixel & 0xFF00FF00U ) | ( ( pixel & 0xFFU ) << 16 ) | ( ( pixel >> 16 ) & 0xFFU );
 
 	// Decode:
 	// R = (id & 0x000000FF) >> 0
@@ -976,7 +976,7 @@ int indexAt( /*GLuint *buffer,*/ NifModel * model, Scene * scene, QList<DrawFunc
 	// B = (id & 0x00FF0000) >> 16
 	// A = (id & 0xFF000000) >> 24
 
-	int choose = COLORKEY2ID( a );
+	int choose = getIDFromColorKey( pixel );
 
 	// Pick BSFurnitureMarker
 	if ( choose > 0 ) {

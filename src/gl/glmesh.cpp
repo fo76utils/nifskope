@@ -772,8 +772,7 @@ void Mesh::drawShapes( NodeList * secondPass )
 
 	if ( Node::SELECTING ) {
 		if ( scene->isSelModeObject() ) {
-			int s_nodeId = ID2COLORKEY( nodeId );
-			glColor4ubv( (GLubyte *)&s_nodeId );
+			setColorKeyFromID( nodeId );
 		} else {
 			glColor4f( 0, 0, 0, 1 );
 		}
@@ -907,8 +906,7 @@ void Mesh::drawVerts() const
 
 	for ( int i = 0; i < transVerts.count(); i++ ) {
 		if ( Node::SELECTING ) {
-			int id = ID2COLORKEY( (shapeNumber << 16) + i );
-			glColor4ubv( (GLubyte *)&id );
+			setColorKeyFromID( ( shapeNumber << 16 ) + i );
 		}
 		glVertex( transVerts.value( i ) );
 	}

@@ -57,10 +57,9 @@ void BSMesh::drawShapes( NodeList * secondPass )
 
 	if ( Node::SELECTING ) {
 		if ( scene->isSelModeObject() ) {
-			int s_nodeId = ID2COLORKEY(nodeId);
-			glColor4ubv((GLubyte*)&s_nodeId);
+			setColorKeyFromID( nodeId );
 		} else {
-			glColor4f(0, 0, 0, 1);
+			glColor4f( 0, 0, 0, 1 );
 		}
 	}
 
@@ -395,9 +394,7 @@ void BSMesh::drawVerts() const
 	glBegin( GL_POINTS );
 	for ( int i = 0; i < transVerts.count(); i++ ) {
 		if ( Node::SELECTING ) {
-			GLubyte	id[4];
-			FileBuffer::writeUInt32Fast( id, std::uint32_t( ID2COLORKEY( (shapeNumber << 16) + i ) ) );
-			glColor4ubv( id );
+			setColorKeyFromID( ( shapeNumber << 16 ) + i );
 		}
 		glVertex( transVerts.value(i) );
 	}
