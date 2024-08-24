@@ -45,6 +45,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QSettings>
 
 #include <algorithm>
+#include <new>
 
 
 //! @file gltex.cpp TexCache management
@@ -199,11 +200,18 @@ QString TexCache::TexFmt::toString() const
 
 TexCache::TexCache( QObject * parent ) : QObject( parent )
 {
+	textures = nullptr;
+	textureHashMask = 0;
+	textureCount = 0;
+	rehashTextures();
 }
 
 TexCache::~TexCache()
 {
-	//flush();
+#if 0
+	flush();
+#endif
+	std::free( textures );
 }
 
 QString TexCache::find( const QString & file, const NifModel * nif )
@@ -290,20 +298,92 @@ bool TexCache::isSupported( const QString & filePath )
 	return texIsSupported( filePath );
 }
 
-int TexCache::bind( const QString & fname, const NifModel * nif, bool useSecondTexture )
+const TexCache::Tex * TexCache::getTextureInfo( const QStringView & file ) const
 {
-	Tex * tx = textures.value( fname );
-	if ( !tx ) [[unlikely]] {
-		tx = new Tex;
-		tx->filename = fname;
-		tx->id[0] = 0;
-		tx->id[1] = 0;
-		tx->mipmaps = 0;
+	if ( file.isEmpty() ) [[unlikely]]
+		return nullptr;
+	const QChar *	s = file.data();
+	size_t	nameLen = size_t( file.size() );
+	std::uint32_t	h = hashFunctionUInt32( s, nameLen * sizeof( QChar ) );
+	std::uint32_t	m = textureHashMask;
+	for ( h = h & m; textures[h]; h = ( h + 1U ) & m ) {
+		const Tex *	p = textures[h];
+		if ( size_t( p->filename.size() ) == nameLen
+			&& std::memcmp( p->filename.constData(), s, nameLen * sizeof( QChar ) ) == 0 ) {
+			return p;
+		}
+	}
+	return nullptr;
+}
 
-		textures.insert( tx->filename, tx );
+inline TexCache::Tex * TexCache::insertTex( const QStringView & file )
+{
+	if ( file.isEmpty() ) [[unlikely]]
+		return nullptr;
+	const QChar *	s = file.data();
+	size_t	nameLen = size_t( file.size() );
+	std::uint32_t	h = hashFunctionUInt32( s, nameLen * sizeof( QChar ) );
+	std::uint32_t	m = textureHashMask;
+	for ( h = h & m; textures[h]; h = ( h + 1U ) & m ) {
+		Tex *	p = textures[h];
+		if ( size_t( p->filename.size() ) == nameLen
+			&& std::memcmp( p->filename.constData(), s, nameLen * sizeof( QChar ) ) == 0 ) {
+			return p;
+		}
+	}
 
-		if ( !isSupported( fname ) ) {
-			tx->id[0] = 0xFFFFFFFF;
+	Tex *	tx = new Tex;
+	textures[h] = tx;
+	tx->filename = file.toString();
+	tx->id[0] = 0;
+	tx->id[1] = 0;
+
+	textureCount++;
+	if ( ( std::uint64_t(textureCount) * 3U ) > ( std::uint64_t(textureHashMask) * 2U ) )
+		rehashTextures();
+
+	return tx;
+}
+
+void TexCache::rehashTextures()
+{
+	std::uint32_t	prvMask = textureHashMask;
+	std::uint32_t	m = ( prvMask << 1 ) | 15U;
+	size_t	n = size_t( m ) + 1;
+	Tex **	newTextures = reinterpret_cast< Tex ** >( std::malloc( n * sizeof( Tex * ) ) );
+	if ( !newTextures )
+		throw std::bad_alloc();
+	for ( size_t i = 0; i < n; i++ )
+		newTextures[i] = nullptr;
+	if ( textureCount ) {
+		for ( size_t i = 0; i <= prvMask; i++ ) {
+			Tex *	tx = textures[i];
+			if ( tx ) {
+				std::uint32_t	h =
+					hashFunctionUInt32( tx->filename.constData(), size_t( tx->filename.size() ) * sizeof( QChar ) ) & m;
+				while ( newTextures[h] )
+					h = ( h + 1U ) & m;
+				newTextures[h] = tx;
+			}
+		}
+	}
+	std::free( textures );
+	textures = newTextures;
+	textureHashMask = m;
+}
+
+int TexCache::bind( const QStringView & fname, const NifModel * nif, bool useSecondTexture )
+{
+	Tex *	tx = insertTex( fname );
+	if ( !tx ) [[unlikely]]
+		return 0;
+	if ( !tx->isLoaded() ) [[unlikely]] {
+		if ( tx->id[0] )
+			return 0;
+
+		if ( !isSupported( tx->filename ) ) {
+			tx->id[0] = GLuint( -1 );
+			return 0;
 		} else {
 			tx->filepath = find( tx->filename, nif );
 			tx->load( nif );
@@ -311,8 +391,6 @@ int TexCache::bind( const QString & fname, const NifModel * nif, bool useSecondT
 		}
 	}
 
-	if ( tx->id[0] == 0xFFFFFFFF ) [[unlikely]]
-		return 0;
 	if ( !tx->id[size_t(useSecondTexture)] ) [[unlikely]]
 		return 0;
 
@@ -363,12 +441,16 @@ int TexCache::bind( const QModelIndex & iSource )
 
 void TexCache::flush()
 {
-	for ( Tex * tx : textures ) {
-		if ( tx->id[0] )
-			glDeleteTextures( ( !tx->id[1] ? 1 : 2 ), tx->id );
+	for ( size_t i = 0; i <= textureHashMask; i++ ) {
+		Tex *	tx = textures[i];
+		if ( tx ) {
+			if ( tx->isLoaded() )
+				glDeleteTextures( ( !tx->id[1] ? 1 : 2 ), tx->id );
+			delete tx;
+			textures[i] = nullptr;
+		}
 	}
-	qDeleteAll( textures );
-	textures.clear();
+	textureCount = 0;
 
 	for ( Tex * tx : embedTextures ) {
 		if ( tx->id[0] )
@@ -406,14 +488,18 @@ QString TexCache::info( const QModelIndex & iSource )
 			}
 		} else {
 			QString filename = nif->get<QString>( iSource, "File Name" );
-			Tex * tx = textures.value( filename );
-			temp = QString( "External texture file: %1\nTexture path: %2\nFormat: %3\nWidth: %4\nHeight: %5\nMipmaps: %6" )
-					.arg( tx->filename )
-					.arg( tx->filepath )
-					.arg( tx->format.toString() )
-					.arg( tx->width )
-					.arg( tx->height )
-					.arg( tx->mipmaps );
+			const Tex * tx = getTextureInfo( filename );
+			if ( tx ) {
+				temp = QString( "External texture file: %1\nTexture path: %2\nFormat: %3\nWidth: %4\nHeight: %5\nMipmaps: %6" )
+						.arg( tx->filename )
+						.arg( tx->filepath )
+						.arg( tx->format.toString() )
+						.arg( tx->width )
+						.arg( tx->height )
+						.arg( tx->mipmaps );
+			} else {
+				temp = QString( "External texture file '%1' not found" ).arg( filename );
+			}
 		}
 	}
 
@@ -440,8 +526,9 @@ bool TexCache::importFile( NifModel * nif, const QModelIndex & iSource, QModelIn
 		if ( nif->get<quint8>( iSource, "Use External" ) == 1 ) {
 			QString filename = nif->get<QString>( iSource, "File Name" );
 			//qDebug() << "TexCache::importFile: Texture has filename (from NIF) " << filename;
-			Tex * tx = textures.value( filename );
-			return tx->savePixelData( nif, iSource, iData );
+			const Tex * tx = getTextureInfo( filename );
+			if ( tx )
+				return tx->savePixelData( nif, iSource, iData );
 		}
 	}
 
@@ -486,7 +573,7 @@ bool TexCache::Tex::saveAsFile( const QModelIndex & index, QString & savepath )
 	return texSaveDDS( index, savepath, width, height, mipmaps );
 }
 
-bool TexCache::Tex::savePixelData( NifModel * nif, const QModelIndex & iSource, QModelIndex & iData )
+bool TexCache::Tex::savePixelData( NifModel * nif, const QModelIndex & iSource, QModelIndex & iData ) const
 {
 	Q_UNUSED( iSource );
 	// gltexloaders function goes here

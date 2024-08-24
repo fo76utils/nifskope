@@ -38,6 +38,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QHash>
 #include <QPersistentModelIndex>
 #include <QString>
+#include <QStringView>
 
 
 //! @file gltex.h TexCache etc. header
@@ -113,14 +114,19 @@ public:
 		//! Save the texture as a file
 		bool saveAsFile( const QModelIndex & index, QString & savepath );
 		//! Save the texture as pixel data
-		bool savePixelData( NifModel * nif, const QModelIndex & iSource, QModelIndex & iData );
+		bool savePixelData( NifModel * nif, const QModelIndex & iSource, QModelIndex & iData ) const;
+		//! Returns true if load() was called and at least one valid texture ID was generated
+		inline bool isLoaded() const
+		{
+			return bool( ( id[0] + 1U ) & ~1U );
+		}
 	};
 
 	TexCache( QObject * parent = nullptr );
 	~TexCache();
 
 	//! Bind a texture from filename
-	int bind( const QString & fname, const NifModel * nif = nullptr, bool useSecondTexture = false );
+	int bind( const QStringView & fname, const NifModel * nif = nullptr, bool useSecondTexture = false );
 	//! Bind a texture from pixel data
 	int bind( const QModelIndex & iSource );
 
@@ -163,17 +169,16 @@ public slots:
 	void setNifFolder( const QString & );
 
 protected:
-	QHash<QString, Tex *> textures;
+	Tex ** textures;
+	std::uint32_t textureHashMask;
+	std::uint32_t textureCount;
 	QHash<QModelIndex, Tex *> embedTextures;
 
+	inline Tex * insertTex( const QStringView & file );
+	void rehashTextures();
+
 public:
-	inline const Tex * getTextureInfo( const QString & file ) const
-	{
-		auto	i = textures.find( file );
-		if ( i == textures.cend() )
-			return nullptr;
-		return i.value();
-	}
+	const Tex * getTextureInfo( const QStringView & file ) const;
 
 	// returns true if the settings have changed
 	static bool loadSettings( QSettings & settings );

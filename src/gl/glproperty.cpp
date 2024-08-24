@@ -939,7 +939,13 @@ bool BSShaderLightingProperty::getSFTexture( int & texunit, int & texUniform, Fl
 		else
 			c = c + c - 1.0f;					// SNORM
 	}
-	if ( texturePath && !texturePath->empty() && texunit >= 3 && texunit < TexCache::num_texture_units && activateTextureUnit(texunit, true) ) {
+	do {
+		size_t	n;
+		if ( !( texturePath && ( n = texturePath->length() ) > 0 && n <= 512 ) )
+			break;
+		if ( !( texunit >= 3 && texunit < TexCache::num_texture_units && activateTextureUnit(texunit, true) ) )
+			break;
+
 		TexClampMode	clampMode = TexClampMode::WRAP_S_WRAP_T;
 		if ( uvStream && uvStream->textureAddressMode ) {
 			if ( uvStream->textureAddressMode == 3 ) {
@@ -951,12 +957,20 @@ bool BSShaderLightingProperty::getSFTexture( int & texunit, int & texUniform, Fl
 			else
 				clampMode = TexClampMode::CLAMP_S_CLAMP_T;
 		}
-		if ( bind( QString::fromLatin1(texturePath->data(), qsizetype(texturePath->length())), false, clampMode ) ) {
-			texUniform = texunit - 2;
-			texunit++;
-			return true;
-		}
-	}
+
+		// convert std::string_view to a temporary array of QChar
+		std::uint16_t	tmpBuf[512];
+		convertStringToUInt16( tmpBuf, texturePath->data(), n );
+
+		if ( !bind( QStringView( tmpBuf, qsizetype( n ) ), false, clampMode ) )
+			break;
+
+		texUniform = texunit - 2;
+		texunit++;
+		return true;
+
+	} while ( false );
+
 	if ( textureReplacementMode > 0 && replUniform ) {
 		texUniform = -1;
 		*replUniform = c;
@@ -1010,7 +1024,7 @@ void BSShaderLightingProperty::loadSFMaterial()
 	const_cast< NifModel * >(nif)->loadSFMaterial( iBlock, ( sf_material_valid ? sf_material : nullptr ) );
 }
 
-bool BSShaderLightingProperty::bind( const QString & fname, bool forceTexturing, TexClampMode mode )
+bool BSShaderLightingProperty::bind( const QStringView & fname, bool forceTexturing, TexClampMode mode )
 {
 	GLuint mipmaps = scene->bindTexture( fname, false, forceTexturing );
 
