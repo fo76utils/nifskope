@@ -1889,7 +1889,7 @@ bool Renderer::setupProgramFO3( const NifModel * nif, Program * prog, Shape * me
 		}
 	}
 	if ( bsprop ) {
-		isDecal = bsprop->hasSF1( ShaderFlags::SLSF1_Decal ) | bsprop->hasSF1( ShaderFlags::SLSF1_Dynamic_Decal );
+		isDecal = bsprop->hasSF1( ShaderFlags::SF1( ShaderFlags::SLSF1_Decal | ShaderFlags::SLSF1_Dynamic_Decal ) );
 		hasSpecular = hasSpecular && bsprop->hasSF1( ShaderFlags::SLSF1_Specular );
 		hasCubeMap = hasCubeMap && bsprop->hasSF1( ShaderFlags::SLSF1_Environment_Mapping );
 		cubeMapScale = bsprop->environmentReflection;
@@ -2267,12 +2267,9 @@ void Renderer::setupFixedFunction( Shape * mesh )
 		texprop->bind( mesh->coords );
 	} else if ( BSShaderLightingProperty * texprop = props.get<BSShaderLightingProperty>() ) {
 		// standard multi texturing property
-		int stage = 0;
-
 		if ( texprop->bind( 0, mesh->coords ) ) {
 			//, mesh->coords, stage ) )
 			// base
-			stage++;
 			glTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE );
 
 			glTexEnvi( GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_MODULATE );
