@@ -27,6 +27,8 @@ Compiling NifSkope requires Qt 5.15. On Windows, [MSYS2](https://www.msys2.org/)
     pacman -S mingw-w64-ucrt-x86_64-qt5-imageformats mingw-w64-ucrt-x86_64-qt5-tools
     pacman -S git
 
+Using the MSYS2-CLANG64 environment instead of UCRT64 is also supported, in this case, the **ucrt** in the package names needs to be replaced with **clang**.
+
 All installed MSYS2 packages can be updated anytime later by running the command '**pacman -Syu**'. To download the complete NifSkope source code, use '**git clone**' as follows:
 
     git clone --recurse-submodules https://github.com/fo76utils/nifskope.git
