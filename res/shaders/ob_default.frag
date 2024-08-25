@@ -119,18 +119,18 @@ void main( void )
 	vec4 color = baseMap;
 
 	if ( isEffect ) {
-		float startO = min( falloffParams.z, 1.0 );
-		float stopO = max( falloffParams.w, 0.0 );
-
-		// TODO: When X and Y are both 0.0 or both 1.0 the effect is reversed.
-		float falloff = smoothstep( falloffParams.y, falloffParams.x, abs(E.b) );
-		falloff = mix( max(falloffParams.w, 0.0), min(falloffParams.z, 1.0), falloff );
-
 		float alphaMult = glowColor.a * glowColor.a;
+
+		if ( falloffParams.y != falloffParams.x ) {
+			// TODO: When X and Y are both 0.0 or both 1.0 the effect is reversed.
+			float falloff = smoothstep( falloffParams.y, falloffParams.x, abs(E.z) );
+			falloff = mix( max(falloffParams.w, 0.0), min(falloffParams.z, 1.0), falloff );
+			alphaMult *= falloff;
+		}
 
 		color *= C;
 		color.rgb = color.rgb * glowColor.rgb * glowMult;
-		color.a = color.a * falloff * alphaMult;
+		color.a = color.a * alphaMult;
 	} else {
 		vec4 normalMap = texture2D( NormalMap, offset );
 
