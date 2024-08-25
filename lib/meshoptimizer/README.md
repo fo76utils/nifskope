@@ -41,7 +41,8 @@ When optimizing a mesh, you should typically feed it through a set of optimizati
 4. Overdraw optimization
 5. Vertex fetch optimization
 6. Vertex quantization
-7. (optional) Vertex/index buffer compression
+7. Shadow indexing
+8. (optional) Vertex/index buffer compression
 
 ## Indexing
 
@@ -123,6 +124,29 @@ unsigned short pz = meshopt_quantizeHalf(v.z);
 ```
 
 Since quantized vertex attributes often need to remain in their compact representations for efficient transfer and storage, they are usually dequantized during vertex processing by configuring the GPU vertex input correctly to expect normalized integers or half precision floats, which often needs no or minimal changes to the shader code. When CPU dequantization is required instead, `meshopt_dequantizeHalf` can be used to convert half precision values back to single precision; for normalized integer formats, the dequantization just requires dividing by 2^N-1 for unorm and 2^(N-1)-1 for snorm variants, for example manually reversing `meshopt_quantizeUnorm(v, 10)` can be done by dividing by 1023.
+
+## Shadow indexing
+
+Many rendering pipelines require meshes to be rendered to depth-only targets, such as shadow maps or during a depth pre-pass, in addition to color/G-buffer targets. While using the same geometry data for both cases is possible, reducing the number of unique vertices for depth-only rendering can be beneficial, especially when the source geometry has many attribute seams due to faceted shading or lightmap texture seams.
+To achieve this, this library provides the `meshopt_generateShadowIndexBuffer` algorithm, which generates a second (shadow) index buffer that can be used with the original vertex data:
+
+
+
+This is possible to achieve using `meshopt_generateShadowIndexBuffer` algorithm, which will generate a second (shadow) index buffer that can be used with the original vertex data. Because the vertex data is shared, this should be done after other optimizations of the vertex/index data, but it is possible (and recommended) to optimize the resulting index buffer for vertex cache at the end:
+
+```c++
+std::vector<unsigned int> shadow_indices(index_count);
+// note: this assumes Vertex starts with float3 positions and should be adjusted accordingly for quantized positions
+meshopt_generateShadowIndexBuffer(&shadow_indices[0], indices, index_count, &vertices[0].x, vertex_count, sizeof(float) * 3, sizeof(Vertex));
+```
+
+Because the vertex data is shared, shadow indexing should be done after other optimizations of the vertex/index data. However, it's possible (and recommended) to optimize the resulting shadow index buffer for vertex cache:
+
+```c++
+meshopt_optimizeVertexCache(&shadow_indices[0], &shadow_indices[0], index_count, vertex_count);
+```
+
+In some cases, it may be beneficial to split the vertex positions into a separate buffer to maximize efficiency for depth-only rendering. Note that the example above assumes only positions are relevant for shadow rendering, but more complex materials may require adding texture coordinates (for alpha testing) or skinning data to the vertex portion used as a key. `meshopt_generateShadowIndexBufferMulti` can be useful for these cases if the relevant data is not contiguous.
 
 ## Vertex/index buffer compression
 
@@ -233,7 +257,7 @@ std::vector<unsigned int> remap(index_count);
 size_t vertex_count = meshopt_generateVertexRemapMulti(&remap[0], NULL, index_count, index_count, streams, sizeof(streams) / sizeof(streams[0]));
 ```
 
-After this `meshopt_remapVertexBuffer` needs to be called once for each vertex stream to produce the correctly reindexed stream.
+After this `meshopt_remapVertexBuffer` needs to be called once for each vertex stream to produce the correctly reindexed stream. For shadow indexing, similarly `meshopt_generateShadowIndexBufferMulti` is available as a replacement.
 
 Instead of calling `meshopt_optimizeVertexFetch` for reordering vertices in a single vertex buffer for efficiency, calling `meshopt_optimizeVertexFetchRemap` and then calling `meshopt_remapVertexBuffer` for each stream again is recommended.
 
@@ -334,7 +358,7 @@ size_t meshlet_count = meshopt_buildMeshlets(meshlets.data(), meshlet_vertices.d
 
 To generate the meshlet data, `max_vertices` and `max_triangles` need to be set within limits supported by the hardware; for NVidia the values of 64 and 124 are recommended (`max_triangles` must be divisible by 4 so 124 is the value closest to official NVidia's recommended 126). `cone_weight` should be left as 0 if cluster cone culling is not used, and set to a value between 0 and 1 to balance cone culling efficiency with other forms of culling like frustum or occlusion culling.
 
-Each resulting meshlet refers to a portion of `meshlet_vertices` and `meshlet_triangles` arrays; this data can be uploaded to GPU and used directly after trimming:
+Each resulting meshlet refers to a portion of `meshlet_vertices` and `meshlet_triangles` arrays; the arrays are overallocated for the worst case so it's recommended to trim them before saving them as an asset / uploading them to the GPU:
 
 ```c++
 const meshopt_Meshlet& last = meshlets[meshlet_count - 1];
@@ -350,6 +374,30 @@ For optimal performance, it is recommended to further optimize each meshlet in i
 
 ```c++
 meshopt_optimizeMeshlet(&meshlet_vertices[m.vertex_offset], &meshlet_triangles[m.triangle_offset], m.triangle_count, m.vertex_count);
+```
+
+Different applications will choose different strategies for rendering meshlets; on a GPU capable of mesh shading, meshlets can be rendered directly; for example, a basic GLSL shader for `VK_EXT_mesh_shader` extension could look like this (parts omitted for brevity):
+
+```glsl
+layout(binding = 0) readonly buffer Meshlets { Meshlet meshlets[]; };
+layout(binding = 1) readonly buffer MeshletVertices { uint meshlet_vertices[]; };
+layout(binding = 2) readonly buffer MeshletTriangles { uint8_t meshlet_triangles[]; };
+
+void main() {
+    Meshlet meshlet = meshlets[gl_WorkGroupID.x];
+    SetMeshOutputsEXT(meshlet.vertex_count, meshlet.triangle_count);
+
+    for (uint i = gl_LocalInvocationIndex; i < meshlet.vertex_count; i += gl_WorkGroupSize.x) {
+        uint index = meshlet_vertices[meshlet.vertex_offset + i];
+        gl_MeshVerticesEXT[i].gl_Position = world_view_projection * vec4(vertex_positions[index], 1);
+    }
+
+    for (uint i = gl_LocalInvocationIndex; i < meshlet.triangle_count; i += gl_WorkGroupSize.x) {
+        uint offset = meshlet.triangle_offset + i * 3;
+        gl_PrimitiveTriangleIndicesEXT[i] = uvec3(
+            meshlet_triangles[offset], meshlet_triangles[offset + 1], meshlet_triangles[offset + 2]);
+    }
+}
 ```
 
 After generating the meshlet data, it's also possible to generate extra data for each meshlet that can be saved and used at runtime to perform cluster culling, where each meshlet can be discarded if it's guaranteed to be invisible. To generate the data, `meshlet_computeMeshletBounds` can be used:
