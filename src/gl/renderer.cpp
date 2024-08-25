@@ -1754,7 +1754,7 @@ bool Renderer::setupProgramFO3( const NifModel * nif, Program * prog, Shape * me
 		if ( scene->hasOption(Scene::DoLighting) && scene->hasVisMode(Scene::VisNormalsOnly) )
 			forced = &white;
 
-		const QString &	alt = ( !scene->hasOption(Scene::DoErrorColor) ? white : magenta );
+		const QString &	alt = ( esp || !scene->hasOption(Scene::DoErrorColor) ? white : magenta );
 
 		prog->uniSampler( bsprop, SAMP_BASE, 0, texunit, alt, clamp, *forced );
 	} else {
@@ -1774,13 +1774,10 @@ bool Renderer::setupProgramFO3( const NifModel * nif, Program * prog, Shape * me
 	if ( uniCubeMap >= 0 ) [[likely]] {
 		if ( !activateTextureUnit( texunit ) )
 			return false;
-		QString	fname;
-		if ( hasCubeMap && bsprop && !esp )
-			fname = bsprop->fileName( 4 );
-		if ( fname.isEmpty() || !scene->bindCube( fname ) )
-			hasCubeMap = false;
-		if ( !hasCubeMap )
+		if ( !( hasCubeMap && bsprop && !esp && scene->bindCube( bsprop->fileName( 4 ) ) ) ) {
 			scene->bindCube( grayCube, 1 );
+			hasCubeMap = false;
+		}
 		fn->glUniform1i( uniCubeMap, texunit++ );
 	} else {
 		hasCubeMap = false;
