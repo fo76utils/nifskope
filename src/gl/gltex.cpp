@@ -313,7 +313,17 @@ const TexCache::Tex::ImageInfo * TexCache::getTextureInfo( const QStringView & f
 	return nullptr;
 }
 
-inline TexCache::Tex * TexCache::insertTex( const QStringView & file )
+static inline const QString & convertToQString( const QString & s )
+{
+	return s;
+}
+
+static inline QString convertToQString( const QStringView & s )
+{
+	return s.toString();
+}
+
+template< typename T > inline TexCache::Tex * TexCache::insertTex( const T & file )
 {
 	if ( file.isEmpty() ) [[unlikely]]
 		return nullptr;
@@ -331,7 +341,7 @@ inline TexCache::Tex * TexCache::insertTex( const QStringView & file )
 		return nullptr;
 	Tex &	tx = textures[h];
 	tx.imageInfo = new Tex::ImageInfo;
-	tx.imageInfo->filename = file.toString();
+	tx.imageInfo->filename = convertToQString( file );
 	tx.nameData = tx.imageInfo->filename.constData();
 	tx.nameLen = std::uint16_t( nameLen );
 

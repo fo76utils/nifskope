@@ -200,7 +200,7 @@ protected:
 	std::uint32_t textureCount;
 	QHash<QModelIndex, Tex> embedTextures;
 
-	inline Tex * insertTex( const QStringView & file );
+	template< typename T > inline Tex * insertTex( const T & file );
 	Tex * rehashTextures( Tex * p = nullptr );
 	//! Load the texture
 	static std::uint16_t loadTex( Tex & tx, const NifModel * nif );
