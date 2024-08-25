@@ -1,12 +1,16 @@
  == CHANGELOG ==
 
+#### NifSkope-2.0.dev9-20240825
+
 * New render setting for the mouse wheel zoom speed in the main window and UV editor.
 * Implemented the 'Startup Direction' render setting that was previously disabled.
 * Skyrim and Fallout 4 shader property data is no longer moved to a sub-structure of BSLightingShaderProperty or BSEffectShaderProperty.
+* Shapes with alpha blending are now considered fully transparent for the purpose of vertex selection. Note that with alpha tested materials (e.g. vegetation), clicking on a vertex will often still not work because the selection mode ignores transparency.
 * Fixed the geometry of docked widgets not being restored.
 * Fixed bug in vertex selection with more than 256 shapes.
 * Fixed invisible Oblivion models with Mesa (and possibly other) OpenGL drivers.
 * Fixed error messages on macOS about unsupported GLSL version in the shaders.
+* Fixed Fallout 3 and Oblivion vertices not being highlighted in vertex selection mode.
 
 #### NifSkope-2.0.dev9-20240818
 

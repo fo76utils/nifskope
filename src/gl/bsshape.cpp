@@ -252,8 +252,6 @@ void BSShape::drawShapes( NodeList * secondPass )
 	if ( isHidden() )
 		return;
 
-	glPointSize( GLView::Settings::vertexSelectPointSize );
-
 	// TODO: Only run this if BSXFlags has "EditorMarkers present" flag
 	if ( !scene->hasOption(Scene::ShowMarkers) && name.contains( "EditorMarker" ) )
 		return;
@@ -289,7 +287,7 @@ void BSShape::drawShapes( NodeList * secondPass )
 	glEnableClientState( GL_VERTEX_ARRAY );
 	glVertexPointer( 3, GL_FLOAT, 0, transVerts.constData() );
 
-	if ( !Node::SELECTING ) {
+	if ( !Node::SELECTING ) [[likely]] {
 		glEnableClientState( GL_NORMAL_ARRAY );
 		glNormalPointer( GL_FLOAT, 0, transNorms.constData() );
 
@@ -308,9 +306,7 @@ void BSShape::drawShapes( NodeList * secondPass )
 		} else {
 			glColor( Color3( 1.0f, 1.0f, 1.0f ) );
 		}
-	}
 
-	if ( !Node::SELECTING ) {
 		if ( nif->getBSVersion() >= 151 )
 			glEnable( GL_FRAMEBUFFER_SRGB );
 		else
@@ -320,6 +316,20 @@ void BSShape::drawShapes( NodeList * secondPass )
 	} else {
 		if ( nif->getBSVersion() >= 151 )
 			glDisable( GL_FRAMEBUFFER_SRGB );
+
+		if ( drawInSecondPass ) {
+			glDisableClientState( GL_VERTEX_ARRAY );
+
+			glDisable( GL_POLYGON_OFFSET_FILL );
+
+			if ( scene->isSelModeVertex() )
+				drawVerts();
+
+			if ( transformRigid )
+				glPopMatrix();
+
+			return;
+		}
 	}
 
 	if ( isDoubleSided ) {
@@ -367,9 +377,8 @@ void BSShape::drawShapes( NodeList * secondPass )
 
 	glDisable( GL_POLYGON_OFFSET_FILL );
 
-	if ( scene->isSelModeVertex() ) {
+	if ( scene->isSelModeVertex() )
 		drawVerts();
-	}
 
 	if ( transformRigid )
 		glPopMatrix();
@@ -378,6 +387,7 @@ void BSShape::drawShapes( NodeList * secondPass )
 void BSShape::drawVerts() const
 {
 	glDisable( GL_LIGHTING );
+	glPointSize( GLView::Settings::vertexSelectPointSize );
 	glNormalColor();
 
 	glBegin( GL_POINTS );
@@ -406,7 +416,7 @@ void BSShape::drawVerts() const
 	// Highlight selected vertex
 	if ( !Node::SELECTING && selected ) {
 		auto idx = scene->currentIndex;
-		auto n = idx.data( Qt::DisplayRole ).toString();
+		auto n = idx.data( NifSkopeDisplayRole ).toString();
 		if ( n == "Vertex" || n == "Vertices" ) {
 			glHighlightColor();
 			glVertex( transVerts.value( idx.parent().row() ) );
@@ -692,7 +702,7 @@ void BSShape::drawSelection() const
 
 		glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 
-		auto type = idx.sibling( idx.row(), 1 ).data( Qt::DisplayRole ).toString();
+		auto type = idx.sibling( idx.row(), 1 ).data( NifSkopeDisplayRole ).toString();
 
 		bool isSegmentArray = (n == "Segment" && type == "BSGeometrySegmentData" && nif->isArray( idx ));
 		bool isSegmentItem = (n == "Segment" && type == "BSGeometrySegmentData" && !nif->isArray( idx ));
@@ -732,7 +742,7 @@ void BSShape::drawSelection() const
 			for ( int i = 0; i < numRec; i++ ) {
 				auto subrec = QModelIndex_child( recs, i );
 				int o = 0;
-				if ( subrec.data( Qt::DisplayRole ).toString() != "Sub Segment" )
+				if ( subrec.data( NifSkopeDisplayRole ).toString() != "Sub Segment" )
 					o = 3; // Offset 3 rows for < 130 BSGeometrySegmentData
 
 				auto suboff = QModelIndex_child( subrec, o, 2 ).data().toInt() / 3;

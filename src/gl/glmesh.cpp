@@ -807,7 +807,7 @@ void Mesh::drawShapes( NodeList * secondPass )
 	glEnableClientState( GL_VERTEX_ARRAY );
 	glVertexPointer( 3, GL_FLOAT, 0, transVerts.constData() );
 
-	if ( !Node::SELECTING ) {
+	if ( !Node::SELECTING ) [[likely]] {
 		if ( transNorms.count() ) {
 			glEnableClientState( GL_NORMAL_ARRAY );
 			glNormalPointer( GL_FLOAT, 0, transNorms.constData() );
@@ -828,11 +828,25 @@ void Mesh::drawShapes( NodeList * secondPass )
 				glColor( Color3( 1.0f, 1.0f, 1.0f ) );
 			}
 		}
+
+		// TODO: Hotspot.  See about optimizing this.
+		if ( !Node::SELECTING )
+			shader = scene->renderer->setupProgram( this, shader );
+
+	} else if ( drawInSecondPass ) {
+		glDisableClientState( GL_VERTEX_ARRAY );
+
+		glDisable( GL_POLYGON_OFFSET_FILL );
+
+		if ( scene->isSelModeVertex() )
+			drawVerts();
+
+		if ( transformRigid )
+			glPopMatrix();
+
+		return;
 	}
 
-	// TODO: Hotspot.  See about optimizing this.
-	if ( !Node::SELECTING )
-		shader = scene->renderer->setupProgram( this, shader );
 
 	if ( isDoubleSided ) {
 		glDisable( GL_CULL_FACE );
@@ -888,10 +902,8 @@ void Mesh::drawShapes( NodeList * secondPass )
 
 	glDisable( GL_POLYGON_OFFSET_FILL );
 
-	glPointSize( GLView::Settings::vertexSelectPointSize );
-	if ( scene->isSelModeVertex() ) {
+	if ( scene->isSelModeVertex() )
 		drawVerts();
-	}
 
 	if ( transformRigid )
 		glPopMatrix();
@@ -900,6 +912,7 @@ void Mesh::drawShapes( NodeList * secondPass )
 void Mesh::drawVerts() const
 {
 	glDisable( GL_LIGHTING );
+	glPointSize( GLView::Settings::vertexSelectPointSize );
 	glNormalColor();
 
 	glBegin( GL_POINTS );
@@ -914,7 +927,7 @@ void Mesh::drawVerts() const
 	// Highlight selected vertex
 	if ( !Node::SELECTING && iData == scene->currentBlock ) {
 		auto idx = scene->currentIndex;
-		if ( idx.data( Qt::DisplayRole ).toString() == "Vertices" ) {
+		if ( idx.data( NifSkopeDisplayRole ).toString() == "Vertices" ) {
 			glHighlightColor();
 			glVertex( transVerts.value( idx.row() ) );
 		}
