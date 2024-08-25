@@ -150,7 +150,9 @@ public:
 	~TexCache();
 
 	//! Bind a texture from filename
-	int bind( const QStringView & fname, const NifModel * nif = nullptr, bool useSecondTexture = false );
+	int bind( const QStringView & fname, const NifModel * nif = nullptr );
+	//! Bind a cube map from filename
+	bool bindCube( const QString & fname, const NifModel * nif, bool useSecondTexture );
 	//! Bind a texture from pixel data
 	int bind( const QModelIndex & iSource );
 

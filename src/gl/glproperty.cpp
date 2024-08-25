@@ -1026,7 +1026,7 @@ void BSShaderLightingProperty::loadSFMaterial()
 
 bool BSShaderLightingProperty::bind( const QStringView & fname, bool forceTexturing, TexClampMode mode )
 {
-	GLuint mipmaps = scene->bindTexture( fname, false, forceTexturing );
+	GLuint mipmaps = scene->bindTexture( fname, forceTexturing );
 
 	if ( !mipmaps )
 		return false;
@@ -1068,31 +1068,6 @@ bool BSShaderLightingProperty::bind( int id, const QVector<QVector<Vector2> > & 
 
 	glDisable( GL_TEXTURE_2D );
 	return false;
-}
-
-bool BSShaderLightingProperty::bindCube( Scene * scene, const QString & fname, bool useSecondTexture )
-{
-	GLuint result = 0;
-
-	if ( !fname.isEmpty() )
-		result = scene->bindTexture( fname, useSecondTexture );
-
-	if ( result == 0 )
-		return false;
-
-	glEnable( GL_TEXTURE_CUBE_MAP_SEAMLESS );
-
-	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
-	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE );
-	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
-	glTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-	glMatrixMode( GL_TEXTURE );
-	glLoadIdentity();
-	glMatrixMode( GL_MODELVIEW );
-
-	return true;
 }
 
 enum

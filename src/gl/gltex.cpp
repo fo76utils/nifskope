@@ -368,7 +368,7 @@ TexCache::Tex * TexCache::rehashTextures( Tex * p )
 	return q;
 }
 
-int TexCache::bind( const QStringView & fname, const NifModel * nif, bool useSecondTexture )
+int TexCache::bind( const QStringView & fname, const NifModel * nif )
 {
 	Tex *	tx = insertTex( fname );
 	if ( !tx ) [[unlikely]]
@@ -380,14 +380,48 @@ int TexCache::bind( const QStringView & fname, const NifModel * nif, bool useSec
 		return loadTex( *tx, nif );
 	}
 
-	if ( !tx->id[size_t(useSecondTexture)] ) [[unlikely]]
-		return 0;
-
 	if ( !tx->target ) [[unlikely]]
 		tx->target = GL_TEXTURE_2D;
-	glBindTexture( tx->target, tx->id[size_t(useSecondTexture)] );
+	glBindTexture( tx->target, tx->id[0] );
 
 	return tx->mipmaps;
+}
+
+bool TexCache::bindCube( const QString & fname, const NifModel * nif, bool useSecondTexture )
+{
+	Tex *	tx = insertTex( fname );
+	if ( !tx ) [[unlikely]]
+		return false;
+
+	if ( !tx->isLoaded() ) [[unlikely]] {
+		if ( tx->id[0] || !loadTex( *tx, nif ) )
+			return false;
+	} else {
+		if ( !tx->id[size_t(useSecondTexture)] ) [[unlikely]]
+			return false;
+
+		if ( !tx->target ) [[unlikely]]
+			tx->target = GL_TEXTURE_CUBE_MAP;
+	}
+
+	glBindTexture( tx->target, tx->id[size_t(useSecondTexture)] );
+
+	if ( !tx->mipmaps ) [[unlikely]]
+		return false;
+
+	glEnable( GL_TEXTURE_CUBE_MAP_SEAMLESS );
+
+	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE );
+	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
+	glTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+	glMatrixMode( GL_TEXTURE );
+	glLoadIdentity();
+	glMatrixMode( GL_MODELVIEW );
+
+	return true;
 }
 
 std::uint16_t TexCache::loadTex( Tex & tx, const NifModel * nif )
