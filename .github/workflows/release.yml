@@ -29,17 +29,17 @@ jobs:
       shell: msys2 {0}
       run: |
         qmake noavx=1 NifSkope.pro
-        make -j 12
+        make -j 8
         mv -f release/NifSkope.exe release/NifSkope_noavx.exe
         make clean
         qmake noavx2=1 NifSkope.pro
-        make -j 12
+        make -j 8
         mv -f release/NifSkope.exe release/NifSkope_noavx2.exe
         make clean
         qmake NifSkope.pro
-        make -j 12
+        make -j 8
         mv -f release NifSkope
-        7za a -m0=lzma -mx=9 NifSkope_2_0_$(date +"%Y-%m-%d")-windows_x64.7z NifSkope
+        7za a -m0=lzma -mx=9 NifSkope_2_0_$(date +"%Y-%m-%d")-win64_gcc.7z NifSkope
 
     - name: 'Upload Artifacts'
       uses: actions/upload-artifact@v4
@@ -69,15 +69,15 @@ jobs:
     - name: 'Build with qmake'
       run: |
         x86_64-linux-gnu-qmake noavx=1 NifSkope.pro
-        make -j 12
+        make -j 8
         mv -f release/NifSkope release/NifSkope_noavx
         make clean
         x86_64-linux-gnu-qmake noavx2=1 NifSkope.pro
-        make -j 12
+        make -j 8
         mv -f release/NifSkope release/NifSkope_noavx2
         make clean
         x86_64-linux-gnu-qmake NifSkope.pro
-        make -j 12
+        make -j 8
         chmod -f 0755 release release/NifSkope release/NifSkope_noavx release/NifSkope_noavx2
         mv -f release nifskope-linux
         7za a -m0=lzma -mx=9 NifSkope_2_0_$(date +"%Y-%m-%d")-linux_x64.7z nifskope-linux
@@ -87,3 +87,82 @@ jobs:
       with:
         name: build-linux
         path: NifSkope*.7z
+
+
+  build_macos:
+    runs-on: macos-latest
+    name: Build MacOS
+
+    steps:
+    - name: 'Checkout'
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        submodules: recursive
+
+    - name: 'Install required packages'
+      uses: jurplel/install-qt-action@v4
+
+    - name: 'Install clang'
+      run: brew install llvm
+
+    - name: 'Build with qmake'
+      run: |
+        qmake noavx2=1 NifSkope.pro
+        make -j 8
+
+    - name: 'Create DMG image'
+      run: |
+        rm release/shaders/stf_default.*
+        cp res/stf_compat.* release/shaders/
+        mv release/*.xml release/shaders release/qt.conf release/style.qss release/*.txt release/NifSkope.app/Contents/MacOS/
+        macdeployqt release/NifSkope.app -dmg
+
+    - name: 'Upload Artifacts'
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-macos
+        path: release/NifSkope.dmg
+
+
+  build_clang64:
+    runs-on: windows-latest
+    name: Build MSYS2-CLANG64
+
+    steps:
+    - name: 'Checkout'
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        submodules: recursive
+
+    - name: 'Setup MSYS2'
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: CLANG64
+        update: true
+        cache: true
+        install: 'base-devel mingw-w64-clang-x86_64-gcc msys/p7zip mingw-w64-clang-x86_64-qt5-base mingw-w64-clang-x86_64-qt5-3d mingw-w64-clang-x86_64-qt5-imageformats mingw-w64-clang-x86_64-qt5-tools'
+
+    - name: 'Build with qmake'
+      shell: msys2 {0}
+      run: |
+        qmake noavx=1 NifSkope.pro
+        make -j 8
+        mv -f release/NifSkope.exe release/NifSkope_noavx.exe
+        make clean
+        qmake noavx2=1 NifSkope.pro
+        make -j 8
+        mv -f release/NifSkope.exe release/NifSkope_noavx2.exe
+        make clean
+        qmake NifSkope.pro
+        make -j 8
+        mv -f release NifSkope
+        7za a -m0=lzma -mx=9 NifSkope_2_0_$(date +"%Y-%m-%d")-win64_clang.7z NifSkope
+
+    - name: 'Upload Artifacts'
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-clang64
+        path: |
+          NifSkope*.7z
