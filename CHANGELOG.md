@@ -1,5 +1,7 @@
  == CHANGELOG ==
 
+#### NifSkope-2.0.dev9-20240825
+
 * New render setting for the mouse wheel zoom speed in the main window and UV editor.
 * Implemented the 'Startup Direction' render setting that was previously disabled.
 * Skyrim and Fallout 4 shader property data is no longer moved to a sub-structure of BSLightingShaderProperty or BSEffectShaderProperty.
