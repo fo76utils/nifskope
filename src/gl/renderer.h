@@ -378,7 +378,6 @@ public:
 		void uni4m( UniformType var, const Matrix4 & val );
 		bool uniSampler( class BSShaderLightingProperty * bsprop, UniformType var, int textureSlot,
 							int & texunit, const QString & alternate, uint clamp, const QString & forced = {} );
-		bool uniSamplerBlank( UniformType var, int & texunit );
 
 		// fmt must be a string literal, with at most two %d format integer arguments in the range 0 to 99
 		int uniLocation( const char * fmt, int argsX16Y16 = 0 );
