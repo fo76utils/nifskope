@@ -833,13 +833,12 @@ void Mesh::drawShapes( NodeList * secondPass )
 		if ( !Node::SELECTING )
 			shader = scene->renderer->setupProgram( this, shader );
 
-	} else if ( drawInSecondPass ) {
+	} else if ( drawInSecondPass && scene->isSelModeVertex() ) {
 		glDisableClientState( GL_VERTEX_ARRAY );
 
 		glDisable( GL_POLYGON_OFFSET_FILL );
 
-		if ( scene->isSelModeVertex() )
-			drawVerts();
+		drawVerts();
 
 		if ( transformRigid )
 			glPopMatrix();

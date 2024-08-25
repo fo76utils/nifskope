@@ -76,6 +76,9 @@ void BSMesh::drawShapes( NodeList * secondPass )
 
 		scene->renderer->stopProgram();
 
+		glDisableClientState(GL_NORMAL_ARRAY);
+		glDisableClientState(GL_COLOR_ARRAY);
+
 	} else {
 		glDisable(GL_FRAMEBUFFER_SRGB);
 
@@ -85,13 +88,11 @@ void BSMesh::drawShapes( NodeList * secondPass )
 			glColor4f( 0, 0, 0, 1 );
 		}
 
-		if ( sortedTriangles.count() && !drawInSecondPass )
+		if ( sortedTriangles.count() && !( drawInSecondPass && scene->isSelModeVertex() ) )
 			glDrawElements(GL_TRIANGLES, sortedTriangles.count() * 3, GL_UNSIGNED_SHORT, sortedTriangles.constData());
 	}
 
 	glDisableClientState(GL_VERTEX_ARRAY);
-	glDisableClientState(GL_NORMAL_ARRAY);
-	glDisableClientState(GL_COLOR_ARRAY);
 
 	glDisable(GL_POLYGON_OFFSET_FILL);
 

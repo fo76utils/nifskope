@@ -317,13 +317,12 @@ void BSShape::drawShapes( NodeList * secondPass )
 		if ( nif->getBSVersion() >= 151 )
 			glDisable( GL_FRAMEBUFFER_SRGB );
 
-		if ( drawInSecondPass ) {
+		if ( drawInSecondPass && scene->isSelModeVertex() ) {
 			glDisableClientState( GL_VERTEX_ARRAY );
 
 			glDisable( GL_POLYGON_OFFSET_FILL );
 
-			if ( scene->isSelModeVertex() )
-				drawVerts();
+			drawVerts();
 
 			if ( transformRigid )
 				glPopMatrix();
