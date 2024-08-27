@@ -1965,7 +1965,10 @@ void GLView::mouseReleaseEvent( QMouseEvent * event )
 		scene->currentIndex = idx.sibling( idx.row(), 0 );
 
 		if ( idx.isValid() ) {
+#if 0
+			// this makes vertex selection slow, and may no longer be needed with newer Qt versions
 			emit clicked( QModelIndex() ); // HACK: To get Block Details to update
+#endif
 			emit clicked( idx );
 		}
 

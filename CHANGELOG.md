@@ -1,5 +1,7 @@
  == CHANGELOG ==
 
+* Fixed vertex selection being slow when the shape has a large number of vertices.
+
 #### NifSkope-2.0.dev9-20240825
 
 * New render setting for the mouse wheel zoom speed in the main window and UV editor.
