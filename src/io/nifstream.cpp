@@ -410,7 +410,7 @@ bool NifIStream::read( NifValue & val )
 				return false;
 
 			*static_cast<QByteArray *>(val.val.data) = device->read( len );
-			return static_cast<QByteArray *>(val.val.data)->count() == len;
+			return static_cast<QByteArray *>(val.val.data)->size() == len;
 		}
 	case NifValue::tStringPalette:
 		{
@@ -898,9 +898,11 @@ bool NifOStream::write( const NifValue & val )
 	case NifValue::tByteArray:
 		{
 			QByteArray * array = static_cast<QByteArray *>(val.val.data);
-			int len = array->count();
+			qsizetype len = array->size();
+			char lenBuf[4];
+			FileBuffer::writeUInt32Fast( lenBuf, std::uint32_t( len ) );
 
-			if ( device->write( (char *)&len, 4 ) != 4 )
+			if ( device->write( lenBuf, 4 ) != 4 )
 				return false;
 
 			return device->write( *array ) == len;
@@ -908,15 +910,17 @@ bool NifOStream::write( const NifValue & val )
 	case NifValue::tStringPalette:
 		{
 			QByteArray * array = static_cast<QByteArray *>(val.val.data);
-			int len = array->count();
+			qsizetype len = array->size();
+			char lenBuf[4];
+			FileBuffer::writeUInt32Fast( lenBuf, std::uint32_t( len ) );
 
-			if ( device->write( (char *)&len, 4 ) != 4 )
+			if ( device->write( lenBuf, 4 ) != 4 )
 				return false;
 
 			if ( device->write( *array ) != len )
 				return false;
 
-			return device->write( (char *)&len, 4 ) == 4;
+			return device->write( lenBuf, 4 ) == 4;
 		}
 	case NifValue::tByteMatrix:
 		{
@@ -1098,12 +1102,12 @@ int NifSStream::size( const NifValue & val )
 	case NifValue::tByteArray:
 		{
 			QByteArray * array = static_cast<QByteArray *>(val.val.data);
-			return 4 + array->count();
+			return 4 + array->size();
 		}
 	case NifValue::tStringPalette:
 		{
 			QByteArray * array = static_cast<QByteArray *>(val.val.data);
-			return 4 + array->count() + 4;
+			return 4 + array->size() + 4;
 		}
 	case NifValue::tByteMatrix:
 		{

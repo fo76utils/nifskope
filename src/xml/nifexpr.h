@@ -153,7 +153,7 @@ private:
 	template <class F>
 	QVariant convertValue( const QVariant & v, const F & convert ) const
 	{
-		if ( v.type() == QVariant::UserType ) {
+		if ( v.typeId() >= QMetaType::User ) {
 			if ( v.canConvert<NifExpr>() )
 				return v.value<NifExpr>().evaluateValue( convert );
 		}

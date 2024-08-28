@@ -239,7 +239,7 @@ public:
 
 			if ( !w && ValueEdit::canEdit( nv.type() ) )
 				w = new ValueEdit( parent );
-		} else if ( v.type() == QVariant::String ) {
+		} else if ( v.typeId() == QMetaType::QString ) {
 			QLineEdit * le = new QLineEdit( parent );
 			le->setFrame( false );
 			w = le;

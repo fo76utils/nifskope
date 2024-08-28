@@ -242,7 +242,7 @@ bool uncompressRLE( QIODevice & f, int w, int h, int bytespp, quint8 * pixel )
 			} while ( ++c < w * h && rl-- > 0 );
 		}
 
-		if ( o >= data.count() )
+		if ( o >= data.size() )
 			return false;
 	}
 

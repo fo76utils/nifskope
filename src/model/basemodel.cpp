@@ -901,7 +901,7 @@ BaseModelEval::BaseModelEval( const BaseModel * model, const NifItem * item )
 
 QVariant BaseModelEval::operator()( const QVariant & v ) const
 {
-	if ( v.type() == QVariant::String ) {
+	if ( v.typeId() == QMetaType::QString ) {
 
 		// Resolve "ARG"
 		QString left = v.toString();

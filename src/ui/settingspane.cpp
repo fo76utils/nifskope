@@ -252,8 +252,8 @@ SettingsGeneral::SettingsGeneral( QWidget * parent ) :
 	QLocale locale( "en" );
 	QString txtLang = QLocale::languageToString( locale.language() );
 
-	if ( locale.country() != QLocale::AnyCountry )
-		txtLang.append( " (" ).append( QLocale::countryToString( locale.country() ) ).append( ")" );
+	if ( locale.territory() != QLocale::AnyTerritory )
+		txtLang.append( " (" ).append( QLocale::territoryToString( locale.territory() ) ).append( ")" );
 
 	ui->language->addItem( txtLang, locale );
 	ui->language->setCurrentIndex( 0 );
@@ -276,8 +276,8 @@ SettingsGeneral::SettingsGeneral( QWidget * parent ) :
 			if ( ui->language->findData( fileLocale ) < 0 ) {
 				QString txtLang = QLocale::languageToString( fileLocale.language() );
 
-				if ( fileLocale.country() != QLocale::AnyCountry )
-					txtLang.append( " (" + QLocale::countryToString( fileLocale.country() ) + ")" );
+				if ( fileLocale.territory() != QLocale::AnyTerritory )
+					txtLang.append( " (" + QLocale::territoryToString( fileLocale.territory() ) + ")" );
 
 				ui->language->addItem( txtLang, fileLocale );
 			}

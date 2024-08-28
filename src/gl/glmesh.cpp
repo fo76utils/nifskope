@@ -525,7 +525,7 @@ void Mesh::updateData_NiTriShape( const NifModel * nif )
 			if ( nif->get<QString>( iExtra, "Name" ) == "Tangent space (binormal & tangent vectors)" ) {
 				iTangentData = iExtra;
 				QByteArray data = nif->get<QByteArray>( iExtra, "Binary Data" );
-				if ( data.count() == numVerts * 4 * 3 * 2 ) {
+				if ( data.size() == numVerts * 4 * 3 * 2 ) {
 					tangents.resize( numVerts );
 					bitangents.resize( numVerts );
 					Vector3 * t = (Vector3 *)data.data();

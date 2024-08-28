@@ -102,11 +102,9 @@ GLGraphicsView::GLGraphicsView( QWidget * parent, GLView * ogl ) : QGraphicsView
 	setAcceptDrops( true );
 
 	installEventFilter( parent );
+	ogl->installEventFilter( this );
 
-	QWidget *	w = QWidget::createWindowContainer( ogl, this );
-	w->installEventFilter( this );
-	ogl->installEventFilter( w );
-	setViewport( w );
+	setViewport( QWidget::createWindowContainer( ogl, this ) );
 }
 
 GLGraphicsView::~GLGraphicsView()
@@ -151,20 +149,16 @@ GLView::GLView( QWindow * p )
 	fmt.setRgba( true );
 #endif
 
-//	setFocusPolicy( Qt::ClickFocus );
-	//setAttribute( Qt::WA_PaintOnScreen );
-	//setAttribute( Qt::WA_NoSystemBackground );
-//	setAutoFillBackground( false );
-//	setAcceptDrops( true );
-//	setContextMenuPolicy( Qt::CustomContextMenu );
-//	setFormat( format );
-//	setUpdateBehavior( QOpenGLWindow::PartialUpdate );
-
-	// Manually handle the buffer swap
-	// Fixes bug with QGraphicsView and double buffering
-	//	Input becomes sluggish and CPU usage doubles when putting GLView
-	//	inside a QGraphicsView.
-//	setAutoBufferSwap( true );
+	setFormat( fmt );
+#if 0
+	setFocusPolicy( Qt::ClickFocus );
+	setAttribute( Qt::WA_PaintOnScreen );
+	setAttribute( Qt::WA_NoSystemBackground );
+	setAutoFillBackground( false );
+	setAcceptDrops( true );
+	setContextMenuPolicy( Qt::CustomContextMenu );
+	setUpdateBehavior( QOpenGLWindow::PartialUpdate );
+#endif
 
 	view = ViewDefault;
 	animState = AnimEnabled;
@@ -768,7 +762,7 @@ void GLView::paintGL()
 	while ( ( err = glGetError() ) != GL_NO_ERROR )
 		qDebug() << tr( "glview.cpp - GL ERROR (paint): " ) << (const char *)gluErrorString( err );
 
-//	emit paintUpdate();
+	emit paintUpdate();
 }
 
 
@@ -785,7 +779,6 @@ void GLView::resizeGL( int width, int height )
 
 	glDisable(GL_FRAMEBUFFER_SRGB);
 	glClearColor( cfg.background.redF(), cfg.background.greenF(), cfg.background.blueF(), cfg.background.alphaF() );
-	update();
 }
 
 void GLView::resizeEvent( QResizeEvent * e )
@@ -1639,7 +1632,7 @@ void GLView::saveImage()
 						if ( i )
 							scene->visMode = Scene::VisSilhouette;
 					}
-					update();
+					paintGL();
 
 					fbo.release();
 
@@ -1774,7 +1767,7 @@ void GLView::dragMoveEvent( QDragMoveEvent * e )
 		fnDragTexOrg = QString();
 	}
 
-	QModelIndex iObj = model->getBlockIndex( indexAt( e->posF() ), "NiAVObject" );
+	QModelIndex iObj = model->getBlockIndex( indexAt( e->position() ), "NiAVObject" );
 
 	if ( iObj.isValid() ) {
 		for ( const auto l : model->getChildLinks( model->getBlockNumber( iObj ) ) ) {
@@ -1886,8 +1879,9 @@ void GLView::mouseDoubleClickEvent( QMouseEvent * )
 
 void GLView::mouseMoveEvent( QMouseEvent * event )
 {
-	int dx = event->x() - lastPos.x();
-	int dy = event->y() - lastPos.y();
+	auto	newPos = event->position();
+	float	dx = newPos.x() - lastPos.x();
+	float	dy = newPos.y() - lastPos.y();
 
 	if ( event->buttons() & Qt::LeftButton && !kbd[Qt::Key_Space] ) {
 		mouseRot += Vector3( dy * .5, 0, dx * .5 );
@@ -1898,7 +1892,7 @@ void GLView::mouseMoveEvent( QMouseEvent * event )
 		setDistance( Dist - (dx + dy) * (axis / (qMax( width(), height() ) + 1)) );
 	}
 
-	lastPos = event->pos();
+	lastPos = newPos;
 }
 
 void GLView::mousePressEvent( QMouseEvent * event )
@@ -1908,19 +1902,19 @@ void GLView::mousePressEvent( QMouseEvent * event )
 		return;
 	}
 
-	lastPos = event->pos();
+	lastPos = event->position();
 
-	if ( (pressPos - event->pos()).manhattanLength() <= 3 )
+	if ( (pressPos - lastPos).manhattanLength() <= 3 )
 		cycleSelect++;
 	else
 		cycleSelect = 0;
 
-	pressPos = event->pos();
+	pressPos = lastPos;
 }
 
 void GLView::mouseReleaseEvent( QMouseEvent * event )
 {
-	if ( !(model && (pressPos - event->pos()).manhattanLength() <= 3) )
+	if ( !(model && (pressPos - event->position()).manhattanLength() <= 3) )
 		return;
 
 	if ( event->button() == Qt::ForwardButton || event->button() == Qt::BackButton || event->button() == Qt::MiddleButton ) {
@@ -1934,7 +1928,7 @@ void GLView::mouseReleaseEvent( QMouseEvent * event )
 	bool	isColorPicker = bool( event->modifiers() & Qt::AltModifier );
 #endif
 	if ( !isColorPicker ) {
-		QModelIndex idx = indexAt( event->localPos(), cycleSelect );
+		QModelIndex idx = indexAt( event->position(), cycleSelect );
 		scene->currentBlock = model->getBlockIndex( idx );
 		scene->currentIndex = idx.sibling( idx.row(), 0 );
 
@@ -1964,7 +1958,7 @@ void GLView::mouseReleaseEvent( QMouseEvent * event )
 
 		QImage * img = new QImage( fbo.toImage() );
 
-		QColor what = QColor( img->pixel( ( event->localPos() * devicePixelRatioF() ).toPoint() ) );
+		QColor what = QColor( img->pixel( ( event->position() * devicePixelRatioF() ).toPoint() ) );
 
 		glClearColor( what.redF(), what.greenF(), what.blueF(), what.alphaF() );
 		// qDebug() << what;
@@ -1990,11 +1984,6 @@ void GLView::wheelEvent( QWheelEvent * event )
 
 void GLGraphicsView::setupViewport( QWidget * viewport )
 {
-	GLView * glWidget = qobject_cast<GLView *>(viewport);
-	if ( glWidget ) {
-		glWidget->installEventFilter( this );
-	}
-
 	QGraphicsView::setupViewport( viewport );
 }
 

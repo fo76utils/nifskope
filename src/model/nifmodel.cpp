@@ -1289,7 +1289,7 @@ QVariant NifModel::data( const QModelIndex & index, int role ) const
 							return tr( "<palette not found>" );
 
 						QByteArray *pBytes = itemPalette->get<QByteArray *>();
-						if ( !pBytes || offset >= pBytes->count() )
+						if ( !pBytes || offset >= pBytes->size() )
 							return tr( "<invalid offset>" );
 
 						return QString( &pBytes->data()[offset] );
@@ -3060,7 +3060,7 @@ NifModelEval::NifModelEval( const NifModel * model, const NifItem * item )
 
 QVariant NifModelEval::operator()( const QVariant & v ) const
 {
-	if ( v.type() == QVariant::String ) {
+	if ( v.typeId() == QMetaType::QString ) {
 		QString left = v.toString();
 		const NifItem * itemLeft = model->getItem( item, left, false );
 

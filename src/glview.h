@@ -153,11 +153,6 @@ public:
 
 	QModelIndex indexAt( const QPointF & p, int cycle = 0 );
 
-	QSize getSizeInPixels() const
-	{
-		return QSize( pixelWidth, pixelHeight );
-	}
-
 public slots:
 	void setCurrentIndex( const QModelIndex & );
 	void setSceneTime( float );
@@ -243,8 +238,8 @@ private:
 	GLdouble aspect;
 
 	QHash<int, bool> kbd;
-	QPoint lastPos;
-	QPoint pressPos;
+	QPointF lastPos;
+	QPointF pressPos;
 	Vector3 mouseMov;
 	Vector3 mouseRot;
 	int cycleSelect;
@@ -286,6 +281,12 @@ public:
 		static float	zoomInScale;
 		static float	zoomOutScale;
 	} cfg;
+
+	//! Returns the actual dimensions in pixels
+	QSize getSizeInPixels() const
+	{
+		return QSize( pixelWidth, pixelHeight );
+	}
 
 	inline void setDisabled( bool n )
 	{

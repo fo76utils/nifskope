@@ -1465,7 +1465,7 @@ void NifSkope::migrateSettings() const
 		QStringList keys = settings.allKeys();
 
 		for ( const auto& key : keys ) {
-			if ( settings.value( key ).metaType() == QMetaType( QMetaType::QByteArray ) ) {
+			if ( settings.value( key ).typeId() == QMetaType::QByteArray ) {
 				qDebug() << "Removing Qt version-specific settings" << key
 					<< "while migrating settings from previous version";
 				settings.remove( key );
