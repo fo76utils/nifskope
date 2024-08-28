@@ -54,6 +54,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "qtcompat.h"
 
 #include <QAction>
+#include <QActionGroup>
 #include <QApplication>
 #include <QByteArray>
 #include <QCheckBox>
@@ -601,7 +602,7 @@ void NifSkope::initToolBars()
 	animGroups->setMinimumWidth( 60 );
 	animGroups->setSizeAdjustPolicy( QComboBox::AdjustToContents );
 	animGroups->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Minimum );
-	connect( animGroups, static_cast<void (QComboBox::*)(const QString&)>(&QComboBox::activated), ogl, &GLView::setSceneSequence );
+	connect( animGroups, &QComboBox::textActivated, ogl, &GLView::setSceneSequence );
 
 	ui->tAnim->addWidget( animSlider );
 	animGroupsAction = ui->tAnim->addWidget( animGroups );
@@ -655,7 +656,7 @@ void NifSkope::initToolBars()
 	tLOD->setVisible( false );
 
 	connect( lodSlider, &QSlider::valueChanged, ogl->getScene(), &Scene::updateLodLevel );
-	connect( lodSlider, &QSlider::valueChanged, ogl, &GLView::updateGL );
+	connect( lodSlider, &QSlider::valueChanged, ogl, &GLView::update_GL );
 	connect( nif, &NifModel::lodSliderChanged, [tLOD]( bool enabled ) { tLOD->setEnabled( enabled ); tLOD->setVisible( enabled ); } );
 }
 
@@ -795,8 +796,7 @@ void NifSkope::onLoadBegin()
 	// Disconnect the models from the views
 	swapModels();
 
-	ogl->setUpdatesEnabled( false );
-	ogl->setEnabled( false );
+	ogl->setDisabled( true );
 	setEnabled( false );
 	ui->tAnim->setEnabled( false );
 
@@ -820,8 +820,7 @@ void NifSkope::onLoadComplete( bool success, QString & fname )
 	setListMode();
 
 	// Re-enable window
-	ogl->setUpdatesEnabled( true );
-	ogl->setEnabled( true );
+	ogl->setDisabled( false );
 	setEnabled( true ); // IMPORTANT!
 
 	ui->aSave->setDisabled(false);
@@ -1051,7 +1050,7 @@ void NifSkope::setViewFont( const QFont & font )
 	header->setIconSize( QSize( metrics.horizontalAdvance( "000" ), metrics.lineSpacing() ) );
 	kfmtree->setFont( font );
 	kfmtree->setIconSize( QSize( metrics.horizontalAdvance( "000" ), metrics.lineSpacing() ) );
-	ogl->setFont( font );
+//	ogl->setFont( font );
 }
 
 void NifSkope::reloadTheme()
@@ -1255,7 +1254,6 @@ void NifSkope::resizeDone()
 	graphicsScene->setSceneRect( graphicsView->rect() );
 	graphicsView->fitInView( graphicsScene->sceneRect() );
 
-	ogl->setUpdatesEnabled( true );
 	ogl->setDisabled( false );
 	ogl->getScene()->animate = true;
 	ogl->update();
@@ -1295,53 +1293,6 @@ bool NifSkope::eventFilter( QObject * o, QEvent * e )
 				indexStack->undo();
 			}
 		}
-	}
-
-	// Filter GLGraphicsView
-	auto obj = qobject_cast<GLGraphicsView *>(o);
-	if ( !obj || obj != graphicsView )
-		return QMainWindow::eventFilter( o, e );
-
-	// Turn off animation
-	// Grab framebuffer
-	// Begin resize timer
-	// Block all Resize Events to GLView
-	if ( e->type() == QEvent::Resize ) {
-		// Hide GLView
-		ogl->hide();
-
-		if ( !isResizing  && !resizeTimer->isActive() ) {
-			ogl->getScene()->animate = false;
-			ogl->updateGL();
-
-			if ( viewBuffer.isNull() ) {
-				// Init initial buffer with solid color
-				//	Otherwise becomes random colors on release builds
-				viewBuffer = QImage( 10, 10, QImage::Format_ARGB32 );
-				viewBuffer.fill( ogl->clearColor() );
-			} else {
-				viewBuffer = ogl->grabFrameBuffer();
-			}
-
-			ogl->setUpdatesEnabled( false );
-			ogl->setDisabled( true );
-
-			isResizing = true;
-		}
-
-		resizeTimer->start( 300 );
-
-		return true;
-	}
-
-	// Paint stored framebuffer over GLGraphicsView while resizing
-	if ( !viewBuffer.isNull() && isResizing && e->type() == QEvent::Paint ) {
-		QPainter painter;
-		painter.begin( graphicsView );
-		painter.drawImage( QRect( 0, 0, painter.device()->width(), painter.device()->height() ), viewBuffer );
-		painter.end();
-
-		return true;
 	}
 
 	return QMainWindow::eventFilter( o, e );

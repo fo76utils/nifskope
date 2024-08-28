@@ -20,11 +20,11 @@ The resource manager in this version of NifSkope is optimized for PCs with solid
 
 #### Building from source code
 
-Compiling NifSkope requires Qt 5.15. On Windows, [MSYS2](https://www.msys2.org/) can be used for building. After running the MSYS2 installer, use the following commands in the MSYS2-UCRT64 shell to install required packages:
+Compiling NifSkope requires Qt 6.2 or newer. On Windows, [MSYS2](https://www.msys2.org/) can be used for building. After running the MSYS2 installer, use the following commands in the MSYS2-UCRT64 shell to install required packages:
 
     pacman -S base-devel mingw-w64-ucrt-x86_64-gcc
-    pacman -S mingw-w64-ucrt-x86_64-qt5-base mingw-w64-ucrt-x86_64-qt5-3d
-    pacman -S mingw-w64-ucrt-x86_64-qt5-imageformats mingw-w64-ucrt-x86_64-qt5-tools
+    pacman -S mingw-w64-ucrt-x86_64-qt6-base mingw-w64-ucrt-x86_64-qt6-3d mingw-w64-ucrt-x86_64-qt6-5compat
+    pacman -S mingw-w64-ucrt-x86_64-qt6-imageformats mingw-w64-ucrt-x86_64-qt6-tools
     pacman -S git
 
 Using the MSYS2-CLANG64 environment instead of UCRT64 is also supported, in this case, the **ucrt** in the package names needs to be replaced with **clang**.
@@ -33,10 +33,10 @@ All installed MSYS2 packages can be updated anytime later by running the command
 
     git clone --recurse-submodules https://github.com/fo76utils/nifskope.git
 
-Finally, run '**qmake**' and then '**make**' in MSYS2-UCRT64 to build the source code (the -j 8 option sets the number of processes to run in parallel). The resulting binaries and required DLL files and resources are placed under '**release**'.
+Finally, run '**qmake6**' and then '**make**' in MSYS2-UCRT64 to build the source code (the -j 8 option sets the number of processes to run in parallel). The resulting binaries and required DLL files and resources are placed under '**release**'.
 
     cd nifskope
-    qmake NifSkope.pro
+    qmake6 NifSkope.pro
     make -j 8
 
 By default, code is generated for Intel Haswell or compatible CPUs, including the AMD Zen series or newer. Running qmake with the **noavx2=1** option reduces the requirement to Intel Ivy Bridge or AMD FX CPUs, and **nof16c=1** to Sandy Bridge. To build for even older hardware, use **noavx=1** or edit the compiler flags in NifSkope.pro.

@@ -35,7 +35,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "data/niftypes.h"
 
-#include <QGLWidget> // Inherited
+#include <QOpenGLWidget> // Inherited
 #include <QDialog>   // Inherited
 #include <QModelIndex>
 #include <QPersistentModelIndex>
@@ -62,7 +62,7 @@ namespace Game
 #undef None // conflicts with Qt
 
 //! Displays and allows editing of UV coordinate data
-class UVWidget final : public QGLWidget
+class UVWidget final : public QOpenGLWidget
 {
 	Q_OBJECT
 
@@ -141,6 +141,8 @@ public slots:
 	void exportSFMesh();
 
 	void updateSettings();
+	void update_Blend( [[maybe_unused]] bool tmp ) { update(); }
+	void update_3D() { update(); }
 
 protected slots:
 	void nifDataChanged( const QModelIndex & );

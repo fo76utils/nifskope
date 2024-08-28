@@ -62,13 +62,14 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QRadioButton>
 #include <QSettings>
 #include <QSpinBox>
+#include <QSurface>
 #include <QTimer>
 #include <QToolBar>
+#include <QWindow>
 
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
 #include <QOpenGLFramebufferObject>
-#include <QGLFormat>
 
 // TODO: Determine the necessity of this
 // Appears to be used solely for gluErrorString
@@ -94,29 +95,28 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //! @file glview.cpp GLView implementation
 
 
-GLGraphicsView::GLGraphicsView( QWidget * parent ) : QGraphicsView()
+GLGraphicsView::GLGraphicsView( QWidget * parent, GLView * ogl ) : QGraphicsView()
 {
 	setContextMenuPolicy( Qt::CustomContextMenu );
 	setFocusPolicy( Qt::ClickFocus );
 	setAcceptDrops( true );
 
 	installEventFilter( parent );
+
+	QWidget *	w = QWidget::createWindowContainer( ogl, this );
+	w->installEventFilter( this );
+	ogl->installEventFilter( w );
+	setViewport( w );
 }
 
-GLGraphicsView::~GLGraphicsView() {}
-
-
-GLView * GLView::create( NifSkope * window )
+GLGraphicsView::~GLGraphicsView()
 {
-	QGLFormat fmt;
-	static QList<QPointer<GLView> > views;
+}
 
-	QGLWidget * share = nullptr;
-	for ( const QPointer<GLView>& v : views ) {
-		if ( v )
-			share = v;
-	}
 
+GLView::GLView( QWindow * p )
+	: QOpenGLWindow( QOpenGLWindow::NoPartialUpdate, p )
+{
 	QSettings settings;
 	int	aa = settings.value( "Settings/Render/General/Antialiasing", 4 ).toInt();
 #ifdef Q_OS_LINUX
@@ -128,65 +128,43 @@ GLView * GLView::create( NifSkope * window )
 #endif
 	aa = std::min< int >( std::max< int >( aa, 0 ), 4 );
 
-	// All new windows after the first window will share a format
-	if ( share ) {
-		fmt = share->format();
-	} else {
-		fmt.setSampleBuffers( bool(aa) );
-	}
+	QSurfaceFormat	fmt;
+#if 0
+	fmt.setSampleBuffers( bool(aa) );
+#endif
 
-	// OpenGL version
-	fmt.setVersion( 4, 0 );
-	// Ignored if version < 3.2
-	fmt.setProfile( QGLFormat::CompatibilityProfile );
+	// OpenGL version (4.1, compatibility profile)
+	fmt.setRenderableType( QSurfaceFormat::OpenGL );
+	fmt.setMajorVersion( 4 );
+	fmt.setMinorVersion( 1 );
+	fmt.setProfile( QSurfaceFormat::CompatibilityProfile );
+	fmt.setOption( QSurfaceFormat::DeprecatedFunctions, true );
 
 	// V-Sync
 	fmt.setSwapInterval( 1 );
-	fmt.setDoubleBuffer( true );
+	fmt.setSwapBehavior( QSurfaceFormat::DoubleBuffer );
 
 	fmt.setSamples( 1 << aa );
 
+#if 0
 	fmt.setDirectRendering( true );
 	fmt.setRgba( true );
+#endif
 
-	views.append( QPointer<GLView>( new GLView( fmt, window, share ) ) );
-
-	return views.last();
-}
-
-GLView::GLView( const QGLFormat & format, QWidget * p, const QGLWidget * shareWidget )
-	: QGLWidget( format, p, shareWidget )
-{
-	setFocusPolicy( Qt::ClickFocus );
+//	setFocusPolicy( Qt::ClickFocus );
 	//setAttribute( Qt::WA_PaintOnScreen );
 	//setAttribute( Qt::WA_NoSystemBackground );
-	setAutoFillBackground( false );
-	setAcceptDrops( true );
-	setContextMenuPolicy( Qt::CustomContextMenu );
+//	setAutoFillBackground( false );
+//	setAcceptDrops( true );
+//	setContextMenuPolicy( Qt::CustomContextMenu );
+//	setFormat( format );
+//	setUpdateBehavior( QOpenGLWindow::PartialUpdate );
 
 	// Manually handle the buffer swap
 	// Fixes bug with QGraphicsView and double buffering
 	//	Input becomes sluggish and CPU usage doubles when putting GLView
 	//	inside a QGraphicsView.
-	setAutoBufferSwap( false );
-
-	// Make the context current on this window
-	makeCurrent();
-	if ( !isValid() )
-		return;
-
-	// Create an OpenGL context
-	glContext = context()->contextHandle();
-
-	// Obtain a functions object and resolve all entry points
-	glFuncs = glContext->functions();
-
-	if ( !glFuncs ) {
-		Message::critical( this, tr( "Could not obtain OpenGL functions" ) );
-		exit( 1 );
-	}
-
-	glFuncs->initializeOpenGLFunctions();
+//	setAutoBufferSwap( true );
 
 	view = ViewDefault;
 	animState = AnimEnabled;
@@ -206,7 +184,7 @@ GLView::GLView( const QGLFormat & format, QWidget * p, const QGLWidget * shareWi
 
 	updateSettings();
 
-	scene = new Scene( textures, glContext, glFuncs );
+	scene = new Scene( textures );
 	connect( textures, &TexCache::sigRefresh, this, static_cast<void (GLView::*)()>(&GLView::update) );
 	connect( scene, &Scene::sceneUpdated, this, static_cast<void (GLView::*)()>(&GLView::update) );
 
@@ -226,7 +204,7 @@ GLView::GLView( const QGLFormat & format, QWidget * p, const QGLWidget * shareWi
 	connect(NifSkope::getOptions(), &SettingsDialog::update3D, [this]() {
 		// Calling update() here in a lambda can crash..
 		//updateSettings();
-		qglClearColor(clearColor());
+		glClearColor( cfg.background.redF(), cfg.background.greenF(), cfg.background.blueF(), cfg.background.alphaF() );
 		//update();
 	});
 	connect(NifSkope::getOptions(), &SettingsDialog::update3D, this, static_cast<void (GLView::*)()>(&GLView::update));
@@ -387,6 +365,16 @@ void GLView::updateAnimationState( bool checked )
 
 void GLView::initializeGL()
 {
+	glContext = context();
+	// Obtain a functions object and resolve all entry points
+	glFuncs = glContext->functions();
+	if ( !glFuncs ) {
+		QMessageBox::critical( nullptr, "NifSkope error", tr( "Could not obtain OpenGL functions" ) );
+		std::exit( 1 );
+	}
+	glFuncs->initializeOpenGLFunctions();
+	scene->setOpenGLContext( glContext, glFuncs );
+
 	GLenum err;
 
 	if ( scene->hasOption(Scene::DoMultisampling) ) {
@@ -469,20 +457,13 @@ void GLView::glProjection( int x, int y )
 }
 
 
-#ifdef USE_GL_QPAINTER
-void GLView::paintEvent( QPaintEvent * event )
-{
-	makeCurrent();
-	if ( !isValid() )
-		return;
-
-	QPainter painter;
-	painter.begin( this );
-	painter.setRenderHint( QPainter::TextAntialiasing );
-#else
 void GLView::paintGL()
 {
-#endif
+	if ( isDisabled || !scene->haveRenderer() ) [[unlikely]] {
+		glClearColor( cfg.background.redF(), cfg.background.greenF(), cfg.background.blueF(), cfg.background.alphaF() );
+		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
+		return;
+	}
 
 	// Save GL state
 	glPushAttrib( GL_ALL_ATTRIB_BITS );
@@ -494,9 +475,11 @@ void GLView::paintGL()
 	// Clear Viewport
 	if ( scene->hasVisMode(Scene::VisSilhouette) ) {
 		glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
+	} else {
+		glClearColor( cfg.background.redF(), cfg.background.greenF(), cfg.background.blueF(), cfg.background.alphaF() );
 	}
 
-	glDisable(GL_FRAMEBUFFER_SRGB);
+	glDisable( GL_FRAMEBUFFER_SRGB );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
 
 
@@ -785,21 +768,14 @@ void GLView::paintGL()
 	while ( ( err = glGetError() ) != GL_NO_ERROR )
 		qDebug() << tr( "glview.cpp - GL ERROR (paint): " ) << (const char *)gluErrorString( err );
 
-	emit paintUpdate();
-
-	// Manually handle the buffer swap
-	swapBuffers();
-
-#ifdef USE_GL_QPAINTER
-	painter.end();
-#endif
+//	emit paintUpdate();
 }
 
 
 void GLView::resizeGL( int width, int height )
 {
-	double	p = 1.0 / devicePixelRatioF();
-	resize( int( p * width + 0.5 ), int( p * height + 0.5 ) );
+	pixelWidth = width;
+	pixelHeight = height;
 
 	makeCurrent();
 	if ( !isValid() )
@@ -808,14 +784,13 @@ void GLView::resizeGL( int width, int height )
 	glViewport( 0, 0, width, height );
 
 	glDisable(GL_FRAMEBUFFER_SRGB);
-	qglClearColor(clearColor());
+	glClearColor( cfg.background.redF(), cfg.background.greenF(), cfg.background.blueF(), cfg.background.alphaF() );
 	update();
 }
 
-void GLView::resizeEvent( [[maybe_unused]] QResizeEvent * e )
+void GLView::resizeEvent( QResizeEvent * e )
 {
-	// This function should never be called.
-	// Moved to NifSkope::eventFilter()
+	resizeGL( e->size().width(), e->size().height() );
 }
 
 void GLView::setFrontalLight( bool frontal )
@@ -1008,8 +983,8 @@ QModelIndex GLView::indexAt( const QPointF & pos, int cycle )
 	glPushMatrix();
 
 	double	p = devicePixelRatioF();
-	int	wp = int( p * width() + 0.5 );
-	int	hp = int( p * height() + 0.5 );
+	int	wp = pixelWidth;
+	int	hp = pixelHeight;
 	QPointF	posScaled( pos );
 	posScaled *= p;
 	glViewport( 0, 0, wp, hp );
@@ -1665,7 +1640,6 @@ void GLView::saveImage()
 							scene->visMode = Scene::VisSilhouette;
 					}
 					update();
-					updateGL();
 
 					fbo.release();
 
@@ -1683,7 +1657,7 @@ void GLView::saveImage()
 				resizeGL( int( p * w + 0.5 ), int( p * h + 0.5 ) );
 
 			if ( !err.empty() ) {
-				QMessageBox::critical( this, "NifSkope error", QString::fromStdString( err ) );
+				QMessageBox::critical( nullptr, "NifSkope error", QString::fromStdString( err ) );
 				return;
 			}
 
@@ -1745,7 +1719,7 @@ void GLView::saveImage()
 				dlg->accept();
 
 			} catch ( std::exception & e ) {
-				QMessageBox::critical( this, "NifSkope error", tr( "Could not save %1: %2" ).arg( file->file() ).arg( e.what() ) );
+				QMessageBox::critical( nullptr, "NifSkope error", tr( "Could not save %1: %2" ).arg( file->file() ).arg( e.what() ) );
 			}
 		}
 	);
@@ -1985,16 +1959,15 @@ void GLView::mouseReleaseEvent( QMouseEvent * event )
 		fbo.bind();
 
 		update();
-		updateGL();
 
 		fbo.release();
 
 		QImage * img = new QImage( fbo.toImage() );
 
-		auto what = img->pixel( ( event->localPos() * devicePixelRatioF() ).toPoint() );
+		QColor what = QColor( img->pixel( ( event->localPos() * devicePixelRatioF() ).toPoint() ) );
 
-		qglClearColor( QColor( what ) );
-		// qDebug() << QColor( what );
+		glClearColor( what.redF(), what.greenF(), what.blueF(), what.alphaF() );
+		// qDebug() << what;
 
 		delete img;
 	}
@@ -2019,7 +1992,7 @@ void GLGraphicsView::setupViewport( QWidget * viewport )
 {
 	GLView * glWidget = qobject_cast<GLView *>(viewport);
 	if ( glWidget ) {
-		//glWidget->installEventFilter( this );
+		glWidget->installEventFilter( this );
 	}
 
 	QGraphicsView::setupViewport( viewport );
@@ -2027,23 +2000,32 @@ void GLGraphicsView::setupViewport( QWidget * viewport )
 
 bool GLGraphicsView::eventFilter( QObject * o, QEvent * e )
 {
-	//GLView * glWidget = qobject_cast<GLView *>(o);
-	//if ( glWidget ) {
-	//
-	//}
+	GLView * glWidget = qobject_cast<GLView *>( o );
+	if ( glWidget && glWidget->eventFilter( o, e ) )
+		return true;
 
 	return QGraphicsView::eventFilter( o, e );
 }
 
-//void GLGraphicsView::paintEvent( QPaintEvent * e )
-//{
-//	GLView * glWidget = qobject_cast<GLView *>(viewport());
-//	if ( glWidget ) {
-//	//	glWidget->paintEvent( e );
-//	}
-//
-//	QGraphicsView::paintEvent( e );
-//}
+void GLGraphicsView::paintEvent( QPaintEvent * e )
+{
+	GLView * glWidget = qobject_cast<GLView *>(viewport());
+	if ( glWidget ) {
+		glWidget->paintEvent( e );
+	}
+
+	QGraphicsView::paintEvent( e );
+}
+
+void GLGraphicsView::resizeEvent( QResizeEvent * e )
+{
+	GLView * glWidget = qobject_cast<GLView *>(viewport());
+	if ( glWidget ) {
+		glWidget->resizeEvent( e );
+	}
+
+	QGraphicsView::resizeEvent( e );
+}
 
 void GLGraphicsView::drawForeground( QPainter * painter, const QRectF & rect )
 {
@@ -2056,7 +2038,7 @@ void GLGraphicsView::drawBackground( QPainter * painter, const QRectF & rect )
 
 	GLView * glWidget = qobject_cast<GLView *>(viewport());
 	if ( glWidget ) {
-		glWidget->updateGL();
+		glWidget->update();
 	}
 
 	//QGraphicsView::drawBackground( painter, rect );

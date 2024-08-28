@@ -17,20 +17,16 @@ macx: {
     ICON = res/nifskope.icns
 }
 
-QT += xml opengl network widgets
+QT += xml opengl network widgets openglwidgets core5compat
 
-# Require Qt 5.15 or higher
-!contains(QT_VERSION, ^5\\.1[5-9].*) {
+# Require Qt 6.2 or higher
+contains(QT_VERSION, ^6\\.[0-1]\\..*) {
 	message("Cannot build NifSkope with Qt version $${QT_VERSION}")
-	error("Minimum required version is Qt 5.15")
+	error("Minimum required version is Qt 6.2")
 }
 
-# C++ Standard Support (NOTE: c++2a is deprecated by GCC, but is needed for compatibility with Qt 5)
-contains(QT_VERSION, ^6.*) {
-    CONFIG += c++20
-} else:macx {
-    CONFIG += c++2a
-}
+# C++ Standard Support
+CONFIG += c++20
 
 # Dependencies
 CONFIG += nvtristrip qhull gli libfo76utils
@@ -50,10 +46,6 @@ CONFIG(debug, debug|release) {
 	DEFINES += QT_NO_DEBUG_OUTPUT
 }
 
-# TODO: Get rid of this define
-#	uncomment this if you want the text stats gl option
-#	DEFINES += USE_GL_QPAINTER
-
 #TRANSLATIONS += \
 #	res/lang/NifSkope_de.ts \
 #	res/lang/NifSkope_fr.ts
@@ -62,8 +54,7 @@ CONFIG(debug, debug|release) {
 DEFINES += \
 	_USE_MATH_DEFINES \ # Define M_PI, etc. in cmath
 	QT_NO_CAST_FROM_BYTEARRAY \ # QByteArray deprecations
-	QT_NO_URL_CAST_FROM_STRING \ # QUrl deprecations
-	QT_DISABLE_DEPRECATED_BEFORE=0x050E00 #\ # Disable all functions deprecated as of 5.14
+	QT_NO_URL_CAST_FROM_STRING # QUrl deprecations
 
 	# Useful for tracking down strings not using
 	#	QObject::tr() for translations.

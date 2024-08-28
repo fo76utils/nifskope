@@ -36,7 +36,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "gl/glscene.h"
 #include "model/nifmodel.h"
 
-#include <QGLWidget> // Inherited
+#include <QOpenGLWindow> // Inherited
 #include <QGraphicsView>
 #include <QDateTime>
 #include <QPersistentModelIndex>
@@ -49,30 +49,26 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class NifSkope;
 class GLGraphicsView;
 
-class QGLFormat;
 class QOpenGLContext;
 class QOpenGLFunctions;
+class QSurfaceFormat;
 class QTimer;
 
 
 //! The main [Viewport](@ref viewport_details) class
-class GLView final : public QGLWidget
+class GLView final : public QOpenGLWindow
 {
 	Q_OBJECT
 
 	friend class NifSkope;
 	friend class GLGraphicsView;
 
-private:
-	GLView( const QGLFormat & format, QWidget * parent, const QGLWidget * shareWidget = 0 );
+public:
+	GLView( QWindow * parent );
 	~GLView();
 
-public:
-	//! Static instance
-	static GLView * create( NifSkope * );
-
-	QOpenGLContext * glContext;
-	QOpenGLFunctions * glFuncs;
+	QOpenGLContext * glContext = nullptr;
+	QOpenGLFunctions * glFuncs = nullptr;
 
 	float	brightnessScale = 1.0f;		// overall brightness
 	float	ambient = 1.0f;				// environment map / ambient light level
@@ -157,18 +153,9 @@ public:
 
 	QModelIndex indexAt( const QPointF & p, int cycle = 0 );
 
-	// UI
-
-	QSize minimumSizeHint() const override final { return { 50, 50 }; }
-	QSize sizeHint() const override final { return { 400, 400 }; }
-
-	//! Returns the actual dimensions in pixels (FIXME: it may be inaccurate due to rounding)
 	QSize getSizeInPixels() const
 	{
-		double	p = devicePixelRatioF();
-		int	w = int( p * width() + 0.5 );
-		int	h = int( p * height() + 0.5 );
-		return QSize( w, h );
+		return QSize( pixelWidth, pixelHeight );
 	}
 
 public slots:
@@ -190,6 +177,7 @@ public slots:
 	void setVisMode( Scene::VisMode, bool checked = true );
 	void updateSettings();
 	void selectPBRCubeMap();
+	void update_GL( [[maybe_unused]] int tmp ) { update(); }
 
 signals:
 	void clicked( const QModelIndex & );
@@ -208,20 +196,16 @@ protected:
 	//! Sets up the OpenGL viewport, projection, etc.
 	void resizeGL( int width, int height ) override final;
 	void resizeEvent( QResizeEvent * event ) override final;
-#ifdef USE_GL_QPAINTER
-	void paintEvent( QPaintEvent * ) override final;
-#else
 	//! Renders the OpenGL scene.
 	void paintGL() override final;
-#endif
 	void glProjection( int x = -1, int y = -1 );
 
 	// QWidget Event Handlers
 
-	void dragEnterEvent( QDragEnterEvent * ) override final;
-	void dragLeaveEvent( QDragLeaveEvent * ) override final;
-	void dragMoveEvent( QDragMoveEvent * ) override final;
-	void dropEvent( QDropEvent * ) override final;
+	void dragEnterEvent( QDragEnterEvent * );
+	void dragLeaveEvent( QDragLeaveEvent * );
+	void dragMoveEvent( QDragMoveEvent * );
+	void dropEvent( QDropEvent * );
 	void focusOutEvent( QFocusEvent * ) override final;
 	void keyPressEvent( QKeyEvent * ) override final;
 	void keyReleaseEvent( QKeyEvent * ) override final;
@@ -268,11 +252,15 @@ private:
 	QPersistentModelIndex iDragTarget;
 	QString fnDragTex, fnDragTexOrg;
 
+	bool isDisabled = true;
 	bool doCompile;
 	bool doCenter;
 
 	QTimer * lightVisTimer;
 	int lightVisTimeout;
+
+	int pixelWidth = 640;
+	int pixelHeight = 480;
 
 public:
 	struct Settings
@@ -299,6 +287,11 @@ public:
 		static float	zoomOutScale;
 	} cfg;
 
+	inline void setDisabled( bool n )
+	{
+		isDisabled = n;
+	}
+
 private slots:
 	void advanceGears();
 
@@ -316,8 +309,13 @@ class GLGraphicsView : public QGraphicsView
 	Q_OBJECT
 
 public:
-	GLGraphicsView( QWidget * parent );
+	GLGraphicsView( QWidget * parent, GLView * ogl );
 	~GLGraphicsView();
+
+	// UI
+
+	virtual QSize minimumSizeHint() const override final { return { 50, 50 }; }
+	virtual QSize sizeHint() const override final { return { 400, 400 }; }
 
 protected slots:
 	void setupViewport( QWidget * viewport ) override;
@@ -337,7 +335,8 @@ protected:
 	void mouseReleaseEvent( QMouseEvent * ) override final;
 	void wheelEvent( QWheelEvent * ) override final;
 
-	//void paintEvent( QPaintEvent * ) override final;
+	void paintEvent( QPaintEvent * ) override final;
+	void resizeEvent( QResizeEvent * ) override final;
 	void drawBackground( QPainter * painter, const QRectF & rect ) override final;
 	void drawForeground( QPainter * painter, const QRectF & rect ) override final;
 

@@ -139,17 +139,17 @@ void BSAProxyModel::setFilterByNameOnly( bool nameOnly )
 {
 	filterByNameOnly = nameOnly;
 
-	setFilterRegExp( filterRegExp() );
+	setFilterRegularExpression( filterRegularExpression() );
 }
 
 void BSAProxyModel::resetFilter()
 {
-	setFilterRegExp( QRegExp( "*", Qt::CaseInsensitive, QRegExp::Wildcard ) );
+	setFilterRegularExpression( QRegularExpression() );
 }
 
 bool BSAProxyModel::filterAcceptsRow( int sourceRow, const QModelIndex & sourceParent ) const
 {
-	if ( !filterRegExp().isEmpty() ) {
+	if ( !filterRegularExpression().pattern().isEmpty() ) {
 
 		QModelIndex sourceIndex0 = sourceModel()->index( sourceRow, 0, sourceParent );
 		QModelIndex sourceIndex1 = sourceModel()->index( sourceRow, 1, sourceParent );
@@ -172,7 +172,7 @@ bool BSAProxyModel::filterAcceptsRow( int sourceRow, const QModelIndex & sourceP
 				}
 			}
 
-			bool stringMatch = (filterByNameOnly) ? key0.contains( filterRegExp() ) : key1.contains( filterRegExp() );
+			bool stringMatch = (filterByNameOnly) ? key0.contains( filterRegularExpression() ) : key1.contains( filterRegularExpression() );
 
 			return typeMatch && stringMatch;
 		}

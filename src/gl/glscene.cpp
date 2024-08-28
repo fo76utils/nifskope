@@ -50,11 +50,9 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //! \file glscene.cpp %Scene management
 
-Scene::Scene( TexCache * texcache, QOpenGLContext * context, QOpenGLFunctions * functions, QObject * parent ) :
+Scene::Scene( TexCache * texcache, QObject * parent ) :
 	QObject( parent )
 {
-	renderer = new Renderer( context, functions );
-
 	currentBlock = currentIndex = QModelIndex();
 	animate = true;
 
@@ -100,7 +98,15 @@ Scene::Scene( TexCache * texcache, QOpenGLContext * context, QOpenGLFunctions * 
 
 Scene::~Scene()
 {
-	delete renderer;
+	if ( renderer )
+		delete renderer;
+}
+
+void Scene::setOpenGLContext( QOpenGLContext * context, QOpenGLFunctions * functions )
+{
+	if ( renderer || !context )
+		return;
+	renderer = new Renderer( context, functions );
 }
 
 void Scene::updateShaders()

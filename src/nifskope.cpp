@@ -309,7 +309,7 @@ NifSkope::NifSkope()
 	// Create GLView
 	/* ********************** */
 
-	ogl = GLView::create( this );
+	ogl = new GLView( nullptr );
 	ogl->setObjectName( "OGL1" );
 	ogl->setNif( nif );
 	ogl->installEventFilter( this );
@@ -341,7 +341,7 @@ NifSkope::NifSkope()
 
 	// Init Scene and View
 	graphicsScene = new QGraphicsScene( this );
-	graphicsView = new GLGraphicsView( this );
+	graphicsView = new GLGraphicsView( this, ogl );
 	graphicsView->setScene( graphicsScene );
 	graphicsView->setRenderHint( QPainter::Antialiasing );
 	graphicsView->setRenderHint( QPainter::SmoothPixmapTransform );
@@ -350,7 +350,6 @@ NifSkope::NifSkope()
 	graphicsView->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
 	//graphicsView->setOptimizationFlags( QGraphicsView::DontSavePainterState | QGraphicsView::DontAdjustForAntialiasing );
 
-	graphicsView->setViewport( ogl );
 	graphicsView->setViewportUpdateMode( QGraphicsView::FullViewportUpdate );
 
 	// Set central widget and viewport
@@ -1011,7 +1010,7 @@ void NifSkope::openArchive( const QString & archive )
 		connect( filterTimer, &QTimer::timeout, [this]() {
 			auto text = ui->bsaFilter->text();
 
-			bsaProxyModel->setFilterRegExp( QRegExp( text, Qt::CaseInsensitive, QRegExp::Wildcard ) );
+			bsaProxyModel->setFilterRegularExpression( QRegularExpression::fromWildcard( text, Qt::CaseInsensitive ) );
 			bsaView->expandAll();
 
 			if ( text.isEmpty() ) {
@@ -1466,7 +1465,7 @@ void NifSkope::migrateSettings() const
 		QStringList keys = settings.allKeys();
 
 		for ( const auto& key : keys ) {
-			if ( settings.value( key ).type() == QVariant::ByteArray ) {
+			if ( settings.value( key ).metaType() == QMetaType( QMetaType::QByteArray ) ) {
 				qDebug() << "Removing Qt version-specific settings" << key
 					<< "while migrating settings from previous version";
 				settings.remove( key );

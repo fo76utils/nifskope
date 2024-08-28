@@ -800,7 +800,7 @@ bool NifValue::setFromVariant( const QVariant & var )
 	if ( var.canConvert<NifValue>() ) {
 		operator=( var.value<NifValue>() );
 		return true;
-	} else if ( var.type() == QVariant::String ) {
+	} else if ( var.metaType() == QMetaType( QMetaType::QString ) ) {
 		return set<QString>( var.toString(), nullptr, nullptr );
 	}
 
@@ -1078,13 +1078,13 @@ QString NifValue::toString() const
 		}
 	case tByteArray:
 		return QString( "%1 bytes" )
-		       .arg( static_cast<QByteArray *>( val.data )->count() );
+		       .arg( static_cast<QByteArray *>( val.data )->size() );
 	case tStringPalette:
 		{
 			QByteArray * array = static_cast<QByteArray *>( val.data );
 			QString s;
 
-			while ( s.length() < array->count() ) {
+			while ( s.length() < array->size() ) {
 				s += &array->data()[s.length()];
 				s += QChar( '|' );
 			}

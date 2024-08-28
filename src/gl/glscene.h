@@ -60,8 +60,14 @@ class Scene final : public QObject
 {
 	Q_OBJECT
 public:
-	Scene( TexCache * texcache, QOpenGLContext * context, QOpenGLFunctions * functions, QObject * parent = nullptr );
+	Scene( TexCache * texcache, QObject * parent = nullptr );
 	~Scene();
+
+	void setOpenGLContext( QOpenGLContext * context, QOpenGLFunctions * functions );
+	inline bool haveRenderer() const
+	{
+		return bool( renderer );
+	}
 
 	void updateShaders();
 
@@ -181,7 +187,7 @@ public:
 	LodLevel lodLevel;
 
 
-	Renderer * renderer;
+	Renderer * renderer = nullptr;
 
 	NodeList nodes;
 	PropertyList properties;

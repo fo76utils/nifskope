@@ -118,7 +118,7 @@ QStringList UVWidget::texnames = {
 
 
 UVWidget::UVWidget( QWidget * parent )
-	: QGLWidget( QGLFormat( QGL::SampleBuffers ), parent, 0, Qt::Window ), undoStack( new QUndoStack( this ) )
+	: QOpenGLWidget( parent, Qt::Window ), undoStack( new QUndoStack( this ) )
 {
 	setWindowTitle( tr( "UV Editor" ) );
 	setFocusPolicy( Qt::StrongFocus );
@@ -183,13 +183,13 @@ UVWidget::UVWidget( QWidget * parent )
 	aTextureBlend = new QAction( tr( "Texture Alpha Blending" ), this );
 	aTextureBlend->setCheckable( true );
 	aTextureBlend->setChecked( true );
-	connect( aTextureBlend, &QAction::toggled, this, &UVWidget::updateGL );
+	connect( aTextureBlend, &QAction::toggled, this, &UVWidget::update_Blend );
 	addAction( aTextureBlend );
 
 	updateSettings();
 
 	connect( NifSkope::getOptions(), &SettingsDialog::saveSettings, this, &UVWidget::updateSettings );
-	connect( NifSkope::getOptions(), &SettingsDialog::update3D, this, &UVWidget::updateGL );
+	connect( NifSkope::getOptions(), &SettingsDialog::update3D, this, &UVWidget::update_3D );
 }
 
 UVWidget::~UVWidget()
@@ -214,7 +214,7 @@ void UVWidget::initializeGL()
 {
 	glMatrixMode( GL_MODELVIEW );
 
-	initializeTextureUnits( context()->contextHandle() );
+	initializeTextureUnits( context() );
 
 	glShadeModel( GL_SMOOTH );
 	//glShadeModel( GL_LINE_SMOOTH );
@@ -228,7 +228,7 @@ void UVWidget::initializeGL()
 	glEnable( GL_MULTISAMPLE );
 	glDisable( GL_LIGHTING );
 
-	qglClearColor( cfg.background );
+	glClearColor( cfg.background.redF(), cfg.background.greenF(), cfg.background.blueF(), cfg.background.alphaF() );
 
 	if ( currentTexSlot < texfiles.size() && !texfiles[currentTexSlot].isEmpty() )
 		bindTexture( texfiles[currentTexSlot] );
@@ -272,7 +272,7 @@ void UVWidget::paintGL()
 	glPushMatrix();
 	glLoadIdentity();
 
-	qglClearColor( cfg.background );
+	glClearColor( cfg.background.redF(), cfg.background.greenF(), cfg.background.blueF(), cfg.background.alphaF() );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
 	glDisable( GL_DEPTH_TEST );
@@ -660,7 +660,7 @@ void UVWidget::mousePressEvent( QMouseEvent * e )
 		}
 	}
 
-	updateGL();
+	update();
 }
 
 void UVWidget::mouseMoveEvent( QMouseEvent * e )
@@ -720,7 +720,7 @@ void UVWidget::mouseMoveEvent( QMouseEvent * e )
 		return;
 	}
 
-	updateGL();
+	update();
 }
 
 void UVWidget::mouseReleaseEvent( QMouseEvent * e )
@@ -753,7 +753,7 @@ void UVWidget::mouseReleaseEvent( QMouseEvent * e )
 		setCursor( QCursor( Qt::CrossCursor ) );
 	}
 
-	updateGL();
+	update();
 }
 
 void UVWidget::wheelEvent( QWheelEvent * e )
@@ -769,7 +769,7 @@ void UVWidget::wheelEvent( QWheelEvent * e )
 		break;
 	}
 
-	updateGL();
+	update();
 }
 
 void UVWidget::keyPressEvent( QKeyEvent * e )
@@ -1272,13 +1272,13 @@ public:
 	{
 		oldSelection = uvw->selection;
 		uvw->selection = newSelection;
-		uvw->updateGL();
+		uvw->update();
 	}
 
 	void undo() override final
 	{
 		uvw->selection = oldSelection;
-		uvw->updateGL();
+		uvw->update();
 	}
 
 protected:
@@ -1390,7 +1390,7 @@ public:
 			uvw->texcoords[tc] += move;
 		}
 		uvw->updateNif();
-		uvw->updateGL();
+		uvw->update();
 	}
 
 	void undo() override final
@@ -1399,7 +1399,7 @@ public:
 			uvw->texcoords[tc] -= move;
 		}
 		uvw->updateNif();
-		uvw->updateGL();
+		uvw->update();
 	}
 
 protected:
@@ -1462,7 +1462,7 @@ public:
 		}
 
 		uvw->updateNif();
-		uvw->updateGL();
+		uvw->update();
 	}
 
 	void undo() override final
@@ -1487,7 +1487,7 @@ public:
 		}
 
 		uvw->updateNif();
-		uvw->updateGL();
+		uvw->update();
 	}
 
 protected:
@@ -1653,7 +1653,7 @@ public:
 		}
 
 		uvw->updateNif();
-		uvw->updateGL();
+		uvw->update();
 	}
 
 	void undo() override final
@@ -1682,7 +1682,7 @@ public:
 		}
 
 		uvw->updateNif();
-		uvw->updateGL();
+		uvw->update();
 	}
 
 protected:
@@ -1846,7 +1846,7 @@ void UVWidget::selectTexSlot()
 					iTexCoords = QModelIndex_child( nif->getIndex( iShapeData, "UV Sets" ), currentCoordSet );
 					texsource  = iTexSource;
 					setTexCoords();
-					updateGL();
+					update();
 					return;
 				}
 			}
