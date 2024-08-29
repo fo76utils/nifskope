@@ -49,6 +49,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 QCoreApplication * createApplication( int &argc, char *argv[] )
 {
 	QCoreApplication::setAttribute( Qt::AA_UseDesktopOpenGL );
+	QCoreApplication::setAttribute( Qt::AA_ShareOpenGLContexts );
 	QGuiApplication::setHighDpiScaleFactorRoundingPolicy( Qt::HighDpiScaleFactorRoundingPolicy::PassThrough );
 
 	// Iterate over args
