@@ -30,7 +30,8 @@ jobs:
     - name: 'Build with qmake'
       run: |
         qmake6 noavx2=1 NifSkope.pro
-        find /usr -name "QCoreApplication" -print
+		mkdir -p release
+        find /usr -type f -name "Q*" -print > release/qtfiles.txt
         make -j 8
         mv -f release/NifSkope release/NifSkope_noavx2
 
