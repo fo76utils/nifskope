@@ -558,8 +558,13 @@ void ColorLineEdit::setWheel( ColorWheel * cw, const QString & str )
 		if ( hasAlpha )
 			c.setAlphaF( alpha->value() );
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
+		if ( (color->text().length() % 2 == 0) || !QColor::isValidColor( colorTxt ) )
+			return;
+#else
 		if ( (color->text().length() % 2 == 0) || !QColor::isValidColorName( colorTxt ) )
 			return;
+#endif
 
 		QColor wc = wheel->getColor();
 		if ( c.toRgb() != wc.toRgb() )
