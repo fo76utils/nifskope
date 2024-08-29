@@ -1,0 +1,41 @@
+name: Build NifSkope
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - qt6
+    tags-ignore:
+      - 'v2*'
+
+jobs:
+  build_linux:
+    runs-on: ubuntu-latest
+    name: Build Linux
+
+    steps:
+    - name: 'Checkout'
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        submodules: recursive
+
+    - name: 'Install required packages'
+      uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+          packages: libsdl2-dev qt6-base-dev qt6-3d-dev qt6-5compat-dev qmake6 qt6-image-formats-plugins
+          version: 1.0
+
+    - name: 'Build with qmake'
+      run: |
+        x86_64-linux-gnu-qmake6 noavx2=1 NifSkope.pro
+        find /usr -name "QCoreApplication" -print
+        make -j 8
+        mv -f release/NifSkope release/NifSkope_noavx2
+
+    - name: 'Upload Artifacts'
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-linux
+        path: 'release'
