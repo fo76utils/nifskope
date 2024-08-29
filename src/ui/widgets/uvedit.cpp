@@ -62,6 +62,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QSettings>
 #include <QMessageBox>
 #include <QFileDialog>
+#include <QSurfaceFormat>
 
 // TODO: Determine the necessity of this
 // Appears to be used solely for gluErrorString
@@ -120,6 +121,12 @@ QStringList UVWidget::texnames = {
 UVWidget::UVWidget( QWidget * parent )
 	: QOpenGLWidget( parent, Qt::Window ), undoStack( new QUndoStack( this ) )
 {
+	{
+		QSurfaceFormat	fmt = format();
+		fmt.setSamples( 4 );
+		setFormat( fmt );
+	}
+
 	setWindowTitle( tr( "UV Editor" ) );
 	setFocusPolicy( Qt::StrongFocus );
 
@@ -253,9 +260,10 @@ void UVWidget::initializeGL()
 
 void UVWidget::resizeGL( int width, int height )
 {
-	pixelWidth = width;
-	pixelHeight = height;
-	updateViewRect( width, height );
+	double	p = devicePixelRatioF();
+	pixelWidth = int( p * width + 0.5 );
+	pixelHeight = int( p * height + 0.5 );
+	updateViewRect( pixelWidth, pixelHeight );
 }
 
 void UVWidget::paintGL()
