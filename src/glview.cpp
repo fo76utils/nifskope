@@ -118,9 +118,9 @@ GLView::GLView( QWindow * p )
 	QSettings settings;
 	int	aa = settings.value( "Settings/Render/General/Antialiasing", 4 ).toInt();
 #ifdef Q_OS_LINUX
-	// work around issues with MSAA > 4x on Linux
-	if ( aa > 2 && !settings.value( "Settings/Render/General/Disable MSAA Limit", false ).toBool() ) {
-		aa = 2;
+	// work around issues with MSAA on Linux
+	if ( aa > 0 && !settings.value( "Settings/Render/General/Disable MSAA Limit", false ).toBool() ) {
+		aa = 0;
 		settings.setValue( "Settings/Render/General/Antialiasing", QVariant(aa) );
 	}
 #endif
@@ -142,6 +142,12 @@ GLView::GLView( QWindow * p )
 	fmt.setSwapInterval( 1 );
 	fmt.setSwapBehavior( QSurfaceFormat::DoubleBuffer );
 
+	fmt.setRedBufferSize( 8 );
+	fmt.setGreenBufferSize( 8 );
+	fmt.setBlueBufferSize( 8 );
+	fmt.setAlphaBufferSize( 8 );
+	fmt.setDepthBufferSize( 24 );
+	fmt.setStencilBufferSize( 8 );
 	fmt.setSamples( 1 << aa );
 
 #if 0
@@ -783,7 +789,8 @@ void GLView::resizeGL( int width, int height )
 
 void GLView::resizeEvent( QResizeEvent * e )
 {
-	resizeGL( e->size().width(), e->size().height() );
+	double	p = devicePixelRatioF();
+	resizeGL( int( p * e->size().width() + 0.5 ), int( p * e->size().height() + 0.5 ) );
 }
 
 void GLView::setFrontalLight( bool frontal )
@@ -1990,8 +1997,14 @@ void GLGraphicsView::setupViewport( QWidget * viewport )
 bool GLGraphicsView::eventFilter( QObject * o, QEvent * e )
 {
 	GLView * glWidget = qobject_cast<GLView *>( o );
-	if ( glWidget && glWidget->eventFilter( o, e ) )
-		return true;
+	if ( glWidget ) {
+		if ( e->type() == QEvent::ContextMenu && (glWidget->pressPos - glWidget->lastPos).manhattanLength() <= 3 ) {
+			emit customContextMenuRequested( static_cast< QContextMenuEvent * >(e)->pos() );
+			return true;
+		}
+		if ( glWidget->eventFilter( o, e ) )
+			return true;
+	}
 
 	return QGraphicsView::eventFilter( o, e );
 }

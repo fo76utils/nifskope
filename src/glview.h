@@ -41,8 +41,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QDateTime>
 #include <QPersistentModelIndex>
 
-#include <math.h>
-
 
 //! @file glview.h GLView, GLGraphicsView
 
