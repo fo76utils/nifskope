@@ -1144,9 +1144,7 @@ public:
 							tr( "Paste Block" ),
 							tr( "Nif versions differ!<br><br>Current File Version: %1<br>Clipboard Data Version: %2<br><br>The results will be unpredictable..." )
 								.arg( nif->getVersion() )
-								.arg( version ),
-							tr( "Continue" ),
-							tr( "Cancel" ) ) == 0)
+								.arg( version ) ) == QMessageBox::Yes )
 				) {
 					QByteArray data = mime->data( form );
 					QBuffer buffer( &data );
@@ -1240,9 +1238,7 @@ public:
 							tr( "Paste Over" ),
 							tr( "Nif versions differ!<br><br>Current File Version: %1<br>Clipboard Data Version: %2<br><br>The results will be unpredictable..." )
 								.arg( nif->getVersion() )
-							    .arg( version ),
-							tr( "Continue" ),
-							tr( "Cancel" ) ) == 0) )
+							    .arg( version ) ) == QMessageBox::Yes) )
 				{
 					QByteArray data = mime->data( form );
 					QBuffer buffer( &data );
@@ -1404,12 +1400,11 @@ QModelIndex spPasteBranch::cast( NifModel * nif, const QModelIndex & index )
 
 			if ( !v.isEmpty()
 				&& ( v == nif->getVersion()
-					|| QMessageBox::question( 0, tr( "Paste Branch" ),
+					|| QMessageBox::question( nullptr, tr( "Paste Branch" ),
 					        tr( "Nif versions differ!<br><br>Current File Version: %1<br>Clipboard Data Version: %2<br><br>The results will be unpredictable..." )
-					            .arg( nif->getVersion() ).arg( v ), tr( "Continue" ),
-					        tr( "Cancel" )
-						) == 0
-				    )
+					            .arg( nif->getVersion() ).arg( v )
+						) == QMessageBox::Yes
+					)
 				)
 			{
 				QByteArray data = mime->data( form );

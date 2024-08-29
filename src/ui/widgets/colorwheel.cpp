@@ -280,8 +280,10 @@ void ColorWheel::mousePressEvent( QMouseEvent * e )
 	if ( e->button() != Qt::LeftButton )
 		return;
 
-	double dx = abs( e->x() - width() / 2 );
-	double dy = abs( e->y() - height() / 2 );
+	double x = e->position().x();
+	double y = e->position().y();
+	double dx = abs( x - width() * 0.5 );
+	double dy = abs( y - height() * 0.5 );
 	double d  = sqrt( dx * dx + dy * dy );
 
 	double s = qMin( width(), height() ) / 2.0;
@@ -294,13 +296,13 @@ void ColorWheel::mousePressEvent( QMouseEvent * e )
 	else
 		pressed = Triangle;
 
-	setColor( e->x(), e->y() );
+	setColor( x, y );
 }
 
 void ColorWheel::mouseMoveEvent( QMouseEvent * e )
 {
 	if ( e->buttons() & Qt::LeftButton )
-		setColor( e->x(), e->y() );
+		setColor( e->position().x(), e->position().y() );
 }
 
 void ColorWheel::contextMenuEvent( QContextMenuEvent * e )
@@ -334,7 +336,7 @@ void ColorWheel::contextMenuEvent( QContextMenuEvent * e )
 	delete menu;
 }
 
-void ColorWheel::setColor( int x, int y )
+void ColorWheel::setColor( double x, double y )
 {
 	if ( pressed == Circle ) {
 		QLineF l( QPointF( width() / 2.0, height() / 2.0 ), QPointF( x, y ) );
@@ -345,7 +347,7 @@ void ColorWheel::setColor( int x, int y )
 		emit sigColor( getColor() );
 		emit sigColorEdited( getColor() );
 	} else if ( pressed == Triangle ) {
-		QPointF mp( x - width() / 2, y - height() / 2 );
+		QPointF mp( x - width() * 0.5, y - height() * 0.5 );
 
 		QTransform m;
 		m.rotate( ( H ) * 360.0 + 120 );
@@ -556,7 +558,7 @@ void ColorLineEdit::setWheel( ColorWheel * cw, const QString & str )
 		if ( hasAlpha )
 			c.setAlphaF( alpha->value() );
 
-		if ( (color->text().length() % 2 == 0) || !QColor::isValidColor( colorTxt ) )
+		if ( (color->text().length() % 2 == 0) || !QColor::isValidColorName( colorTxt ) )
 			return;
 
 		QColor wc = wheel->getColor();

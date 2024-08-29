@@ -220,9 +220,9 @@ void NifExpr::partition( const QString & cond, int offset /*= 0*/ )
 			if ( reUInt.match( cond ).hasMatch() ) {
 				bool ok = false;
 				lhs.setValue( cond.toUInt( &ok, 16 ) );
-				lhs.convert( QVariant::UInt );
+				lhs.convert( QMetaType( QMetaType::UInt ) );
 			} else if ( reInt.match( cond ).hasMatch() ) {
-				lhs.convert( QVariant::Int );
+				lhs.convert( QMetaType( QMetaType::Int ) );
 			} else if ( reVersion.match( cond ).hasMatch() ) {
 				lhs.setValue( version2number( cond ) );
 			}
@@ -258,10 +258,10 @@ QString NifExpr::toString() const
 	QString l = lhs.toString();
 	QString r = rhs.toString();
 
-	if ( lhs.type() == QVariant::UserType && lhs.canConvert<NifExpr>() )
+	if ( lhs.typeId() >= QMetaType::User && lhs.canConvert<NifExpr>() )
 		l = lhs.value<NifExpr>().toString();
 
-	if ( rhs.type() == QVariant::UserType && rhs.canConvert<NifExpr>() )
+	if ( rhs.typeId() >= QMetaType::User && rhs.canConvert<NifExpr>() )
 		r = rhs.value<NifExpr>().toString();
 
 	switch ( opcode ) {
@@ -309,13 +309,13 @@ QString NifExpr::toString() const
 void NifExpr::NormalizeVariants( QVariant & l, QVariant & r ) const
 {
 	if ( l.isValid() && r.isValid() ) {
-		if ( l.type() != r.type() ) {
-			if ( l.type() == QVariant::String && l.canConvert( r.type() ) )
-				l.convert( r.type() );
-			else if ( r.type() == QVariant::String && r.canConvert( l.type() ) )
-				r.convert( l.type() );
+		if ( l.typeId() != r.typeId() ) {
+			if ( l.typeId() == QMetaType::QString && l.canConvert( r.metaType() ) )
+				l.convert( r.metaType() );
+			else if ( r.typeId() == QMetaType::QString && r.canConvert( l.metaType() ) )
+				r.convert( l.metaType() );
 			else {
-				QVariant::Type t = l.type() > r.type() ? l.type() : r.type();
+				QMetaType t = QMetaType( l.typeId() > r.typeId() ? l.typeId() : r.typeId() );
 
 				if ( r.canConvert( t ) && l.canConvert( t ) ) {
 					l.convert( t );

@@ -3,6 +3,7 @@
 #include "ui_checkablemessagebox.h"
 
 #include <QPushButton>
+#include <QCommonStyle>
 
 
 struct CheckableMessageBoxPrivate {
@@ -126,17 +127,18 @@ QDialogButtonBox::StandardButton
                                       QDialogButtonBox::StandardButtons buttons,
                                       QDialogButtonBox::StandardButton defaultButton )
 {
-    CheckableMessageBox mb( parent );
-    mb.setWindowTitle( title );
-    mb.setIconPixmap( QMessageBox::standardIcon( QMessageBox::Question ) );
-    mb.setText( question );
-    mb.setCheckBoxText( checkBoxText );
-    mb.setChecked( *checkBoxSetting );
-    mb.setStandardButtons( buttons );
-    mb.setDefaultButton( defaultButton );
-    mb.exec();
-    *checkBoxSetting = mb.isChecked();
-    return mb.clickedStandardButton();
+	CheckableMessageBox mb( parent );
+	mb.setWindowTitle( title );
+	QCommonStyle s;
+	mb.setIconPixmap( s.standardIcon( QStyle::SP_MessageBoxQuestion ).pixmap( mb.m_d->ui.pixmapLabel->size() ) );
+	mb.setText( question );
+	mb.setCheckBoxText( checkBoxText );
+	mb.setChecked( *checkBoxSetting );
+	mb.setStandardButtons( buttons );
+	mb.setDefaultButton( defaultButton );
+	mb.exec();
+	*checkBoxSetting = mb.isChecked();
+	return mb.clickedStandardButton();
 }
 
 QMessageBox::StandardButton CheckableMessageBox::dialogButtonBoxToMessageBoxButton( QDialogButtonBox::StandardButton db )

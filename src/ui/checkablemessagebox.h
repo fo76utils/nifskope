@@ -47,7 +47,7 @@ public:
 	void setDefaultButton( QDialogButtonBox::StandardButton s );
 
 	QPixmap iconPixmap() const;
-	void setIconPixmap ( const QPixmap & p );
+	void setIconPixmap( const QPixmap & p );
 
 	// Query the result
 	QAbstractButton * clickedButton() const;

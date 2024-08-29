@@ -237,7 +237,7 @@ public:
 
 			if ( parent->isArray() && parent->isBinary() ) {
 				// NOTE: This will only work on byte arrays where the array length is not an expression
-				nif->set<int>( iParent.parent(), parent->arr1(), data.count() );
+				nif->set<int>( iParent.parent(), parent->arr1(), int( data.size() ) );
 				nif->updateArraySize( iParent );
 			}
 

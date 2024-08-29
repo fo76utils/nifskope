@@ -962,7 +962,7 @@ public:
 		catch ( QString & err )
 		{
 			if ( !err.isEmpty() )
-				QMessageBox::warning( 0, "NifSkope", err );
+				QMessageBox::warning( nullptr, "NifSkope", err );
 
 			return iShape;
 		}
@@ -1231,12 +1231,9 @@ public:
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
 	{
 		if ( nif->getLink( index, "Controller" ) != -1 ) {
-			int keyframeResponse = QMessageBox::question( 0, Spell::tr( "Mirror Armature" ), Spell::tr( "Do you wish to flip or delete animation?" ), Spell::tr( "Flip" ), Spell::tr( "Delete" ), Spell::tr( "Cancel" ) );
+			int keyframeResponse = QMessageBox::question( nullptr, Spell::tr( "Mirror Armature" ), Spell::tr( "Do you wish to flip animation?" ), QMessageBox::StandardButtons( QMessageBox::Yes | QMessageBox::Discard | QMessageBox::Cancel ) );
 
-			if ( keyframeResponse == 2 )
-				return index;
-
-			if ( keyframeResponse == 1 ) {
+			if ( keyframeResponse == QMessageBox::Discard ) {
 				// delete blocks
 				int n = 0;
 
@@ -1248,6 +1245,8 @@ public:
 					else
 						n++;
 				}
+			} else if ( keyframeResponse != QMessageBox::Yes ) {
+				return index;
 			}
 		}
 

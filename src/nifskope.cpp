@@ -1335,10 +1335,9 @@ void NifSkope::sltLocaleChanged()
 {
 	SetAppLocale( cfg.locale );
 
-	QMessageBox mb( "NifSkope",
+	QMessageBox mb( QMessageBox::Information, "NifSkope",
 	                tr( "NifSkope must be restarted for this setting to take full effect." ),
-	                QMessageBox::Information, QMessageBox::Ok | QMessageBox::Default, 0, 0,
-	                qApp->activeWindow()
+	                QMessageBox::Ok | QMessageBox::Default, qApp->activeWindow()
 	);
 	mb.setIconPixmap( QPixmap( ":/res/nifskope.png" ) );
 	mb.exec();

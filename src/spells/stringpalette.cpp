@@ -151,7 +151,7 @@ public:
 		QMap<QString, int> strings;
 		int x = 0;
 
-		while ( x < bytes.count() ) {
+		while ( x < bytes.size() ) {
 			QString s( &bytes.data()[x] );
 			strings.insert( s, x );
 			x += s.length() + 1;
@@ -195,7 +195,7 @@ public:
 			return strings[ string ];
 
 		QByteArray bytes = nif->get<QByteArray>( iPalette, "Palette" );
-		int ofs = bytes.count();
+		int ofs = int( bytes.size() );
 		bytes += string.toLatin1();
 		bytes.append( '\0' );
 		nif->set<QByteArray>( iPalette, "Palette", bytes );
@@ -327,7 +327,7 @@ public:
 		QMap<int, QString> oldPalette;
 		int x = 0;
 
-		while ( x < bytes.count() ) {
+		while ( x < bytes.size() ) {
 			QString s( &bytes.data()[x] );
 			oldPalette.insert( x, s );
 			x += s.length() + 1;

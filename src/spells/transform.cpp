@@ -105,10 +105,8 @@ QModelIndex spApplyTransformation::cast( NifModel * nif, const QModelIndex & ind
 	if ( nif->getLink( index, "Controller" ) != -1
 		 || nif->getLink( index, "Skin Instance" ) != -1
 		 || nif->getLink( index, "Skin" ) != -1 )
-		if ( QMessageBox::question( 0, Spell::tr( "Apply Transformation" ),
-			Spell::tr( "On animated and or skinned nodes Apply Transformation most likely won't work the way you expected it." ),
-			Spell::tr( "Try anyway" ),
-			Spell::tr( "Cancel" ) ) != 0 )
+		if ( QMessageBox::question( nullptr, Spell::tr( "Apply Transformation" ),
+			Spell::tr( "On animated and or skinned nodes Apply Transformation most likely won't work the way you expected it. Try anyway?" ) ) != QMessageBox::Yes )
 		{
 			return index;
 		}

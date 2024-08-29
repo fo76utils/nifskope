@@ -89,7 +89,7 @@ protected:
 	void mouseMoveEvent( QMouseEvent * e ) override final;
 	void contextMenuEvent( QContextMenuEvent * e ) override final;
 
-	void setColor( int x, int y );
+	void setColor( double x, double y );
 
 private:
 	double H = 0, S = 0, V = 0, A = 0;
