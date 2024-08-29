@@ -89,6 +89,7 @@ jobs:
       uses: jurplel/install-qt-action@v4
       with:
         version: '6.*'
+        modules: 'core5compat'
 
     - name: 'Install clang'
       run: brew install llvm
