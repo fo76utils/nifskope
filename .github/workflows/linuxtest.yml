@@ -24,12 +24,12 @@ jobs:
     - name: 'Install required packages'
       uses: awalsh128/cache-apt-pkgs-action@latest
       with:
-          packages: libsdl2-dev qt6-base-dev qt6-3d-dev qt6-5compat-dev qmake6 qt6-image-formats-plugins
+          packages: libsdl2-dev qt6-base-dev qt6-3d-dev qt6-5compat-dev libqt6core5compat6-dev qmake6 qt6-image-formats-plugins
           version: 1.0
 
     - name: 'Build with qmake'
       run: |
-        x86_64-linux-gnu-qmake6 noavx2=1 NifSkope.pro
+        qmake6 noavx2=1 NifSkope.pro
         find /usr -name "QCoreApplication" -print
         make -j 8
         mv -f release/NifSkope release/NifSkope_noavx2
