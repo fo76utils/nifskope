@@ -5,7 +5,7 @@ on:
   pull_request:
   push:
     branches:
-      - develop
+      - qt6
     tags-ignore:
       - 'v2*'
 
@@ -27,12 +27,12 @@ jobs:
         msystem: UCRT64
         update: true
         cache: true
-        install: 'base-devel mingw-w64-ucrt-x86_64-gcc msys/p7zip mingw-w64-ucrt-x86_64-qt5-base mingw-w64-ucrt-x86_64-qt5-3d mingw-w64-ucrt-x86_64-qt5-imageformats mingw-w64-ucrt-x86_64-qt5-tools'
+        install: 'base-devel mingw-w64-ucrt-x86_64-gcc msys/p7zip mingw-w64-ucrt-x86_64-qt6-base mingw-w64-ucrt-x86_64-qt6-3d mingw-w64-ucrt-x86_64-qt6-5compat mingw-w64-ucrt-x86_64-qt6-imageformats mingw-w64-ucrt-x86_64-qt6-tools'
 
     - name: 'Build with qmake'
       shell: msys2 {0}
       run: |
-        qmake noavx2=1 NifSkope.pro
+        qmake6 noavx2=1 NifSkope.pro
         make -j 8
         mv -f release/NifSkope.exe release/NifSkope_noavx2.exe
 
@@ -58,12 +58,12 @@ jobs:
     - name: 'Install required packages'
       uses: awalsh128/cache-apt-pkgs-action@latest
       with:
-          packages: libsdl2-dev qtbase5-dev qt5-qmake qt5-image-formats-plugins
+          packages: libsdl2-dev qt6-base-dev qt6-3d-dev qt6-5compat-dev qmake6 qt6-image-formats-plugins
           version: 1.0
 
     - name: 'Build with qmake'
       run: |
-        x86_64-linux-gnu-qmake noavx2=1 NifSkope.pro
+        x86_64-linux-gnu-qmake6 noavx2=1 NifSkope.pro
         make -j 8
         mv -f release/NifSkope release/NifSkope_noavx2
 
@@ -93,7 +93,7 @@ jobs:
 
     - name: 'Build with qmake'
       run: |
-        qmake noavx2=1 NifSkope.pro
+        qmake6 noavx2=1 NifSkope.pro
         make -j 8
 
     - name: 'Create DMG image'
@@ -127,12 +127,12 @@ jobs:
         msystem: CLANG64
         update: true
         cache: true
-        install: 'base-devel mingw-w64-clang-x86_64-gcc msys/p7zip mingw-w64-clang-x86_64-qt5-base mingw-w64-clang-x86_64-qt5-3d mingw-w64-clang-x86_64-qt5-imageformats mingw-w64-clang-x86_64-qt5-tools'
+        install: 'base-devel mingw-w64-clang-x86_64-gcc msys/p7zip mingw-w64-clang-x86_64-qt6-base mingw-w64-clang-x86_64-qt6-3d mingw-w64-clang-x86_64-qt6-5compat mingw-w64-clang-x86_64-qt6-imageformats mingw-w64-clang-x86_64-qt6-tools'
 
     - name: 'Build with qmake'
       shell: msys2 {0}
       run: |
-        qmake NifSkope.pro
+        qmake6 NifSkope.pro
         make -j 8
 
     - name: 'Upload Artifacts'
