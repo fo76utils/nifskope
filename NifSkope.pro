@@ -572,7 +572,7 @@ build_pass|!debug_and_release {
 			$$[QT_INSTALL_PLUGINS]/imageformats/qwebp$${DLLEXT}
 
 		styles += \
-			$$[QT_INSTALL_PLUGINS]/styles/qwindowsvistastyle$${DLLEXT}
+			$$[QT_INSTALL_PLUGINS]/styles/qmodernwindowsstyle$${DLLEXT}
 
 		copyFiles( $$platforms, platforms, true )
 		copyFiles( $$imageformats, imageformats, true )
