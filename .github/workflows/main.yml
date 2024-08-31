@@ -56,11 +56,10 @@ jobs:
         submodules: recursive
 
     - name: 'Install required packages'
-      uses: awalsh128/cache-apt-pkgs-action@latest
+      uses: jurplel/install-qt-action@v4
       with:
-          packages: libsdl2-dev qt6-base-dev qt6-base-private-dev qt6-base-dev-tools qt6-5compat-dev qt6-3d-dev qmake6 qt6-image-formats-plugins libglu1-mesa-dev
-          version: 1.0
-          execute_install_scripts: true
+        version: '6.*'
+        modules: 'qt5compat'
 
     - name: 'Build with qmake'
       run: |

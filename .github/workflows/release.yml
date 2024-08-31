@@ -2,8 +2,6 @@ name: Build NifSkope release packages
 
 on:
   push:
-    branches-ignore:
-      - develop
     tags:
       - 'v2*'
 
