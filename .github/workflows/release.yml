@@ -2,6 +2,8 @@ name: Build NifSkope release packages
 
 on:
   push:
+    branches:
+      - qt6
     tags:
       - 'v2*'
 
@@ -23,23 +25,23 @@ jobs:
         msystem: UCRT64
         update: true
         cache: true
-        install: 'base-devel mingw-w64-ucrt-x86_64-gcc msys/p7zip mingw-w64-ucrt-x86_64-qt5-base mingw-w64-ucrt-x86_64-qt5-3d mingw-w64-ucrt-x86_64-qt5-imageformats mingw-w64-ucrt-x86_64-qt5-tools'
+        install: 'base-devel mingw-w64-ucrt-x86_64-gcc msys/p7zip mingw-w64-ucrt-x86_64-qt6-base mingw-w64-ucrt-x86_64-qt6-3d mingw-w64-ucrt-x86_64-qt6-5compat mingw-w64-ucrt-x86_64-qt6-imageformats mingw-w64-ucrt-x86_64-qt6-tools'
 
     - name: 'Build with qmake'
       shell: msys2 {0}
       run: |
-        qmake noavx=1 NifSkope.pro
+        qmake6 noavx=1 NifSkope.pro
         make -j 8
         mv -f release/NifSkope.exe release/NifSkope_noavx.exe
         make clean
-        qmake noavx2=1 NifSkope.pro
+        qmake6 noavx2=1 NifSkope.pro
         make -j 8
         mv -f release/NifSkope.exe release/NifSkope_noavx2.exe
         make clean
-        qmake NifSkope.pro
+        qmake6 NifSkope.pro
         make -j 8
         mv -f release NifSkope
-        7za a -m0=lzma -mx=9 NifSkope_2_0_$(date +"%Y-%m-%d")-win64_gcc.7z NifSkope
+        7za a -m0=lzma -mx=9 NifSkope_2_0_$(date +"%Y-%m-%d")-win64qt6_gcc.7z NifSkope
 
     - name: 'Upload Artifacts'
       uses: actions/upload-artifact@v4
@@ -50,7 +52,7 @@ jobs:
 
 
   build_linux:
-    runs-on: ubuntu-latest
+    runs-on: 'ubuntu-24.04'
     name: Build Linux
 
     steps:
@@ -63,24 +65,24 @@ jobs:
     - name: 'Install required packages'
       uses: awalsh128/cache-apt-pkgs-action@latest
       with:
-          packages: libsdl2-dev qtbase5-dev qt5-qmake qt5-image-formats-plugins 7zip
+          packages: libsdl2-dev qt6-base-dev qt6-base-private-dev qt6-base-dev-tools qt6-5compat-dev qt6-3d-dev qmake6 qt6-image-formats-plugins libglu1-mesa-dev 7zip
           version: 1.0
 
     - name: 'Build with qmake'
       run: |
-        x86_64-linux-gnu-qmake noavx=1 NifSkope.pro
+        qmake6 noavx=1 NifSkope.pro
         make -j 8
         mv -f release/NifSkope release/NifSkope_noavx
         make clean
-        x86_64-linux-gnu-qmake noavx2=1 NifSkope.pro
+        qmake6 noavx2=1 NifSkope.pro
         make -j 8
         mv -f release/NifSkope release/NifSkope_noavx2
         make clean
-        x86_64-linux-gnu-qmake NifSkope.pro
+        qmake6 NifSkope.pro
         make -j 8
         chmod -f 0755 release release/NifSkope release/NifSkope_noavx release/NifSkope_noavx2
         mv -f release nifskope-linux
-        7za a -m0=lzma -mx=9 NifSkope_2_0_$(date +"%Y-%m-%d")-linux_x64.7z nifskope-linux
+        7za a -m0=lzma -mx=9 NifSkope_2_0_$(date +"%Y-%m-%d")-linuxqt6_x64.7z nifskope-linux
 
     - name: 'Upload Artifacts'
       uses: actions/upload-artifact@v4
@@ -102,13 +104,16 @@ jobs:
 
     - name: 'Install required packages'
       uses: jurplel/install-qt-action@v4
+      with:
+        version: '6.7.2'
+        modules: 'qt5compat'
 
     - name: 'Install clang'
       run: brew install llvm
 
     - name: 'Build with qmake'
       run: |
-        qmake noavx2=1 NifSkope.pro
+        qmake6 QMAKE_APPLE_DEVICE_ARCHS="x86_64" noavx2=1 NifSkope.pro
         make -j 8
 
     - name: 'Create DMG image'
@@ -117,12 +122,13 @@ jobs:
         cp res/stf_compat.* release/shaders/
         mv release/*.xml release/shaders release/qt.conf release/style.qss release/*.txt release/NifSkope.app/Contents/MacOS/
         macdeployqt release/NifSkope.app -dmg
+        mv release/NifSkope.dmg release/NifSkope_2_0_$(date +"%Y-%m-%d")-macosqt6_x64.dmg
 
     - name: 'Upload Artifacts'
       uses: actions/upload-artifact@v4
       with:
         name: build-macos
-        path: release/NifSkope.dmg
+        path: release/NifSkope*.dmg
 
 
   build_clang64:
@@ -142,23 +148,23 @@ jobs:
         msystem: CLANG64
         update: true
         cache: true
-        install: 'base-devel mingw-w64-clang-x86_64-gcc msys/p7zip mingw-w64-clang-x86_64-qt5-base mingw-w64-clang-x86_64-qt5-3d mingw-w64-clang-x86_64-qt5-imageformats mingw-w64-clang-x86_64-qt5-tools'
+        install: 'base-devel mingw-w64-clang-x86_64-gcc msys/p7zip mingw-w64-clang-x86_64-qt6-base mingw-w64-clang-x86_64-qt6-3d mingw-w64-clang-x86_64-qt6-5compat mingw-w64-clang-x86_64-qt6-imageformats mingw-w64-clang-x86_64-qt6-tools'
 
     - name: 'Build with qmake'
       shell: msys2 {0}
       run: |
-        qmake noavx=1 NifSkope.pro
+        qmake6 noavx=1 NifSkope.pro
         make -j 8
         mv -f release/NifSkope.exe release/NifSkope_noavx.exe
         make clean
-        qmake noavx2=1 NifSkope.pro
+        qmake6 noavx2=1 NifSkope.pro
         make -j 8
         mv -f release/NifSkope.exe release/NifSkope_noavx2.exe
         make clean
-        qmake NifSkope.pro
+        qmake6 NifSkope.pro
         make -j 8
         mv -f release NifSkope
-        7za a -m0=lzma -mx=9 NifSkope_2_0_$(date +"%Y-%m-%d")-win64_clang.7z NifSkope
+        7za a -m0=lzma -mx=9 NifSkope_2_0_$(date +"%Y-%m-%d")-win64qt6_clang.7z NifSkope
 
     - name: 'Upload Artifacts'
       uses: actions/upload-artifact@v4
