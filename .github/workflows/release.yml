@@ -2,8 +2,8 @@ name: Build NifSkope release packages
 
 on:
   push:
-    branches:
-      - qt6
+    branches-ignore:
+      - develop
     tags:
       - 'v2*'
 
@@ -67,6 +67,7 @@ jobs:
       with:
           packages: libsdl2-dev qt6-base-dev qt6-base-private-dev qt6-base-dev-tools qt6-5compat-dev qt6-3d-dev qmake6 qt6-image-formats-plugins libglu1-mesa-dev 7zip
           version: 1.0
+          execute_install_scripts: true
 
     - name: 'Build with qmake'
       run: |
