@@ -56,10 +56,9 @@ jobs:
         submodules: recursive
 
     - name: 'Install required packages'
-      uses: jurplel/install-qt-action@v4
-      with:
-        version: '6.4.2'
-        modules: 'qt5compat'
+      run: |
+        sudo apt-get update
+        sudo apt-get -y install libsdl2-dev qt6-base-dev qt6-base-private-dev qt6-base-dev-tools qt6-5compat-dev qt6-3d-dev qmake6 qt6-image-formats-plugins libglu1-mesa-dev 7zip
 
     - name: 'Build with qmake'
       run: |
