@@ -990,7 +990,10 @@ void NifSkope::openArchive( const QString & archive )
 
 		// Sort proxy after model/view is populated
 		bsaProxyModel->sort( 0, Qt::AscendingOrder );
+#if 0
+		// this is not needed because archives are already filtered on load
 		bsaProxyModel->setFiletypes( { ".nif", ".bto", ".btr" } );
+#endif
 		bsaProxyModel->resetFilter();
 
 		// Set filename label
@@ -1010,7 +1013,9 @@ void NifSkope::openArchive( const QString & archive )
 		connect( filterTimer, &QTimer::timeout, [this]() {
 			auto text = ui->bsaFilter->text();
 
-			bsaProxyModel->setFilterRegularExpression( QRegularExpression::fromWildcard( text, Qt::CaseInsensitive ) );
+			bsaProxyModel->setFilterRegularExpression(
+				QRegularExpression::fromWildcard(
+					text, Qt::CaseInsensitive, QRegularExpression::UnanchoredWildcardConversion ) );
 			bsaView->expandAll();
 
 			if ( text.isEmpty() ) {
