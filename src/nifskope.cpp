@@ -71,7 +71,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QTreeView>
 #include <QStandardItemModel>
 
-#include "libfo76utils/src/ba2file.hpp"
+#include "ba2file.hpp"
 #include "bsamodel.h"
 
 #ifdef WIN32
@@ -138,7 +138,7 @@ static const QHash<QString, QString> migrateTo2_0 = {
 		{ "File/Last Load", "File/Last Load" }, { "File/Last Save", "File/Last Save" },
 		{ "FSEngine/Archives", "FSEngine/Archives" },
 		{ "Render Settings/Anti Aliasing", "Render Settings/Anti Aliasing" },
-		{ "Render Settings/Texturing", "Render Settings/Texturing" }, 
+		{ "Render Settings/Texturing", "Render Settings/Texturing" },
 		{ "Render Settings/Enable Shaders", "Render Settings/Enable Shaders" },
 		{ "Render Settings/Background", "Render Settings/Background" },
 		{ "Render Settings/Foreground", "Render Settings/Foreground" },
@@ -312,7 +312,6 @@ NifSkope::NifSkope()
 	ogl = new GLView( nullptr );
 	ogl->setObjectName( "OGL1" );
 	ogl->setNif( nif );
-	ogl->installEventFilter( this );
 
 	// Create InspectView
 	/* ********************** */
@@ -340,28 +339,12 @@ NifSkope::NifSkope()
 	 */
 
 	// Init Scene and View
-	graphicsScene = new QGraphicsScene( this );
-	graphicsView = new GLGraphicsView( this, ogl );
-	graphicsView->setScene( graphicsScene );
-	graphicsView->setRenderHint( QPainter::Antialiasing );
-	graphicsView->setRenderHint( QPainter::SmoothPixmapTransform );
-	graphicsView->setCacheMode( QGraphicsView::CacheNone );
-	graphicsView->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
-	graphicsView->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
-	//graphicsView->setOptimizationFlags( QGraphicsView::DontSavePainterState | QGraphicsView::DontAdjustForAntialiasing );
-
-	graphicsView->setViewportUpdateMode( QGraphicsView::FullViewportUpdate );
+	graphicsView = ogl->createWindowContainer( this );
 
 	// Set central widget and viewport
 	setCentralWidget( graphicsView );
 
 	setContextMenuPolicy( Qt::NoContextMenu );
-
-	// Resize timer for eventFilter()
-	isResizing = false;
-	resizeTimer = new QTimer( this );
-	resizeTimer->setSingleShot( true );
-	connect( resizeTimer, &QTimer::timeout, this, &NifSkope::resizeDone );
 
 	// Set Actions
 	initActions();
@@ -1124,7 +1107,8 @@ void NifSkope::openFiles( QStringList & files )
 {
 	// Open first file in current window if blank
 	//	or only one file selected.
-	if ( getCurrentFile().isEmpty() || files.count() == 1 ) {
+	if ( ( getCurrentFile().isEmpty() || files.count() == 1 )
+		&& !( isWindowModified() || ( nif && !nif->undoStack->isClean() ) ) ) {
 		QString first = files.takeFirst();
 		if ( !first.isEmpty() )
 			loadFile( first );

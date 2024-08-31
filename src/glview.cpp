@@ -95,23 +95,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //! @file glview.cpp GLView implementation
 
 
-GLGraphicsView::GLGraphicsView( QWidget * parent, GLView * ogl ) : QGraphicsView()
-{
-	setContextMenuPolicy( Qt::CustomContextMenu );
-	setFocusPolicy( Qt::ClickFocus );
-	setAcceptDrops( true );
-
-	installEventFilter( parent );
-	ogl->installEventFilter( this );
-
-	setViewport( QWidget::createWindowContainer( ogl, this ) );
-}
-
-GLGraphicsView::~GLGraphicsView()
-{
-}
-
-
 GLView::GLView( QWindow * p )
 	: QOpenGLWindow( QOpenGLWindow::NoPartialUpdate, p )
 {
@@ -119,17 +102,14 @@ GLView::GLView( QWindow * p )
 	int	aa = settings.value( "Settings/Render/General/Antialiasing", 4 ).toInt();
 #ifdef Q_OS_LINUX
 	// work around issues with MSAA on Linux
-	if ( aa > 0 && !settings.value( "Settings/Render/General/Disable MSAA Limit", false ).toBool() ) {
-		aa = 0;
+	if ( aa > 2 && !settings.value( "Settings/Render/General/Disable MSAA Limit", false ).toBool() ) {
+		aa = 2;
 		settings.setValue( "Settings/Render/General/Antialiasing", QVariant(aa) );
 	}
 #endif
 	aa = std::min< int >( std::max< int >( aa, 0 ), 4 );
 
 	QSurfaceFormat	fmt;
-#if 0
-	fmt.setSampleBuffers( bool(aa) );
-#endif
 
 	// OpenGL version (4.1, compatibility profile)
 	fmt.setRenderableType( QSurfaceFormat::OpenGL );
@@ -142,29 +122,11 @@ GLView::GLView( QWindow * p )
 	fmt.setSwapInterval( 1 );
 	fmt.setSwapBehavior( QSurfaceFormat::DoubleBuffer );
 
-	fmt.setRedBufferSize( 8 );
-	fmt.setGreenBufferSize( 8 );
-	fmt.setBlueBufferSize( 8 );
-	fmt.setAlphaBufferSize( 8 );
 	fmt.setDepthBufferSize( 24 );
 	fmt.setStencilBufferSize( 8 );
 	fmt.setSamples( 1 << aa );
 
-#if 0
-	fmt.setDirectRendering( true );
-	fmt.setRgba( true );
-#endif
-
 	setFormat( fmt );
-#if 0
-	setFocusPolicy( Qt::ClickFocus );
-	setAttribute( Qt::WA_PaintOnScreen );
-	setAttribute( Qt::WA_NoSystemBackground );
-	setAutoFillBackground( false );
-	setAcceptDrops( true );
-	setContextMenuPolicy( Qt::CustomContextMenu );
-	setUpdateBehavior( QOpenGLWindow::PartialUpdate );
-#endif
 
 	view = ViewDefault;
 	animState = AnimEnabled;
@@ -208,6 +170,8 @@ GLView::GLView( QWindow * p )
 		//update();
 	});
 	connect(NifSkope::getOptions(), &SettingsDialog::update3D, this, static_cast<void (GLView::*)()>(&GLView::update));
+
+	setMinimumSize( QSize( 50, 50 ) );
 }
 
 GLView::~GLView()
@@ -216,6 +180,19 @@ GLView::~GLView()
 
 	delete textures;
 	delete scene;
+}
+
+QWidget * GLView::createWindowContainer( QWidget * parent )
+{
+	graphicsView = QWidget::createWindowContainer( this, parent );
+	graphicsView->setContextMenuPolicy( Qt::CustomContextMenu );
+	graphicsView->setFocusPolicy( Qt::ClickFocus );
+	graphicsView->setAcceptDrops( true );
+
+	graphicsView->installEventFilter( parent );
+	installEventFilter( graphicsView );
+
+	return graphicsView;
 }
 
 float	GLView::Settings::vertexPointSize = 5.0f;
@@ -1735,8 +1712,35 @@ void GLView::saveImage()
  * QWidget Event Handlers
  */
 
+void GLView::contextMenuEvent( QContextMenuEvent * e )
+{
+	if ( ( pressPos - lastPos ).manhattanLength() <= 3 ) {
+		emit graphicsView->customContextMenuRequested( e->pos() );
+		e->accept();
+	}
+}
+
 void GLView::dragEnterEvent( QDragEnterEvent * e )
 {
+	// Intercept NIF files
+	if ( e->mimeData()->hasUrls() ) {
+		QList<QUrl> urls = e->mimeData()->urls();
+		for ( auto url : urls ) {
+			if ( url.scheme() == "file" ) {
+				QString fn = url.toLocalFile();
+				QFileInfo finfo( fn );
+				if ( finfo.exists() && NifSkope::fileExtensions().contains( finfo.suffix(), Qt::CaseInsensitive ) ) {
+					draggedNifs << finfo.absoluteFilePath();
+				}
+			}
+		}
+
+		if ( !draggedNifs.isEmpty() ) {
+			e->accept();
+			return;
+		}
+	}
+
 	auto md = e->mimeData();
 	if ( md && md->hasUrls() && md->urls().count() == 1 ) {
 		QUrl url = md->urls().first();
@@ -1757,7 +1761,11 @@ void GLView::dragEnterEvent( QDragEnterEvent * e )
 
 void GLView::dragLeaveEvent( QDragLeaveEvent * e )
 {
-	Q_UNUSED( e );
+	if ( !draggedNifs.isEmpty() ) {
+		draggedNifs.clear();
+		e->ignore();
+		return;
+	}
 
 	if ( iDragTarget.isValid() ) {
 		model->set<QString>( iDragTarget, fnDragTexOrg );
@@ -1768,6 +1776,11 @@ void GLView::dragLeaveEvent( QDragLeaveEvent * e )
 
 void GLView::dragMoveEvent( QDragMoveEvent * e )
 {
+	if ( !draggedNifs.isEmpty() ) {
+		e->accept();
+		return;
+	}
+
 	if ( iDragTarget.isValid() ) {
 		model->set<QString>( iDragTarget, fnDragTexOrg );
 		iDragTarget  = QModelIndex();
@@ -1802,6 +1815,16 @@ void GLView::dragMoveEvent( QDragMoveEvent * e )
 
 void GLView::dropEvent( QDropEvent * e )
 {
+	if ( !draggedNifs.isEmpty() ) {
+		auto ns = qobject_cast<NifSkope *>( graphicsView->parent() );
+		if ( ns )
+			ns->openFiles( draggedNifs );
+
+		draggedNifs.clear();
+		e->accept();
+		return;
+	}
+
 	iDragTarget = QModelIndex();
 	fnDragTex = fnDragTexOrg = QString();
 	e->accept();
@@ -1985,193 +2008,5 @@ void GLView::wheelEvent( QWheelEvent * event )
 			setDistance( Dist * Settings::zoomOutScale );
 		else
 			setDistance( Dist * Settings::zoomInScale );
-	}
-}
-
-
-void GLGraphicsView::setupViewport( QWidget * viewport )
-{
-	QGraphicsView::setupViewport( viewport );
-}
-
-bool GLGraphicsView::eventFilter( QObject * o, QEvent * e )
-{
-	GLView * glWidget = qobject_cast<GLView *>( o );
-	if ( glWidget ) {
-		if ( e->type() == QEvent::ContextMenu && (glWidget->pressPos - glWidget->lastPos).manhattanLength() <= 3 ) {
-			emit customContextMenuRequested( static_cast< QContextMenuEvent * >(e)->pos() );
-			return true;
-		}
-		if ( glWidget->eventFilter( o, e ) )
-			return true;
-	}
-
-	return QGraphicsView::eventFilter( o, e );
-}
-
-void GLGraphicsView::paintEvent( QPaintEvent * e )
-{
-	GLView * glWidget = qobject_cast<GLView *>(viewport());
-	if ( glWidget ) {
-		glWidget->paintEvent( e );
-	}
-
-	QGraphicsView::paintEvent( e );
-}
-
-void GLGraphicsView::resizeEvent( QResizeEvent * e )
-{
-	GLView * glWidget = qobject_cast<GLView *>(viewport());
-	if ( glWidget ) {
-		glWidget->resizeEvent( e );
-	}
-
-	QGraphicsView::resizeEvent( e );
-}
-
-void GLGraphicsView::drawForeground( QPainter * painter, const QRectF & rect )
-{
-	QGraphicsView::drawForeground( painter, rect );
-}
-
-void GLGraphicsView::drawBackground( QPainter * painter, const QRectF & rect )
-{
-	Q_UNUSED( painter ); Q_UNUSED( rect );
-
-	GLView * glWidget = qobject_cast<GLView *>(viewport());
-	if ( glWidget ) {
-		glWidget->update();
-	}
-
-	//QGraphicsView::drawBackground( painter, rect );
-}
-
-void GLGraphicsView::dragEnterEvent( QDragEnterEvent * e )
-{
-	// Intercept NIF files
-	if ( e->mimeData()->hasUrls() ) {
-		QList<QUrl> urls = e->mimeData()->urls();
-		for ( auto url : urls ) {
-			if ( url.scheme() == "file" ) {
-				QString fn = url.toLocalFile();
-				QFileInfo finfo( fn );
-				if ( finfo.exists() && NifSkope::fileExtensions().contains( finfo.suffix(), Qt::CaseInsensitive ) ) {
-					draggedNifs << finfo.absoluteFilePath();
-				}
-			}
-		}
-
-		if ( !draggedNifs.isEmpty() ) {
-			e->accept();
-			return;
-		}
-	}
-
-	// Pass event on to viewport for any texture drag/drops
-	GLView * glWidget = qobject_cast<GLView *>(viewport());
-	if ( glWidget ) {
-		glWidget->dragEnterEvent( e );
-	}
-}
-void GLGraphicsView::dragLeaveEvent( QDragLeaveEvent * e )
-{
-	if ( !draggedNifs.isEmpty() ) {
-		draggedNifs.clear();
-		e->ignore();
-		return;
-	}
-
-	// Pass event on to viewport for any texture drag/drops
-	GLView * glWidget = qobject_cast<GLView *>(viewport());
-	if ( glWidget ) {
-		glWidget->dragLeaveEvent( e );
-	}
-}
-void GLGraphicsView::dragMoveEvent( QDragMoveEvent * e )
-{
-	if ( !draggedNifs.isEmpty() ) {
-		e->accept();
-		return;
-	}
-
-	// Pass event on to viewport for any texture drag/drops
-	GLView * glWidget = qobject_cast<GLView *>(viewport());
-	if ( glWidget ) {
-		glWidget->dragMoveEvent( e );
-	}
-}
-void GLGraphicsView::dropEvent( QDropEvent * e )
-{
-	if ( !draggedNifs.isEmpty() ) {
-		auto ns = qobject_cast<NifSkope *>(parentWidget());
-		if ( ns ) {
-			ns->openFiles( draggedNifs );
-		}
-
-		draggedNifs.clear();
-		e->accept();
-		return;
-	}
-
-	// Pass event on to viewport for any texture drag/drops
-	GLView * glWidget = qobject_cast<GLView *>(viewport());
-	if ( glWidget ) {
-		glWidget->dropEvent( e );
-	}
-}
-void GLGraphicsView::focusOutEvent( QFocusEvent * e )
-{
-	GLView * glWidget = qobject_cast<GLView *>(viewport());
-	if ( glWidget ) {
-		glWidget->focusOutEvent( e );
-	}
-}
-void GLGraphicsView::keyPressEvent( QKeyEvent * e )
-{
-	GLView * glWidget = qobject_cast<GLView *>(viewport());
-	if ( glWidget ) {
-		glWidget->keyPressEvent( e );
-	}
-}
-void GLGraphicsView::keyReleaseEvent( QKeyEvent * e )
-{
-	GLView * glWidget = qobject_cast<GLView *>(viewport());
-	if ( glWidget ) {
-		glWidget->keyReleaseEvent( e );
-	}
-}
-void GLGraphicsView::mouseDoubleClickEvent( QMouseEvent * e )
-{
-	GLView * glWidget = qobject_cast<GLView *>(viewport());
-	if ( glWidget ) {
-		glWidget->mouseDoubleClickEvent( e );
-	}
-}
-void GLGraphicsView::mouseMoveEvent( QMouseEvent * e )
-{
-	GLView * glWidget = qobject_cast<GLView *>(viewport());
-	if ( glWidget ) {
-		glWidget->mouseMoveEvent( e );
-	}
-}
-void GLGraphicsView::mousePressEvent( QMouseEvent * e )
-{
-	GLView * glWidget = qobject_cast<GLView *>(viewport());
-	if ( glWidget ) {
-		glWidget->mousePressEvent( e );
-	}
-}
-void GLGraphicsView::mouseReleaseEvent( QMouseEvent * e )
-{
-	GLView * glWidget = qobject_cast<GLView *>(viewport());
-	if ( glWidget ) {
-		glWidget->mouseReleaseEvent( e );
-	}
-}
-void GLGraphicsView::wheelEvent( QWheelEvent * e )
-{
-	GLView * glWidget = qobject_cast<GLView *>(viewport());
-	if ( glWidget ) {
-		glWidget->wheelEvent( e );
 	}
 }

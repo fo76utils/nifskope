@@ -42,14 +42,12 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QPersistentModelIndex>
 
 
-//! @file glview.h GLView, GLGraphicsView
+//! @file glview.h GLView
 
 class NifSkope;
-class GLGraphicsView;
 
 class QOpenGLContext;
 class QOpenGLFunctions;
-class QSurfaceFormat;
 class QTimer;
 
 
@@ -59,11 +57,11 @@ class GLView final : public QOpenGLWindow
 	Q_OBJECT
 
 	friend class NifSkope;
-	friend class GLGraphicsView;
 
 public:
 	GLView( QWindow * parent );
 	~GLView();
+	QWidget * createWindowContainer( QWidget * parent );
 
 	QOpenGLContext * glContext = nullptr;
 	QOpenGLFunctions * glFuncs = nullptr;
@@ -195,6 +193,7 @@ protected:
 
 	// QWidget Event Handlers
 
+	void contextMenuEvent( QContextMenuEvent * );
 	void dragEnterEvent( QDragEnterEvent * );
 	void dragLeaveEvent( QDragLeaveEvent * );
 	void dragMoveEvent( QDragMoveEvent * );
@@ -255,6 +254,8 @@ private:
 	int pixelWidth = 640;
 	int pixelHeight = 480;
 
+	QWidget * graphicsView = nullptr;
+
 public:
 	struct Settings
 	{
@@ -298,51 +299,11 @@ private slots:
 	void modelChanged();
 	void modelLinked();
 	void modelDestroyed();
+
+private:
+	QStringList draggedNifs;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS( GLView::AnimationState )
-
-
-class GLGraphicsView : public QGraphicsView
-{
-	Q_OBJECT
-
-public:
-	GLGraphicsView( QWidget * parent, GLView * ogl );
-	~GLGraphicsView();
-
-	// UI
-
-	virtual QSize minimumSizeHint() const override final { return { 50, 50 }; }
-	virtual QSize sizeHint() const override final { return { 400, 400 }; }
-
-protected slots:
-	void setupViewport( QWidget * viewport ) override;
-
-protected:
-	bool eventFilter( QObject * o, QEvent * e ) override final;
-	void dragEnterEvent( QDragEnterEvent * ) override final;
-	void dragLeaveEvent( QDragLeaveEvent * ) override final;
-	void dragMoveEvent( QDragMoveEvent * ) override final;
-	void dropEvent( QDropEvent * ) override final;
-	void focusOutEvent( QFocusEvent * ) override final;
-	void keyPressEvent( QKeyEvent * ) override final;
-	void keyReleaseEvent( QKeyEvent * ) override final;
-	void mouseDoubleClickEvent( QMouseEvent * ) override final;
-	void mouseMoveEvent( QMouseEvent * ) override final;
-	void mousePressEvent( QMouseEvent * ) override final;
-	void mouseReleaseEvent( QMouseEvent * ) override final;
-	void wheelEvent( QWheelEvent * ) override final;
-
-	void paintEvent( QPaintEvent * ) override final;
-	void resizeEvent( QResizeEvent * ) override final;
-	void drawBackground( QPainter * painter, const QRectF & rect ) override final;
-	void drawForeground( QPainter * painter, const QRectF & rect ) override final;
-
-private:
-
-	QStringList draggedNifs;
-
-};
 
 #endif

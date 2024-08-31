@@ -364,7 +364,7 @@ void NifSkope::initActions()
 		ogl->setOrientation( GLView::ViewDefault, false );
 	} );
 
-	connect( graphicsView, &GLGraphicsView::customContextMenuRequested, this, &NifSkope::contextMenu );
+	connect( graphicsView, &QWidget::customContextMenuRequested, this, &NifSkope::contextMenu );
 
 	// Update Inspector widget with current index
 	connect( tree, &NifTreeView::sigCurrentIndexChanged, inspect, &InspectView::updateSelection );
@@ -1245,25 +1245,6 @@ void NifSkope::setTheme( nstheme::WindowTheme t )
 	loadTheme();
 }
 
-void NifSkope::resizeDone()
-{
-	isResizing = false;
-
-	// Unhide GLView, update GLGraphicsView
-	ogl->show();
-	graphicsScene->setSceneRect( graphicsView->rect() );
-	graphicsView->fitInView( graphicsScene->sceneRect() );
-
-	ogl->setDisabled( false );
-	ogl->getScene()->animate = true;
-	ogl->update();
-	auto	w = centralWidget();
-	double	p = w->devicePixelRatioF();
-	int	wp = int( p * w->width() + 0.5 );
-	int	hp = int( p * w->height() + 0.5 );
-	ogl->resizeGL( wp, hp );
-}
-
 
 bool NifSkope::eventFilter( QObject * o, QEvent * e )
 {
@@ -1272,27 +1253,68 @@ bool NifSkope::eventFilter( QObject * o, QEvent * e )
 	//	QTimer::singleShot( 0, this, SLOT( overrideViewFont() ) );
 	//}
 
-	// Global mouse press
-	if ( o->isWindowType() && e->type() == QEvent::MouseButtonPress ) {
-		//qDebug() << "Mouse Press";
-	}
-	// Global mouse release
-	if ( o->isWindowType() && e->type() == QEvent::MouseButtonRelease ) {
-		//qDebug() << "Mouse Release";
+	switch ( e->type() ) {
+	case QEvent::MouseButtonPress:
+		// Global mouse press
+		if ( o->isWindowType() ) {
+			//qDebug() << "Mouse Press";
+		}
+		break;
 
-		// Back/Forward button support for cycling through indices
-		auto mouseEvent = static_cast<QMouseEvent *>(e);
-		if ( mouseEvent ) {
-			if ( mouseEvent->button() == Qt::ForwardButton ) {
-				mouseEvent->accept();
-				indexStack->redo();
-			}
+	case QEvent::MouseButtonRelease:
+		// Global mouse release
+		if ( o->isWindowType() ) {
+			//qDebug() << "Mouse Release";
 
-			if ( mouseEvent->button() == Qt::BackButton ) {
-				mouseEvent->accept();
-				indexStack->undo();
+			// Back/Forward button support for cycling through indices
+			auto mouseEvent = static_cast<QMouseEvent *>(e);
+			if ( mouseEvent ) {
+				if ( mouseEvent->button() == Qt::ForwardButton ) {
+					mouseEvent->accept();
+					indexStack->redo();
+				}
+
+				if ( mouseEvent->button() == Qt::BackButton ) {
+					mouseEvent->accept();
+					indexStack->undo();
+				}
 			}
 		}
+		break;
+
+	case QEvent::ContextMenu:
+		if ( o == ogl ) {
+			ogl->contextMenuEvent( static_cast< QContextMenuEvent * >(e) );
+			return true;
+		}
+		break;
+	case QEvent::DragEnter:
+		if ( o == ogl ) {
+			ogl->dragEnterEvent( static_cast< QDragEnterEvent * >(e) );
+			return true;
+		}
+		break;
+	case QEvent::DragLeave:
+		if ( o == ogl ) {
+			ogl->dragLeaveEvent( static_cast< QDragLeaveEvent * >(e) );
+			return true;
+		}
+		break;
+	case QEvent::DragMove:
+		if ( o == ogl ) {
+			ogl->dragMoveEvent( static_cast< QDragMoveEvent * >(e) );
+			return true;
+		}
+		break;
+	case QEvent::Drop:
+		if ( o == ogl ) {
+			ogl->dropEvent( static_cast< QDropEvent * >(e) );
+			return true;
+		}
+		break;
+
+	default:
+		break;
 	}
 
 	return QMainWindow::eventFilter( o, e );

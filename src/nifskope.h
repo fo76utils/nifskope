@@ -59,7 +59,6 @@ namespace nstypes
 }
 
 class GLView;
-class GLGraphicsView;
 class InspectView;
 class KfmModel;
 class NifModel;
@@ -68,7 +67,6 @@ class NifTreeView;
 class ReferenceBrowser;
 class SettingsDialog;
 class SpellBook;
-class FSArchiveHandler;
 class BA2File;
 class BSAModel;
 class BSAProxyModel;
@@ -76,7 +74,6 @@ class QStandardItemModel;
 class QAction;
 class QActionGroup;
 class QComboBox;
-class QGraphicsScene;
 class QProgressBar;
 class QTimer;
 class QTreeView;
@@ -273,9 +270,6 @@ protected slots:
 	//! Change system locale and notify user that restart may be required
 	void sltLocaleChanged();
 
-	//! Called after window resizing has stopped
-	void resizeDone();
-
 protected:
 	void closeEvent( QCloseEvent * e ) override final;
 	//void resizeEvent( QResizeEvent * event ) override final;
@@ -378,9 +372,7 @@ private:
 
 	//! The main window
 	GLView * ogl;
-
-	QGraphicsScene * graphicsScene;
-	GLGraphicsView * graphicsView;
+	QWidget * graphicsView;
 
 	QComboBox * animGroups;
 	QAction * animGroupsAction;
@@ -425,10 +417,6 @@ private:
 	QAction * recentFileActs[NumRecentFiles];
 	QAction * recentArchiveActs[NumRecentFiles];
 	QAction * recentArchiveFileActs[NumRecentFiles];
-
-	bool isResizing;
-	QTimer * resizeTimer;
-	QImage viewBuffer;
 
 	struct Settings
 	{

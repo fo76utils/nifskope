@@ -182,7 +182,7 @@
              <item row="2" column="0">
               <widget class="QLabel" name="lblDisableMSAALimit">
                <property name="text">
-                <string>Enable MSAA on Linux</string>
+                <string>Allow >4x AA on Linux</string>
                </property>
                <property name="buddy">
                 <cstring>disableMSAALimit</cstring>
