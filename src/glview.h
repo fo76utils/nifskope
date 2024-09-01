@@ -87,7 +87,7 @@ public:
 
 	AnimationState animState;
 
-	enum ViewState
+	enum ViewState : unsigned char
 	{
 		ViewDefault,
 		ViewTop,
@@ -100,14 +100,14 @@ public:
 		ViewUser
 	};
 
-	enum DebugMode
+	enum DebugMode : unsigned char
 	{
 		DbgNone = 0,
 		DbgColorPicker = 1,
 		DbgBounds = 2
 	};
 
-	enum UpAxis
+	enum UpAxis : unsigned char
 	{
 		XAxis = 0,
 		YAxis = 1,
@@ -234,12 +234,13 @@ private:
 
 	GLdouble aspect;
 
-	QHash<int, bool> kbd;
+	std::uint64_t kbdState = 0;
 	QPointF lastPos;
 	QPointF pressPos;
 	Vector3 mouseMov;
 	Vector3 mouseRot;
 	int cycleSelect;
+	std::uint32_t mouseButtonState = 0;
 
 	QPersistentModelIndex iDragTarget;
 	QString fnDragTex, fnDragTexOrg;
@@ -255,6 +256,33 @@ private:
 	int pixelHeight = 480;
 
 	QWidget * graphicsView = nullptr;
+
+	enum Key : unsigned char
+	{
+		Key_CenterView = 1,
+		Key_FrontView = 2,
+		Key_LeftView = 3,
+		Key_MoveBack = 4,
+		Key_MoveCam = 5,
+		Key_MoveDown = 6,
+		Key_MoveForward = 7,
+		Key_MoveLeft = 8,
+		Key_MoveRight = 9,
+		Key_MoveUp = 10,
+		Key_Perspective = 11,
+		Key_RotateDown = 12,
+		Key_RotateLeft = 13,
+		Key_RotateRight = 14,
+		Key_RotateUp = 15,
+		Key_ToggleGrid = 16,
+		Key_TopView = 17,
+		Key_Update = 18,
+		Key_ZoomIn = 19,
+		Key_ZoomOut = 20
+	};
+
+	int convertKeyCode( int n ) const;
+	inline bool kbd( int n ) const;
 
 public:
 	struct Settings
@@ -291,6 +319,8 @@ public:
 	{
 		isDisabled = n;
 	}
+
+	static const char * getGLErrorString( int err );
 
 private slots:
 	void advanceGears();

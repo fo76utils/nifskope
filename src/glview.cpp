@@ -71,15 +71,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QOpenGLFunctions>
 #include <QOpenGLFramebufferObject>
 
-// TODO: Determine the necessity of this
-// Appears to be used solely for gluErrorString
-// There may be some Qt alternative
-#ifdef __APPLE__
-	#include <OpenGL/glu.h>
-#else
-	#include <GL/glu.h>
-#endif
-
 
 // NOTE: The FPS define is a frame limiter,
 //	NOT the guaranteed FPS in the viewport.
@@ -188,6 +179,7 @@ QWidget * GLView::createWindowContainer( QWidget * parent )
 	graphicsView->setContextMenuPolicy( Qt::CustomContextMenu );
 	graphicsView->setFocusPolicy( Qt::ClickFocus );
 	graphicsView->setAcceptDrops( true );
+	graphicsView->setMinimumSize( QSize( 50, 50 ) );
 
 	graphicsView->installEventFilter( parent );
 	installEventFilter( graphicsView );
@@ -378,7 +370,7 @@ void GLView::initializeGL()
 
 	// Check for errors
 	while ( ( err = glGetError() ) != GL_NO_ERROR )
-		qDebug() << tr( "glview.cpp - GL ERROR (init) : " ) << (const char *)gluErrorString( err );
+		qDebug() << tr( "glview.cpp - GL ERROR (init) : " ) << getGLErrorString( int(err) );
 }
 
 void GLView::updateShaders()
@@ -743,7 +735,7 @@ void GLView::paintGL()
 	// Check for errors
 	GLenum err;
 	while ( ( err = glGetError() ) != GL_NO_ERROR )
-		qDebug() << tr( "glview.cpp - GL ERROR (paint): " ) << (const char *)gluErrorString( err );
+		qDebug() << tr( "glview.cpp - GL ERROR (paint): " ) << getGLErrorString( int(err) );
 
 	emit paintUpdate();
 }
@@ -1351,6 +1343,11 @@ void GLView::loadUserView()
 	settings.endGroup();
 }
 
+inline bool GLView::kbd( int n ) const
+{
+	return bool( kbdState & ( 1ULL << n ) );
+}
+
 void GLView::advanceGears()
 {
 	QTime t  = QTime::currentTime();
@@ -1397,24 +1394,24 @@ void GLView::advanceGears()
 	// keys based on user preferences of what app they would like to
 	// emulate for the control scheme
 	// Rotation
-	if ( kbd[ Qt::Key_Up ] )    rotate( -cfg.rotSpd * dT, 0, 0 );
-	if ( kbd[ Qt::Key_Down ] )  rotate( +cfg.rotSpd * dT, 0, 0 );
-	if ( kbd[ Qt::Key_Left ] )  rotate( 0, 0, -cfg.rotSpd * dT );
-	if ( kbd[ Qt::Key_Right ] ) rotate( 0, 0, +cfg.rotSpd * dT );
+	if ( kbd( Key_RotateUp ) )    rotate( -cfg.rotSpd * dT, 0, 0 );
+	if ( kbd( Key_RotateDown ) )  rotate( +cfg.rotSpd * dT, 0, 0 );
+	if ( kbd( Key_RotateLeft ) )  rotate( 0, 0, -cfg.rotSpd * dT );
+	if ( kbd( Key_RotateRight ) ) rotate( 0, 0, +cfg.rotSpd * dT );
 
 	// Fix movement speed for Starfield scale
 	dT *= scale();
 	// Movement
-	if ( kbd[ Qt::Key_A ] ) move( +cfg.moveSpd * dT, 0, 0 );
-	if ( kbd[ Qt::Key_D ] ) move( -cfg.moveSpd * dT, 0, 0 );
-	if ( kbd[ Qt::Key_W ] ) move( 0, 0, +cfg.moveSpd * dT );
-	if ( kbd[ Qt::Key_S ] ) move( 0, 0, -cfg.moveSpd * dT );
-	if ( kbd[ Qt::Key_Q ] ) move( 0, +cfg.moveSpd * dT, 0 );
-	if ( kbd[ Qt::Key_E ] ) move( 0, -cfg.moveSpd * dT, 0 );
+	if ( kbd( Key_MoveLeft ) ) move( +cfg.moveSpd * dT, 0, 0 );
+	if ( kbd( Key_MoveRight ) ) move( -cfg.moveSpd * dT, 0, 0 );
+	if ( kbd( Key_MoveForward ) ) move( 0, 0, +cfg.moveSpd * dT );
+	if ( kbd( Key_MoveBack ) ) move( 0, 0, -cfg.moveSpd * dT );
+	if ( kbd( Key_MoveDown ) ) move( 0, +cfg.moveSpd * dT, 0 );
+	if ( kbd( Key_MoveUp ) ) move( 0, -cfg.moveSpd * dT, 0 );
 
 	// Focal Length
-	if ( kbd[ Qt::Key_PageUp ] )   setZoom( Zoom * std::sqrt( Settings::zoomOutScale ) );
-	if ( kbd[ Qt::Key_PageDown ] ) setZoom( Zoom * std::sqrt( Settings::zoomInScale ) );
+	if ( kbd( Key_ZoomIn ) )   setZoom( Zoom * std::sqrt( Settings::zoomOutScale ) );
+	if ( kbd( Key_ZoomOut ) )  setZoom( Zoom * std::sqrt( Settings::zoomInScale ) );
 
 	if ( mouseMov[0] != 0 || mouseMov[1] != 0 || mouseMov[2] != 0 ) {
 		move( mouseMov[0], mouseMov[1], mouseMov[2] );
@@ -1427,7 +1424,7 @@ void GLView::advanceGears()
 	}
 
 	// update display without movement
-	if ( kbd[ Qt::Key_M ] ) update();
+	if ( kbd( Key_Update ) ) update();
 }
 
 
@@ -1714,7 +1711,8 @@ void GLView::saveImage()
 
 void GLView::contextMenuEvent( QContextMenuEvent * e )
 {
-	if ( ( pressPos - lastPos ).manhattanLength() <= 3 ) {
+	if ( ( pressPos - lastPos ).manhattanLength() <= 10 ) {
+		mouseButtonState = 0;
 		emit graphicsView->customContextMenuRequested( e->pos() );
 		e->accept();
 	}
@@ -1832,68 +1830,73 @@ void GLView::dropEvent( QDropEvent * e )
 
 void GLView::focusOutEvent( QFocusEvent * )
 {
-	kbd.clear();
+	kbdState = 0;
+	mouseButtonState = 0;
+}
+
+int GLView::convertKeyCode( int n ) const
+{
+	switch ( n ) {
+	case Qt::Key_Up:
+		return Key_RotateUp;
+	case Qt::Key_Down:
+		return Key_RotateDown;
+	case Qt::Key_Left:
+		return Key_RotateLeft;
+	case Qt::Key_Right:
+		return Key_RotateRight;
+	case Qt::Key_PageUp:
+		return Key_ZoomIn;
+	case Qt::Key_PageDown:
+		return Key_ZoomOut;
+	case Qt::Key_A:
+		return Key_MoveLeft;
+	case Qt::Key_D:
+		return Key_MoveRight;
+	case Qt::Key_W:
+		return Key_MoveForward;
+	case Qt::Key_S:
+		return Key_MoveBack;
+#if 0
+	case Qt::Key_F:
+		return Key_FrontView;
+#endif
+	case Qt::Key_Q:
+		return Key_MoveDown;
+	case Qt::Key_E:
+		return Key_MoveUp;
+	case Qt::Key_M:
+		return Key_Update;
+	case Qt::Key_Space:
+		return Key_MoveCam;
+	}
+	return -1;
 }
 
 void GLView::keyPressEvent( QKeyEvent * event )
 {
-	switch ( event->key() ) {
-	case Qt::Key_Up:
-	case Qt::Key_Down:
-	case Qt::Key_Left:
-	case Qt::Key_Right:
-	case Qt::Key_PageUp:
-	case Qt::Key_PageDown:
-	case Qt::Key_A:
-	case Qt::Key_D:
-	case Qt::Key_W:
-	case Qt::Key_S:
-	//case Qt::Key_R:
-	//case Qt::Key_F:
-	case Qt::Key_Q:
-	case Qt::Key_E:
-	case Qt::Key_M:
-	case Qt::Key_Space:
-		kbd[event->key()] = true;
-		break;
-	case Qt::Key_Escape:
+	int	k = convertKeyCode( event->key() );
+	if ( k >= 0 ) {
+		kbdState = kbdState | ( 1ULL << k );
+	} else if ( event->key() == Qt::Key_Escape ) {
 		doCompile = true;
 
 		if ( view == ViewWalk )
 			doCenter = true;
 
 		update();
-		break;
-	default:
+	} else {
 		event->ignore();
-		break;
 	}
 }
 
 void GLView::keyReleaseEvent( QKeyEvent * event )
 {
-	switch ( event->key() ) {
-	case Qt::Key_Up:
-	case Qt::Key_Down:
-	case Qt::Key_Left:
-	case Qt::Key_Right:
-	case Qt::Key_PageUp:
-	case Qt::Key_PageDown:
-	case Qt::Key_A:
-	case Qt::Key_D:
-	case Qt::Key_W:
-	case Qt::Key_S:
-	//case Qt::Key_R:
-	//case Qt::Key_F:
-	case Qt::Key_Q:
-	case Qt::Key_E:
-	case Qt::Key_M:
-	case Qt::Key_Space:
-		kbd[event->key()] = false;
-		break;
-	default:
+	int	k = convertKeyCode( event->key() );
+	if ( k >= 0 ) {
+		kbdState = kbdState & ~( 1ULL << k );
+	} else {
 		event->ignore();
-		break;
 	}
 }
 
@@ -1912,13 +1915,22 @@ void GLView::mouseMoveEvent( QMouseEvent * event )
 	auto	newPos = event->position();
 	float	dx = newPos.x() - lastPos.x();
 	float	dy = newPos.y() - lastPos.y();
+	Qt::MouseButtons	buttonMask = Qt::MouseButtons( mouseButtonState );
 
-	if ( event->buttons() & Qt::LeftButton && !kbd[Qt::Key_Space] ) {
+	if ( ( buttonMask | event->buttons() ) != buttonMask ) [[unlikely]] {
+		// work around button events being lost after activating the context menu
+		buttonMask = buttonMask | event->buttons();
+		mouseButtonState = std::uint32_t( buttonMask );
+		dx = 0.0f;
+		dy = 0.0f;
+	}
+
+	if ( ( buttonMask & Qt::LeftButton ) && !kbd( Key_MoveCam ) ) {
 		mouseRot += Vector3( dy * .5, 0, dx * .5 );
-	} else if ( (event->buttons() & Qt::MiddleButton) || (event->buttons() & Qt::LeftButton && kbd[Qt::Key_Space]) ) {
+	} else if ( ( buttonMask & Qt::MiddleButton ) || ( ( buttonMask & Qt::LeftButton ) && kbd( Key_MoveCam ) ) ) {
 		float d = axis / (qMax( width(), height() ) + 1);
 		mouseMov += Vector3( dx * d, -dy * d, 0 );
-	} else if ( event->buttons() & Qt::RightButton ) {
+	} else if ( buttonMask & Qt::RightButton ) {
 		setDistance( Dist - (dx + dy) * (axis / (qMax( width(), height() ) + 1)) );
 	}
 
@@ -1927,6 +1939,7 @@ void GLView::mouseMoveEvent( QMouseEvent * event )
 
 void GLView::mousePressEvent( QMouseEvent * event )
 {
+	mouseButtonState |= std::uint32_t( event->button() );
 	if ( event->button() == Qt::ForwardButton || event->button() == Qt::BackButton ) {
 		event->ignore();
 		return;
@@ -1944,6 +1957,7 @@ void GLView::mousePressEvent( QMouseEvent * event )
 
 void GLView::mouseReleaseEvent( QMouseEvent * event )
 {
+	mouseButtonState &= ~( std::uint32_t( event->button() ) );
 	if ( !(model && (pressPos - event->position()).manhattanLength() <= 3) )
 		return;
 
@@ -2009,4 +2023,27 @@ void GLView::wheelEvent( QWheelEvent * event )
 		else
 			setDistance( Dist * Settings::zoomInScale );
 	}
+}
+
+const char * GLView::getGLErrorString( int err )
+{
+	switch ( err ) {
+	case GL_NO_ERROR:
+		return "No Error";
+	case GL_INVALID_ENUM:
+		return "GL_INVALID_ENUM";
+	case GL_INVALID_VALUE:
+		return "GL_INVALID_VALUE";
+	case GL_INVALID_OPERATION:
+		return "GL_INVALID_OPERATION";
+	case GL_INVALID_FRAMEBUFFER_OPERATION:
+		return "GL_INVALID_FRAMEBUFFER_OPERATION";
+	case GL_OUT_OF_MEMORY:
+		return "GL_OUT_OF_MEMORY";
+	case GL_STACK_UNDERFLOW:
+		return "GL_STACK_UNDERFLOW";
+	case GL_STACK_OVERFLOW:
+		return "GL_STACK_OVERFLOW";
+	}
+	return "Unknown OpenGL Error";
 }
