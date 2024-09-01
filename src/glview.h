@@ -95,7 +95,7 @@ public:
 
 	AnimationState animState;
 
-	enum ViewState
+	enum ViewState : unsigned char
 	{
 		ViewDefault,
 		ViewTop,
@@ -108,14 +108,14 @@ public:
 		ViewUser
 	};
 
-	enum DebugMode
+	enum DebugMode : unsigned char
 	{
 		DbgNone = 0,
 		DbgColorPicker = 1,
 		DbgBounds = 2
 	};
 
-	enum UpAxis
+	enum UpAxis : unsigned char
 	{
 		XAxis = 0,
 		YAxis = 1,
@@ -298,6 +298,8 @@ public:
 		static float	zoomInScale;
 		static float	zoomOutScale;
 	} cfg;
+
+	static const char * getGLErrorString( int err );
 
 private slots:
 	void advanceGears();
