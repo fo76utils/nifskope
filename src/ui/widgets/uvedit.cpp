@@ -64,15 +64,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QFileDialog>
 #include <QSurfaceFormat>
 
-// TODO: Determine the necessity of this
-// Appears to be used solely for gluErrorString
-// There may be some Qt alternative
-#ifdef __APPLE__
-	#include <OpenGL/glu.h>
-#else
-	#include <GL/glu.h>
-#endif
-
 #define BASESIZE 1024.0
 #define GRIDSIZE 16.0
 #define GRIDSEGS 4
@@ -254,7 +245,7 @@ void UVWidget::initializeGL()
 	GLenum err;
 
 	while ( ( err = glGetError() ) != GL_NO_ERROR ) {
-		qDebug() << "GL ERROR (init) : " << (const char *)gluErrorString( err );
+		qDebug() << "GL ERROR (init) : " << GLView::getGLErrorString( int(err) );
 	}
 }
 
@@ -1203,13 +1194,17 @@ void UVWidget::updateNif()
 		disconnect( nif, &NifModel::dataChanged, this, &UVWidget::nifDataChanged );
 		nif->setState( BaseModel::Processing );
 
-		if ( sfMeshIndex.isValid() ) {
+		if ( sfMeshIndex.isValid() && nif->isArray( iTexCoords ) ) {
 			int	numVerts = int( texcoords.size() );
+			NifItem *	texcoordsItem = nif->getItem( iTexCoords );
+			if ( !texcoordsItem )
+				numVerts = 0;
+			else
+				numVerts = std::min< int >( numVerts, texcoordsItem->childCount() );
 			for ( int i = 0; i < numVerts; i++ ) {
-				auto	j = QModelIndex_child( iTexCoords, i );
-				if ( !j.isValid() )
-					break;
-				nif->set<HalfVector2>( j, texcoords.at( i ) );
+				NifItem *	j = texcoordsItem->child( i );
+				if ( j )
+					nif->set<HalfVector2>( j, texcoords.at( i ) );
 			}
 		} else if ( nif->blockInherits( iShapeData, "NiTriBasedGeomData" ) ) {
 			nif->setArray<Vector2>( iTexCoords, texcoords );
