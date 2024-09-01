@@ -500,11 +500,7 @@ win32 {
 
 win32 {
     # GL libs for Qt 5.5+
-    LIBS += -lopengl32 -lglu32
-}
-
-unix:!macx {
-	LIBS += -lGLU
+    LIBS += -lopengl32
 }
 
 macx {
