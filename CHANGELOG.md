@@ -1,6 +1,7 @@
  == CHANGELOG ==
 
 * Fixed vertex selection being slow when the shape has a large number of vertices.
+* Fixed error in the UV editor with Starfield meshes using external geometry data.
 
 #### NifSkope-2.0.dev9-20240825
 
