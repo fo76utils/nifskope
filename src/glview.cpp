@@ -444,8 +444,6 @@ void GLView::paintGL()
 	// Clear Viewport
 	if ( scene->hasVisMode(Scene::VisSilhouette) ) {
 		glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
-	} else {
-		glClearColor( cfg.background.redF(), cfg.background.greenF(), cfg.background.blueF(), cfg.background.alphaF() );
 	}
 
 	glDisable( GL_FRAMEBUFFER_SRGB );
@@ -740,6 +738,15 @@ void GLView::paintGL()
 	emit paintUpdate();
 }
 
+void GLView::updateNow()
+{
+	// work around 5 ms delay to update()
+#if 0
+	update();
+#endif
+	QCoreApplication::postEvent( this, new QEvent( QEvent::UpdateRequest ), INT_MAX );
+}
+
 
 void GLView::resizeGL( int width, int height )
 {
@@ -1014,14 +1021,14 @@ void GLView::move( float x, float y, float z )
 {
 	Pos += Matrix::euler( deg2rad(Rot[0]), deg2rad(Rot[1]), deg2rad(Rot[2]) ).inverted() * Vector3( x, y, z );
 	updateViewpoint();
-	update();
+	updateNow();
 }
 
 void GLView::rotate( float x, float y, float z )
 {
 	Rot += Vector3( x, y, z );
 	updateViewpoint();
-	update();
+	updateNow();
 }
 
 void GLView::setCenter()
@@ -1035,7 +1042,7 @@ void GLView::setCenter()
 		this->setPosition( -bs.center );
 
 		if ( bs.radius > 0 ) {
-			setDistance( bs.radius * 1.2 );
+			Dist = bs.radius * 1.2;
 		}
 	} else {
 		// Center on entire mesh
@@ -1044,10 +1051,10 @@ void GLView::setCenter()
 		if ( bs.radius < scale() )
 			bs.radius = 1024.0 * scale();
 
-		setDistance( bs.radius * 1.2 );
-		setZoom( 1.0 );
+		Dist = bs.radius * 1.2;
+		Zoom = 1.0;
 
-		setPosition( -bs.center );
+		Pos = -bs.center;
 
 		setOrientation( view );
 	}
@@ -1056,7 +1063,7 @@ void GLView::setCenter()
 void GLView::setDistance( float x )
 {
 	Dist = x;
-	update();
+	updateNow();
 }
 
 void GLView::setPosition( float x, float y, float z )
@@ -1087,7 +1094,7 @@ void GLView::setZoom( float z )
 {
 	Zoom = std::min< float >( std::max< float >( z, ZOOM_MIN ), ZOOM_MAX );
 
-	update();
+	updateNow();
 }
 
 
@@ -1996,7 +2003,7 @@ void GLView::mouseReleaseEvent( QMouseEvent * event )
 		QOpenGLFramebufferObject fbo( sizeInPixels.width(), sizeInPixels.height(), fboFmt );
 		fbo.bind();
 
-		update();
+		paintGL();
 
 		fbo.release();
 

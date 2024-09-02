@@ -190,6 +190,7 @@ protected:
 	//! Renders the OpenGL scene.
 	void paintGL() override final;
 	void glProjection( int x = -1, int y = -1 );
+	void updateNow();
 
 	// QWidget Event Handlers
 
