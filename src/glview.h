@@ -150,6 +150,7 @@ public:
 	QModelIndex indexAt( const QPointF & p, int cycle = 0 );
 
 public slots:
+	void update();
 	void setCurrentIndex( const QModelIndex & );
 	void setSceneTime( float );
 	void setSceneSequence( const QString & );
@@ -190,7 +191,6 @@ protected:
 	//! Renders the OpenGL scene.
 	void paintGL() override final;
 	void glProjection( int x = -1, int y = -1 );
-	void updateNow();
 
 	// QWidget Event Handlers
 
@@ -249,6 +249,7 @@ private:
 	bool isDisabled = true;
 	bool doCompile;
 	bool doCenter;
+	unsigned char updatePending = 0;
 
 	QTimer * lightVisTimer;
 	int lightVisTimeout;

@@ -428,6 +428,8 @@ void GLView::glProjection( int x, int y )
 
 void GLView::paintGL()
 {
+	updatePending = 0;
+
 	if ( isDisabled || !scene->haveRenderer() ) [[unlikely]] {
 		glClearColor( cfg.background.redF(), cfg.background.greenF(), cfg.background.blueF(), cfg.background.alphaF() );
 		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
@@ -738,13 +740,16 @@ void GLView::paintGL()
 	emit paintUpdate();
 }
 
-void GLView::updateNow()
+void GLView::update()
 {
-	// work around 5 ms delay to update()
-#if 0
-	update();
-#endif
-	QCoreApplication::postEvent( this, new QEvent( QEvent::UpdateRequest ), INT_MAX );
+	if ( !isExposed() ) {
+		QOpenGLWindow::update();
+	} else {
+		// work around 5 ms delay to update()
+		if ( !updatePending )
+			QCoreApplication::postEvent( this, new QEvent( QEvent::UpdateRequest ), Qt::HighEventPriority );
+		updatePending = 10;
+	}
 }
 
 
@@ -1021,14 +1026,14 @@ void GLView::move( float x, float y, float z )
 {
 	Pos += Matrix::euler( deg2rad(Rot[0]), deg2rad(Rot[1]), deg2rad(Rot[2]) ).inverted() * Vector3( x, y, z );
 	updateViewpoint();
-	updateNow();
+	update();
 }
 
 void GLView::rotate( float x, float y, float z )
 {
 	Rot += Vector3( x, y, z );
 	updateViewpoint();
-	updateNow();
+	update();
 }
 
 void GLView::setCenter()
@@ -1039,11 +1044,11 @@ void GLView::setCenter()
 		// Center on selected node
 		BoundSphere bs = node->bounds();
 
-		this->setPosition( -bs.center );
-
 		if ( bs.radius > 0 ) {
 			Dist = bs.radius * 1.2;
 		}
+
+		this->setPosition( -bs.center );
 	} else {
 		// Center on entire mesh
 		BoundSphere bs = scene->bounds();
@@ -1063,7 +1068,7 @@ void GLView::setCenter()
 void GLView::setDistance( float x )
 {
 	Dist = x;
-	updateNow();
+	update();
 }
 
 void GLView::setPosition( float x, float y, float z )
@@ -1094,7 +1099,7 @@ void GLView::setZoom( float z )
 {
 	Zoom = std::min< float >( std::max< float >( z, ZOOM_MIN ), ZOOM_MAX );
 
-	updateNow();
+	update();
 }
 
 
@@ -1357,6 +1362,8 @@ inline bool GLView::kbd( int n ) const
 
 void GLView::advanceGears()
 {
+	updatePending -= (unsigned char) bool( updatePending );
+
 	QTime t  = QTime::currentTime();
 	float dT = lastTime.msecsTo( t ) / 1000.0;
 	dT = (dT < 0) ? 0 : ((dT > 1.0) ? 1.0 : dT);
