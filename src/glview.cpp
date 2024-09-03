@@ -678,7 +678,7 @@ void GLView::paintGL()
 
 	if ( scene->hasOption(Scene::ShowAxes) ) {
 		// Resize viewport to small corner of screen
-		int axesSize = int( devicePixelRatioF() * 0.1 * std::min< int >( width(), 1250 ) + 0.5 );
+		int axesSize = int( std::min< double >( 0.1 * pixelWidth, 125.0 * devicePixelRatioF() ) + 0.5 );
 		glViewport( 0, 0, axesSize, axesSize );
 
 		// Reset matrices
@@ -719,8 +719,7 @@ void GLView::paintGL()
 		glPopMatrix();
 
 		// Restore viewport size
-		QSize	sizeInPixels( getSizeInPixels() );
-		glViewport( 0, 0, sizeInPixels.width(), sizeInPixels.height() );
+		glViewport( 0, 0, pixelWidth, pixelHeight );
 		// Restore matrices
 		glProjection();
 	}
@@ -2006,8 +2005,7 @@ void GLView::mouseReleaseEvent( QMouseEvent * event )
 		fboFmt.setMipmap( false );
 		fboFmt.setAttachment( QOpenGLFramebufferObject::Attachment::Depth );
 
-		QSize	sizeInPixels( getSizeInPixels() );
-		QOpenGLFramebufferObject fbo( sizeInPixels.width(), sizeInPixels.height(), fboFmt );
+		QOpenGLFramebufferObject fbo( pixelWidth, pixelHeight, fboFmt );
 		fbo.bind();
 
 		paintGL();
