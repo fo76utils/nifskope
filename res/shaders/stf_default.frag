@@ -8,8 +8,8 @@ struct UVStream {
 
 struct TextureSet {
 	// >= 1: textureUnits index, -1: use replacement, 0: disabled
-	int	textures[11];
-	vec4	textureReplacements[11];
+	int	textures[9];
+	vec4	textureReplacements[9];
 	float	floatParam;
 };
 
@@ -193,9 +193,9 @@ struct LayeredMaterial {
 	int	shaderModel;
 	bool	isEffect;
 	bool	hasOpacityComponent;
-	bool	layersEnabled[4];
-	Layer	layers[4];
-	Blender	blenders[3];
+	bool	layersEnabled[6];
+	Layer	layers[6];
+	Blender	blenders[5];
 	LayeredEmissivityComponent	layeredEmissivity;
 	EmissiveSettingsComponent	emissiveSettings;
 	DecalSettingsComponent	decalSettings;
@@ -433,7 +433,7 @@ void main()
 	vec3	emissive = vec3(0.0);
 	vec3	transmissive = vec3(0.0);
 
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < 6; i++) {
 		if ( !lm.layersEnabled[i] )
 			break;
 

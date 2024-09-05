@@ -1153,24 +1153,24 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 	}
 
 	// material layers
-	int	texUniforms[11];
-	FloatVector4	replUniforms[11];
-	std::uint32_t	layerMask = mat->layerMask & 0x0F;	// limit the number of layers to 4
-	for ( int i = 0; i < 4; i++ )
+	int	texUniforms[9];
+	FloatVector4	replUniforms[9];
+	std::uint32_t	layerMask = mat->layerMask & 0x3F;	// limit the number of layers to 6
+	for ( int i = 0; i < 6; i++ )
 		texUniforms[i] = int( (layerMask >> i) & 1 );
-	prog->uni1iv_l( prog->uniLocation("lm.layersEnabled"), texUniforms, 4 );
+	prog->uni1iv_l( prog->uniLocation("lm.layersEnabled"), texUniforms, 6 );
 	for ( int i = 0; layerMask; i++, layerMask = layerMask >> 1 ) {
 		if ( !( layerMask & 1 ) )
 			continue;
 		const CE2Material::Layer *	layer = mat->layers[i];
-		for ( int j = 0; j < 11; j++ ) {
+		for ( int j = 0; j < 9; j++ ) {
 			texUniforms[j] = 0;
 			replUniforms[j] = FloatVector4( 0.0f );
 		}
 		if ( layer->material && layer->material->textureSet ) {
 			const CE2Material::TextureSet *	textureSet = layer->material->textureSet;
 			prog->uni1f_l( prog->uniLocation("lm.layers[%d].material.textureSet.floatParam", i), textureSet->floatParam );
-			for ( int j = 0; j < 11 && j < CE2Material::TextureSet::maxTexturePaths; j++ ) {
+			for ( int j = 0; j < 9 && j < CE2Material::TextureSet::maxTexturePaths; j++ ) {
 				const std::string_view *	texturePath = nullptr;
 				if ( textureSet->texturePathMask & (1 << j) )
 					texturePath = textureSet->texturePaths[j];
@@ -1195,12 +1195,12 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 			}
 		} else {
 			prog->uni1f_l( prog->uniLocation("lm.layers[%d].material.textureSet.floatParam", i), 1.0f );
-			for ( int j = 0; j < 11 && j < CE2Material::TextureSet::maxTexturePaths; j++ ) {
+			for ( int j = 0; j < 9 && j < CE2Material::TextureSet::maxTexturePaths; j++ ) {
 				bsprop->getSFTexture( texunit, texUniforms[j], &(replUniforms[j]), nullptr, defaultSFTextureSet[j], int(j < 6), layer->uvStream );
 			}
 		}
-		prog->uni1iv_l( prog->uniLocation("lm.layers[%d].material.textureSet.textures", i), texUniforms, 11 );
-		prog->uni4fv_l( prog->uniLocation("lm.layers[%d].material.textureSet.textureReplacements", i), replUniforms, 11 );
+		prog->uni1iv_l( prog->uniLocation("lm.layers[%d].material.textureSet.textures", i), texUniforms, 9 );
+		prog->uni4fv_l( prog->uniLocation("lm.layers[%d].material.textureSet.textureReplacements", i), replUniforms, 9 );
 
 		const CE2Material::UVStream *	uvStream = layer->uvStream;
 		if ( !uvStream )
