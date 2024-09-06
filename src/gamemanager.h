@@ -142,8 +142,10 @@ public:
 		bool (*fileListFilterFunc)( void * p, const std::string_view & fileName ) = nullptr,
 		void * fileListFilterFuncData = nullptr );
 
-	//! Find applicable data folders at the game installation path
-	static QStringList find_folders( const GameMode game );
+	//! Return a sorted list of .bsa and .ba2 files (base name only) under dataPath
+	static QStringList get_archive_list( const QString & dataPath );
+	//! Find applicable data folders and archives at the game installation path
+	static QStringList find_paths( const GameMode game );
 
 	//! Game installation path
 	static inline QString path( const QString & game );
@@ -153,8 +155,8 @@ public:
 	static inline QStringList folders( const QString & game );
 	//! Game enabled status in the GameManager
 	static inline bool status( const QString & game );
-	//! Find applicable data folders at the game installation path
-	static inline QStringList find_folders( const QString & game );
+	//! Find applicable data folders and archives at the game installation path
+	static inline QStringList find_paths( const QString & game );
 
 	static inline void update_game( const GameMode game, const QString & path );
 	static inline void update_game( const QString & game, const QString & path );
@@ -216,9 +218,9 @@ bool GameManager::status( const QString & game )
 	return status( ModeForString(game) );
 }
 
-QStringList GameManager::find_folders( const QString & game )
+QStringList GameManager::find_paths( const QString & game )
 {
-	return find_folders( ModeForString(game) );
+	return find_paths( ModeForString(game) );
 }
 
 void GameManager::update_game( const GameMode game, const QString & path )

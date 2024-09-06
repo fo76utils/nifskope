@@ -10,6 +10,7 @@
 #include <QCoreApplication>
 #include <QProgressDialog>
 #include <QDir>
+#include <QMap>
 #include <QMessageBox>
 #include <QStringBuilder>
 
@@ -61,14 +62,14 @@ static const GameMap DATA = {
 };
 
 static const ResourceListMap FOLDERS = {
-	{MORROWIND, {"."}},
-	{OBLIVION, {"."}},
-	{FALLOUT_3NV, {"."}},
-	{SKYRIM, {"."}},
-	{SKYRIM_SE, {"."}},
-	{FALLOUT_4, {".", "Textures"}},
-	{FALLOUT_76, {".", "Textures"}},
-	{STARFIELD, {".", "Textures"}},
+	{MORROWIND, {"Textures"}},
+	{OBLIVION, {"Textures"}},
+	{FALLOUT_3NV, {"Textures"}},
+	{SKYRIM, {"Textures"}},
+	{SKYRIM_SE, {"Textures"}},
+	{FALLOUT_4, {"Textures", "Materials"}},
+	{FALLOUT_76, {"Textures", "Materials"}},
+	{STARFIELD, {"Textures", "Materials"}},
 	{OTHER, {}}
 };
 
@@ -130,22 +131,6 @@ QString registry_game_path( const QString& key )
 	(void) key;
 #endif
 	return {};
-}
-
-QStringList existing_folders(GameMode game, QString path)
-{
-	// TODO: Restore the minimal previous support for detecting Civ IV, etc.
-	if ( game == OTHER )
-		return {};
-
-	QStringList folders;
-	for ( const auto& f : FOLDERS.value(game, {}) ) {
-		QDir dir(QString("%1/%2").arg(path).arg(DATA.value(game, "")));
-		if ( dir.exists(f) )
-			folders.append(QFileInfo(dir, f).absoluteFilePath());
-	}
-
-	return folders;
 }
 
 QString StringForMode( GameMode game )
@@ -470,7 +455,7 @@ void GameManager::init_settings( int & manager_version, QProgressDialog * dlg )
 		QString	gameName = StringForMode( gameID );
 		if ( !gamePath.isEmpty() ) {
 			paths.insert( gameName, gamePath );
-			folders.insert( gameName, existing_folders( gameID, gamePath ) );
+			folders.insert( gameName, find_paths( gameID ) );
 		}
 
 		// Game Enabled Status
@@ -497,7 +482,7 @@ void GameManager::update_settings( int & manager_version, QProgressDialog * dlg 
 			continue;
 
 		QString	gameName = StringForMode( gameID );
-		folders.insert( gameName, existing_folders( gameID, gamePath ) );
+		folders.insert( gameName, find_paths( gameID ) );
 	}
 
 	if ( manager_version == 1 ) {
@@ -681,11 +666,100 @@ void GameManager::list_files(
 	archives[game].list_files( fileSet, fileListFilterFunc, fileListFilterFuncData );
 }
 
-QStringList GameManager::find_folders( const GameMode game )
+QStringList GameManager::get_archive_list( const QString & dataPath )
 {
-	if ( game >= OTHER && game < NUM_GAMES )
-		return existing_folders( game, gamePaths[game] );
-	return QStringList();
+	QStringList	archiveNames;
+	{
+		QDir	archiveDir( dataPath, QString(), QDir::NoSort, QDir::Files );
+		if ( !archiveDir.exists() )
+			return archiveNames;
+		archiveDir.setNameFilters( { QString( "*.ba2" ), QString( "*.bsa" ) } );
+		archiveNames = archiveDir.entryList();
+	}
+
+	QMap< QString, QString >	archiveMap;
+	for ( qsizetype i = 0; i < archiveNames.size(); i++ ) {
+		QString	archiveName( archiveNames[i].toLower() );
+		// sort order: 0 = base game archive, 1 = DLC or patch, 2 = mod archive
+		QChar	c( '2' );
+		if ( archiveName == "morrowind.bsa"
+			|| archiveName.startsWith( "oblivion" )
+			|| archiveName.startsWith( "fallout" )
+			|| archiveName.startsWith( "skyrim" )
+			|| archiveName.startsWith( "seventysix" )
+			|| archiveName.startsWith( "starfield" ) ) {
+			if ( archiveName.contains( "update" ) || archiveName.endsWith( "patch.ba2" ) ) {
+				c = '1';
+			} else {
+				c = '0';
+			}
+		} else if ( archiveName.startsWith( "dlc" ) ) {
+			c = '1';
+		}
+		archiveName.insert( 0, c );
+		archiveMap.insert( archiveName, archiveNames[i] );
+	}
+
+	archiveNames.clear();
+	for ( auto i = archiveMap.cend(); i != archiveMap.cbegin(); ) {
+		i--;
+		archiveNames.append( i.value() );
+	}
+
+	return archiveNames;
+}
+
+static bool findPathsArchiveFilterFunc( void * p, const std::string_view & s )
+{
+	if ( s.starts_with( "textures/" ) )
+		return true;
+	GameMode	game = GameMode( reinterpret_cast< std::uintptr_t >( reinterpret_cast< unsigned char * >(p) ) );
+	if ( game < FALLOUT_4 )
+		return false;
+	if ( s.starts_with( "materials/" ) )
+		return true;
+	return ( game >= STARFIELD && s.starts_with( "geometries/" ) );
+}
+
+QStringList GameManager::find_paths( const GameMode game )
+{
+	QStringList	folders;
+
+	// TODO: Restore the minimal previous support for detecting Civ IV, etc.
+	if ( !( game > OTHER && game < NUM_GAMES ) )
+		return folders;
+
+	QString	dataPath( gamePaths[game] );
+	if ( dataPath.isEmpty() )
+		return folders;
+	dataPath.append( QChar('/') );
+	dataPath.append( DATA.value( game, "" ) );
+
+	{
+		QDir	dataDir( dataPath );
+		if ( !dataDir.exists() )
+			return folders;
+
+		for ( const auto& f : FOLDERS.value(game, {}) ) {
+			if ( dataDir.exists( f ) )
+				folders.append( QFileInfo( dataDir, f ).absoluteFilePath() );
+		}
+	}
+
+	QStringList	archiveNames( get_archive_list( dataPath ) );
+	for ( const QString & baseName : archiveNames ) {
+		QString	fullPath = dataPath + QChar('/') + baseName;
+		try {
+			void *	p = reinterpret_cast< void * >( reinterpret_cast< unsigned char * >( std::uintptr_t( game ) ) );
+			BA2File	ba2File( fullPath.toStdString().c_str(), &findPathsArchiveFilterFunc, p );
+			if ( ba2File.size() > 0 )
+				folders.append( fullPath );
+		} catch ( std::exception & ) {
+			continue;
+		}
+	}
+
+	return folders;
 }
 
 void GameManager::save()

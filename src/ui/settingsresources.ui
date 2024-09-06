@@ -955,7 +955,7 @@
              <item>
               <widget class="QPushButton" name="btnArchiveAdd">
                <property name="text">
-                <string>Add Archive or File</string>
+                <string>Add Archives or Files</string>
                </property>
               </widget>
              </item>
@@ -996,8 +996,7 @@
              <item>
               <widget class="QPushButton" name="btnFolderAutoDetect">
                <property name="text">
-                <string>Auto Detect
-Game Paths</string>
+                <string>Auto Detect Game Paths</string>
                </property>
               </widget>
              </item>

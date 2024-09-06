@@ -853,53 +853,25 @@ bool NifSkope::loadArchivesFromFolder( QString archive )
 			archive = dataDir;
 	}
 
-	QStringList	archiveNames;
-	{
-		QDir	archiveDir( archive, QString(), QDir::NoSort, QDir::Files );
-		if ( !archiveDir.exists() ) {
-			qCWarning( nsIo ) << "The archive folder could not be opened.";
-			return false;
-		}
-		archiveDir.setNameFilters( { QString( "*.ba2" ), QString( "*.bsa" ) } );
-		archiveNames = archiveDir.entryList();
+	QStringList	archiveNames( Game::GameManager::get_archive_list( archive ) );
+	if ( archiveNames.isEmpty() ) {
+		qCWarning( nsIo ) << "The archive folder could not be opened, or no archives were found.";
+		return false;
 	}
-	for ( qsizetype i = 0; i < archiveNames.size(); ) {
-		QString	archiveName( archiveNames[i].toLower() );
-		static const char *	excludeFilters[6] = { " - faceanimation", " - sounds", " - terrain", " - textures", " - voices", " - wwisesounds" };
+
+	for ( qsizetype i = 0; i < archiveNames.size(); i++ ) {
+		static const char *	excludeFilters[6] = {
+			" - faceanimation", " - sounds", " - terrain", " - textures", " - voices", " - wwisesounds"
+		};
 		bool	isExcluded = false;
 		for ( size_t j = 0; j < 6 && !isExcluded; j++ ) {
-			if ( archiveName.contains( excludeFilters[j] ) )
+			if ( archiveNames[i].contains( excludeFilters[j], Qt::CaseInsensitive ) )
 				isExcluded = true;
 		}
-		if ( isExcluded ) {
-			archiveNames.removeAt( i );
+		if ( isExcluded )
 			continue;
-		}
-		// sort order: 0 = base game archive, 1 = DLC or patch, 2 = mod archive
-		QChar	c( '2' );
-		if ( archiveName == "morrowind.bsa"
-			|| archiveName.startsWith( "oblivion" )
-			|| archiveName.startsWith( "fallout" )
-			|| archiveName.startsWith( "skyrim" )
-			|| archiveName.startsWith( "seventysix" )
-			|| archiveName.startsWith( "starfield" ) ) {
-			if ( archiveName.contains( "update" ) || archiveName.endsWith( "patch.ba2" ) ) {
-				c = '1';
-			} else {
-				c = '0';
-			}
-		} else if ( archiveName.startsWith( "dlc" ) ) {
-			c = '1';
-		}
-		archiveNames[i].insert( 0, c );
-		i++;
-	}
-	if ( archiveNames.empty() )
-		return true;
-	archiveNames.sort( Qt::CaseInsensitive );
-	for ( qsizetype i = archiveNames.size(); i-- > 0; ) {
-		QString	fullPath = archive + archiveNames[i];
-		fullPath[archive.length()] = QChar( '/' );
+
+		QString	fullPath = archive + QChar('/') + archiveNames[i];
 		try {
 			size_t	prvCnt = currentArchive->getArchiveFileCnt();
 			currentArchive->loadArchivePath( fullPath.toStdString().c_str(), &archiveFilterFunction );
