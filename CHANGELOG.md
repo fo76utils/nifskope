@@ -3,7 +3,9 @@
 * The Qt version used by NifSkope has been upgraded from 5.15 to 6.7. This is an experimental change and may still have issues. Note that Windows versions older than 10 are not supported by Qt 6.
 * The maximum number of Starfield material layers that can be rendered has been increased from 4 to 6.
 * Auto-detecting game paths in the resource settings now adds archives and the Textures and Materials folders, instead of the game data path. Loose Starfield geometries are not added automatically, since loading Data/geometries can take a long time with all base game .mesh files extracted.
-* Fixes to loading and exporting JSON (.mat) format Starfield materials.
+* Fixes to rendering Starfield materials, and to loading and exporting .mat files.
+* Fixed "unexpected change to size of loose file" error message on changes to loose Starfield .mat files, resources are now automatically closed and reloaded if such change is detected.
+* Fixed error color on missing Starfield albedo textures. An empty texture path now defaults to black, but invalid textures are highlighted with the error color (if enabled).
 * Fixed vertex selection being slow when the shape has a large number of vertices.
 * Fixed error in the UV editor with Starfield meshes using external geometry data.
 * Linux binary packages are now built on Ubuntu 24.04 instead of 22.04.

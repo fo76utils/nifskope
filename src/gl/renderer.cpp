@@ -1171,17 +1171,33 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 			const CE2Material::TextureSet *	textureSet = layer->material->textureSet;
 			prog->uni1f_l( prog->uniLocation("lm.layers[%d].material.textureSet.floatParam", i), textureSet->floatParam );
 			for ( int j = 0; j < 9 && j < CE2Material::TextureSet::maxTexturePaths; j++ ) {
+				int	k = j;
+				if ( i ) {
+					// Character2Layer, Character3Layer or Character4Layer
+					if ( mat->shaderModel >= 34 && mat->shaderModel <= 36 ) {
+						// remap color, roughness and metalness to overlay texture slots
+						if ( j == 0 )
+							k = 14;
+						else if ( j == 3 || j == 4 )
+							k = j + 12;
+					}
+				}
 				const std::string_view *	texturePath = nullptr;
-				if ( textureSet->texturePathMask & (1 << j) )
-					texturePath = textureSet->texturePaths[j];
-				std::uint32_t	textureReplacement = textureSet->textureReplacements[j];
+				if ( textureSet->texturePathMask & (1 << k) )
+					texturePath = textureSet->texturePaths[k];
+				std::uint32_t	textureReplacement = textureSet->textureReplacements[k];
 				int	textureReplacementMode = 0;
-				if ( textureSet->textureReplacementMask & (1 << j) )
+				if ( textureSet->textureReplacementMask & (1 << k) )
 					textureReplacementMode = ( j == 0 || j == 7 ? 2 : ( j == 1 ? 3 : 1 ) );
-				if ( j == 0 && ((scene->hasOption(Scene::DoLighting) && scene->hasVisMode(Scene::VisNormalsOnly)) || useErrorColor) ) {
-					texturePath = nullptr;
-					textureReplacement = (useErrorColor ? 0xFFFF00FFU : 0xFFFFFFFFU);
-					textureReplacementMode = 1;
+				if ( j == 0 ) {
+					if ( (scene->hasOption(Scene::DoLighting) && scene->hasVisMode(Scene::VisNormalsOnly)) || useErrorColor ) {
+						texturePath = nullptr;
+						textureReplacement = (useErrorColor ? 0xFFFF00FFU : 0xFFFFFFFFU);
+						textureReplacementMode = 1;
+					} else if ( texturePath && !textureReplacementMode && scene->hasOption(Scene::DoErrorColor) ) {
+						textureReplacement = 0xFFFF00FFU;
+						textureReplacementMode = 1;
+					}
 				}
 				if ( j == 1 && !scene->hasOption(Scene::DoLighting) ) {
 					texturePath = nullptr;
