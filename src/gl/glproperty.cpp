@@ -1019,6 +1019,15 @@ void BSShaderLightingProperty::loadSFMaterial()
 		sf_material = nullptr;
 		sf_material_valid = false;
 		sfMaterialDB_ID = nif->getCE2MaterialDB_ID();
+		if ( std::string_view(e.what()).starts_with( "BA2File: unexpected change to size of loose file" ) ) {
+			Game::GameManager::GameResources &	r = nif->getGameResources();
+			if ( r.ba2File && r.ba2File->findFile( sfMaterialPath ) )
+				r.close_archives();
+			if ( r.parent && r.parent->ba2File && r.parent->ba2File->findFile( sfMaterialPath ) )
+				r.parent->close_archives();
+			loadSFMaterial();
+			return;
+		}
 		QMessageBox::critical( nullptr, "NifSkope error", QString("Error loading material '%1': %2" ).arg( sfMaterialPath.c_str() ).arg( e.what() ) );
 	}
 	const_cast< NifModel * >(nif)->loadSFMaterial( iBlock, ( sf_material_valid ? sf_material : nullptr ) );
