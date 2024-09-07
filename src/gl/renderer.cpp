@@ -1155,13 +1155,10 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 	// material layers
 	int	texUniforms[9];
 	FloatVector4	replUniforms[9];
-	std::uint32_t	layerMask = mat->layerMask & 0x3F;	// limit the number of layers to 6
-	for ( int i = 0; i < 6; i++ )
-		texUniforms[i] = int( (layerMask >> i) & 1 );
-	prog->uni1iv_l( prog->uniLocation("lm.layersEnabled"), texUniforms, 6 );
-	for ( int i = 0; layerMask; i++, layerMask = layerMask >> 1 ) {
-		if ( !( layerMask & 1 ) )
-			continue;
+	// limit the number of layers to 6, or 2 if the shader model is Eye1Layer
+	int	numLayers = std::countr_one( mat->layerMask & ( mat->shaderModel != 41 ? 0x3FU : 0x03U ) );
+	prog->uni1i( "lm.numLayers", numLayers );
+	for ( int i = 0; i < numLayers; i++ ) {
 		const CE2Material::Layer *	layer = mat->layers[i];
 		for ( int j = 0; j < 9; j++ ) {
 			texUniforms[j] = 0;

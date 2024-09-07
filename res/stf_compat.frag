@@ -193,7 +193,7 @@ struct LayeredMaterial {
 	int	shaderModel;
 	bool	isEffect;
 	bool	hasOpacityComponent;
-	bool	layersEnabled[6];
+	int	numLayers;
 	Layer	layers[6];
 	Blender	blenders[5];
 	LayeredEmissivityComponent	layeredEmissivity;
@@ -380,21 +380,20 @@ vec2 parallaxMapping( int n, vec3 V, vec2 offset )
 	return mix( currentTextureCoords, prevTCoords, weight );
 }
 
-void getLayer(int n, vec2 offset, inout vec4 baseMap, inout vec3 normalMap, inout vec3 pbrMap)
+void getLayer(int n, vec2 offset, inout vec3 baseMap, inout vec3 normalMap, inout vec3 pbrMap)
 {
 	// _height.dds
 	if ( lm.layers[n].material.textureSet.textures[6] >= 1 )
 		offset = parallaxMapping( lm.layers[n].material.textureSet.textures[6], normalize( ViewDir_norm * btnMatrix_norm ), offset );
 	// _color.dds
 	if ( lm.layers[n].material.textureSet.textures[0] != 0 )
-		baseMap.rgb = getLayerTexture(n, 0, offset).rgb;
+		baseMap = getLayerTexture(n, 0, offset).rgb;
 	if ( n == 0 || lm.layers[n].material.textureSet.textures[0] != 0 ) {
+		vec4	tintColor = ( fract( float(lm.layers[n].material.flags) * 0.25 ) < 0.499 ? lm.layers[n].material.color : C );
 		if ( fract( float(lm.layers[n].material.flags) * 0.5 ) < 0.499 )
-			baseMap.rgb *= lm.layers[n].material.color.rgb;
+			baseMap *= tintColor.rgb;
 		else
-			baseMap.rgb = mix( baseMap.rgb, lm.layers[n].material.color.rgb, lm.layers[n].material.color.a );
-		if ( fract( float(lm.layers[n].material.flags) * 0.25 ) > 0.499 )
-			baseMap.rgb *= C.rgb;
+			baseMap = mix( baseMap, tintColor.rgb, tintColor.a );
 	}
 	// _normal.dds
 	if ( lm.layers[n].material.textureSet.textures[1] != 0 ) {
@@ -422,18 +421,18 @@ void main()
 	if ( lm.shaderModel == 45 )	// "Invisible"
 		discard;
 
-	vec4	baseMap = vec4(0.0, 0.0, 0.0, 1.0);
+	vec3	baseMap = vec3(0.0);
 	vec3	normal = vec3(0.0, 0.0, 1.0);
-	vec3	pbrMap = vec3(0.0, 0.0, 1.0);	// roughness, metalness, AO
+	// roughness (0.5625 for Hair1Layer), metalness, AO
+	vec3	pbrMap = vec3((lm.shaderModel != 44 ? 0.0 : 0.5625), 0.0, 1.0);
+	float	baseAlpha = 1.0;
 	float	alpha = 1.0;
 	vec3	emissive = vec3(0.0);
 	vec3	transmissive = vec3(0.0);
 	float	falloffLayerMask = float(lm.layeredEdgeFalloff.flags);
+	int	numLayers = min( lm.numLayers, 6 );
 
-	for (int i = 0; i < 6; i++) {
-		if ( !lm.layersEnabled[i] )
-			break;
-
+	for ( int i = 0; i < numLayers; i++ ) {
 		vec2	offset = getTexCoord( lm.layers[i].uvStream );
 
 		float	layerMask = 1.0;
@@ -457,15 +456,15 @@ void main()
 				discard;
 			getLayer( 0, offset, baseMap, normal, pbrMap );
 			if ( lm.layeredEdgeFalloff.flags >= 128 )
-				baseMap.rgb *= f;
+				baseMap *= f;
 			alpha = f;
 		} else {
-			vec4	layerBaseMap = vec4(0.0, 0.0, 0.0, 1.0);
+			vec3	layerBaseMap = vec3(0.0);
 			vec3	layerNormal = vec3(0.0, 0.0, 1.0);
 			vec3	layerPBRMap = vec3(0.0, 0.0, 1.0);
 			getLayer( i, offset, layerBaseMap, layerNormal, layerPBRMap );
 			if ( lm.layeredEdgeFalloff.flags >= 128 )
-				layerBaseMap.rgb *= f;
+				layerBaseMap *= f;
 
 			layerMask = getBlenderMask( i - 1 );
 			if ( lm.blenders[i - 1].blendMode != 3 && !( lm.isEffect && lm.effectSettings.isGlass ) ) {
@@ -484,7 +483,7 @@ void main()
 				srcMask *= f;
 				float	dstMask = 1.0 - ( lm.blenders[i - 1].blendMode != 1 ? srcMask : 0.0 );
 				if ( lm.blenders[i - 1].boolParams[0] )
-					baseMap.rgb = baseMap.rgb * dstMask + layerBaseMap.rgb * srcMask;	// blend color
+					baseMap = baseMap * dstMask + layerBaseMap * srcMask;	// blend color
 				if ( lm.blenders[i - 1].boolParams[1] )
 					pbrMap.g = pbrMap.g * dstMask + layerPBRMap.g * srcMask;	// blend metalness
 				if ( lm.blenders[i - 1].boolParams[2] )
@@ -509,7 +508,7 @@ void main()
 				if ( lm.hasOpacityComponent ) {
 					int	opacityBlendMode = -1;
 					if ( i == lm.opacity.firstLayerIndex ) {
-						baseMap.a = a;
+						baseAlpha = a;
 					} else if ( !lm.effectSettings.isGlass ) {
 						// FIXME: this assumes blender index = layer index - 1
 						if ( lm.opacity.secondLayerActive && i == lm.opacity.secondLayerIndex )
@@ -518,21 +517,21 @@ void main()
 							opacityBlendMode = lm.opacity.secondBlenderMode;
 					}
 					if ( opacityBlendMode == 0 )
-						baseMap.a = mix( baseMap.a, a, layerMask );
+						baseAlpha = mix( baseAlpha, a, layerMask );
 					else if ( opacityBlendMode == 1 )
-						baseMap.a = min( baseMap.a + a * layerMask, 1.0 );
+						baseAlpha = min( baseAlpha + a * layerMask, 1.0 );
 					else if ( opacityBlendMode == 2 )
-						baseMap.a = max( baseMap.a - a * layerMask, 0.0 );
+						baseAlpha = max( baseAlpha - a * layerMask, 0.0 );
 					else if ( opacityBlendMode == 3 )
-						baseMap.a *= a * layerMask;
+						baseAlpha *= a * layerMask;
 				} else if ( i == 0 ) {
-					baseMap.a = a;
+					baseAlpha = a;
 				}
 			} else if ( lm.alphaSettings.hasOpacity && i == lm.alphaSettings.opacitySourceLayer ) {
 				if ( lm.layers[i].material.flags < 4 )
-					baseMap.a = getLayerTexture( i, 2, getTexCoord(lm.alphaSettings.opacityUVstream) ).r;
+					baseAlpha = getLayerTexture( i, 2, getTexCoord(lm.alphaSettings.opacityUVstream) ).r;
 				else
-					baseMap.a = getLayerTexture( i, 2, offset ).r;
+					baseAlpha = getLayerTexture( i, 2, offset ).r;
 			}
 		}
 
@@ -561,8 +560,10 @@ void main()
 	}
 
 	if ( lm.isEffect ) {
-		if ( lm.effectSettings.vertexColorBlend )
-			baseMap *= C;
+		if ( lm.effectSettings.vertexColorBlend ) {
+			baseMap *= C.rgb;
+			baseAlpha *= C.a;
+		}
 		alpha *= lm.effectSettings.materialOverallAlpha;
 	} else if ( lm.alphaSettings.hasOpacity ) {
 		if ( lm.alphaSettings.useDetailBlendMask )
@@ -574,10 +575,10 @@ void main()
 	if ( lm.decalSettings.isDecal )
 		alpha = lm.decalSettings.materialOverallAlpha;
 
-	vec3	albedo = baseMap.rgb;
+	vec3	albedo = baseMap;
 	vec4	color = vec4(1.0);
 	if ( alphaFlags != 0 ) {
-		alpha = alpha * baseMap.a;
+		alpha = alpha * baseAlpha;
 		if ( ( alphaFlags == 1 || alphaFlags == 3 ) && !( alpha > ( !lm.isEffect ? lm.alphaSettings.alphaTestThreshold : lm.effectSettings.alphaTestThreshold ) ) )
 			discard;
 		if ( alphaFlags >= 2 )
@@ -633,7 +634,7 @@ void main()
 	}
 	vec3	f = mix(f0, vec3(1.0), envLUT.r);
 	if (!hasSpecular) {
-		albedo = baseMap.rgb;
+		albedo = baseMap;
 		diffuse = vec3(NdotL0);
 		spec = vec3(0.0);
 		f = vec3(0.0);
