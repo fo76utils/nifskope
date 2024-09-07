@@ -424,11 +424,9 @@ void main()
 	if ( lm.shaderModel == 45 )	// "Invisible"
 		discard;
 
-	vec4	baseMap = vec4(1.0);
-	if ( lm.isEffect && ( lm.effectSettings.emissiveOnlyEffect || lm.effectSettings.emissiveOnlyAutomaticallyApplied ) )
-		baseMap.rgb = vec3(0.0);
+	vec4	baseMap = vec4(0.0, 0.0, 0.0, 1.0);
 	vec3	normal = vec3(0.0, 0.0, 1.0);
-	vec3	pbrMap = vec3(0.75, 0.0, 1.0);	// roughness, metalness, AO
+	vec3	pbrMap = vec3(0.0, 0.0, 1.0);	// roughness, metalness, AO
 	float	alpha = 1.0;
 	vec3	emissive = vec3(0.0);
 	vec3	transmissive = vec3(0.0);
@@ -462,9 +460,9 @@ void main()
 				baseMap.rgb *= f;
 			alpha = f;
 		} else {
-			vec4	layerBaseMap = baseMap;
-			vec3	layerNormal = normal;
-			vec3	layerPBRMap = pbrMap;
+			vec4	layerBaseMap = vec4(0.0, 0.0, 0.0, 1.0);
+			vec3	layerNormal = vec3(0.0, 0.0, 1.0);
+			vec3	layerPBRMap = vec3(0.0, 0.0, 1.0);
 			getLayer( i, offset, layerBaseMap, layerNormal, layerPBRMap );
 			if ( (lm.layeredEdgeFalloff.flags & 0x80) != 0 )
 				layerBaseMap.rgb *= f;
