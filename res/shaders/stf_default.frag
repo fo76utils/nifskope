@@ -394,8 +394,7 @@ void main()
 
 	vec3	baseMap = C.rgb;
 	vec3	normal = vec3(0.0, 0.0, 1.0);
-	// roughness (0.53 for Hair1Layer), metalness, AO
-	vec3	pbrMap = vec3((lm.shaderModel != 44 ? 0.0 : 0.53), 0.0, 1.0);
+	vec3	pbrMap = vec3(0.0, 0.0, 1.0);	// roughness, metalness, AO
 	float	baseAlpha = C.a;
 	float	alpha = 1.0;
 	vec3	emissive = vec3(0.0);
@@ -405,7 +404,7 @@ void main()
 	for ( int i = 0; i < numLayers; i++ ) {
 		vec3	layerBaseMap = vec3(0.0);
 		vec3	layerNormal = vec3(0.0, 0.0, 1.0);
-		vec3	layerPBRMap = vec3(0.0, 0.0, 1.0);
+		vec3	layerPBRMap = vec3((lm.shaderModel != 44 ? 0.0 : 0.53), 0.0, 1.0);	// default roughness for Hair1Layer
 
 		vec2	offset = getTexCoord( lm.layers[i].uvStream );
 		// _height.dds
