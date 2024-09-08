@@ -37,7 +37,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "fp32vec4.hpp"
 #include "filebuf.hpp"
-#include "lib/half.h"
 
 #include <QDataStream>
 #include <QIODevice>
@@ -140,13 +139,9 @@ bool NifIStream::read( NifValue & val )
 	case NifValue::tHfloat:
 		{
 			val.val.u64 = 0;
-			uint16_t half;
+			qfloat16 half;
 			*dataStream >> half;
-#if ENABLE_X86_64_SIMD >= 3
-			val.val.f32 = FloatVector4::convertFloat16( half )[0];
-#else
-			val.val.u32 = half_to_float( half );
-#endif
+			val.val.f32 = float( half );
 			return (dataStream->status() == QDataStream::Ok);
 		}
 	case NifValue::tNormbyte:
@@ -221,25 +216,16 @@ bool NifIStream::read( NifValue & val )
 
 			*dataStream >> xy;
 			*dataStream >> z;
-			FloatVector4	xyz_f( FloatVector4::convertFloat16( (uint64_t(z) << 32) | uint64_t(xy) ) );
 
-			v->xyz[0] = xyz_f[0];
-			v->xyz[1] = xyz_f[1];
-			v->xyz[2] = xyz_f[2];
+			FloatVector4::convertFloat16( (uint64_t(z) << 32) | uint64_t(xy) ).convertToVector3( &(v->xyz[0]) );
 #else
-			uint16_t	x, y, z;
+			qfloat16	x, y, z;
 
 			*dataStream >> x;
 			*dataStream >> y;
 			*dataStream >> z;
 
-			union { float f; uint32_t i; } xu, yu, zu;
-
-			xu.i = half_to_float( x );
-			yu.i = half_to_float( y );
-			zu.i = half_to_float( z );
-
-			v->xyz[0] = xu.f; v->xyz[1] = yu.f; v->xyz[2] = zu.f;
+			v->xyz[0] = float(x); v->xyz[1] = float(y); v->xyz[2] = float(z);
 #endif
 			return (dataStream->status() == QDataStream::Ok);
 		}
@@ -255,17 +241,12 @@ bool NifIStream::read( NifValue & val )
 			v->xy[0] = xy_f[0];
 			v->xy[1] = xy_f[1];
 #else
-			uint16_t	x, y;
+			qfloat16	x, y;
 
 			*dataStream >> x;
 			*dataStream >> y;
 
-			union { float f; uint32_t i; } xu, yu;
-
-			xu.i = half_to_float( x );
-			yu.i = half_to_float( y );
-
-			v->xy[0] = xu.f; v->xy[1] = yu.f;
+			v->xy[0] = float(x); v->xy[1] = float(y);
 #endif
 			return (dataStream->status() == QDataStream::Ok);
 		}
@@ -670,12 +651,10 @@ bool NifOStream::write( const NifValue & val )
 		return device->write( (char *)&val.val.f32, 4 ) == 4;
 	case NifValue::tHfloat:
 		{
-#if ENABLE_X86_64_SIMD >= 3
-			uint16_t	half = uint16_t( FloatVector4( val.val.f32 ).convertToFloat16() );
-#else
-			uint16_t	half = half_from_float( val.val.u32 );
-#endif
-			return device->write( (char *)&half, 2 ) == 2;
+			std::uint16_t	half = std::bit_cast< std::uint16_t >( qfloat16( val.val.f32 ) );
+			char	v[2];
+			FileBuffer::writeUInt16Fast( v, half );
+			return device->write( v, 2 ) == 2;
 		}
 	case NifValue::tNormbyte:
 		{
@@ -731,22 +710,16 @@ bool NifOStream::write( const NifValue & val )
 			if ( !vec )
 				return false;
 
+			char	v[8];
 #if ENABLE_X86_64_SIMD >= 3
 			uint64_t	xyz = FloatVector4( vec->xyz[0], vec->xyz[1], vec->xyz[2], 0.0f ).convertToFloat16();
-			return device->write( (char*) &xyz, 6 ) == 6;
+			FileBuffer::writeUInt64Fast( v, xyz );
 #else
-			uint16_t	v[3];
-			union { float f; uint32_t i; } xu, yu, zu;
-
-			xu.f = vec->xyz[0];
-			yu.f = vec->xyz[1];
-			zu.f = vec->xyz[2];
-
-			v[0] = half_from_float( xu.i );
-			v[1] = half_from_float( yu.i );
-			v[2] = half_from_float( zu.i );
-			return device->write( (char*)v, 6 ) == 6;
+			FileBuffer::writeUInt16Fast( &(v[0]), std::bit_cast< std::uint16_t >( qfloat16( vec->xyz[0] ) ) );
+			FileBuffer::writeUInt16Fast( &(v[2]), std::bit_cast< std::uint16_t >( qfloat16( vec->xyz[1] ) ) );
+			FileBuffer::writeUInt16Fast( &(v[4]), std::bit_cast< std::uint16_t >( qfloat16( vec->xyz[2] ) ) );
 #endif
+			return device->write( v, 6 ) == 6;
 		}
 	case NifValue::tHalfVector2:
 		{
@@ -754,20 +727,15 @@ bool NifOStream::write( const NifValue & val )
 			if ( !vec )
 				return false;
 
+			char	v[8];
 #if ENABLE_X86_64_SIMD >= 3
 			uint64_t	xy = FloatVector4( vec->xy[0], vec->xy[1], 0.0f, 0.0f ).convertToFloat16();
-			return device->write( (char*) &xy, 4 ) == 4;
+			FileBuffer::writeUInt64Fast( v, xy );
 #else
-			uint16_t	v[2];
-			union { float f; uint32_t i; } xu, yu;
-
-			xu.f = vec->xy[0];
-			yu.f = vec->xy[1];
-
-			v[0] = half_from_float( xu.i );
-			v[1] = half_from_float( yu.i );
-			return device->write( (char*)v, 4 ) == 4;
+			FileBuffer::writeUInt16Fast( &(v[0]), std::bit_cast< std::uint16_t >( qfloat16( vec->xy[0] ) ) );
+			FileBuffer::writeUInt16Fast( &(v[2]), std::bit_cast< std::uint16_t >( qfloat16( vec->xy[1] ) ) );
 #endif
+			return device->write( v, 4 ) == 4;
 		}
 	case NifValue::tVector3:
 		return device->write( (char *)static_cast<Vector3 *>(val.val.data)->xyz, 12 ) == 12;
