@@ -883,9 +883,9 @@ static inline void setupGLBlendModeSF( int blendMode, QOpenGLFunctions * fn )
 	static const GLenum blendModeMap[32] = {
 		GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA,	// AlphaBlend
 		GL_SRC_ALPHA, GL_ONE, GL_ONE, GL_ONE_MINUS_SRC_ALPHA,	// Additive
-		GL_SRC_ALPHA, GL_ONE, GL_ONE, GL_ONE_MINUS_SRC_ALPHA,	// SourceSoftAdditive (TODO: not implemented yet)
+		GL_SRC_ALPHA, GL_ONE, GL_ONE, GL_ONE_MINUS_SRC_ALPHA,	// SourceSoftAdditive (alpha is squared in the shader)
 		GL_DST_COLOR, GL_ZERO, GL_DST_ALPHA, GL_ZERO,	// Multiply
-		GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA,	// TODO: DestinationSoftAdditive
+		GL_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA,	// DestinationSoftAdditive
 		GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA,	// TODO: DestinationInvertedSoftAdditive
 		GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA,	// TODO: TakeSmaller
 		GL_ZERO, GL_ONE, GL_ZERO, GL_ONE	// None
@@ -898,7 +898,7 @@ static inline void setupGLBlendModeSF( int blendMode, QOpenGLFunctions * fn )
 bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * mesh )
 {
 	auto scene = mesh->scene;
-	auto lsp = mesh->bslsp;
+	auto lsp = mesh->bssp;
 	if ( !lsp )
 		return false;
 
@@ -918,8 +918,6 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 	}
 
 	// texturing
-
-	BSShaderLightingProperty * bsprop = lsp;
 
 	int texunit = 0;
 
@@ -947,7 +945,7 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 	// texture unit 2 is reserved for the environment BRDF LUT texture
 	if ( !activateTextureUnit( texunit, true ) )
 		return false;
-	if ( !bsprop->bind( pbr_lut_sf, true, TexClampMode::CLAMP_S_CLAMP_T ) )
+	if ( !lsp->bind( pbr_lut_sf, true, TexClampMode::CLAMP_S_CLAMP_T ) )
 		return false;
 	texunit++;
 
@@ -1033,7 +1031,7 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 		prog->uni1b( "lm.decalSettings.isProjected", sp->isProjected );
 		prog->uni1b( "lm.decalSettings.useParallaxOcclusionMapping", sp->useParallaxMapping );
 		int	texUniform = 0;
-		bsprop->getSFTexture( texunit, texUniform, nullptr, sp->surfaceHeightMap, 0, 0, nullptr );
+		lsp->getSFTexture( texunit, texUniform, nullptr, sp->surfaceHeightMap, 0, 0, nullptr );
 		prog->uni1i( "lm.decalSettings.surfaceHeightMap", texUniform );
 		prog->uni1f( "lm.decalSettings.parallaxOcclusionScale", sp->parallaxOcclusionScale );
 		prog->uni1b( "lm.decalSettings.parallaxOcclusionShadows", sp->parallaxOcclusionShadows );
@@ -1142,7 +1140,7 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 			uvStream = &defaultUVStream;
 		int	texUniform = 0;
 		FloatVector4	replUniform( 0.0f );
-		bsprop->getSFTexture( texunit, texUniform, &replUniform, sp->texturePath, sp->textureReplacement, int(sp->textureReplacementEnabled), uvStream );
+		lsp->getSFTexture( texunit, texUniform, &replUniform, sp->texturePath, sp->textureReplacement, int(sp->textureReplacementEnabled), uvStream );
 		prog->uni1i( "lm.detailBlender.maskTexture", texUniform );
 		if ( texUniform < 0 )
 			prog->uni4f_l( prog->uniLocation("lm.detailBlender.maskTextureReplacement"), replUniform );
@@ -1204,12 +1202,12 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 				const CE2Material::UVStream *	uvStream = layer->uvStream;
 				if ( j == 2 && i == mat->alphaSourceLayer )
 					uvStream = mat->alphaUVStream;
-				bsprop->getSFTexture( texunit, texUniforms[j], &(replUniforms[j]), texturePath, textureReplacement, textureReplacementMode, uvStream );
+				lsp->getSFTexture( texunit, texUniforms[j], &(replUniforms[j]), texturePath, textureReplacement, textureReplacementMode, uvStream );
 			}
 		} else {
 			prog->uni1f_l( prog->uniLocation("lm.layers[%d].material.textureSet.floatParam", i), 1.0f );
 			for ( int j = 0; j < 9 && j < CE2Material::TextureSet::maxTexturePaths; j++ ) {
-				bsprop->getSFTexture( texunit, texUniforms[j], &(replUniforms[j]), nullptr, defaultSFTextureSet[j], int(j < 6), layer->uvStream );
+				lsp->getSFTexture( texunit, texUniforms[j], &(replUniforms[j]), nullptr, defaultSFTextureSet[j], int(j < 6), layer->uvStream );
 			}
 		}
 		prog->uni1iv_l( prog->uniLocation("lm.layers[%d].material.textureSet.textures", i), texUniforms, 9 );
@@ -1232,9 +1230,16 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 		prog->uni4f_l( prog->uniLocation("lm.layers[%d].uvStream.scaleAndOffset", i), uvScaleAndOffset );
 		prog->uni1b_l( prog->uniLocation("lm.layers[%d].uvStream.useChannelTwo", i), (uvStream->channel > 1) );
 
-		const CE2Material::Blender *	blender;
-		if ( !( i > 0 && i <= CE2Material::maxBlenders && ( blender = mat->blenders[i - 1] ) != nullptr ) )
+		if ( !i )
 			continue;
+		const CE2Material::Blender *	blender;
+		if ( ( blender = mat->blenders[i - 1] ) == nullptr ) [[unlikely]] {
+			prog->uni1i_l( prog->uniLocation("lm.blenders[%d].maskTexture", i - 1), -1 );
+			prog->uni4f_l( prog->uniLocation("lm.blenders[%d].maskTextureReplacement", i - 1), FloatVector4( 0.0f ) );
+			prog->uni1i_l( prog->uniLocation("lm.blenders[%d].blendMode", i - 1), 0 );
+			prog->uni1i_l( prog->uniLocation("lm.blenders[%d].colorChannel", i - 1), 0 );
+			continue;
+		}
 		uvStream = blender->uvStream;
 		if ( !uvStream )
 			uvStream = &defaultUVStream;
@@ -1242,7 +1247,7 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 		prog->uni1b_l( prog->uniLocation("lm.blenders[%d].uvStream.useChannelTwo", i - 1), (uvStream->channel > 1) );
 		int	texUniform = 0;
 		FloatVector4	replUniform( 0.0f );
-		bsprop->getSFTexture( texunit, texUniform, &replUniform, blender->texturePath, blender->textureReplacement, int(blender->textureReplacementEnabled), uvStream );
+		lsp->getSFTexture( texunit, texUniform, &replUniform, blender->texturePath, blender->textureReplacement, int(blender->textureReplacementEnabled), uvStream );
 		prog->uni1i_l( prog->uniLocation("lm.blenders[%d].maskTexture", i - 1), texUniform );
 		if ( texUniform < 0 )
 			prog->uni4f_l( prog->uniLocation("lm.blenders[%d].maskTextureReplacement", i - 1), replUniform );
