@@ -40,6 +40,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <QDataStream>
 #include <QIODevice>
+#include <QFloat16>
 
 
 //! @file nifstream.cpp NIF file I/O
