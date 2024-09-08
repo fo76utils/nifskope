@@ -719,7 +719,7 @@ QWidget * NifSkope::filePathWidget( QWidget * parent )
 	filepathWidget->setVisible( false );
 
 	// Show Filepath on successful NIF load
-	connect( this, &NifSkope::completeLoading, [this, filepathWidget, labelFilepath, navigateToFilepath]( bool success, QString & fname ) {
+	connect( this, &NifSkope::completeLoading, [filepathWidget, labelFilepath, navigateToFilepath]( bool success, QString & fname ) {
 		filepathWidget->setVisible( success );
 		labelFilepath->setText( fname );
 
@@ -731,7 +731,7 @@ QWidget * NifSkope::filePathWidget( QWidget * parent )
 	} );
 
 	// Change Filepath on successful NIF save
-	connect( this, &NifSkope::completeSave, [this, filepathWidget, labelFilepath, navigateToFilepath]( bool success, QString & fname ) {
+	connect( this, &NifSkope::completeSave, [filepathWidget, labelFilepath, navigateToFilepath]( bool success, QString & fname ) {
 		filepathWidget->setVisible( success );
 		labelFilepath->setText( fname );
 
@@ -742,14 +742,19 @@ QWidget * NifSkope::filePathWidget( QWidget * parent )
 		}
 	} );
 
-	// Navigate to NIF in Explorer
+	// Navigate to NIF in Explorer (TODO: implement this for macOS)
+#if defined( Q_OS_WIN ) || defined( Q_OS_LINUX )
 	connect( navigateToFilepath, &QPushButton::clicked, [this]() {
-#ifdef Q_OS_WIN
 		QStringList args;
+#  ifdef Q_OS_WIN
 		args << "/select," << QDir::toNativeSeparators( currentFile );
 		QProcess::startDetached( "explorer", args );
-#endif
+#  else
+		args << "--select" << QDir::toNativeSeparators( currentFile );
+		QProcess::startDetached( "dolphin", args );
+#  endif
 	} );
+#endif
 
 
 	return filepathWidget;
