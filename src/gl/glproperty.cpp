@@ -1007,10 +1007,14 @@ void BSShaderLightingProperty::loadSFMaterial()
 	try {
 		CE2MaterialDB *	materials = nif->getCE2Materials();
 		if ( materials ) {
-			if ( !sfMaterialPath.empty() ) {
+			if ( sfMaterialPath.empty() ) [[unlikely]] {
+				// for editor markers
+				if ( typeid( *this ) == typeid( BSEffectShaderProperty ) )
+					sf_material = materials->loadMaterial( "materials/effects/xtests/effectmaterialchecker.mat" );
+			} else {
 				sf_material = materials->loadMaterial( sfMaterialPath );
-				sf_material_valid = bool( sf_material );
 			}
+			sf_material_valid = bool( sf_material );
 			if ( !sf_material_valid )
 				sf_material = materials->loadMaterial( "materials/test/generic/test_generic_white.mat" );
 			sfMaterialDB_ID = nif->getCE2MaterialDB_ID();
