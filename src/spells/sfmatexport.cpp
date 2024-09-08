@@ -299,8 +299,9 @@ void spStarfieldMaterialSaveAs::renameMaterial(
 						break;
 					char	c = t[i + 21];
 					if ( i >= matBaseName.length() ) {
-						t = std::string_view( t.data() + ( i + 21 ), t.length() - ( i + 21 ) );
-						foundMatch = ( c == '"' || c == '_' );
+						foundMatch = ( c == '"' || c == '_' || c == ' ' );
+						if ( foundMatch )
+							t = std::string_view( t.data() + ( i + 21 ), t.length() - ( i + 21 ) );
 						break;
 					}
 					if ( std::tolower( c ) != std::tolower( matBaseName[i] ) )
