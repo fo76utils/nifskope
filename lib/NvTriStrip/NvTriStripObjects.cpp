@@ -1618,8 +1618,8 @@ void NvStripifier::FindAllStrips(NvStripInfoVec &allStrips,
 	int stripId      = 0;
 	bool done        = false;
 
-	int loopCtr = 0;
-	
+	[[maybe_unused]] int loopCtr = 0;
+
 	while (!done)
 	{
 		loopCtr++;

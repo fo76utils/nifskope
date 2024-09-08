@@ -968,7 +968,7 @@ GLuint texLoadNIF( QIODevice & f, TexCache::TexFmt & texformat, GLenum & target,
 }
 
 //! Initialize the GL functions necessary for texture loading
-void initializeTextureLoaders( const QOpenGLContext * context )
+void initializeTextureLoaders( [[maybe_unused]] const QOpenGLContext * context )
 {
 	if ( !extInitialized ) {
 #ifndef __APPLE__

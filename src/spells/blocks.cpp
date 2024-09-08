@@ -820,8 +820,8 @@ class spAddNewRef final : public Spell
 {
 public:
 	QString name() const override final { return Spell::tr( "Attach" ); }
-	bool instant() const { return true; }
-	QIcon icon() const { return QIcon( ":img/add" ); }
+	bool instant() const override { return true; }
+	QIcon icon() const override { return QIcon( ":img/add" ); }
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{

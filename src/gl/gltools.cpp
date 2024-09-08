@@ -1180,7 +1180,7 @@ void drawCMS( const NifModel * nif, const QModelIndex & iShape, bool solid )
 
 			QVector<Vector4> vertices( numOffsets );
 
-			int numStripVerts = 0;
+			[[maybe_unused]] int numStripVerts = 0;
 			int offset = 0;
 
 			for ( int v = 0; v < (int)numStrips; v++ ) {

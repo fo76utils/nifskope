@@ -745,7 +745,3 @@ void import3ds( NifModel * nif, const QModelIndex & index )
 	nif->reset();
 	return;
 }
-
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif

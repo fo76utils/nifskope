@@ -53,7 +53,7 @@ class spStrippify final : public Spell
 		if ( !iTriangles.isValid() )
 			return idx;
 
-		int skip = 0;
+		[[maybe_unused]] int skip = 0;
 
 		for ( int t = 0; t < nif->rowCount( iTriangles ); t++ ) {
 			Triangle tri = nif->get<Triangle>( QModelIndex_child( iTriangles, t ) );

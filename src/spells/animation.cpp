@@ -305,6 +305,7 @@ REGISTER_SPELL( spAttachKf )
  * Also, since Quaternions can't store tangents (or can they?), quadratic
  * keys are out, leaving linear and tension-bias-continuity to be converted.
  */
+#if 0
 class spConvertQuatsToEulers final : public Spell
 {
 public:
@@ -317,7 +318,6 @@ public:
 		return iBlock.isValid() && nif->get<int>( iBlock, "Rotation Type" ) != 4;
 	}
 
-	/*
 	QModelIndex cast( NifModel * nif, const QModelIndex & index )
 	{
 	    QModelIndex iQuats = nif->getIndex( index, "Quaternion Keys" );
@@ -356,10 +356,11 @@ public:
 	    }
 
 	    return index;
-	}*/
+	}
 };
 
-//REGISTER_SPELL( spConvertQuatsToEulers )
+REGISTER_SPELL( spConvertQuatsToEulers )
+#endif
 
 
 class spFixAVObjectPalette final : public Spell

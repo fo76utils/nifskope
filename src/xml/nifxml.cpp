@@ -731,7 +731,7 @@ bool NifModel::loadXML()
 #ifdef Q_OS_LINUX
 						 << "/usr/share/nifskope/nif.xml"
 #endif
-#ifdef Q_OS_MACX
+#ifdef Q_OS_MACOS
 						 << "../../../nif.xml"
 #endif
 	);

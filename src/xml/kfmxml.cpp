@@ -272,7 +272,7 @@ bool KfmModel::loadXML()
 #ifdef Q_OS_LINUX
 	                     << "/usr/share/nifskope/kfm.xml"
 #endif
-#ifdef Q_OS_MACX
+#ifdef Q_OS_MACOS
 						 << "../../../kfm.xml"
 #endif
 	);
