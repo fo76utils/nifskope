@@ -9190,11 +9190,12 @@
     </struct>
 
     <struct name="BSWeakReference" module="BSMain" versions="#STF#">
+        <field name="Unknown Int 1" type="uint" vercond="#BSVER# #GTE# 173" />
         <field name="Resource ID" type="BSResourceID" />
         <field name="Num Transforms" type="uint" />
         <field name="Transforms" type="Matrix44" length="Num Transforms" />
-        <field name="Unknown Int 1" type="uint" />
-        <field name="Unknown Material Struct" type="UnknownMaterialStruct" length="Unknown Int 1" />
+        <field name="Num Materials" type="uint" />
+        <field name="Unknown Material Struct" type="UnknownMaterialStruct" length="Num Materials" />
     </struct>
 
     <struct name="UnknownWeakReferenceStruct" module="BSMain" versions="#STF#">
