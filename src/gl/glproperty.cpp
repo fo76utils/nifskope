@@ -929,7 +929,7 @@ void BSShaderLightingProperty::clear()
 	sfMaterialPath.clear();
 }
 
-bool BSShaderLightingProperty::getSFTexture( int & texunit, int & texUniform, FloatVector4 * replUniform, const std::string_view * texturePath, std::uint32_t textureReplacement, int textureReplacementMode, const CE2Material::UVStream * uvStream )
+int BSShaderLightingProperty::getSFTexture( int & texunit, FloatVector4 & replUniform, const std::string_view & texturePath, std::uint32_t textureReplacement, int textureReplacementMode, const CE2Material::UVStream * uvStream )
 {
 	FloatVector4	c( textureReplacement );
 	c *= 1.0f / 255.0f;
@@ -940,9 +940,9 @@ bool BSShaderLightingProperty::getSFTexture( int & texunit, int & texUniform, Fl
 			c = c + c - 1.0f;					// SNORM
 	}
 	do {
-		size_t	n;
-		if ( !( texturePath && ( n = texturePath->length() ) > 0 && n <= 1024 ) )
-			break;
+		size_t	n = texturePath.length();
+		if ( ( n - 1 ) & ~( size_t(1023) ) )
+			break;		// empty path or not enough space in tmpBuf
 		if ( !( texunit >= 3 && texunit < TexCache::num_texture_units && activateTextureUnit(texunit, true) ) )
 			break;
 
@@ -960,24 +960,21 @@ bool BSShaderLightingProperty::getSFTexture( int & texunit, int & texUniform, Fl
 
 		// convert std::string_view to a temporary array of QChar
 		std::uint16_t	tmpBuf[1024];
-		convertStringToUInt16( tmpBuf, texturePath->data(), n );
+		convertStringToUInt16( tmpBuf, texturePath.data(), n );
 
 		if ( !bind( QStringView( tmpBuf, qsizetype( n ) ), false, clampMode ) )
 			break;
 
-		texUniform = texunit - 2;
 		texunit++;
-		return true;
+		return texunit - 3;
 
 	} while ( false );
 
-	if ( textureReplacementMode > 0 && replUniform ) {
-		texUniform = -1;
-		*replUniform = c;
-		return true;
+	if ( textureReplacementMode > 0 ) {
+		replUniform = c;
+		return -1;
 	}
-	texUniform = 0;
-	return false;
+	return 0;
 }
 
 void BSShaderLightingProperty::setMaterial( Material * newMaterial )
