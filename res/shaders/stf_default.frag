@@ -99,8 +99,6 @@ struct DecalSettingsComponent {
 struct EffectSettingsComponent {
 	// NOTE: the falloff settings here are deprecated and have been replaced by LayeredEdgeFalloffComponent
 	bool	vertexColorBlend;
-	bool	isAlphaTested;
-	float	alphaTestThreshold;
 	bool	noHalfResOptimization;
 	bool	softEffect;
 	float	softFalloffDepth;
@@ -573,7 +571,8 @@ void main()
 				baseAlpha *= C.a;
 			}
 			alpha = alpha * lm.effectSettings.materialOverallAlpha * baseAlpha;
-			if ( ( alphaFlags & 1 ) != 0 && !( alpha > lm.effectSettings.alphaTestThreshold ) )
+			// alpha test settings seem to be ignored for effects, and a fixed threshold of 1/128 is used instead
+			if ( !( alpha > 0.0078 ) )
 				discard;
 			if ( lm.effectSettings.blendingMode == 2 )	// SourceSoftAdditive
 				baseMap *= alpha;
