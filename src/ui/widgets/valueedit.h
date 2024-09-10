@@ -110,6 +110,9 @@ public:
 	//! Accessor for the Vector2
 	Vector2 getVector2() const;
 
+	//! Set single step to n
+	void setStepSize( double n );
+
 signals:
 	//! Signal emitted when the vector is edited
 	/**

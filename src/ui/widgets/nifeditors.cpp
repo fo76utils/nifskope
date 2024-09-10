@@ -306,6 +306,8 @@ NifVectorEdit::NifVectorEdit( NifModel * n, const QModelIndex & index )
 	: NifEditBox( n, index )
 {
 	getLayout()->addWidget( vector = new VectorEdit() );
+	if ( n && n->getBSVersion() >= 170 )
+		vector->setStepSize( 0.02 );
 	connect( vector, &VectorEdit::sigEdited, this, &NifVectorEdit::sltApplyData );
 }
 

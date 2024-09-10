@@ -749,6 +749,14 @@ Vector2 VectorEdit::getVector2() const
 	return Vector2( x->value(), y->value() );
 }
 
+void VectorEdit::setStepSize( double n )
+{
+	x->setSingleStep( n );
+	y->setSingleStep( n );
+	z->setSingleStep( n );
+	w->setSingleStep( n );
+}
+
 
 RotationEdit::RotationEdit( QWidget * parent ) : ValueEdit( parent ), mode( mAuto ), setting( false )
 {
