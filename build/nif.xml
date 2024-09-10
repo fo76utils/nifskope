@@ -9183,14 +9183,14 @@
     <!-- Starfield -->
 
     <struct name="UnknownMaterialStruct" module="BSMain" versions="#STF#">
-        <field name="Unknown Int 1" type="uint" />
+        <field name="Biome Form ID" type="uint" />
         <field name="Directory Hash" type="uint" />
         <field name="File Hash" type="uint" />
         <field name="Material Extension" type="char" length="4" />
     </struct>
 
     <struct name="BSWeakReference" module="BSMain" versions="#STF#">
-        <field name="Unknown Int 1" type="uint" vercond="#BSVER# #GTE# 173" />
+        <field name="Form ID" type="uint" vercond="#BSVER# #GTE# 173" />
         <field name="Resource ID" type="BSResourceID" />
         <field name="Num Transforms" type="uint" />
         <field name="Transforms" type="Matrix44" length="Num Transforms" />
@@ -9198,10 +9198,10 @@
         <field name="Unknown Material Struct" type="UnknownMaterialStruct" length="Num Materials" />
     </struct>
 
-    <struct name="UnknownWeakReferenceStruct" module="BSMain" versions="#STF#">
+    <struct name="BSWaterReferenceStruct" module="BSMain" versions="#STF#">
         <field name="Transform" type="Matrix44" />
         <field name="Resource ID" type="BSResourceID" />
-        <field name="Unknown Int 1" type="uint" />
+        <field name="Water Form ID" type="uint" />
         <field name="Material" type="SizedString" />
     </struct>
 
@@ -9209,8 +9209,8 @@
         <field name="Num Refs" type="uint" />
         <field name="Ref" type="BSWeakReference" length="Num Refs" />
         <field name="Unknown Int 1" type="uint" />
-        <field name="Num Unknown 1" type="uint" />
-        <field name="Unknown Structs" type="UnknownWeakReferenceStruct" length="Num Unknown 1" />
+        <field name="Num Water Refs" type="uint" />
+        <field name="Water Refs" type="BSWaterReferenceStruct" length="Num Water Refs" />
     </niobject>
 
     <struct name="BSMeshTriangles" module="BSMain" versions="#STF#">
