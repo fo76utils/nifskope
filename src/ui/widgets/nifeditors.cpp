@@ -71,9 +71,9 @@ NifBlockEditor::NifBlockEditor( NifModel * n, const QModelIndex & i, bool fireAn
 		connect( btAccept, &QPushButton::clicked, this, &NifBlockEditor::close );
 		btnlayout->addWidget( btAccept );
 
-		QPushButton * btReject = new QPushButton( tr( "Reject" ) );
-		connect( btReject, &QPushButton::clicked, this, &NifBlockEditor::reset );
-		btnlayout->addWidget( btReject );
+		QPushButton * btReset = new QPushButton( tr( "Reset" ) );
+		connect( btReset, &QPushButton::clicked, this, &NifBlockEditor::reset );
+		btnlayout->addWidget( btReset );
 
 		layout->addLayout( btnlayout );
 	}
@@ -325,9 +325,9 @@ void NifVectorEdit::applyData( NifModel * dstNif )
 	NifItem * item = dstNif->getItem( index );
 	if ( item ) {
 		if ( item->isVector3() )
-			item->set<Vector3>( vector->getVector3() );
+			dstNif->set<Vector3>( item, vector->getVector3() );
 		else if ( item->isVector2() )
-			item->set<Vector2>( vector->getVector2() );
+			dstNif->set<Vector2>( item, vector->getVector2() );
 	}
 }
 
@@ -354,9 +354,9 @@ void NifRotationEdit::applyData( NifModel * dstNif )
 	NifItem * item = dstNif->getItem( index );
 	if ( item ) {
 		if ( item->isMatrix() )
-			item->set<Matrix>( rotation->getMatrix() );
+			dstNif->set<Matrix>( item, rotation->getMatrix() );
 		else if ( item->isQuat() )
-			item->set<Quat>( rotation->getQuat() );
+			dstNif->set<Quat>( item, rotation->getQuat() );
 	}
 }
 
