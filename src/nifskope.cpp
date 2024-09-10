@@ -876,7 +876,7 @@ bool NifSkope::loadArchivesFromFolder( QString archive )
 			size_t	prvCnt = currentArchive->getArchiveFileCnt();
 			currentArchive->loadArchivePath( fullPath.toStdString().c_str(), &archiveFilterFunction );
 			if ( currentArchive->getArchiveFileCnt() > prvCnt )
-				currentArchiveNames += archiveNames[i].mid( 1 );
+				currentArchiveNames += archiveNames[i];
 		} catch ( std::exception & ) {
 			qCWarning( nsIo ) << QString( "The BSA %1 could not be opened." ).arg( fullPath );
 		}
