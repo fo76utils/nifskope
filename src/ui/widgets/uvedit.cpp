@@ -640,7 +640,7 @@ void UVWidget::mousePressEvent( QMouseEvent * e )
 			else
 				selectCycle++;
 
-			int h = hits[ selectCycle % hits.count() ];
+			int h = hits[ selectCycle % (unsigned int) hits.count() ];
 
 			if ( !e->modifiers().testFlag( Qt::ShiftModifier ) ) {
 				if ( !isSelected( h ) )
@@ -667,7 +667,6 @@ void UVWidget::mouseMoveEvent( QMouseEvent * e )
 	double	p = devicePixelRatioF();
 	QPoint	pixelPos( ( e->position() * p ).toPoint() );
 	QPoint	dPos( pixelPos - mousePos );
-	mousePos = pixelPos;
 
 	switch ( e->buttons() ) {
 	case Qt::LeftButton:
@@ -719,6 +718,7 @@ void UVWidget::mouseMoveEvent( QMouseEvent * e )
 		return;
 	}
 
+	mousePos = pixelPos;
 	update();
 }
 
