@@ -7322,7 +7322,7 @@
 
     <niobject name="BSEffectShaderProperty" inherit="BSShaderProperty" module="BSMain" versions="#SKY_AND_LATER#">
         Bethesda effect shader property for Skyrim and later.
-        <field name="Material" type="BSLayeredMaterial" abstract="true" vercond="#BS_GTE_STF#">Starfield material (.mat).</field>
+        <field name="Material" type="BSLayeredMaterial" abstract="true" vercond="#BS_GTE_STF#" cond="$Name">Starfield material (.mat).</field>
         <field name="Shader Property Data" type="BSEffectShaderPropertyDataGTEFO76" vercond="#BS_F76#" cond="!$Name" />
         <field name="Material" type="BSEffectMaterialDataFO76" abstract="true" vercond="#BS_F76#" cond="$Name" />
         <field name="Shader Property Data (Deprecated)" type="BSEffectShaderPropertyDataGTEFO76" vercond="#BS_GTE_STF#" cond="!$Name" />
