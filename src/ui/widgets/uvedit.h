@@ -165,7 +165,7 @@ private:
 
 	QRect selectRect;
 	QList<QPoint> selectPoly;
-	int selectCycle;
+	unsigned int selectCycle = 0;
 
 	//! A UV face
 	struct face
