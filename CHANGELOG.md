@@ -1,6 +1,6 @@
  == CHANGELOG ==
 
-#### NifSkope-2.0.dev9-20240910
+#### NifSkope-2.0.dev9-20240912
 
 * The Qt version used by NifSkope has been upgraded from 5.15 to 6.7. This is an experimental change and may still have issues. Note that Windows versions older than 10 are not supported by Qt 6.
 * The maximum number of Starfield material layers that can be rendered has been increased from 4 to 6.

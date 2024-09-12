@@ -88,8 +88,8 @@ void initializeTextureUnits( const QOpenGLContext * context )
 		//qDebug() << "texture units" << TexCache::num_texture_units;
 	} else {
 		qCWarning( nsGl ) << QObject::tr( "Multitexturing not supported." );
-		TexCache::num_texture_units = 1;
-		TexCache::num_txtunits_client = 1;
+		TexCache::num_texture_units = 0;
+		TexCache::num_txtunits_client = 0;
 	}
 
 	if ( context->hasExtension( "GL_EXT_texture_filter_anisotropic" ) ) {
@@ -111,10 +111,7 @@ void initializeTextureUnits( const QOpenGLContext * context )
 
 bool activateTextureUnit( int stage, bool noClient )
 {
-	if ( TexCache::num_texture_units <= 1 )
-		return ( stage == 0 );
-
-	if ( stage < TexCache::num_texture_units ) {
+	if ( stage < TexCache::num_texture_units ) [[likely]] {
 
 		glActiveTexture( GL_TEXTURE0 + stage );
 		if ( stage < TexCache::num_txtunits_client && !noClient )
@@ -122,12 +119,12 @@ bool activateTextureUnit( int stage, bool noClient )
 		return true;
 	}
 
-	return false;
+	return ( stage == 0 );
 }
 
 void resetTextureUnits( int numTex )
 {
-	if ( TexCache::num_texture_units <= 1 ) {
+	if ( !TexCache::num_texture_units ) {
 		glDisable( GL_TEXTURE_2D );
 		return;
 	}
@@ -138,10 +135,10 @@ void resetTextureUnits( int numTex )
 		glMatrixMode( GL_TEXTURE );
 		glLoadIdentity();
 		glMatrixMode( GL_MODELVIEW );
-		if ( x < TexCache::num_txtunits_client ) {
-			glClientActiveTexture( GL_TEXTURE0 + x );
-			glDisableClientState( GL_TEXTURE_COORD_ARRAY );
-		}
+	}
+	for ( int x = TexCache::num_txtunits_client; --x >= 0; ) {
+		glClientActiveTexture( GL_TEXTURE0 + x );
+		glDisableClientState( GL_TEXTURE_COORD_ARRAY );
 	}
 }
 

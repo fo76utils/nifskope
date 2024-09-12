@@ -73,12 +73,79 @@ static const QString cube_fo4 = "textures/shared/cubemaps/mipblur_defaultoutside
 static const QString grayCube = "#FF555555c";
 static const QString pbr_lut_sf = "#sfpbr.dds";
 
-static const std::uint32_t defaultSFTextureSet[21] = {
-	0xFFFF00FFU, 0xFFFF8080U, 0xFFFFFFFFU, 0xFFC0C0C0U, 0xFF000000U, 0xFFFFFFFFU,
-	0xFF000000U, 0xFF000000U, 0xFF000000U, 0xFF808080U, 0xFF000000U, 0xFF808080U,
-	0xFF000000U, 0xFF000000U, 0xFF808080U, 0xFF808080U, 0xFF808080U, 0xFF000000U,
-	0xFF000000U, 0xFFFFFFFFU, 0xFF808080U
+const char * const Renderer::Program::uniforms[NUM_UNIFORM_TYPES] = {
+	"BaseMap",	// SAMP_BASE
+	"NormalMap",	// SAMP_NORMAL
+	"SpecularMap",	// SAMP_SPECULAR
+	"ReflMap",	// SAMP_REFLECTIVITY
+	"LightingMap",	// SAMP_LIGHTING
+	"CubeMap",	// SAMP_CUBE
+	"CubeMap2",	// SAMP_CUBE_2
+	"EnvironmentMap",	// SAMP_ENV_MASK
+	"GlowMap",	// SAMP_GLOW
+	"HeightMap",	// SAMP_HEIGHT
+	"GreyscaleMap",	// SAMP_GRAYSCALE
+	"DetailMask",	// SAMP_DETAIL
+	"TintMask",	// SAMP_TINT
+	"LightMask",	// SAMP_LIGHT
+	"BacklightMap",	// SAMP_BACKLIGHT
+	"InnerMap",	// SAMP_INNER
+	"alpha",	// ALPHA
+	"doubleSided",	// DOUBLE_SIDE
+	"envReflection",	// ENV_REFLECTION
+	"falloffDepth",	// FALL_DEPTH
+	"falloffParams",	// FALL_PARAMS
+	"greyscaleAlpha",	// G2P_ALPHA
+	"greyscaleColor",	// G2P_COLOR
+	"paletteScale",	// G2P_SCALE
+	"glowColor",	// GLOW_COLOR
+	"glowMult",	// GLOW_MULT
+	"hasEmit",	// HAS_EMIT
+	"hasBacklight",	// HAS_MAP_BACK
+	"hasSourceTexture",	// HAS_MAP_BASE
+	"hasCubeMap",	// HAS_MAP_CUBE
+	"hasDetailMask",	// HAS_MAP_DETAIL
+	"hasGreyscaleMap",	// HAS_MAP_G2P
+	"hasGlowMap",	// HAS_MAP_GLOW
+	"hasHeightMap",	// HAS_MAP_HEIGHT
+	"hasNormalMap",	// HAS_MAP_NORMAL
+	"hasSpecularMap",	// HAS_MAP_SPEC
+	"hasTintMask",	// HAS_MAP_TINT
+	"hasEnvMask",	// HAS_MASK_ENV
+	"hasRGBFalloff",	// HAS_RGBFALL
+	"hasRimlight",	// HAS_RIM
+	"hasSoftlight",	// HAS_SOFT
+	"hasTintColor",	// HAS_TINT_COLOR
+	"hasWeaponBlood",	// HAS_WEAP_BLOOD
+	"innerScale",	// INNER_SCALE
+	"innerThickness",	// INNER_THICK
+	"lightingEffect1",	// LIGHT_EFF1
+	"lightingEffect2",	// LIGHT_EFF2
+	"lightingInfluence",	// LIGHT_INF
+	"viewMatrix",	// MAT_VIEW
+	"worldMatrix",	// MAT_WORLD
+	"outerReflection",	// OUTER_REFL
+	"outerRefraction",	// OUTER_REFR
+	"backlightPower",	// POW_BACK
+	"fresnelPower",	// POW_FRESNEL
+	"rimPower",	// POW_RIM
+	"hasSpecular",	// HAS_SPECULAR
+	"specColor",	// SPEC_COLOR
+	"specGlossiness",	// SPEC_GLOSS
+	"specStrength",	// SPEC_SCALE
+	"subsurfaceRolloff",	// SS_ROLLOFF
+	"tintColor",	// TINT_COLOR
+	"useFalloff",	// USE_FALLOFF
+	"uvOffset",	// UV_OFFSET
+	"uvScale",	// UV_SCALE
+	"isSkinned",	// SKINNED
+	"isGPUSkinned",	// GPU_SKINNED
+	"boneTransforms",	// GPU_BONES
+	"isWireframe",	// WIREFRAME
+	"solidColor",	// SOLID_COLOR
+	"fLumEmittance"	// LUM_EMIT
 };
+
 
 bool Renderer::initialize()
 {
@@ -420,7 +487,7 @@ bool Renderer::Program::load( const QString & filepath, Renderer * renderer )
 void Renderer::Program::setUniformLocations()
 {
 	for ( int i = 0; i < NUM_UNIFORM_TYPES; i++ )
-		uniformLocations[i] = f->glGetUniformLocation( id, uniforms[i].c_str() );
+		uniformLocations[i] = f->glGetUniformLocation( id, uniforms[i] );
 }
 
 Renderer::Renderer( QOpenGLContext * c, QOpenGLFunctions * f )
@@ -578,7 +645,9 @@ void Renderer::stopProgram()
 		fn->glUseProgram( 0 );
 	}
 
-	resetTextureUnits();
+	int	numTex = fixedFuncTexUnits;
+	fixedFuncTexUnits = 0;
+	resetTextureUnits( numTex );
 }
 
 void Renderer::Program::uni1f( UniformType var, float x )
@@ -1207,9 +1276,8 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 			}
 		} else {
 			prog->uni1f_l( prog->uniLocation("lm.layers[%d].material.textureSet.floatParam", i), 1.0f );
-			for ( int j = 0; j < 9 && j < CE2Material::TextureSet::maxTexturePaths; j++ ) {
-				texUniforms[j] = lsp->getSFTexture( texunit, replUniforms[j], emptyTexturePath, defaultSFTextureSet[j], int(j < 6), layer->uvStream );
-			}
+			for ( int j = 0; j < 9 && j < CE2Material::TextureSet::maxTexturePaths; j++ )
+				texUniforms[j] = 0;
 		}
 		prog->uni1iv_l( prog->uniLocation("lm.layers[%d].material.textureSet.textures", i), texUniforms, 9 );
 		prog->uni4fv_l( prog->uniLocation("lm.layers[%d].material.textureSet.textureReplacements", i), replUniforms, 9 );
@@ -2095,9 +2163,10 @@ void Renderer::setupFixedFunction( Shape * mesh )
 	if ( !mesh->scene->hasOption(Scene::DoTexturing) )
 		return;
 
+	int	stage = 0;
+
 	if ( TexturingProperty * texprop = props.get<TexturingProperty>() ) {
 		// standard multi texturing property
-		int stage = 0;
 
 		if ( texprop->bind( 1, mesh->coords, stage ) ) {
 			// dark
@@ -2259,10 +2328,12 @@ void Renderer::setupFixedFunction( Shape * mesh )
 	} else if ( TextureProperty * texprop = props.get<TextureProperty>() ) {
 		// old single texture property
 		texprop->bind( mesh->coords );
+		stage++;
 	} else if ( BSShaderLightingProperty * texprop = props.get<BSShaderLightingProperty>() ) {
 		// standard multi texturing property
 		if ( texprop->bind( 0, mesh->coords ) ) {
 			//, mesh->coords, stage ) )
+			stage++;
 			// base
 			glTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE );
 
@@ -2283,6 +2354,7 @@ void Renderer::setupFixedFunction( Shape * mesh )
 	} else {
 		glDisable( GL_TEXTURE_2D );
 	}
+	fixedFuncTexUnits = (unsigned char) stage;
 }
 
 void Renderer::drawSkyBox( Scene * scene )

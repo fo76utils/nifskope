@@ -275,80 +275,9 @@ public:
 		ConditionGroup conditions;
 		QMap<int, CoordType> texcoords;
 
-		std::array<std::string, NUM_UNIFORM_TYPES> uniforms = { {
-			"BaseMap",
-			"NormalMap",
-			"SpecularMap",
-			"ReflMap",
-			"LightingMap",
-			"CubeMap",
-			"CubeMap2",
-			"EnvironmentMap",
-			"GlowMap",
-			"HeightMap",
-			"GreyscaleMap",
-			"DetailMask",
-			"TintMask",
-			"LightMask",
-			"BacklightMap",
-			"InnerMap",
-			"alpha",
-			"doubleSided",
-			"envReflection",
-			"falloffDepth",
-			"falloffParams",
-			"greyscaleAlpha",
-			"greyscaleColor",
-			"paletteScale",
-			"glowColor",
-			"glowMult",
-			"hasEmit",
-			"hasBacklight",
-			"hasSourceTexture",
-			"hasCubeMap",
-			"hasDetailMask",
-			"hasGreyscaleMap",
-			"hasGlowMap",
-			"hasHeightMap",
-			"hasNormalMap",
-			"hasSpecularMap",
-			"hasTintMask",
-			"hasEnvMask",
-			"hasRGBFalloff",
-			"hasRimlight",
-			"hasSoftlight",
-			"hasTintColor",
-			"hasWeaponBlood",
-			"innerScale",
-			"innerThickness",
-			"lightingEffect1",
-			"lightingEffect2",
-			"lightingInfluence",
-			"viewMatrix",
-			"worldMatrix",
-			"outerReflection",
-			"outerRefraction",
-			"backlightPower",
-			"fresnelPower",
-			"rimPower",
-			"hasSpecular",
-			"specColor",
-			"specGlossiness",
-			"specStrength",
-			"subsurfaceRolloff",
-			"tintColor",
-			"useFalloff",
-			"uvOffset",
-			"uvScale",
-			"isSkinned",
-			"isGPUSkinned",
-			"boneTransforms",
-			"isWireframe",
-			"solidColor",
-			"fLumEmittance"
-		} };
-
+		static const char * const uniforms[NUM_UNIFORM_TYPES];
 		int uniformLocations[NUM_UNIFORM_TYPES];
+
 private:
 		struct UniformLocationMapItem {
 			const char *	fmt;
@@ -429,6 +358,9 @@ public:
 		QString	cubeMapPathFO76;
 		QString	cubeMapPathSTF;
 	} cfg;
+
+	unsigned char	fixedFuncTexUnits = 0;
+
 public:
 	void drawSkyBox( Scene * scene );
 };
