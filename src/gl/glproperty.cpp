@@ -438,20 +438,6 @@ bool TexturingProperty::bind( int id, const QString & fname )
 		glMatrixMode( GL_TEXTURE );
 		glLoadIdentity();
 
-		if ( textures[id].hasTransform ) {
-			// Sign order is important here: get it backwards and we rotate etc.
-			// around (-center, -center)
-			glTranslatef( textures[id].center[0], textures[id].center[1], 0 );
-
-			// rotation appears to be in radians
-			glRotatef( rad2deg( textures[id].rotation ), 0, 0, 1 );
-			// It appears that the scaling here is relative to center
-			glScalef( textures[id].tiling[0], textures[id].tiling[1], 1 );
-			glTranslatef( textures[id].translation[0], textures[id].translation[1], 0 );
-
-			glTranslatef( -textures[id].center[0], -textures[id].center[1], 0 );
-		}
-
 		glMatrixMode( GL_MODELVIEW );
 		return true;
 	}
