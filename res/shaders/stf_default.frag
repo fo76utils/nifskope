@@ -651,15 +651,16 @@ void main()
 		ambient *= (vec3(1.0) - f0) * fDiffEnv;
 	}
 	float	ao = pbrMap.b;
-	refl *= f * envLUT.g * ao;
+	refl *= f * envLUT.g;
 
 	// Diffuse
 	color.rgb = diffuse * albedo * D.rgb;
 	// Ambient
-	color.rgb += ambient * albedo * ao;
+	color.rgb += ambient * albedo;
 	// Specular
 	color.rgb += spec;
 	color.rgb += refl;
+	color.rgb *= ao;
 
 	// Emissive
 	if ( lm.emissiveSettings.isEnabled ) {
@@ -671,13 +672,13 @@ void main()
 
 	// Transmissive
 	if ( lm.translucencySettings.isEnabled && lm.translucencySettings.isThin ) {
-		transmissive *= albedo * ( vec3(1.0) - f );
+		transmissive *= albedo * ( vec3(1.0) - f ) * ao;
 		// TODO: implement flipBackFaceNormalsInViewSpace
 		color.rgb += transmissive * D.rgb * max( -NdotL, 0.0 );
 		if ( hasCubeMap )
-			color.rgb += textureLod( CubeMap2, -normalWS, 0.0 ).rgb * transmissive * A.rgb * ao;
+			color.rgb += textureLod( CubeMap2, -normalWS, 0.0 ).rgb * transmissive * A.rgb;
 		else
-			color.rgb += transmissive * A.rgb * ( ao * 0.08 );
+			color.rgb += transmissive * A.rgb * 0.08;
 	}
 
 	color.rgb = tonemap(color.rgb * D.a, A.a);
