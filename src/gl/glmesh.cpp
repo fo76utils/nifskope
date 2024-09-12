@@ -100,7 +100,7 @@ void Mesh::updateData( const NifModel * nif )
 			int nTotalBones = bones.count();
 			int nBoneList = nif->rowCount( idxBones );
 			// Ignore weights listed in NiSkinData if NiSkinPartition exists
-			int vcnt = ( nif->get<unsigned char>( iSkinData, "Has Vertex Weights" ) && !iSkinPart.isValid() ) ? numVerts : 0;
+			int vcnt = ( !iSkinPart.isValid() ? numVerts : 0 );
 			for ( int b = 0; b < nBoneList && b < nTotalBones; b++ )
 				weights.append( BoneWeights( nif, QModelIndex_child( idxBones, b ), bones[b], vcnt ) );
 		}
@@ -626,11 +626,11 @@ void Mesh::transformShapes()
 
 		transVerts.resize( vcnt );
 		transVerts.fill( Vector3() );
-		transNorms.resize( vcnt );
+		transNorms.resize( ncnt );
 		transNorms.fill( Vector3() );
-		transTangents.resize( vcnt );
+		transTangents.resize( tcnt );
 		transTangents.fill( Vector3() );
-		transBitangents.resize( vcnt );
+		transBitangents.resize( bcnt );
 		transBitangents.fill( Vector3() );
 
 		Node * root = findParent( skeletonRoot );
@@ -677,15 +677,13 @@ void Mesh::transformShapes()
 			int x = 0;
 			for ( const BoneWeights& bw : weights ) {
 				Transform trans = viewTrans() * skeletonTrans;
-				Node * bone = root ? root->findChild( bw.bone ) : 0;
+				Node * bone = root ? root->findChild( bw.bone ) : nullptr;
 
-				if ( bone )
+				if ( bone ) {
 					trans = trans * bone->localTrans( skeletonRoot ) * bw.trans;
-
-				if ( bone )
-					weights[x++].tcenter = bone->viewTrans() * bw.center;
-				else
-					x++;
+					weights[x].tcenter = bone->viewTrans() * bw.center;
+				}
+				x++;
 
 				for ( const VertexWeight& vw : bw.weights ) {
 					int vindex = vw.vertex;

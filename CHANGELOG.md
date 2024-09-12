@@ -12,6 +12,7 @@
 * Fixed error color on missing Starfield albedo textures. An empty texture path now defaults to black, but invalid textures are highlighted with the error color (if enabled).
 * Fixed vertex selection being slow when the shape has a large number of vertices.
 * Fixed error in the UV editor with Starfield meshes using external geometry data.
+* Fixed invisible Morrowind meshes when skinning is enabled.
 * Linux binary packages are now built on Ubuntu 24.04 instead of 22.04.
 
 #### NifSkope-2.0.dev9-20240825
