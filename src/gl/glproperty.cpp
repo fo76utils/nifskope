@@ -460,7 +460,7 @@ bool TexturingProperty::bind( int id, const QVector<QVector<Vector2> > & texcoor
 
 bool TexturingProperty::bind( int id, const QVector<QVector<Vector2> > & texcoords, int stage )
 {
-	return ( activateTextureUnit( stage ) && bind( id, texcoords ) );
+	return ( activateTextureUnit( stage ) && activateClientTexture( stage ) && bind( id, texcoords ) );
 }
 
 QString TexturingProperty::fileName( int id ) const
@@ -929,7 +929,7 @@ int BSShaderLightingProperty::getSFTexture( int & texunit, FloatVector4 & replUn
 		size_t	n = texturePath.length();
 		if ( ( n - 1 ) & ~( size_t(1023) ) )
 			break;		// empty path or not enough space in tmpBuf
-		if ( !( texunit >= 3 && texunit < TexCache::num_texture_units && activateTextureUnit(texunit, true) ) )
+		if ( !( texunit >= 3 && texunit < TexCache::num_texture_units && activateTextureUnit( texunit ) ) )
 			break;
 
 		TexClampMode	clampMode = TexClampMode::WRAP_S_WRAP_T;

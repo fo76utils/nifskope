@@ -109,17 +109,22 @@ void initializeTextureUnits( const QOpenGLContext * context )
 	initializeTextureLoaders( context );
 }
 
-bool activateTextureUnit( int stage, bool noClient )
+bool activateTextureUnit( int stage )
 {
-	if ( stage < TexCache::num_texture_units ) [[likely]] {
+	if ( stage >= TexCache::num_texture_units ) [[unlikely]]
+		return ( stage == 0 );
 
-		glActiveTexture( GL_TEXTURE0 + stage );
-		if ( stage < TexCache::num_txtunits_client && !noClient )
-			glClientActiveTexture( GL_TEXTURE0 + stage );
-		return true;
-	}
+	glActiveTexture( GL_TEXTURE0 + stage );
+	return true;
+}
 
-	return ( stage == 0 );
+bool activateClientTexture( int stage )
+{
+	if ( stage >= TexCache::num_txtunits_client ) [[unlikely]]
+		return ( stage == 0 );
+
+	glClientActiveTexture( GL_TEXTURE0 + stage );
+	return true;
 }
 
 void resetTextureUnits( int numTex )
@@ -129,7 +134,7 @@ void resetTextureUnits( int numTex )
 		return;
 	}
 
-	for ( int x = std::min( numTex, TexCache::num_texture_units ); --x >= 0; ) {
+	for ( int x = std::min( std::max< int >( numTex, 1 ), TexCache::num_texture_units ); --x >= 0; ) {
 		glActiveTexture( GL_TEXTURE0 + x );
 		glDisable( GL_TEXTURE_2D );
 		glMatrixMode( GL_TEXTURE );

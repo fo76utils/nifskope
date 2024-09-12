@@ -215,7 +215,8 @@ public:
 
 void initializeTextureUnits( const QOpenGLContext * );
 
-bool activateTextureUnit( int x, bool noClient = false );
+bool activateTextureUnit( int x );
+bool activateClientTexture( int x );
 void resetTextureUnits( int numTex = TexCache::maxTextureUnits );
 
 float get_max_anisotropy();

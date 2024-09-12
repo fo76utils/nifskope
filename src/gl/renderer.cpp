@@ -1012,7 +1012,7 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 	prog->uni1i( HAS_MAP_CUBE, hasCubeMap );
 
 	// texture unit 2 is reserved for the environment BRDF LUT texture
-	if ( !activateTextureUnit( texunit, true ) )
+	if ( !activateTextureUnit( texunit ) )
 		return false;
 	if ( !lsp->bind( pbr_lut_sf, true, TexClampMode::CLAMP_S_CLAMP_T ) )
 		return false;
@@ -1336,7 +1336,7 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 	while ( itx.hasNext() ) {
 		itx.next();
 
-		if ( !activateTextureUnit( itx.key() ) )
+		if ( !activateClientTexture( itx.key() ) )
 			return false;
 
 		auto it = itx.value();
@@ -1696,7 +1696,7 @@ bool Renderer::setupProgramCE1( const NifModel * nif, Program * prog, Shape * me
 	while ( itx.hasNext() ) {
 		itx.next();
 
-		if ( !activateTextureUnit( itx.key() ) )
+		if ( !activateClientTexture( itx.key() ) )
 			return false;
 
 		auto it = itx.value();
@@ -2003,7 +2003,7 @@ bool Renderer::setupProgramFO3( const NifModel * nif, Program * prog, Shape * me
 	while ( itx.hasNext() ) {
 		itx.next();
 
-		if ( !activateTextureUnit( itx.key() ) )
+		if ( !activateClientTexture( itx.key() ) )
 			return false;
 
 		auto it = itx.value();
