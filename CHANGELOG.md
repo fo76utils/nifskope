@@ -1,5 +1,7 @@
  == CHANGELOG ==
 
+* Fixed the Options/Theme menu, the list of available styles is now automatically detected, instead of using fixed Windows specific options like "Windows XP" that may no longer be supported by new versions of Qt (see https://github.com/hexabits/nifskope/issues/52).
+
 #### NifSkope-2.0.dev9-20240912
 
 * The Qt version used by NifSkope has been upgraded from 5.15 to 6.7. This is an experimental change and may still have issues. Note that Windows versions older than 10 are not supported by Qt 6.

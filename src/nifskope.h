@@ -82,7 +82,7 @@ class QUdpSocket;
 namespace nstheme
 {
 	enum WindowColor { Base, BaseAlt, Text, Highlight, HighlightText, BrightText };
-	enum WindowTheme { ThemeDark, ThemeLight, ThemeWindows, ThemeWindowsXP };
+	enum WindowTheme { ThemeDark, ThemeLight };
 	enum ToolbarSize { ToolbarSmall, ToolbarLarge };
 }
 

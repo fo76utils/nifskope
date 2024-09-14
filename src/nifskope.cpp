@@ -70,6 +70,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QListView>
 #include <QTreeView>
 #include <QStandardItemModel>
+#include <QStyleFactory>
 
 #include "ba2file.hpp"
 #include "bsamodel.h"
@@ -197,6 +198,11 @@ NifSkope::NifSkope()
 {
 	// Init UI
 	ui->setupUi( this );
+
+	for ( const auto & s : QStyleFactory::keys() ) {
+		if ( s.compare( "Fusion", Qt::CaseInsensitive ) != 0 )
+			ui->mTheme->addAction( s )->setCheckable( true );
+	}
 
 	qApp->installEventFilter( this );
 

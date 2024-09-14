@@ -1081,20 +1081,27 @@ void NifSkope::loadTheme()
 
 	switch ( theme )
 	{
-	case ThemeWindowsXP:
-		QApplication::setStyle( QStyleFactory::create( "WindowsXP" ) );
-		qApp->setStyleSheet("");
-		qApp->setPalette( style()->standardPalette() );
-		return;
-	case ThemeWindows:
-		QApplication::setStyle( QStyleFactory::create( "WindowsVista" ) );
-		qApp->setStyleSheet("");
-		qApp->setPalette( style()->standardPalette() );
-		return;
+	default:
+		{
+			auto	a = ui->mTheme->actions();
+			qsizetype	n = a.size();
+			qsizetype	i = std::min< qsizetype >( std::max< qsizetype >( qsizetype( theme ), 0 ), n - 1 );
+			if ( i != qsizetype( theme ) ) {
+				theme = nstheme::WindowTheme( i );
+				settings.setValue( "Theme", theme );
+			}
+			if ( theme != ThemeDark && theme != ThemeLight ) {
+				QApplication::setStyle( QStyleFactory::create( a.at( i )->text() ) );
+				qApp->setStyleSheet("");
+				qApp->setPalette( style()->standardPalette() );
+				return;
+			}
+		}
+		[[fallthrough]];
 	case ThemeDark:
 	case ThemeLight:
-	default:
 		QApplication::setStyle( QStyleFactory::create( "Fusion" ) );
+		break;
 	}
 
 	QPalette pal;

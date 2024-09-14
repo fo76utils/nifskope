@@ -331,8 +331,6 @@
      </property>
      <addaction name="aTheme_2_0_Dark"/>
      <addaction name="aTheme_2_0_Light"/>
-     <addaction name="aThemeWindows"/>
-     <addaction name="aThemeWindowsXP"/>
     </widget>
     <addaction name="aSettings"/>
     <addaction name="separator"/>
@@ -2025,22 +2023,6 @@ background: qradialgradient(spread:pad, cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0
    </property>
    <property name="text">
     <string>2.0 Dark</string>
-   </property>
-  </action>
-  <action name="aThemeWindows">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Windows</string>
-   </property>
-  </action>
-  <action name="aThemeWindowsXP">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Windows XP</string>
    </property>
   </action>
   <action name="aTheme_2_0_Light">
