@@ -2156,23 +2156,24 @@
 
     <struct name="BSVertexData" versions="#SSE# #FO4# #F76#" module="BSMain">
         Byte fields for normal, tangent and bitangent map [0, 255] to [-1, 1].
-        <field name="Vertex" type="Vector3" cond="(#ARG# #BITAND# 0x401) == 0x401" />
-        <field name="Bitangent X" type="float" cond="(#ARG# #BITAND# 0x411) == 0x411" />
-        <field name="Unused W" type="uint" cond="(#ARG# #BITAND# 0x411) == 0x401" />
+        <field name="Vertex" type="Vector3" cond="((#ARG# #RSH# 44) #BITAND# 0x401) == 0x401" />
+        <field name="Unknown Floats" type="Vector2" cond="(#ARG# #BITAND# 0xF00) == 0x600" />
+        <field name="Bitangent X" type="float" cond="((#ARG# #RSH# 44) #BITAND# 0x411) == 0x411" />
+        <field name="Unused W" type="uint" cond="((#ARG# #RSH# 44) #BITAND# 0x411) == 0x401" />
 
-        <field name="Vertex" type="HalfVector3" cond="(#ARG# #BITAND# 0x401) == 0x1" />
-        <field name="Bitangent X" type="hfloat" cond="(#ARG# #BITAND# 0x411) == 0x11" />
-        <field name="Unused W" type="ushort" cond="(#ARG# #BITAND# 0x411) == 0x1" />
+        <field name="Vertex" type="HalfVector3" cond="((#ARG# #RSH# 44) #BITAND# 0x401) == 0x1" />
+        <field name="Bitangent X" type="hfloat" cond="((#ARG# #RSH# 44) #BITAND# 0x411) == 0x11" />
+        <field name="Unused W" type="ushort" cond="((#ARG# #RSH# 44) #BITAND# 0x411) == 0x1" />
 
-        <field name="UV" type="HalfTexCoord" cond="(#ARG# #BITAND# 0x2) != 0" />
-        <field name="Normal" type="ByteVector3" cond="(#ARG# #BITAND# 0x8) != 0" />
-        <field name="Bitangent Y" type="normbyte" cond="(#ARG# #BITAND# 0x8) != 0" />
-        <field name="Tangent" type="ByteVector3" cond="(#ARG# #BITAND# 0x18) == 0x18" />
-        <field name="Bitangent Z" type="normbyte" cond="(#ARG# #BITAND# 0x18) == 0x18" />
-        <field name="Vertex Colors" type="ByteColor4" cond="(#ARG# #BITAND# 0x20) != 0" />
-        <field name="Bone Weights" type="hfloat" length="4" cond="(#ARG# #BITAND# 0x40) != 0" />
-        <field name="Bone Indices" type="byte" length="4" cond="(#ARG# #BITAND# 0x40) != 0" />
-        <field name="Eye Data" type="float" cond="(#ARG# #BITAND# 0x100) != 0" />
+        <field name="UV" type="HalfTexCoord" cond="((#ARG# #RSH# 44) #BITAND# 0x2) != 0" />
+        <field name="Normal" type="ByteVector3" cond="((#ARG# #RSH# 44) #BITAND# 0x8) != 0" />
+        <field name="Bitangent Y" type="normbyte" cond="((#ARG# #RSH# 44) #BITAND# 0x8) != 0" />
+        <field name="Tangent" type="ByteVector3" cond="((#ARG# #RSH# 44) #BITAND# 0x18) == 0x18" />
+        <field name="Bitangent Z" type="normbyte" cond="((#ARG# #RSH# 44) #BITAND# 0x18) == 0x18" />
+        <field name="Vertex Colors" type="ByteColor4" cond="((#ARG# #RSH# 44) #BITAND# 0x20) != 0" />
+        <field name="Bone Weights" type="hfloat" length="4" cond="((#ARG# #RSH# 44) #BITAND# 0x40) != 0" />
+        <field name="Bone Indices" type="byte" length="4" cond="((#ARG# #RSH# 44) #BITAND# 0x40) != 0" />
+        <field name="Eye Data" type="float" cond="((#ARG# #RSH# 44) #BITAND# 0x100) != 0" />
     </struct>
 
     <struct name="BSVertexDataSSE" versions="#SSE# #FO4#" module="BSMain">
@@ -8921,7 +8922,7 @@
         <field name="Num Triangles" type="ushort" vercond="#NI_BS_LT_FO4#" />
         <field name="Num Vertices" type="ushort" />
         <field name="Data Size" type="uint" calc="((Vertex Desc #BITAND# 0xF) #MUL# Num Vertices #MUL# 4) #ADD# (Num Triangles #MUL# 6)" />
-        <field name="Vertex Data" type="BSVertexData" length="Num Vertices" arg="Vertex Desc #RSH# 44" cond="Data Size #GT# 0" vercond="#BS_GTE_130#" />
+        <field name="Vertex Data" type="BSVertexData" length="Num Vertices" arg="Vertex Desc" cond="Data Size #GT# 0" vercond="#BS_GTE_130#" />
         <field name="Vertex Data" type="BSVertexDataSSE" length="Num Vertices" arg="Vertex Desc #RSH# 44" cond="Data Size #GT# 0" vercond="#BS_SSE#" />
         <field name="Triangles" type="Triangle" length="Num Triangles" cond="Data Size #GT# 0" />
         <field name="Particle Data Size" type="uint" calc="(Num Vertices #MUL# 6) #ADD# (Num Triangles #MUL# 3)" vercond="#BS_SSE#" />
@@ -9074,7 +9075,7 @@
         <field name="Num Combined" type="uint" />
         <field name="Combined" type="BSPackedGeomDataCombined" length="Num Combined" />
         <field name="Vertex Desc" type="BSVertexDesc" />
-        <field name="Vertex Data" type="BSVertexData" length="Num Verts" arg="Vertex Desc #RSH# 44" />
+        <field name="Vertex Data" type="BSVertexData" length="Num Verts" arg="Vertex Desc" />
         <field name="Triangles" type="Triangle" length="Tri Count LOD0 + Tri Count LOD1 + Tri Count LOD2" />
     </struct>
 
