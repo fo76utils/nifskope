@@ -1,6 +1,9 @@
  == CHANGELOG ==
 
+* Implemented the 'Transform/Scale Vertices' spell for BSTriShape geometry (Fallout 4, Skyrim: Special Edition, Fallout 76). Note that skinned meshes are not supported yet, and normals, tangent space and bounds should be updated after using this spell.
 * Fixed the Options/Theme menu, the list of available styles is now automatically detected, instead of using fixed Windows specific options like "Windows XP" that may no longer be supported by new versions of Qt (see https://github.com/hexabits/nifskope/issues/52).
+* Fixed error on opening Fallout 76 models with NiPSysRotDampeningCtlr blocks.
+* Fixed the UV editor and some of the spells not updating the view after making changes.
 
 #### NifSkope-2.0.dev9-20240912
 

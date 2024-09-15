@@ -394,7 +394,10 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
-		return nif->blockInherits( index, "NiGeometry" );
+		// TODO: implement support for BSGeometry and skinned BSTriShape
+		return ( nif->blockInherits( index, "NiGeometry" )
+				|| ( nif->blockInherits( index, "BSTriShape" ) && nif->getIndex( index, "Vertex Data" ).isValid()
+					&& !nif->getBlockIndex( nif->getLink( index, "Skin" ) ).isValid() ) );
 	}
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
@@ -430,7 +433,47 @@ public:
 		if ( dlg.exec() != QDialog::Accepted )
 			return QModelIndex();
 
-		settings.setValue( key, chkNormals->isChecked() );
+		FloatVector4	scaleVector( float( scale[0]->value() ), float( scale[1]->value() ), float( scale[2]->value() ), 0.0f );
+		bool	scaleNormals = chkNormals->isChecked();
+
+		settings.setValue( key, scaleNormals );
+
+		if ( nif->blockInherits( index, "BSTriShape" ) ) {
+			auto	idx = nif->getIndex( index, "Vertex Data" );
+			if ( !idx.isValid() )
+				return index;
+
+			nif->setState( BaseModel::Processing );
+			int	numVerts = nif->rowCount( idx );
+			for ( int i = 0; i < numVerts; i++ ) {
+				auto	v = QModelIndex_child( idx, i );
+				if ( !v.isValid() )
+					continue;
+				auto	iVertex = nif->getItem( v, "Vertex" );
+				if ( iVertex ) {
+					Vector3	xyz = nif->get<Vector3>( iVertex );
+					xyz.fromFloatVector4( FloatVector4( xyz ) * scaleVector );
+					if ( iVertex->hasValueType( NifValue::tHalfVector3 ) )
+						nif->set<HalfVector3>( iVertex, xyz );
+					else
+						nif->set<Vector3>( iVertex, xyz );
+				}
+				if ( scaleNormals ) {
+					auto	iNormal = nif->getIndex( v, "Normal" );
+					if ( iNormal.isValid() ) {
+						// FIXME: simple multiplication of the normals does not give correct results,
+						// normals and tangent space still need to be recalculated after using this spell
+						FloatVector4	n( nif->get<Vector3>( iNormal ) );
+						n *= scaleVector;
+						n.normalize();
+						nif->set<ByteVector3>( iNormal, Vector3( n ) );
+					}
+				}
+			}
+			nif->restoreState();
+
+			return index;
+		}
 
 		QModelIndex iData = nif->getBlockIndex( nif->getLink( nif->getBlockIndex( index ), "Data" ), "NiGeometryData" );
 
@@ -439,22 +482,18 @@ public:
 
 		while ( it.hasNext() ) {
 			Vector3 & v = it.next();
-
-			for ( int a = 0; a < 3; a++ )
-				v[a] *= scale[a]->value();
+			v.fromFloatVector4( FloatVector4( v ) * scaleVector );
 		}
 
 		nif->setArray<Vector3>( iData, "Vertices", vertices );
 
-		if ( chkNormals->isChecked() ) {
+		if ( scaleNormals ) {
 			QVector<Vector3> norms = nif->getArray<Vector3>( iData, "Normals" );
 			QMutableVectorIterator<Vector3> it( norms );
 
 			while ( it.hasNext() ) {
 				Vector3 & v = it.next();
-
-				for ( int a = 0; a < 3; a++ )
-					v[a] *= scale[a]->value();
+				v.fromFloatVector4( ( FloatVector4( v ) * scaleVector ).normalize() );
 			}
 
 			nif->setArray<Vector3>( iData, "Normals", norms );
