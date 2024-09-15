@@ -387,7 +387,7 @@ public:
 	//! Flips UV data in a model index
 	void flip( NifModel * nif, const QModelIndex & index, int f )
 	{
-		if ( nif->itemStrType( index ) == "BSVertexData" ) {
+		if ( nif->itemStrType( index ).startsWith( "BSVertexData" ) ) {
 			// BSTriShape vertex data
 			int	n = nif->rowCount( index );
 			for ( int i = 0; i < n; i++ ) {
