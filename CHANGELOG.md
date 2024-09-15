@@ -4,6 +4,7 @@
 * Fixed the Options/Theme menu, the list of available styles is now automatically detected, instead of using fixed Windows specific options like "Windows XP" that may no longer be supported by new versions of Qt (see https://github.com/hexabits/nifskope/issues/52).
 * Fixed error on opening Fallout 76 models with NiPSysRotDampeningCtlr blocks.
 * Fixed the UV editor and some of the spells not updating the view after making changes.
+* Fixed crash on closing the last main window while the UV editor is open.
 
 #### NifSkope-2.0.dev9-20240912
 

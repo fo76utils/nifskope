@@ -387,6 +387,9 @@ void NifSkope::exitRequested()
 
 NifSkope::~NifSkope()
 {
+	// work around crash that would occur if the UV editor is still open and it is the last window
+	disconnect( qApp, &QApplication::lastWindowClosed, this, &NifSkope::exitRequested );
+
 	delete ui;
 	if ( currentArchive )
 		delete currentArchive;
