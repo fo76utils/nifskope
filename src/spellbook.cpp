@@ -143,7 +143,7 @@ void SpellBook::cast( NifModel * nif, const QModelIndex & index, SpellPtr spell 
 		nif->invalidateHeaderConditions();
 		nif->updateHeader();
 
-		if ( noSignals && nif->getProcessingResult() ) {
+		if ( nif->getProcessingResult() ) {
 			emit nif->dataChanged( idx, idx );
 		}
 

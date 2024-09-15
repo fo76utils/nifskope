@@ -450,7 +450,7 @@ void NifTreeView::keyPressEvent( QKeyEvent * e )
 			nif->invalidateHeaderConditions();
 			nif->updateHeader();
 
-			if ( noSignals && nif->getProcessingResult() ) {
+			if ( nif->getProcessingResult() ) {
 				emit nif->dataChanged( newidx, newidx );
 			}
 

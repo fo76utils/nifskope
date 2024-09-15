@@ -1206,6 +1206,7 @@ void UVWidget::updateNif()
 				if ( j )
 					nif->set<HalfVector2>( j, texcoords.at( i ) );
 			}
+			nif->dataChanged( iTexCoords, iTexCoords );
 		} else if ( nif->blockInherits( iShapeData, "NiTriBasedGeomData" ) ) {
 			nif->setArray<Vector2>( iTexCoords, texcoords );
 		} else if ( nif->blockInherits( iShape, "BSTriShape" ) ) {
