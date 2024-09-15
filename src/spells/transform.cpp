@@ -394,10 +394,9 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
-		// TODO: implement support for BSGeometry and skinned BSTriShape
+		// TODO: implement support for BSGeometry
 		return ( nif->blockInherits( index, "NiGeometry" )
-				|| ( nif->blockInherits( index, "BSTriShape" ) && nif->getIndex( index, "Vertex Data" ).isValid()
-					&& !nif->getBlockIndex( nif->getLink( index, "Skin" ) ).isValid() ) );
+				|| ( nif->blockInherits( index, "BSTriShape" ) && nif->getIndex( index, "Vertex Data" ).isValid() ) );
 	}
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
