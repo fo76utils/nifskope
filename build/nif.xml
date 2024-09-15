@@ -5048,6 +5048,10 @@
         Particle system controller for emitter initial rotation angle variation.
     </niobject>
 
+    <niobject name="NiPSysRotDampeningCtlr" inherit="NiPSysModifierFloatCtlr" module="NiParticle" versions="#BS_GTE_152#">
+        Particle system rotation dampening controller.
+    </niobject>
+
     <niobject name="NiPSysEmitterPlanarAngleCtlr" inherit="NiPSysModifierFloatCtlr" module="NiParticle">
         Particle system controller for emitter planar angle.
     </niobject>
