@@ -262,6 +262,19 @@ QModelIndex BaseModel::index( int row, int column, const QModelIndex & parent ) 
 	return itemToIndex( parentItem ? parentItem->child(row) : nullptr, column );
 }
 
+QModelIndex BaseModel::getIndex( const QModelIndex & itemParent, int row, int column ) const
+{
+	if ( itemParent.isValid() && itemParent.model() == this ) [[likely]] {
+		const NifItem *	i = indexToItem( itemParent );
+		if ( i ) [[likely]] {
+			i = i->child( row );
+			if ( i ) [[likely]]
+				return itemToIndex( i, column );
+		}
+	}
+	return QModelIndex();
+}
+
 QModelIndex BaseModel::parent( const QModelIndex & child ) const
 {
 	const NifItem * childItem = getItem( child );

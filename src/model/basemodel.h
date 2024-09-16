@@ -217,7 +217,7 @@ public:
 
 	// QAbstractItemModel
 
-	/*! Creates a model index for the given row and column
+	/*! Creates a model index for the given row and column. If parent is not valid, the root index is returned
 	 * @see QAbstractItemModel::createIndex()
 	 */
 	QModelIndex index( int row, int column, const QModelIndex & parent = QModelIndex() ) const override;
@@ -394,6 +394,8 @@ public:
 	QModelIndex getIndex( const QModelIndex & itemParent, const QLatin1String & itemName, int column = 0 ) const;
 	//! Get the model index of a child item.
 	QModelIndex getIndex( const QModelIndex & itemParent, const char * itemName, int column = 0 ) const;
+	//! Get the model index of a child item. If itemParent is not valid, QModelIndex() is returned
+	QModelIndex getIndex( const QModelIndex & itemParent, int row, int column = 0 ) const;
 
 	// Item value getters
 public:
