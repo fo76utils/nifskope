@@ -79,7 +79,7 @@ void BSShape::updateData( const NifModel * nif )
 	}
 
 	for ( int i = 0; i < numVerts; i++ ) {
-		auto idx = nif->index( i, 0, iData );
+		auto idx = nif->getIndex( iData, i );
 		float bitX;
 
 		if ( isDynamic ) {
@@ -115,7 +115,7 @@ void BSShape::updateData( const NifModel * nif )
 		if ( iPartitions.isValid() ) {
 			int n = nif->rowCount( iPartitions );
 			for ( int i = 0; i < n; i++ )
-				triangles << nif->getArray<Triangle>( nif->index( i, 0, iPartitions ), "Triangles" );
+				triangles << nif->getArray<Triangle>( nif->getIndex( iPartitions, i ), "Triangles" );
 		}
 	} else {
 		auto iTriData = nif->getIndex( iBlock, "Triangles" );
@@ -140,7 +140,7 @@ void BSShape::updateData( const NifModel * nif )
 		auto nTotalWeights = weights.count();
 
 		for ( int i = 0; i < numVerts; i++ ) {
-			auto idx = nif->index( i, 0, iData );
+			auto idx = nif->getIndex( iData, i );
 			auto wts = nif->getArray<float>( idx, "Bone Weights" );
 			auto bns = nif->getArray<quint8>( idx, "Bone Indices" );
 			if ( wts.count() < 4 || bns.count() < 4 )
@@ -157,7 +157,7 @@ void BSShape::updateData( const NifModel * nif )
 
 		auto b = nif->getIndex( iSkinData, "Bone List" );
 		for ( int i = 0; i < nTotalWeights; i++ )
-			weights[i].setTransform( nif, QModelIndex_child( b, i ) );
+			weights[i].setTransform( nif, nif->getIndex( b, i ) );
 	}
 }
 
@@ -171,12 +171,12 @@ QModelIndex BSShape::vertexAt( int idx ) const
 	auto blk = iBlock;
 	if ( iSkinPart.isValid() ) {
 		if ( isDynamic )
-			return QModelIndex_child( nif->getIndex( blk, "Vertices" ), idx );
+			return nif->getIndex( nif->getIndex( blk, "Vertices" ), idx );
 
 		blk = iSkinPart;
 	}
 
-	return nif->getIndex( QModelIndex_child( nif->getIndex( blk, "Vertex Data" ), idx ), "Vertex" );
+	return nif->getIndex( nif->getIndex( nif->getIndex( blk, "Vertex Data" ), idx ), "Vertex" );
 }
 
 void BSShape::transformShapes()
@@ -550,13 +550,13 @@ void BSShape::drawSelection() const
 			int dataCt = nif->rowCount( data );
 
 			for ( int i = 0; i < dataCt; i++ ) {
-				auto d = QModelIndex_child( data, i );
+				auto d = nif->getIndex( data, i );
 
 				auto c = nif->getIndex( d, "Combined" );
 				int cCt = nif->rowCount( c );
 
 				for ( int j = 0; j < cCt; j++ ) {
-					idxs += nif->getIndex( QModelIndex_child( c, j ), "Bounding Sphere" );
+					idxs += nif->getIndex( nif->getIndex( c, j ), "Bounding Sphere" );
 				}
 			}
 		}
@@ -567,11 +567,11 @@ void BSShape::drawSelection() const
 		}
 
 #if 0
-		Vector3 pTrans = nif->get<Vector3>( QModelIndex_child( pBlock, 1 ), "Translation" );
+		Vector3 pTrans = nif->get<Vector3>( nif->getIndex( pBlock, 1 ), "Translation" );
 #endif
 		auto iBSphere = nif->getIndex( pBlock, "Bounding Sphere" );
-		Vector3 pbvC = nif->get<Vector3>( QModelIndex_child( iBSphere, 0, 2 ) );
-		float pbvR = nif->get<float>( QModelIndex_child( iBSphere, 1, 2 ) );
+		Vector3 pbvC = nif->get<Vector3>( nif->getIndex( iBSphere, 0, 2 ) );
+		float pbvR = nif->get<float>( nif->getIndex( iBSphere, 1, 2 ) );
 
 		if ( pbvR > 0.0 ) {
 			glColor4f( 0, 1, 0, 0.33f );
@@ -582,7 +582,7 @@ void BSShape::drawSelection() const
 
 		for ( auto i : idxs ) {
 			// Transform compound
-			auto iTrans = QModelIndex_child( i.parent(), 1 );
+			auto iTrans = nif->getIndex( i.parent(), 1 );
 			Matrix mat = nif->get<Matrix>( iTrans, "Rotation" );
 			//auto trans = nif->get<Vector3>( iTrans, "Translation" );
 			float scale = nif->get<float>( iTrans, "Scale" );
@@ -727,9 +727,9 @@ void BSShape::drawSelection() const
 		for ( int l = 0; l < loopNum; l++ ) {
 
 			if ( n != "Num Primitives" && !isSubSegArray && !isSegmentArray ) {
-				sidx = QModelIndex_child( idx, 1 );
+				sidx = nif->getIndex( idx, 1 );
 			} else if ( isSegmentArray ) {
-				sidx = QModelIndex_child( QModelIndex_child( idx, l ), 1 );
+				sidx = nif->getIndex( nif->getIndex( idx, l ), 1 );
 			}
 			s = sidx.row() + o;
 
@@ -739,13 +739,13 @@ void BSShape::drawSelection() const
 
 			auto recs = sidx.sibling( s + 3, 0 );
 			for ( int i = 0; i < numRec; i++ ) {
-				auto subrec = QModelIndex_child( recs, i );
+				auto subrec = nif->getIndex( recs, i );
 				int o = 0;
 				if ( subrec.data( NifSkopeDisplayRole ).toString() != "Sub Segment" )
 					o = 3; // Offset 3 rows for < 130 BSGeometrySegmentData
 
-				auto suboff = QModelIndex_child( subrec, o, 2 ).data().toInt() / 3;
-				auto subcnt = QModelIndex_child( subrec, o + 1, 2 ).data().toInt();
+				auto suboff = nif->getIndex( subrec, o, 2 ).data().toInt() / 3;
+				auto subcnt = nif->getIndex( subrec, o + 1, 2 ).data().toInt();
 
 				for ( int j = suboff; j < subcnt + suboff; j++ ) {
 					if ( j >= maxTris )
@@ -791,7 +791,7 @@ void BSShape::drawSelection() const
 			int ct = nif->rowCount( iBones );
 
 			for ( int i = 0; i < ct; i++ ) {
-				auto b = QModelIndex_child( iBones, i );
+				auto b = nif->getIndex( iBones, i );
 				boneSphere( nif, b );
 			}
 		}
@@ -803,7 +803,7 @@ void BSShape::drawSelection() const
 	if ( n == "Bone List" ) {
 		if ( nif->isArray( idx ) ) {
 			for ( int i = 0; i < nif->rowCount( idx ); i++ )
-				boneSphere( nif, QModelIndex_child( idx, i ) );
+				boneSphere( nif, nif->getIndex( idx, i ) );
 		} else {
 			boneSphere( nif, idx );
 		}

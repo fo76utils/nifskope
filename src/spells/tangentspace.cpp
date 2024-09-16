@@ -107,7 +107,7 @@ QModelIndex spTangentSpace::cast( NifModel * nif, const QModelIndex & iBlock )
 
 	if ( !isBSTriShape ) {
 		QModelIndex iTexCo = nif->getIndex( iData, "UV Sets" );
-		iTexCo = QModelIndex_child( iTexCo );
+		iTexCo = nif->getIndex( iTexCo, 0 );
 		texco = nif->getArray<Vector2>( iTexCo );
 	}
 
@@ -119,7 +119,7 @@ QModelIndex spTangentSpace::cast( NifModel * nif, const QModelIndex & iBlock )
 		QVector<QVector<quint16> > strips;
 
 		for ( int r = 0; r < nif->rowCount( iPoints ); r++ )
-			strips.append( nif->getArray<quint16>( QModelIndex_child( iPoints, r ) ) );
+			strips.append( nif->getArray<quint16>( nif->getIndex( iPoints, r ) ) );
 
 		triangles = triangulate( strips );
 	} else if ( !isBSTriShape ) {
@@ -130,7 +130,7 @@ QModelIndex spTangentSpace::cast( NifModel * nif, const QModelIndex & iBlock )
 			auto numParts = nif->get<int>( iPartBlock, "Num Partitions" );
 			auto iParts = nif->getIndex( iPartBlock, "Partitions" );
 			for ( int i = 0; i < numParts; i++ )
-				triangles << nif->getArray<Triangle>( QModelIndex_child( iParts, i ), "Triangles" );
+				triangles << nif->getArray<Triangle>( nif->getIndex( iParts, i ), "Triangles" );
 		} else {
 			triangles = nif->getArray<Triangle>( iShape, "Triangles" );
 		}
@@ -280,7 +280,7 @@ QModelIndex spTangentSpace::cast( NifModel * nif, const QModelIndex & iBlock )
 				int numlinks = nif->get<int>( iNumExtras );
 				nif->set<int>( iNumExtras, numlinks + 1 );
 				nif->updateArraySize( iExtras );
-				nif->setLink( QModelIndex_child( iExtras, numlinks ), nif->getBlockNumber( iTSpace ) );
+				nif->setLink( nif->getIndex( iExtras, numlinks ), nif->getBlockNumber( iTSpace ) );
 			}
 		}
 
@@ -333,7 +333,7 @@ void spTangentSpace::tangentSpaceSFMesh( NifModel * nif, const QModelIndex & ind
 				auto	iMeshes = nif->getIndex( i, "Meshes" );
 				if ( iMeshes.isValid() && nif->isArray( iMeshes ) ) {
 					for ( int n = 0; n <= 3; n++ )
-						tangentSpaceSFMesh( nif, QModelIndex_child( iMeshes, n ) );
+						tangentSpaceSFMesh( nif, nif->getIndex( iMeshes, n ) );
 				}
 			}
 			return;

@@ -88,7 +88,7 @@ void spSimplifySFMesh::Meshes::loadGeometryData( const NifModel * nif, const QMo
 
 	QModelIndex	iMeshData = nif->getIndex( index, "Meshes" );
 	if ( iMeshData.isValid() )
-		iMeshData = QModelIndex_child( iMeshData, 0 );
+		iMeshData = nif->getIndex( iMeshData, 0 );
 	if ( iMeshData.isValid() && nif->get<bool>( iMeshData, "Has Mesh" ) )
 		iMeshData = nif->getIndex( iMeshData, "Mesh" );
 	else
@@ -247,7 +247,7 @@ void spSimplifySFMesh::Meshes::saveGeometryData( NifModel * nif ) const
 
 		QModelIndex	iMeshData = nif->getIndex( index, "Meshes" );
 		if ( iMeshData.isValid() )
-			iMeshData = QModelIndex_child( iMeshData, 0 );
+			iMeshData = nif->getIndex( iMeshData, 0 );
 		if ( iMeshData.isValid() && nif->get<bool>( iMeshData, "Has Mesh" ) )
 			iMeshData = nif->getIndex( iMeshData, "Mesh" );
 		else
@@ -278,7 +278,7 @@ void spSimplifySFMesh::Meshes::saveGeometryData( NifModel * nif ) const
 
 			QModelIndex	iMesh = nif->getIndex( index, "Meshes" );
 			if ( iMesh.isValid() )
-				iMesh = QModelIndex_child( iMesh, l + 1 );
+				iMesh = nif->getIndex( iMesh, l + 1 );
 			if ( iMesh.isValid() )
 				nif->set<bool>( iMesh, "Has Mesh", ( newIndicesCnt && !isSkinned ) );
 			else if ( !isSkinned )
@@ -348,7 +348,7 @@ void spSimplifySFMesh::Meshes::saveGeometryData( NifModel * nif ) const
 				auto	lodsIndex = nif->getIndex( iMeshData, "LODs" );
 				if ( lodsIndex.isValid() ) {
 					nif->updateArraySize( lodsIndex );
-					auto	lodIndex = QModelIndex_child( lodsIndex, l );
+					auto	lodIndex = nif->getIndex( lodsIndex, l );
 					if ( lodIndex.isValid() ) {
 						nif->set<quint32>( lodIndex, "Indices Size", quint32(newIndicesCnt) );
 						QModelIndex	lodTrianglesIndex;

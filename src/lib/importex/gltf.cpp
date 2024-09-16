@@ -8,7 +8,7 @@
 #include "model/nifmodel.h"
 #include "message.h"
 #include "qtcompat.h"
-#include "libfo76utils/src/ddstxt16.hpp"
+#include "ddstxt16.hpp"
 #include "libfo76utils/src/material.hpp"
 #include "spells/mesh.h"
 #include "spells/tangentspace.h"
@@ -1132,7 +1132,7 @@ void ImportGltf::loadSkin( const QPersistentModelIndex & index, const tinygltf::
 		auto	iExtraData = nif->getIndex( index, "Extra Data List" );
 		if ( iExtraData.isValid() ) {
 			nif->updateArraySize( iExtraData );
-			nif->setLink( QModelIndex_child( iExtraData, int(n) ), qint32( nif->getBlockNumber(iSkinBMP) ) );
+			nif->setLink( nif->getIndex( iExtraData, int(n) ), qint32( nif->getBlockNumber(iSkinBMP) ) );
 		}
 		break;
 	}
@@ -1206,7 +1206,7 @@ void ImportGltf::loadSkin( const QPersistentModelIndex & index, const tinygltf::
 			Vector3	tmpScale;
 			m.decompose( t.translation, t.rotation, tmpScale );
 			t.scale = ( tmpScale[0] + tmpScale[1] + tmpScale[2] ) / 3.0f;
-			QModelIndex	iBone = QModelIndex_child( iBones, int(i) );
+			QModelIndex	iBone = nif->getIndex( iBones, int(i) );
 			if ( iBone.isValid() )
 				t.writeBack( nif, iBone );
 		}
@@ -1243,7 +1243,7 @@ void ImportGltf::loadSkinnedLODMesh( const QPersistentModelIndex & index, const 
 	auto	iMeshes = nif->getIndex( index, "Meshes" );
 	if ( !iMeshes.isValid() )
 		return;
-	auto	iMesh = QModelIndex_child( iMeshes, 0 );
+	auto	iMesh = nif->getIndex( iMeshes, 0 );
 	if ( iMesh.isValid() )
 		iMesh = nif->getIndex( iMesh, "Mesh" );
 	if ( !iMesh.isValid() )
@@ -1294,7 +1294,7 @@ void ImportGltf::loadSkinnedLODMesh( const QPersistentModelIndex & index, const 
 	if ( !iLODMesh.isValid() )
 		return;
 	nif->updateArraySize( iLODMesh );
-	iLODMesh = QModelIndex_child( iLODMesh, lod - 1 );
+	iLODMesh = nif->getIndex( iLODMesh, lod - 1 );
 	if ( iLODMesh.isValid() )
 		(void) loadTriangles( iLODMesh, p );
 }
@@ -1325,7 +1325,7 @@ bool ImportGltf::loadMesh(
 	auto	iMeshes = nif->getIndex( index, "Meshes" );
 	if ( !( iMeshes.isValid() && nif->isArray( iMeshes ) && nif->rowCount( iMeshes ) > lod ) )
 		return false;
-	auto	iMesh = QModelIndex_child( iMeshes, lod );
+	auto	iMesh = nif->getIndex( iMeshes, lod );
 	if ( !iMesh.isValid() )
 		return false;
 	nif->set<bool>( iMesh, "Has Mesh", true );
@@ -1597,7 +1597,7 @@ void ImportGltf::loadNode( const QPersistentModelIndex & index, int nodeNum, boo
 				auto	iChildren = nif->getIndex( index, "Children" );
 				if ( iChildren.isValid() ) {
 					nif->updateArraySize( iChildren );
-					nif->setLink( QModelIndex_child( iChildren, int(n) ), qint32( nif->getBlockNumber(iBlock) ) );
+					nif->setLink( nif->getIndex( iChildren, int(n) ), qint32( nif->getBlockNumber(iBlock) ) );
 				}
 			}
 		}
@@ -1646,7 +1646,7 @@ void ImportGltf::loadNode( const QPersistentModelIndex & index, int nodeNum, boo
 				auto	iExtraData = nif->getIndex( iBlock, "Extra Data List" );
 				if ( iExtraData.isValid() ) {
 					nif->updateArraySize( iExtraData );
-					nif->setLink( QModelIndex_child( iExtraData, int(n) ), qint32( nif->getBlockNumber(iMaterialID) ) );
+					nif->setLink( nif->getIndex( iExtraData, int(n) ), qint32( nif->getBlockNumber(iMaterialID) ) );
 				}
 				break;
 			}

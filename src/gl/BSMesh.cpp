@@ -249,7 +249,7 @@ void BSMesh::drawSelection() const
 				int	numBones;
 				if ( iBones.isValid() && nif->isArray( iBones ) && ( numBones = nif->rowCount( iBones ) ) > 0 ) {
 					for ( int i = 0; i < numBones; i++ ) {
-						auto	iBone = QModelIndex_child( iBones, i );
+						auto	iBone = nif->getIndex( iBones, i );
 						if ( !iBone.isValid() )
 							continue;
 						BoundSphere	sph( nif, iBone );
@@ -281,7 +281,7 @@ void BSMesh::drawSelection() const
 			glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 			int	numMeshlets = nif->rowCount( iMeshlets );
 			for ( int i = 0; i < numMeshlets && triangleOffset < quint32(sortedTriangles.size()); i++ ) {
-				triangleCount = nif->get<quint32>( QModelIndex_child( iMeshlets, i ), "Triangle Count" );
+				triangleCount = nif->get<quint32>( nif->getIndex( iMeshlets, i ), "Triangle Count" );
 				std::uint32_t	j = std::uint32_t(i);
 				j = ( ( j & 0x0001U ) << 7 ) | ( ( j & 0x0008U ) << 3 ) | ( ( j & 0x0040U ) >> 1 )
 					| ( ( j & 0x0200U ) >> 5 ) | ( ( j & 0x1000U ) >> 9 )
@@ -336,7 +336,7 @@ void BSMesh::drawSelection() const
 				quint32	triangleCount = 0;
 				for ( int i = 0; i <= s; i++ ) {
 					triangleOffset += triangleCount;
-					triangleCount = nif->get<quint32>( QModelIndex_child( iMeshlets, i ), "Triangle Count" );
+					triangleCount = nif->get<quint32>( nif->getIndex( iMeshlets, i ), "Triangle Count" );
 				}
 				for ( ; triangleCount && triangleOffset < quint32(sortedTriangles.size()); triangleCount-- ) {
 					Triangle tri = sortedTriangles.value( qsizetype(triangleOffset) );
@@ -451,7 +451,7 @@ QModelIndex BSMesh::vertexAt( int c ) const
 		int	l = 0;
 		if ( gpuLODs.isEmpty() )
 			l = int( lodLevel );
-		iMeshData = QModelIndex_child( iMeshData, l );
+		iMeshData = nif->getIndex( iMeshData, l );
 		if ( !iMeshData.isValid() )
 			break;
 		iMeshData = nif->getIndex( iMeshData, "Mesh" );
@@ -484,7 +484,7 @@ QModelIndex BSMesh::vertexAt( int c ) const
 		int	n = nif->rowCount( iVerts );
 		if ( n <= 0 )
 			break;
-		return QModelIndex_child( iVerts, int( std::int64_t( c ) * n / transVerts.count() ) );
+		return nif->getIndex( iVerts, int( std::int64_t( c ) * n / transVerts.count() ) );
 	}
 	return QModelIndex();
 }
@@ -500,10 +500,10 @@ void BSMesh::updateImpl(const NifModel* nif, const QModelIndex& index)
 	iMeshes = nif->getIndex(index, "Meshes");
 	meshes.clear();
 	for ( int i = 0; i < 4; i++ ) {
-		auto meshArray = QModelIndex_child( iMeshes, i );
-		bool hasMesh = nif->get<bool>( QModelIndex_child( meshArray ) );
+		auto meshArray = nif->getIndex( iMeshes, i );
+		bool hasMesh = nif->get<bool>( nif->getIndex( meshArray, 0 ) );
 		if ( hasMesh ) {
-			auto mesh = std::make_shared<MeshFile>( nif, QModelIndex_child( meshArray, 1 ) );
+			auto mesh = std::make_shared<MeshFile>( nif, nif->getIndex( meshArray, 1 ) );
 			if ( mesh->isValid() ) {
 				meshes.append(mesh);
 				if ( i > 0 || mesh->lods.size() > 0 )
@@ -590,7 +590,7 @@ void BSMesh::updateData(const NifModel* nif)
 			boneTransforms.resize(numBones);
 			auto iBoneList = nif->getIndex(iSkinData, "Bone List");
 			for ( int i = 0; i < numBones; i++ ) {
-				auto iBone = QModelIndex_child( iBoneList, i );
+				auto iBone = nif->getIndex( iBoneList, i );
 				Transform trans;
 				trans.rotation = nif->get<Matrix>(iBone, "Rotation");
 				trans.translation = nif->get<Vector3>(iBone, "Translation");
