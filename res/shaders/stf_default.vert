@@ -11,10 +11,11 @@ out vec4 D;
 
 out mat4 reflMatrix;
 
+uniform mat4 worldMatrix;
+// FIXME: these uniforms are never set
 uniform bool isSkinned;
 uniform bool isGPUSkinned;
 uniform mat4 boneTransforms[100];
-uniform mat4 worldMatrix;
 
 mat4 inverse(mat4 m) {
   float

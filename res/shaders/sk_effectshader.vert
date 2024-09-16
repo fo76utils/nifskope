@@ -10,6 +10,7 @@ varying vec3 t;
 varying vec3 b;
 varying vec3 v;
 
+// FIXME: these uniforms are never set
 uniform bool isGPUSkinned;
 uniform mat4 boneTransforms[100];
 

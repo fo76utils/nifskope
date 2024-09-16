@@ -212,11 +212,6 @@ uniform bool	hasSpecular;
 
 uniform sampler2D	textureUnits[SF_NUM_TEXTURE_UNITS];
 
-uniform vec4 solidColor;
-
-uniform bool isWireframe;
-uniform bool isSkinned;
-uniform mat4 worldMatrix;
 uniform vec4 parallaxOcclusionSettings;	// min. steps, max. steps, height scale, height offset
 // bit 0: alpha testing, bit 1: alpha blending
 uniform int alphaFlags;
@@ -383,10 +378,6 @@ vec2 parallaxMapping( int n, vec3 V, vec2 offset )
 
 void main()
 {
-	if ( isWireframe ) {
-		fragColor = solidColor;
-		return;
-	}
 	if ( lm.shaderModel == 45 )	// "Invisible"
 		discard;
 

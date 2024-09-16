@@ -9,9 +9,6 @@ uniform sampler2D EnvironmentMap;
 uniform sampler2D ReflMap;
 uniform sampler2D LightingMap;
 
-uniform bool isWireframe;
-uniform vec4 solidColor;
-
 uniform bool hasSourceTexture;
 uniform bool hasGreyscaleMap;
 uniform bool hasCubeMap;
@@ -41,8 +38,6 @@ uniform float envReflection;
 
 uniform float fLumEmittance;
 
-uniform mat4 worldMatrix;
-
 varying vec3 LightDir;
 varying vec3 ViewDir;
 
@@ -68,10 +63,6 @@ vec3 fresnelSchlickRoughness(float NdotV, vec3 F0, float roughness)
 
 void main( void )
 {
-	if ( isWireframe ) {
-		gl_FragColor = solidColor;
-		return;
-	}
 	vec2 offset = gl_TexCoord[0].st * uvScale + uvOffset;
 
 	vec4 baseMap = texture2D( BaseMap, offset );

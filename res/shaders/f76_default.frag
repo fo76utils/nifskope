@@ -11,7 +11,6 @@ uniform sampler2D EnvironmentMap;	// environment BRDF LUT
 uniform samplerCube CubeMap;	// pre-filtered cube maps (specular, diffuse)
 uniform samplerCube CubeMap2;
 
-uniform vec4 solidColor;
 uniform vec3 specColor;
 uniform bool hasSpecular;
 uniform float specStrength;
@@ -42,10 +41,6 @@ uniform float rimPower;
 uniform float backlightPower;
 
 uniform float envReflection;
-
-uniform bool isWireframe;
-uniform bool isSkinned;
-uniform mat4 worldMatrix;
 
 varying vec3 LightDir;
 varying vec3 ViewDir;
@@ -105,10 +100,6 @@ float srgbCompress(float x)
 
 void main(void)
 {
-	if ( isWireframe ) {
-		gl_FragColor = solidColor;
-		return;
-	}
 	vec2 offset = gl_TexCoord[0].st * uvScale + uvOffset;
 
 	vec4	baseMap = texture2D(BaseMap, offset);

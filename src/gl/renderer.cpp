@@ -1024,7 +1024,6 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 	defaultUVStream.channel = 1;	// "One"
 	static const std::string_view	emptyTexturePath = "";
 
-	prog->uni1b( "isWireframe", false );
 	prog->uni1i( HAS_SPECULAR, int(scene->hasOption(Scene::DoSpecular)) );
 	prog->uni1i( "lm.shaderModel", mat->shaderModel );
 	prog->uni4f_l( prog->uniLocation("parallaxOcclusionSettings"), FloatVector4( 8.0f, float(cfg.sfParallaxMaxSteps), cfg.sfParallaxScale, cfg.sfParallaxOffset ) );
