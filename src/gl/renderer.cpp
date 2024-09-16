@@ -1234,26 +1234,32 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 			texUniforms[j] = 0;
 			replUniforms[j] = FloatVector4( 0.0f );
 		}
+		std::uint32_t	textureSlotMap = 0;
+		std::uint32_t	textureReplModes = 0x0055955E;	// 2, 3, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1
+		const CE2Material::Blender *	blender = nullptr;
+		if ( i ) {
+			blender = mat->blenders[i - 1];
+			if ( !blender ) [[unlikely]] {
+				prog->uni1i_l( prog->uniLocation("lm.blenders[%d].maskTexture", i - 1), -1 );
+				prog->uni4f_l( prog->uniLocation("lm.blenders[%d].maskTextureReplacement", i - 1), FloatVector4( 0.0f ) );
+				prog->uni1i_l( prog->uniLocation("lm.blenders[%d].blendMode", i - 1), 3 );
+				prog->uni1i_l( prog->uniLocation("lm.blenders[%d].colorChannel", i - 1), 0 );
+			} else if ( blender->blendMode == 4 ) {
+				// CharacterCombine: remap color, roughness and metalness to overlay texture slots (0,3,4 -> 14,15,16)
+				textureSlotMap = 0x000CC00E;
+			}
+		}
 		if ( layer->material && layer->material->textureSet ) {
 			const CE2Material::TextureSet *	textureSet = layer->material->textureSet;
 			prog->uni1f_l( prog->uniLocation("lm.layers[%d].material.textureSet.floatParam", i), textureSet->floatParam );
 			for ( int j = 0; j < 9 && j < CE2Material::TextureSet::maxTexturePaths; j++ ) {
-				int	k = j;
-				if ( i ) {
-					// Character2Layer, Character3Layer or Character4Layer
-					if ( mat->shaderModel >= 34 && mat->shaderModel <= 36 ) {
-						// remap color, roughness and metalness to overlay texture slots
-						if ( j == 0 )
-							k = 14;
-						else if ( j == 3 || j == 4 )
-							k = j + 12;
-					}
-				}
+				int	k = j + int( textureSlotMap & 15U );
 				const std::string_view *	texturePath = textureSet->texturePaths[k];
 				std::uint32_t	textureReplacement = textureSet->textureReplacements[k];
-				int	textureReplacementMode = 0;
-				if ( textureSet->textureReplacementMask & (1 << k) )
-					textureReplacementMode = ( j == 0 || j == 7 ? 2 : ( j == 1 ? 3 : 1 ) );
+				int	textureReplacementMode =
+					( !( textureSet->textureReplacementMask & (1 << k) ) ? 0 : int( textureReplModes & 3U ) );
+				textureSlotMap = textureSlotMap >> 4;
+				textureReplModes = textureReplModes >> 2;
 				if ( j == 0 ) {
 					if ( (scene->hasOption(Scene::DoLighting) && scene->hasVisMode(Scene::VisNormalsOnly)) || useErrorColor ) {
 						texturePath = &emptyTexturePath;
@@ -1300,16 +1306,8 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 		prog->uni4f_l( prog->uniLocation("lm.layers[%d].uvStream.scaleAndOffset", i), uvScaleAndOffset );
 		prog->uni1b_l( prog->uniLocation("lm.layers[%d].uvStream.useChannelTwo", i), (uvStream->channel > 1) );
 
-		if ( !i )
+		if ( !blender )
 			continue;
-		const CE2Material::Blender *	blender;
-		if ( ( blender = mat->blenders[i - 1] ) == nullptr ) [[unlikely]] {
-			prog->uni1i_l( prog->uniLocation("lm.blenders[%d].maskTexture", i - 1), -1 );
-			prog->uni4f_l( prog->uniLocation("lm.blenders[%d].maskTextureReplacement", i - 1), FloatVector4( 0.0f ) );
-			prog->uni1i_l( prog->uniLocation("lm.blenders[%d].blendMode", i - 1), 0 );
-			prog->uni1i_l( prog->uniLocation("lm.blenders[%d].colorChannel", i - 1), 0 );
-			continue;
-		}
 		uvStream = blender->uvStream;
 		if ( !uvStream )
 			uvStream = &defaultUVStream;
