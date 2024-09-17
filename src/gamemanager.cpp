@@ -418,6 +418,7 @@ GameMode GameManager::get_game( const NifModel * nif )
 	case BSSTREAM_170:
 	case BSSTREAM_172:
 	case BSSTREAM_173:
+	case BSSTREAM_175:
 		return STARFIELD;
 	default:
 		break;
