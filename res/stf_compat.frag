@@ -478,7 +478,11 @@ void main()
 				} else if ( blendMode == 4 ) {
 					// CharacterCombine: blend color, roughness and metalness multiplicatively
 					layerBaseMap = layerBaseMap * baseMap * 2.0;
-					layerPBRMap.rg = layerPBRMap.rg * pbrMap.rg * 2.0;
+					layerPBRMap.r = layerPBRMap.r * pbrMap.r * 2.0;
+					if ( layerPBRMap.g < 0.5 )
+						layerPBRMap.g = layerPBRMap.g * pbrMap.g;
+					else
+						layerPBRMap.g = layerPBRMap.g + pbrMap.g - layerPBRMap.g * pbrMap.g;
 				}
 				srcMask *= f;
 				float	dstMask = 1.0 - ( blendMode != 1 ? srcMask : 0.0 );
