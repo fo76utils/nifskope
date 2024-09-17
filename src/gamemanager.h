@@ -61,7 +61,8 @@ enum BSVersion
 	BSSTREAM_155 = 155,
 	BSSTREAM_170 = 170,
 	BSSTREAM_172 = 172,
-	BSSTREAM_173 = 173
+	BSSTREAM_173 = 173,
+	BSSTREAM_175 = 175
 };
 
 QString StringForMode(GameMode game);
