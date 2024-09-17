@@ -47,10 +47,14 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //	to no longer work as of msvc2013
 #else
 #pragma GCC diagnostic push
+#ifdef __clang__
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#else
 #pragma GCC diagnostic ignored "-Wclobbered"
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #pragma GCC diagnostic ignored "-Wunused-but-set-parameter"
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
 extern "C"
 {
