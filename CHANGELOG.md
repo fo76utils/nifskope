@@ -5,6 +5,7 @@
 * Fixed the Options/Theme menu, the list of available styles is now automatically detected, instead of using fixed Windows specific options like "Windows XP" that may no longer be supported by new versions of Qt (see https://github.com/hexabits/nifskope/issues/52).
 * Updates for Starfield version 1.14.68.0. Note: as of this update, the materialsbeta.cdb file in "SFBGS007 - Main.ba2" is still version 1.13.34.0, and it cannot be loaded at the same time as the main CDB file because of incompatible class definitions. However, the DLC001 material unique to SFBGS007 can be extracted in .mat format from the ContentResources.zip archive included with the Creation Kit.
 * Fixed the Remove Unused Strings spell corrupting Starfield models that contain shader property blocks with an empty name (https://github.com/niftools/nifskope/issues/254).
+* Fixed bug in Copy Branch and Duplicate Branch due to Qt 6 changing the return type of QList::count().
 * Fixed error on opening Fallout 76 models with NiPSysRotDampeningCtlr blocks.
 * Fixed the UV editor and some of the spells not updating the view after making changes.
 * Fixed crash on closing the last main window while the UV editor is open.

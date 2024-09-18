@@ -1,5 +1,4 @@
 #include "blocks.h"
-#include "qtcompat.h"
 
 #include <QApplication>
 #include <QBuffer>
@@ -200,10 +199,10 @@ QStringList getStringsArray( NifModel * nif, const QModelIndex & parent,
 
 	if ( name.isEmpty() ) {
 		for ( int i = 0; i < nif->rowCount( iArr ); i++ )
-			strings << nif->resolveString( QModelIndex_child( iArr, i ) );
+			strings << nif->resolveString( nif->getIndex( iArr, i ) );
 	} else {
 		for ( int i = 0; i < nif->rowCount( iArr ); i++ )
-			strings << nif->resolveString( QModelIndex_child( iArr, i ), name );
+			strings << nif->resolveString( nif->getIndex( iArr, i ), name );
 	}
 
 	return strings;
@@ -218,10 +217,10 @@ void setStringsArray( NifModel * nif, const QModelIndex & parent, QStringList & 
 
 	if ( name.isEmpty() ) {
 		for ( int i = 0; i < nif->rowCount( iArr ); i++ )
-			nif->set<QString>( QModelIndex_child( iArr, i ), strings.takeFirst() );
+			nif->set<QString>( nif->getIndex( iArr, i ), strings.takeFirst() );
 	} else {
 		for ( int i = 0; i < nif->rowCount( iArr ); i++ )
-			nif->set<QString>( QModelIndex_child( iArr, i ), name, strings.takeFirst() );
+			nif->set<QString>( nif->getIndex( iArr, i ), name, strings.takeFirst() );
 	}
 }
 //! Get "Name" et al. for NiObjectNET, NiExtraData, NiPSysModifier, etc.
@@ -229,7 +228,7 @@ QStringList getNiObjectRootStrings( NifModel * nif, const QModelIndex & iBlock )
 {
 	QStringList strings;
 	for ( int i = 0; i < nif->rowCount( iBlock ); i++ ) {
-		auto iString = QModelIndex_child( iBlock, i );
+		auto iString = nif->getIndex( iBlock, i );
 		if ( rootStringList.contains( nif->itemName( iString ) ) )
 			strings << nif->resolveString( iString );
 	}
@@ -240,7 +239,7 @@ QStringList getNiObjectRootStrings( NifModel * nif, const QModelIndex & iBlock )
 void setNiObjectRootStrings( NifModel * nif, const QModelIndex & iBlock, QStringList & strings )
 {
 	for ( int i = 0; i < nif->rowCount( iBlock ); i++ ) {
-		auto iString = QModelIndex_child( iBlock, i );
+		auto iString = nif->getIndex( iBlock, i );
 		if ( rootStringList.contains( nif->itemName( iString ) ) )
 			nif->set<QString>( iString, strings.takeFirst() );
 	}
@@ -255,7 +254,7 @@ QStringList getStringsNiMesh( NifModel * nif, const QModelIndex & iBlock )
 		return {};
 
 	for ( int i = 0; i < nif->rowCount( iData ); i++ )
-		strings << getStringsArray( nif, QModelIndex_child( iData, i ), "Component Semantics", "Name" );
+		strings << getStringsArray( nif, nif->getIndex( iData, i ), "Component Semantics", "Name" );
 
 	return strings;
 }
@@ -267,7 +266,7 @@ void setStringsNiMesh( NifModel * nif, const QModelIndex & iBlock, QStringList &
 		return;
 
 	for ( int i = 0; i < nif->rowCount( iData ); i++ )
-		setStringsArray( nif, QModelIndex_child( iData, i ), strings, "Component Semantics", "Name" );
+		setStringsArray( nif, nif->getIndex( iData, i ), strings, "Component Semantics", "Name" );
 }
 //! Get strings for NiSequence
 QStringList getStringsNiSequence( NifModel * nif, const QModelIndex & iBlock )
@@ -278,7 +277,7 @@ QStringList getStringsNiSequence( NifModel * nif, const QModelIndex & iBlock )
 		return {};
 
 	for ( int i = 0; i < nif->rowCount( iControlledBlocks ); i++ ) {
-		auto iChild = QModelIndex_child( iControlledBlocks, i );
+		auto iChild = nif->getIndex( iControlledBlocks, i );
 		strings << nif->resolveString( iChild, "Target Name" )
 				<< nif->resolveString( iChild, "Node Name" )
 				<< nif->resolveString( iChild, "Property Type" )
@@ -297,7 +296,7 @@ void setStringsNiSequence( NifModel * nif, const QModelIndex & iBlock, QStringLi
 		return;
 
 	for ( int i = 0; i < nif->rowCount( iControlledBlocks ); i++ ) {
-		auto iChild = QModelIndex_child( iControlledBlocks, i );
+		auto iChild = nif->getIndex( iControlledBlocks, i );
 		nif->set<QString>( iChild, "Target Name", strings.takeFirst() );
 		nif->set<QString>( iChild, "Node Name", strings.takeFirst() );
 		nif->set<QString>( iChild, "Property Type", strings.takeFirst() );
@@ -365,7 +364,7 @@ bool addLink( NifModel * nif, const QModelIndex & iParent, const QString & array
 			int numlinks = nif->get<int>( iSize );
 			nif->set<int>( iSize, numlinks + 1 );
 			nif->updateArraySize( iArray );
-			nif->setLink( QModelIndex_child( iArray, numlinks ), link );
+			nif->setLink( nif->getIndex( iArray, numlinks ), link );
 			return true;
 		}
 
@@ -376,7 +375,7 @@ bool addLink( NifModel * nif, const QModelIndex & iParent, const QString & array
 		if ( nif->isArray( iArray ) && item ) {
 			for ( int c = 0; c < item->childCount(); c++ ) {
 				if ( item->child( c )->getLinkValue() == -1 ) {
-					nif->setLink( QModelIndex_child( iArray, c ), link );
+					nif->setLink( nif->getIndex( iArray, c ), link );
 					return true;
 				}
 			}
@@ -1327,7 +1326,7 @@ QModelIndex spCopyBranch::cast( NifModel * nif, const QModelIndex & index )
 
 	if ( buffer.open( QIODevice::WriteOnly ) ) {
 		QDataStream ds( &buffer );
-		ds << blocks.count();
+		ds << int( blocks.count() );
 		ds << blockMap;
 		ds << parentMap;
 
@@ -1914,7 +1913,7 @@ QModelIndex spDuplicateBranch::cast( NifModel * nif, const QModelIndex & index )
 
 	if ( buffer.open( QIODevice::WriteOnly ) ) {
 		QDataStream ds( &buffer );
-		ds << blocks.count();
+		ds << int( blocks.count() );
 		ds << blockMap;
 		ds << parentMap;
 		for ( const auto block : blocks ) {
@@ -2023,7 +2022,7 @@ public:
 				QList<QPair<QString, qint32> > links;
 
 				for ( int r = 0; r < nif->rowCount( iChildren ); r++ ) {
-					qint32 l = nif->getLink( QModelIndex_child( iChildren, r ) );
+					qint32 l = nif->getLink( nif->getIndex( iChildren, r ) );
 
 					if ( l >= 0 )
 						links.append( QPair<QString, qint32>( nif->get<QString>( nif->getBlockIndex( l ), "Name" ), l ) );
@@ -2032,8 +2031,8 @@ public:
 				std::stable_sort( links.begin(), links.end() );
 
 				for ( int r = 0; r < links.count(); r++ ) {
-					if ( links[r].second != nif->getLink( QModelIndex_child( iChildren, r ) ) )
-						nif->setLink( QModelIndex_child( iChildren, r ), links[r].second );
+					if ( links[r].second != nif->getLink( nif->getIndex( iChildren, r ) ) )
+						nif->setLink( nif->getIndex( iChildren, r ), links[r].second );
 
 					nif->set<int>( iNumChildren, links.count() );
 					nif->updateArraySize( iChildren );
@@ -2098,7 +2097,7 @@ public:
 		int attachedNodeNumber = thisBlockNumber++;
 
 		// replace this block with the attached node
-		nif->setLink( QModelIndex_child( nif->getIndex( iParent, "Children" ), thisBlockIndex ), attachedNodeNumber );
+		nif->setLink( nif->getIndex( nif->getIndex( iParent, "Children" ), thisBlockIndex ), attachedNodeNumber );
 
 		// attach ourselves to the attached node
 		addLink( nif, attachedNode, "Children", thisBlockNumber );
