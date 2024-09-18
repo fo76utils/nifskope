@@ -9209,9 +9209,17 @@
         <field name="Material" type="SizedString" />
     </struct>
 
+    <struct name="BSWeakRefUnknownStruct" module="BSMain" versions="#STF#">
+        <field name="Unknown Short" type="ushort" />
+        <field name="Unknown Int 1" type="uint" />
+        <field name="Unknown Int 2" type="uint" />
+    </struct>
+
     <niobject name="BSWeakReferenceNode" inherit="NiNode" module="BSMain" versions="#STF#">
         <field name="Num Refs" type="uint" />
         <field name="Ref" type="BSWeakReference" length="Num Refs" />
+        <field name="Num Unknown Structs" type="ushort" vercond="#BSVER# #GTE# 175" />
+        <field name="Unknown Structs" type="BSWeakRefUnknownStruct" length="Num Unknown Structs" vercond="#BSVER# #GTE# 175" />
         <field name="Unknown Int 1" type="uint" />
         <field name="Num Water Refs" type="uint" />
         <field name="Water Refs" type="BSWaterReferenceStruct" length="Num Water Refs" />
