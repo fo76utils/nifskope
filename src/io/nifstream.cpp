@@ -363,7 +363,7 @@ bool NifIStream::read( NifValue & val )
 
 			//string.replace( "\r", "\\r" );
 			//string.replace( "\n", "\\n" );
-			*static_cast<QString *>(val.val.data) = QString::fromLocal8Bit( string );
+			*static_cast<QString *>(val.val.data) = QString::fromLatin1( string );
 		}
 		return true;
 	case NifValue::tText:
@@ -814,14 +814,16 @@ bool NifOStream::write( const NifValue & val )
 		}
 	case NifValue::tShortString:
 		{
-			QByteArray string = static_cast<QString *>(val.val.data)->toLocal8Bit();
-			string.replace( "\\r", "\r" );
-			string.replace( "\\n", "\n" );
+			QByteArray string = static_cast<QString *>(val.val.data)->toLatin1();
+			//string.replace( "\\r", "\r" );
+			//string.replace( "\\n", "\n" );
 
 			if ( string.size() > 254 )
 				string.resize( 254 );
+			// make sure the string has exactly one terminating null character
+			string.resize( std::max< qsizetype >( string.indexOf( '\0' ), 0 ) + 1, '\0' );
 
-			unsigned char len = string.size() + 1;
+			unsigned char len = (unsigned char) string.size();
 
 			if ( device->write( (char *)&len, 1 ) != 1 )
 				return false;
@@ -1048,10 +1050,8 @@ int NifSStream::size( const NifValue & val )
 
 			//string.replace( "\\r", "\r" );
 			//string.replace( "\\n", "\n" );
-			if ( string.size() > 254 )
-				string.resize( 254 );
 
-			return 1 + string.size() + 1;
+			return std::min< qsizetype >( std::max< qsizetype >( string.indexOf( '\0' ), 0 ) + 2, 256 );
 		}
 	case NifValue::tText:
 		{
