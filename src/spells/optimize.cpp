@@ -4,7 +4,6 @@
 #include "spells/mesh.h"
 #include "spells/tangentspace.h"
 #include "spells/transform.h"
-#include "qtcompat.h"
 
 #include <QBuffer>
 #include <QMessageBox>
@@ -447,8 +446,8 @@ public:
 		QModelIndex iUVb = nif->getIndex( iDataB, "UV Sets" );
 
 		for ( int r = 0; r < nif->rowCount( iUVa ); r++ ) {
-			nif->updateArraySize( QModelIndex_child( iUVa, r ) );
-			nif->setArray<Vector2>( QModelIndex_child( iUVa, r ), nif->getArray<Vector2>( QModelIndex_child( iUVa, r ) ).mid( 0, numA ) + nif->getArray<Vector2>( QModelIndex_child( iUVb, r ) ) );
+			nif->updateArraySize( nif->getIndex( iUVa, r ) );
+			nif->setArray<Vector2>( nif->getIndex( iUVa, r ), nif->getArray<Vector2>( nif->getIndex( iUVa, r ) ).mid( 0, numA ) + nif->getArray<Vector2>( nif->getIndex( iUVb, r ) ) );
 		}
 
 		int triCntA = nif->get<int>( iDataA, "Num Triangles" );
@@ -477,15 +476,15 @@ public:
 		nif->updateArraySize( iDataA, "Points" );
 
 		for ( int r = 0; r < stripCntB; r++ ) {
-			QVector<quint16> strip = nif->getArray<quint16>( QModelIndex_child( nif->getIndex( iDataB, "Points" ), r ) );
+			QVector<quint16> strip = nif->getArray<quint16>( nif->getIndex( nif->getIndex( iDataB, "Points" ), r ) );
 			QMutableVectorIterator<quint16> it( strip );
 
 			while ( it.hasNext() )
 				it.next() += numA;
 
-			nif->set<int>( QModelIndex_child( nif->getIndex( iDataA, "Strip Lengths" ), r + stripCntA ), strip.size() );
-			nif->updateArraySize( QModelIndex_child( nif->getIndex( iDataA, "Points" ), r + stripCntA ) );
-			nif->setArray<quint16>( QModelIndex_child( nif->getIndex( iDataA, "Points" ), r + stripCntA ), strip );
+			nif->set<int>( nif->getIndex( nif->getIndex( iDataA, "Strip Lengths" ), r + stripCntA ), strip.size() );
+			nif->updateArraySize( nif->getIndex( nif->getIndex( iDataA, "Points" ), r + stripCntA ) );
+			nif->setArray<quint16>( nif->getIndex( nif->getIndex( iDataA, "Points" ), r + stripCntA ), strip );
 		}
 
 		spUpdateCenterRadius CenterRadius;
@@ -496,12 +495,12 @@ public:
 REGISTER_SPELL( spCombiTris )
 
 
-void scan( const QModelIndex & idx, NifModel * nif, QMap<QString, qint32> & usedStrings, bool hasCED )
+static void scan( const QModelIndex & idx, NifModel * nif, QMap<QString, qint32> & usedStrings, int cedIdx )
 {
 	for ( int i = 0; i < nif->rowCount( idx ); i++ ) {
-		auto child = QModelIndex_child( idx, i, 2 );
-		if ( nif->rowCount( child ) > 0 ) {
-			scan( child, nif, usedStrings, hasCED );
+		auto child = nif->getIndex( idx, i, 2 );
+		if ( child.isValid() && nif->rowCount( child ) > 0 ) {
+			scan( child, nif, usedStrings, cedIdx );
 			continue;
 		}
 
@@ -512,12 +511,12 @@ void scan( const QModelIndex & idx, NifModel * nif, QMap<QString, qint32> & used
 				continue;
 
 			auto str = nif->get<QString>( child );
-			if ( !usedStrings.contains( str ) )
-				usedStrings.insert( str, usedStrings.size() );
+			if ( !usedStrings.contains( str ) ) {
+				qsizetype	n = usedStrings.size();
+				usedStrings.insert( str, qint32( n - int( n <= cedIdx ) ) );
+			}
 
 			qint32 value = usedStrings[str];
-			if ( hasCED && value > 0 )
-				value++;
 
 			nif->set<int>( child, value );
 		}
@@ -543,11 +542,16 @@ public:
 		// FO4 workaround for apparently unused but necessary BSClothExtraData string
 		int cedIdx = originalStrings.indexOf( "CED" );
 
-		bool hasCED = cedIdx >= 0;
-
 		QMap<QString, qint32> usedStrings;
+		if ( cedIdx >= 0 )
+			usedStrings.insert( "CED", cedIdx );
+
+		nif->setState( BaseModel::Processing );
+
 		for ( qint32 b = 0; b < nif->getBlockCount(); b++ )
-			scan( nif->getBlockIndex( b ), nif, usedStrings, hasCED );
+			scan( nif->getBlockIndex( b ), nif, usedStrings, cedIdx );
+		while ( usedStrings.size() <= cedIdx )
+			usedStrings.insert( "", qint32( usedStrings.size() - 1 ) );
 
 		QVector<QString> newStrings( usedStrings.size() );
 		for ( auto kv : usedStrings.toStdMap() )
@@ -555,14 +559,11 @@ public:
 
 		int newSize = newStrings.size();
 
-		if ( hasCED ) {
-			newStrings.insert( cedIdx, 1, "CED" );
-			newSize++;
-		}
-
 		nif->set<uint>( nif->getHeaderIndex(), "Num Strings", newSize );
 		nif->updateArraySize( nif->getHeaderIndex(), "Strings" );
 		nif->setArray<QString>( nif->getHeaderIndex(), "Strings", newStrings );
+
+		nif->restoreState();
 		nif->updateHeader();
 
 		// Remove new from original to see what was removed
