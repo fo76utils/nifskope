@@ -6860,6 +6860,7 @@
         <field name="Depth MV Fixup" type="bool" />
         <field name="Depth MV Fixup Edges Only" type="bool" />
         <field name="Force Render Before OIT" type="bool" />
+        <field name="Force Render Before Clouds" type="bool" />
         <field name="Depth Bias In Ulp" type="ushort" />
     </struct>
 
@@ -7039,6 +7040,7 @@
         <field name="Layered Emissivity Settings" type="BSLayeredEmissivityComponent" cond="Layered Emissivity" />
         <field name="Is Translucent" type="bool" />
         <field name="Translucency Settings" type="BSTranslucencySettingsComponent" cond="Is Translucent" />
+        <field name="Is Modified" type="bool" />
     </struct>
 
     <struct name="BSLightingShaderPropertyDataGTEFO76" module="BSMain" versions="#BS_GTE_F76#">

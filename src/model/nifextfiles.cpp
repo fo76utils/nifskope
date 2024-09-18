@@ -374,6 +374,7 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, const void *matPtr, i
 		setValue<bool>( o, "Depth MV Fixup", bool(sp->flags & CE2Material::EffectFlag_MVFixup) );
 		setValue<bool>( o, "Depth MV Fixup Edges Only", bool(sp->flags & CE2Material::EffectFlag_MVFixupEdgesOnly) );
 		setValue<bool>( o, "Force Render Before OIT", bool(sp->flags & CE2Material::EffectFlag_RenderBeforeOIT) );
+		setValue<bool>( o, "Force Render Before Clouds", bool(sp->flags & CE2Material::EffectFlag_RenderBeforeClouds) );
 		setValue<quint16>( o, "Depth Bias In Ulp", quint16(sp->depthBias) );
 	}
 	bool	layeredEdgeFalloff = false;
