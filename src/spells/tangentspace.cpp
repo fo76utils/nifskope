@@ -1,5 +1,4 @@
 #include "tangentspace.h"
-#include "qtcompat.h"
 
 #include "lib/nvtristripwrapper.h"
 

@@ -2,7 +2,6 @@
 
 #include "ui/widgets/nifeditors.h"
 #include "gl/gltools.h"
-#include "qtcompat.h"
 
 #include <QApplication>
 #include <QBuffer>

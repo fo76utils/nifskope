@@ -7,7 +7,6 @@
 #include "io/MeshFile.h"
 #include "model/nifmodel.h"
 #include "message.h"
-#include "qtcompat.h"
 #include "ddstxt16.hpp"
 #include "libfo76utils/src/material.hpp"
 #include "spells/mesh.h"

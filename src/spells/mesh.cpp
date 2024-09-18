@@ -1,6 +1,5 @@
 #include "mesh.h"
 #include "gl/gltools.h"
-#include "qtcompat.h"
 
 #include <QDialog>
 #include <QGridLayout>

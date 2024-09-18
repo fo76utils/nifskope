@@ -1,6 +1,5 @@
 #include "io/MeshFile.h"
 #include "model/nifmodel.h"
-#include "qtcompat.h"
 
 #include <QByteArray>
 #include <QDataStream>

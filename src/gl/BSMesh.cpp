@@ -5,7 +5,6 @@
 #include "gl/renderer.h"
 #include "io/nifstream.h"
 #include "model/nifmodel.h"
-#include "qtcompat.h"
 #include "glview.h"
 
 #include <QDir>

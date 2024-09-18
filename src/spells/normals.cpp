@@ -1,5 +1,4 @@
 #include "spellbook.h"
-#include "qtcompat.h"
 
 #include "lib/nvtristripwrapper.h"
 
