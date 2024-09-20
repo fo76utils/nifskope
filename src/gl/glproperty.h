@@ -758,6 +758,7 @@ protected:
 	std::uint64_t	sfMaterialDB_ID = std::uint64_t(-1);
 	bool	sf_material_valid = false;
 	std::string	sfMaterialPath;
+	AllocBuffers	sfMatDataBuf;
 	void setMaterial( Material * newMaterial );
 	void setSFMaterial( const QString & mat_name );
 	void loadSFMaterial();

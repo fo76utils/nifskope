@@ -116,11 +116,28 @@ public:
 				if ( model->inherits( "NifModel" ) ) {
 					NifModel *	nif = static_cast< NifModel * >( model );
 					if ( nif->getBSVersion() >= 151 ) {
-						for ( const NifItem * i = nif->getItem( index ); i; i = i->parent() ) {
-							if ( i->isAbstract() ) {
+						const NifItem *	item = nif->getItem( index );
+						for ( const NifItem * i = item; i; i = i->parent() ) {
+							if ( i->isAbstract() && i->hasName( "Material" ) ) {
 								if ( !nif->blockInherits( i, "BSShaderProperty" ) )
 									break;
-								QMessageBox::warning( nullptr, "NifSkope warning", QString( "Abstract material data cannot be edited" ) );
+								if ( nif->getBSVersion() >= 170 ) {
+									if ( !i->hasStrType( "BSLayeredMaterial" ) )
+										continue;
+									if ( !item->hasName( "Is Modified" ) || !nif->get<bool>( item ) ) {
+										if ( !nif->get<bool>( i, "Is Modified" ) ) {
+											if ( !item->hasName( "Is Modified" ) )
+												nif->set<bool>( i, "Is Modified", true );
+											QMessageBox::warning( nullptr, "NifSkope warning", QString( "Changes to Starfield material data are not saved" ) );
+										}
+										break;
+									} else {
+										if ( QMessageBox::question( nullptr, "NifSkope warning", QString( "Revert changes to material data?" ) ) == QMessageBox::Yes )
+											break;
+									}
+								} else {
+									QMessageBox::warning( nullptr, "NifSkope warning", QString( "Abstract material data cannot be edited" ) );
+								}
 								return true;
 							}
 						}

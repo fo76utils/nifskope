@@ -8,7 +8,6 @@
 #include "ui/widgets/uvedit.h"
 #include "ui/widgets/filebrowser.h"
 #include "model/nifmodel.h"
-#include "qtcompat.h"
 
 #include "lib/nvtristripwrapper.h"
 
@@ -180,18 +179,28 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & idx ) override final
 	{
+		const NifItem *	item = nif->getItem( idx );
+		if ( !item )
+			return false;
 		QModelIndex iBlock = nif->getBlockIndex( idx );
 
 		if ( nif->isNiBlock( iBlock, { "NiSourceTexture", "NiImage" } )
-				&& ( iBlock == idx.sibling( idx.row(), 0 ) || nif->itemName( idx ) == "File Name" ) )
+				&& ( iBlock == idx.sibling( idx.row(), 0 ) || item->hasName( "File Name" ) ) )
 			return true;
-		else if ( nif->isNiBlock( iBlock, "BSShaderNoLightingProperty" ) && nif->itemName( idx ) == "File Name" )
+
+		if ( !( item->hasName( "File Name" ) || item->hasName( "Textures" ) || item->hasName( "Path" ) ) )
+			return false;
+
+		if ( nif->isNiBlock( iBlock, "BSShaderNoLightingProperty" ) && item->hasName( "File Name" ) )
 			return true;
-		else if ( nif->isNiBlock( iBlock, "BSShaderTextureSet" ) && nif->itemName( idx ) == "Textures" )
+		else if ( nif->isNiBlock( iBlock, "BSShaderTextureSet" ) && item->hasName( "Textures" ) )
 			return true;
-		else if ( nif->isNiBlock( iBlock, "SkyShaderProperty" ) && nif->itemName( idx ) == "File Name" )
+		else if ( nif->isNiBlock( iBlock, "SkyShaderProperty" ) && item->hasName( "File Name" ) )
 			return true;
-		else if ( nif->isNiBlock( iBlock, "TileShaderProperty" ) && nif->itemName( idx ) == "File Name" )
+		else if ( nif->isNiBlock( iBlock, "TileShaderProperty" ) && item->hasName( "File Name" ) )
+			return true;
+		else if ( nif->getBSVersion() >= 170 && item->hasName( "Path" )
+					&& nif->blockInherits( iBlock, "BSShaderProperty" ) )
 			return true;
 
 		return false;
@@ -202,6 +211,7 @@ public:
 		QModelIndex iBlock = nif->getBlockIndex( idx );
 		QModelIndex iFile;
 		bool setExternal = false;
+		bool isSFMaterial = false;
 
 		if ( nif->isNiBlock( iBlock, { "NiSourceTexture", "NiImage" } )
 				&& ( iBlock == idx.sibling( idx.row(), 0 ) || nif->itemName( idx ) == "File Name" ) )
@@ -216,6 +226,10 @@ public:
 			iFile = idx;
 		} else if ( nif->isNiBlock( iBlock, "TileShaderProperty" ) && nif->itemName( idx ) == "File Name" ) {
 			iFile = idx;
+		} else if ( nif->getBSVersion() >= 170 && nif->itemName( idx ) == "Path"
+					&& nif->blockInherits( iBlock, "BSShaderProperty" ) ) {
+			iFile = idx;
+			isSFMaterial = true;
 		}
 
 		if ( !iFile.isValid() )
@@ -245,6 +259,16 @@ public:
 					// update the "File Name" block reference, since it changes when we set Use External
 					if ( nif->checkVersion( 0x0A010000, 0 ) && nif->isNiBlock( iBlock, "NiSourceTexture" ) ) {
 						iFile = nif->getIndex( iBlock, "File Name" );
+					}
+				}
+
+				if ( isSFMaterial ) {
+					for ( const NifItem * i = nif->getItem( iFile ); i; i = i->parent() ) {
+						if ( i->isAbstract() && i->hasStrType( "BSLayeredMaterial" ) ) {
+							nif->set<bool>( i, "Is Modified", true );
+							QMessageBox::warning( nullptr, "NifSkope warning", QString( "Changes to Starfield material data are not saved" ) );
+							break;
+						}
 					}
 				}
 
@@ -638,7 +662,7 @@ class spTextureTemplate final : public Spell
 		settings.setValue( k( "Wire Color" ), colorARGB );
 
 		// get the selected coord set
-		QModelIndex iSet = QModelIndex_child( iUVs, set->currentIndex(), 0 );
+		QModelIndex iSet = nif->getIndex( iUVs, set->currentIndex(), 0 );
 
 		QVector<Vector2> uv;
 		QVector<Triangle> tri;
@@ -660,7 +684,7 @@ class spTextureTemplate final : public Spell
 				auto numParts = nif->get<int>( iPartBlock, "Num Partitions" );
 				auto iParts = nif->getIndex( iPartBlock, "Partitions" );
 				for ( int i = 0; i < numParts; i++ )
-					tri << nif->getArray<Triangle>( QModelIndex_child( iParts, i, 0 ), "Triangles" );
+					tri << nif->getArray<Triangle>( nif->getIndex( iParts, i, 0 ), "Triangles" );
 
 			} else {
 				iVertData = nif->getIndex( index, "Vertex Data" );
@@ -682,7 +706,7 @@ class spTextureTemplate final : public Spell
 			QVector<QVector<quint16> > strips;
 
 			for ( int r = 0; r < nif->rowCount( iPoints ); r++ )
-				strips.append( nif->getArray<quint16>( QModelIndex_child( iPoints, r, 0 ) ) );
+				strips.append( nif->getArray<quint16>( nif->getIndex( iPoints, r, 0 ) ) );
 
 			tri = triangulate( strips );
 		} else if ( nif->getBSVersion() < 100 ) {
@@ -831,7 +855,7 @@ public:
 
 		if ( iChildren.isValid() ) {
 			for ( int c = 0; c < nif->rowCount( iChildren ); c++ ) {
-				qint32 link = nif->getLink( QModelIndex_child( iChildren, c, 0 ) );
+				qint32 link = nif->getLink( nif->getIndex( iChildren, c, 0 ) );
 
 				if ( lChildren.contains( link ) ) {
 					QModelIndex iChild = nif->getBlockIndex( link );
@@ -844,7 +868,7 @@ public:
 
 		if ( iProperties.isValid() ) {
 			for ( int p = 0; p < nif->rowCount( iProperties ); p++ ) {
-				QModelIndex iProp = nif->getBlockIndex( nif->getLink( QModelIndex_child( iProperties, p, 0 ) ) );
+				QModelIndex iProp = nif->getBlockIndex( nif->getLink( nif->getIndex( iProperties, p, 0 ) ) );
 				replaceApplyMode( nif, iProp, rep, by );
 			}
 		}
@@ -1164,7 +1188,7 @@ void TexFlipDialog::listFromNif()
 	QStringList sourceFiles;
 
 	for ( int i = 0; i < numSources; i++ ) {
-		QModelIndex source = nif->getBlockIndex( nif->getLink( QModelIndex_child( sources, i, 0 ) ) );
+		QModelIndex source = nif->getBlockIndex( nif->getLink( nif->getIndex( sources, i, 0 ) ) );
 		sourceFiles << nif->get<QString>( source, "File Name" );
 	}
 
@@ -1212,9 +1236,9 @@ public:
 			int num = nif->get<int>( flipController, "Num Sources" );
 			for ( int i = size; i < num; i++ ) {
 				Message::append( tr( "Found %1 textures, have %2" ).arg( size ).arg( num ),
-					tr( "Deleting %1" ).arg( nif->getLink( QModelIndex_child( sources, i, 0 ) ) ), QMessageBox::Information
+					tr( "Deleting %1" ).arg( nif->getLink( nif->getIndex( sources, i, 0 ) ) ), QMessageBox::Information
 				);
-				nif->removeNiBlock( nif->getLink( QModelIndex_child( sources, i, 0 ) ) );
+				nif->removeNiBlock( nif->getLink( nif->getIndex( sources, i, 0 ) ) );
 			}
 		}
 
@@ -1225,11 +1249,11 @@ public:
 			QString name = TexCache::stripPath( flipNames.at( i ), nif->getFolder() );
 			QModelIndex sourceTex;
 
-			if ( nif->getLink( QModelIndex_child( sources, i, 0 ) ) == -1 ) {
+			if ( nif->getLink( nif->getIndex( sources, i, 0 ) ) == -1 ) {
 				sourceTex = nif->insertNiBlock( "NiSourceTexture", nif->getBlockNumber( flipController ) + i + 1 );
-				nif->setLink( QModelIndex_child( sources, i, 0 ), nif->getBlockNumber( sourceTex ) );
+				nif->setLink( nif->getIndex( sources, i, 0 ), nif->getBlockNumber( sourceTex ) );
 			} else {
-				sourceTex = nif->getBlockIndex( nif->getLink( QModelIndex_child( sources, i, 0 ) ) );
+				sourceTex = nif->getBlockIndex( nif->getLink( nif->getIndex( sources, i, 0 ) ) );
 			}
 
 			nif->set<QString>( sourceTex, "File Name", name );

@@ -498,9 +498,19 @@ protected:
 	void loadSFTextureWithReplacement( NifItem * parent, const char * texturePath, bool replacementEnabled, std::uint32_t replacementColor );
 	void loadSFTextureSet( NifItem * parent, const void * o );
 	void loadSFUVStream( NifItem * parent, const void * o );
+	static const std::string_view * copySFMatString( AllocBuffers & bufs, const QString & s );
+	const void * createSFBlender( AllocBuffers & bufs, const NifItem * parent ) const;
+	const void * createSFLayer( AllocBuffers & bufs, const NifItem * parent ) const;
+	const void * createSFMaterial( AllocBuffers & bufs, const NifItem * parent ) const;
+	// returns true if the texture replacement is enabled
+	bool createSFTextureWithReplacement( const std::string_view* & texturePath, std::uint32_t & replacementColor,
+										AllocBuffers & bufs, const NifItem * parent ) const;
+	const void * createSFTextureSet( AllocBuffers & bufs, const NifItem * parent ) const;
+	const void * createSFUVStream( AllocBuffers & bufs, const NifItem * parent ) const;
 public:
 	void loadSFMaterial( const QModelIndex & parent, const void * matPtr, int lodLevel = 0 );
 	void loadFO76Material( const QModelIndex & parent, const void * material );
+	const void * updateSFMaterial( AllocBuffers & bufs, const QModelIndex & parent ) const;
 
 	// String resolving ("get ex")
 public:
