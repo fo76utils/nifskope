@@ -6678,7 +6678,6 @@
     <struct name="BSTextureSet" abstract="true" module="BSMain" versions="#STF#">
         <field name="Name" type="SizedString" />
         <field name="Normal Intensity" type="float" default="1.0" />
-        <field name="Resolution Hint" type="BSTextureResolutionHint" />
         <field name="Enable Mask" type="uint" />
         <field name="Texture 0" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x000001">Color Texture</field>
         <field name="Texture 1" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x000002">Normal Texture</field>
@@ -6694,13 +6693,15 @@
         <field name="Texture 11" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x000800" />
         <field name="Texture 12" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x001000">Z Offset Texture</field>
         <field name="Texture 13" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x002000" />
-        <field name="Texture 14" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x004000" />
-        <field name="Texture 15" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x008000" />
-        <field name="Texture 16" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x010000" />
+        <field name="Texture 14" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x004000">Overlay Color Texture</field>
+        <field name="Texture 15" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x008000">Overlay Roughness Texture</field>
+        <field name="Texture 16" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x010000">Overlay Metalness Texture</field>
         <field name="Texture 17" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x020000" />
         <field name="Texture 18" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x040000" />
         <field name="Texture 19" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x080000" />
         <field name="Texture 20" type="BSTextureWithReplacement" cond="Enable Mask #BITAND# 0x100000">ID Texture</field>
+        <field name="Resolution Hint" type="BSTextureResolutionHint" />
+        <field name="Disable Mip Bias Hint" type="bool" />
     </struct>
 
     <enum name="BSMaterialColorOverrideMode" storage="byte" versions="#STF#">
