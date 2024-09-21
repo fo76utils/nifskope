@@ -978,12 +978,12 @@ void BSShaderLightingProperty::setMaterial( Material * newMaterial )
 
 void BSShaderLightingProperty::setSFMaterial( const QString & mat_name )
 {
+	sfMaterialDB_ID = std::uint64_t(-1);
 	if ( mat_name == sfMaterialPath ) {
 		const NifModel *	nif = scene->nifModel;
 		const NifItem *	i = nif->getItem( iBlock, "Material" );
 		if ( i && nif->get<bool>( i, "Is Modified" ) ) {
 			sf_material = nullptr;
-			sfMaterialDB_ID = std::uint64_t(-1);
 			sf_material_valid = false;
 			sfMatDataBuf.clear();
 			sf_material = reinterpret_cast< const CE2Material * >( nif->updateSFMaterial( sfMatDataBuf, iBlock ) );
