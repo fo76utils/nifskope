@@ -1074,13 +1074,13 @@ const void * NifModel::updateSFMaterial( AllocBuffers & bufs, const QModelIndex 
 		CE2Material::LayeredEmissiveSettings *	sp = bufs.constructObject< CE2Material::LayeredEmissiveSettings >();
 		sp->isEnabled = true;
 		sp->layer1Index = std::min< quint8 >( get<quint8>( o, "First Layer Index" ), maxLayer );
-		sp->layer1Tint = std::uint32_t( get<ByteColor4>( o, "First Layer Tint" ) );
+		sp->layer1Tint = std::uint32_t( FloatVector4( get<Color4>( o, "First Layer Tint" ) ) * 255.0f );
 		// "None", "Blender 0", "Blender 1", "Blender 2"
 		sp->layer1MaskIndex = std::min< quint8 >( get<quint8>( o, "First Layer Mask Source" ), 3 );
 		sp->layer2Active = get<bool>( o, "Second Layer Active" );
 		if ( sp->layer2Active ) {
 			sp->layer2Index = std::min< quint8 >( get<quint8>( o, "Second Layer Index" ), maxLayer );
-			sp->layer2Tint = std::uint32_t( get<ByteColor4>( o, "Second Layer Tint" ) );
+			sp->layer2Tint = std::uint32_t( FloatVector4( get<Color4>( o, "Second Layer Tint" ) ) * 255.0f );
 			sp->layer2MaskIndex = std::min< quint8 >( get<quint8>( o, "Second Layer Mask Source" ), 3 );
 			sp->blender1Index = std::min< quint8 >( get<quint8>( o, "First Blender Index" ), maxBlender );
 			// "Lerp", "Additive", "Subtractive", "Multiplicative"
@@ -1089,7 +1089,7 @@ const void * NifModel::updateSFMaterial( AllocBuffers & bufs, const QModelIndex 
 		sp->layer3Active = get<bool>( o, "Third Layer Active" );
 		if ( sp->layer3Active ) {
 			sp->layer3Index = std::min< quint8 >( get<quint8>( o, "Third Layer Index" ), maxLayer );
-			sp->layer3Tint = std::uint32_t( get<ByteColor4>( o, "Third Layer Tint" ) );
+			sp->layer3Tint = std::uint32_t( FloatVector4( get<Color4>( o, "Third Layer Tint" ) ) * 255.0f );
 			sp->layer3MaskIndex = std::min< quint8 >( get<quint8>( o, "Third Layer Mask Source" ), 3 );
 			sp->blender2Index = std::min< quint8 >( get<quint8>( o, "Second Blender Index" ), maxBlender );
 			sp->blender2Mode = get<quint8>( o, "Second Blender Mode" ) & 3;
