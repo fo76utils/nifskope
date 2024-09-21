@@ -755,13 +755,14 @@ protected:
 
 	Material * material = nullptr;
 	const CE2Material *	sf_material = nullptr;
-	std::uint64_t	sfMaterialDB_ID = std::uint64_t(-1);
+	std::uint64_t	sfMaterialDB_ID = std::uint64_t(-1);	// -2 when using an edited material
 	bool	sf_material_valid = false;
-	std::string	sfMaterialPath;
+	QString	sfMaterialPath;
 	AllocBuffers	sfMatDataBuf;
 	void setMaterial( Material * newMaterial );
 	void setSFMaterial( const QString & mat_name );
 	void loadSFMaterial();
+	const CE2Material * createDefaultSFMaterial();
 
 	void updateImpl( const NifModel * nif, const QModelIndex & block ) override;
 	virtual void resetParams();

@@ -6888,7 +6888,7 @@
         <field name="Surface Height Map" type="SizedString" cond="Is Projected" />
         <field name="Parallax Occlusion Scale" type="float" cond="Is Projected" />
         <field name="Parallax Occlusion Shadows" type="bool" cond="Is Projected" />
-        <field name="Max Parralax Occlusion Steps" type="byte" cond="Is Projected" />
+        <field name="Max Parallax Occlusion Steps" type="byte" cond="Is Projected" />
         <field name="Render Layer" type="BSProjectedDecalRenderLayer" cond="Is Projected" />
         <field name="Use G Buffer Normals" type="bool" cond="Is Projected" />
         <field name="Blend Mode" type="BSAlphaBlendMode" />

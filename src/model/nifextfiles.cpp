@@ -269,7 +269,7 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, const void *matPtr, i
 
 	setValue<QString>( m, "Name", ( material ? material->name : "" ) );
 	setValue<bool>( m, "Is Modified", false );
-	for ( int l = 0; l < 6; l++ ) {
+	for ( int l = 0; l < CE2Material::maxLayers; l++ ) {
 		bool	layerEnabled = false;
 		if ( material )
 			layerEnabled = bool( material->layerMask & (1 << l) );
@@ -410,7 +410,7 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, const void *matPtr, i
 			setValue<QString>( o, "Surface Height Map", sp->surfaceHeightMap->data() );
 			setValue<float>( o, "Parallax Occlusion Scale", sp->parallaxOcclusionScale );
 			setValue<bool>( o, "Parallax Occlusion Shadows", sp->parallaxOcclusionShadows );
-			setValue<quint8>( o, "Max Parralax Occlusion Steps", sp->maxParallaxSteps );
+			setValue<quint8>( o, "Max Parallax Occlusion Steps", sp->maxParallaxSteps );
 			setValue<quint8>( o, "Render Layer", sp->renderLayer );
 			setValue<bool>( o, "Use G Buffer Normals", sp->useGBufferNormals );
 		}
@@ -694,26 +694,9 @@ const std::string_view * NifModel::copySFMatString( AllocBuffers & bufs, const Q
 
 const void * NifModel::createSFBlender( AllocBuffers & bufs, const NifItem * parent ) const
 {
-	CE2Material::Blender *	blender = bufs.allocateObject< CE2Material::Blender >();
-	blender->type = 2;
+	CE2Material::Blender *	blender = bufs.constructObject< CE2Material::Blender >();
 	if ( !parent ) {
-		blender->name = "";
 		blender->uvStream = reinterpret_cast< const CE2Material::UVStream * >( createSFUVStream( bufs, nullptr ) );
-		blender->texturePath = copySFMatString( bufs, QString() );
-		blender->textureReplacement = 0xFFFFFFFFU;
-		blender->floatParams[0] = 0.5f;		// height blend threshold
-		blender->floatParams[1] = 0.5f;		// height blend factor
-		blender->floatParams[2] = 0.5f;		// position
-		blender->floatParams[3] = 1.0f;		// 1.0 - contrast
-		blender->floatParams[4] = 1.0f;		// mask intensity
-		blender->boolParams[0] = true;		// blend color
-		blender->boolParams[1] = true;		// blend metalness
-		blender->boolParams[2] = true;		// blend roughness
-		blender->boolParams[3] = true;		// blend normals
-		blender->boolParams[4] = true;		// blend normals additively
-		blender->boolParams[5] = false;		// use vertex color
-		blender->boolParams[6] = true;		// blend ambient occlusion
-		blender->boolParams[7] = false;		// use detail blend mask
 	} else {
 		blender->name = copySFMatString( bufs, get<QString>( parent, "Name" ) )->data();
 		blender->uvStream = reinterpret_cast< const CE2Material::UVStream * >(
@@ -744,10 +727,8 @@ const void * NifModel::createSFBlender( AllocBuffers & bufs, const NifItem * par
 
 const void * NifModel::createSFLayer( AllocBuffers & bufs, const NifItem * parent ) const
 {
-	CE2Material::Layer *	layer = bufs.allocateObject< CE2Material::Layer >();
-	layer->type = 3;
+	CE2Material::Layer *	layer = bufs.constructObject< CE2Material::Layer >();
 	if ( !parent ) {
-		layer->name = "";
 		layer->material = reinterpret_cast< const CE2Material::Material * >( createSFMaterial( bufs, nullptr ) );
 		layer->uvStream = reinterpret_cast< const CE2Material::UVStream * >( createSFUVStream( bufs, nullptr ) );
 	} else {
@@ -766,15 +747,8 @@ const void * NifModel::createSFLayer( AllocBuffers & bufs, const NifItem * paren
 
 const void * NifModel::createSFMaterial( AllocBuffers & bufs, const NifItem * parent ) const
 {
-	CE2Material::Material *	material = bufs.allocateObject< CE2Material::Material >();
-	material->type = 4;
-	material->flipbookColumns = 1;
-	material->flipbookRows = 1;
-	material->flipbookFPS = 30.0f;
+	CE2Material::Material *	material = bufs.constructObject< CE2Material::Material >();
 	if ( !parent ) {
-		material->name = "";
-		material->color = FloatVector4( 1.0f, 1.0f, 1.0f, 0.0f );
-		material->colorModeFlags = 1;	// "Lerp"
 		material->textureSet =
 			reinterpret_cast< const CE2Material::TextureSet * >( createSFTextureSet( bufs, nullptr ) );
 	} else {
@@ -814,14 +788,8 @@ bool NifModel::createSFTextureWithReplacement( const std::string_view* & texture
 
 const void * NifModel::createSFTextureSet( AllocBuffers & bufs, const NifItem * parent ) const
 {
-	CE2Material::TextureSet *	textureSet = bufs.allocateObject< CE2Material::TextureSet >();
-	textureSet->type = 5;
-	if ( !parent ) {
-		textureSet->name = "";
-		textureSet->floatParam = 1.0f;
-		for ( int i = 0; i < CE2Material::TextureSet::maxTexturePaths; i++ )
-			textureSet->texturePaths[i] = copySFMatString( bufs, QString() );
-	} else {
+	CE2Material::TextureSet *	textureSet = bufs.constructObject< CE2Material::TextureSet >();
+	if ( parent ) {
 		textureSet->name = copySFMatString( bufs, get<QString>( parent, "Name" ) )->data();
 		textureSet->floatParam = get<float>( parent, "Normal Intensity" );
 		std::uint32_t	textureEnableMask = get<quint32>( parent, "Enable Mask" );
@@ -846,13 +814,8 @@ const void * NifModel::createSFTextureSet( AllocBuffers & bufs, const NifItem * 
 
 const void * NifModel::createSFUVStream( AllocBuffers & bufs, const NifItem * parent ) const
 {
-	CE2Material::UVStream *	uvStream = bufs.allocateObject< CE2Material::UVStream >();
-	uvStream->type = 6;
-	if ( !parent ) {
-		uvStream->name = "";
-		uvStream->scaleAndOffset = FloatVector4( 1.0f, 1.0f, 0.0f, 0.0f );
-		uvStream->channel = 1;	// "One"
-	} else {
+	CE2Material::UVStream *	uvStream = bufs.constructObject< CE2Material::UVStream >();
+	if ( parent ) {
 		uvStream->name = copySFMatString( bufs, get<QString>( parent, "Name" ) )->data();
 		uvStream->scaleAndOffset[0] = get<float>( parent, "U Scale" );
 		uvStream->scaleAndOffset[1] = get<float>( parent, "V Scale" );
@@ -874,10 +837,293 @@ const void * NifModel::updateSFMaterial( AllocBuffers & bufs, const QModelIndex 
 	if ( !m )
 		return nullptr;
 
-	CE2Material *	mat = bufs.allocateObject< CE2Material >();
-	mat->type = 1;
+	CE2Material *	mat = bufs.constructObject< CE2Material >();
 	mat->name = copySFMatString( bufs, get<QString>( m, "Name" ) )->data();
-	// TODO
+
+	for ( int l = 0; l < CE2Material::maxLayers; l++ ) {
+		if ( !get<bool>( m, QString( "Layer %1 Enabled" ).arg( l ) ) )
+			continue;
+
+		mat->layers[l] = reinterpret_cast< const CE2Material::Layer * >(
+							createSFLayer( bufs, getItem( m, QString( "Layer %1" ).arg( l ) ) ) );
+		if ( mat->layers[l] )
+			const_cast< CE2Material::Layer * >( mat->layers[l] )->parent = mat;
+		if ( l > 0 ) {
+			mat->blenders[l - 1] = reinterpret_cast< const CE2Material::Blender * >(
+										createSFBlender( bufs, getItem( m, QString( "Blender %1" ).arg( l - 1 ) ) ) );
+			if ( mat->blenders[l - 1] )
+				const_cast< CE2Material::Blender * >( mat->blenders[l - 1] )->parent = mat;
+		}
+		mat->layerMask |= std::uint32_t( 1 << l );
+	}
+
+	QString	shaderModel = get<QString>( m, "Shader Model" ).trimmed();
+	{
+		size_t	n0 = 0;
+		size_t	n2 = sizeof( CE2Material::shaderModelNames ) / sizeof( char * );
+		while ( n2 > n0 ) {
+			size_t	n1 = ( n0 + n2 ) >> 1;
+			int	d = shaderModel.compare( QLatin1StringView( CE2Material::shaderModelNames[n1] ), Qt::CaseInsensitive );
+			if ( d && n1 > n0 ) [[likely]] {
+				if ( d < 0 )
+					n2 = n1;
+				else
+					n0 = n1;
+				continue;
+			}
+			if ( !d )
+				mat->shaderModel = (unsigned char) n1;
+			break;
+		}
+	}
+	mat->shaderRoute = std::min< quint8 >( get<quint8>( m, "Shader Route" ), 5 );
+	mat->setFlags( CE2Material::Flag_TwoSided, get<bool>( m, "Two Sided" ) );
+	mat->physicsMaterialType = std::min< quint8 >( get<quint8>( m, "Physics Material Type" ), 7 );
+
+	quint8	maxLayer = CE2Material::maxLayers - 1;
+	quint8	maxBlender = CE2Material::maxBlenders - 1;
+	const NifItem *	o;
+	if ( mat->shaderRoute == 1 && get<bool>( m, "Has Opacity Component" )
+		&& ( o = getItem( m, "Opacity Settings" ) ) != nullptr ) {
+		mat->setFlags( CE2Material::Flag_HasOpacityComponent, true );
+		mat->opacityLayer1 = std::min< quint8 >( get<quint8>( o, "First Layer Index" ), maxLayer );
+		mat->setFlags( CE2Material::Flag_OpacityLayer2Active, get<bool>( o, "Second Layer Active" ) );
+		mat->opacityLayer2 = std::min< quint8 >( get<quint8>( o, "Second Layer Index" ), maxLayer );
+		mat->opacityBlender1 = std::min< quint8 >( get<quint8>( o, "First Blender Index" ), maxBlender );
+		// opacity blender modes: "Lerp", "Additive", "Subtractive", "Multiplicative"
+		mat->opacityBlender1Mode = get<quint8>( o, "First Blender Mode" ) & 3;
+		mat->setFlags( CE2Material::Flag_OpacityLayer3Active, get<bool>( o, "Third Layer Active" ) );
+		mat->opacityLayer3 = std::min< quint8 >( get<quint8>( o, "Third Layer Index" ), maxLayer );
+		mat->opacityBlender2 = std::min< quint8 >( get<quint8>( o, "Second Blender Index" ), maxBlender );
+		mat->opacityBlender2Mode = get<quint8>( o, "Second Blender Mode" ) & 3;
+		mat->specularOpacityOverride = get<float>( o, "Specular Opacity Override" );
+	}
+
+	if ( mat->shaderRoute != 1 && get<bool>( m, "Has Opacity" ) && ( o = getItem( m, "Alpha Settings" ) ) != nullptr ) {
+		mat->setFlags( CE2Material::Flag_HasOpacity, true );
+		mat->alphaThreshold = get<float>( o, "Alpha Test Threshold" );
+		mat->alphaSourceLayer = std::min< quint8 >( get<quint8>( o, "Opacity Source Layer" ), maxLayer );
+		// alpha blender modes: "Linear", "Additive", "PositionContrast", "None"
+		mat->alphaBlendMode = get<quint8>( o, "Alpha Blender Mode" ) & 3;
+		mat->setFlags( CE2Material::Flag_AlphaDetailBlendMask, get<bool>( o, "Use Detail Blend Mask" ) );
+		mat->setFlags( CE2Material::Flag_AlphaVertexColor, get<bool>( o, "Use Vertex Color" ) );
+		if ( mat->flags & CE2Material::Flag_AlphaVertexColor )
+			mat->alphaVertexColorChannel = get<quint8>( o, "Vertex Color Channel" ) & 3;
+		mat->alphaUVStream = reinterpret_cast< const CE2Material::UVStream * >(
+								createSFUVStream( bufs, getItem( o, "Opacity UV Stream" ) ) );
+		if ( mat->alphaUVStream )
+			const_cast< CE2Material::UVStream * >( mat->alphaUVStream )->parent = mat;
+		mat->alphaHeightBlendThreshold = get<float>( o, "Height Blend Threshold" );
+		mat->alphaHeightBlendFactor = get<float>( o, "Height Blend Factor" );
+		mat->alphaPosition = get<float>( o, "Position" );
+		mat->alphaContrast = get<float>( o, "Contrast" );
+		mat->setFlags( CE2Material::Flag_DitheredTransparency, get<bool>( o, "Use Dithered Transparency" ) );
+	}
+
+	if ( get<bool>( m, "Detail Blend Mask Supported" ) && ( o = getItem( m, "Detail Blender Settings" ) ) != nullptr ) {
+		CE2Material::DetailBlenderSettings *	sp = bufs.constructObject< CE2Material::DetailBlenderSettings >();
+		sp->isEnabled = true;
+		sp->textureReplacementEnabled = createSFTextureWithReplacement( sp->texturePath, sp->textureReplacement,
+																		bufs, getItem( o, "Texture" ) );
+		sp->uvStream = reinterpret_cast< const CE2Material::UVStream * >(
+							createSFUVStream( bufs, getItem( o, "UV Stream" ) ) );
+		if ( sp->uvStream )
+			const_cast< CE2Material::UVStream * >( sp->uvStream )->parent = mat;
+		mat->detailBlenderSettings = sp;
+		mat->setFlags( CE2Material::Flag_UseDetailBlender, true );
+	}
+
+	if ( get<bool>( m, "Is Effect" ) && ( o = getItem( m, "Effect Settings" ) ) != nullptr ) {
+		CE2Material::EffectSettings *	sp = bufs.constructObject< CE2Material::EffectSettings >();
+		for ( const NifItem * q = getItem( o, "Falloff Settings (Deprecated)" ); q; ) {
+			sp->setFlags( CE2Material::EffectFlag_UseFalloff, get<bool>( q, "Use Falloff" ) );
+			sp->setFlags( CE2Material::EffectFlag_UseRGBFalloff, get<bool>( q, "Use RGB Falloff" ) );
+			if ( sp->flags & ( CE2Material::EffectFlag_UseFalloff | CE2Material::EffectFlag_UseRGBFalloff ) ) {
+				sp->falloffStartAngle = get<float>( q, "Falloff Start Angle" );
+				sp->falloffStopAngle = get<float>( q, "Falloff Stop Angle" );
+				sp->falloffStartOpacity = get<float>( q, "Falloff Start Opacity" );
+				sp->falloffStopOpacity = get<float>( q, "Falloff Stop Opacity" );
+			}
+			break;
+		}
+		sp->setFlags( CE2Material::EffectFlag_VertexColorBlend, get<bool>( o, "Vertex Color Blend" ) );
+		sp->setFlags( CE2Material::EffectFlag_IsAlphaTested, get<bool>( o, "Is Alpha Tested" ) );
+		if ( sp->flags & CE2Material::EffectFlag_IsAlphaTested )
+			sp->alphaThreshold = get<float>( o, "Alpha Test Threshold" );
+		sp->setFlags( CE2Material::EffectFlag_NoHalfResOpt, get<bool>( o, "No Half Res Optimization" ) );
+		sp->setFlags( CE2Material::EffectFlag_SoftEffect, get<bool>( o, "Soft Effect" ) );
+		sp->softFalloffDepth = get<float>( o, "Soft Falloff Depth" );
+		sp->setFlags( CE2Material::EffectFlag_EmissiveOnly, get<bool>( o, "Emissive Only Effect" ) );
+		sp->setFlags( CE2Material::EffectFlag_EmissiveOnlyAuto, get<bool>( o, "Emissive Only Automatically Applied" ) );
+		sp->setFlags( CE2Material::EffectFlag_DirShadows, get<bool>( o, "Receive Directional Shadows" ) );
+		sp->setFlags( CE2Material::EffectFlag_NonDirShadows, get<bool>( o, "Receive Non-Directional Shadows" ) );
+		sp->setFlags( CE2Material::EffectFlag_IsGlass, get<bool>( o, "Is Glass" ) );
+		sp->setFlags( CE2Material::EffectFlag_Frosting, get<bool>( o, "Frosting" ) );
+		if ( sp->flags & CE2Material::EffectFlag_Frosting ) {
+			sp->frostingBgndBlend = get<float>( o, "Frosting Unblurred Background Alpha Blend" );
+			sp->frostingBlurBias = get<float>( o, "Frosting Blur Bias" );
+		}
+		sp->materialAlpha = get<float>( o, "Material Overall Alpha" );
+		sp->setFlags( CE2Material::EffectFlag_ZTest, get<bool>( o, "Z Test" ) );
+		sp->setFlags( CE2Material::EffectFlag_ZWrite, get<bool>( o, "Z Write" ) );
+		sp->blendMode = get<quint8>( o, "Blending Mode" ) & 7;
+		sp->setFlags( CE2Material::EffectFlag_BacklightEnable, get<bool>( o, "Backlighting Enable" ) );
+		if ( sp->flags & CE2Material::EffectFlag_BacklightEnable ) {
+			sp->backlightScale = get<float>( o, "Backlighting Scale" );
+			sp->backlightSharpness = get<float>( o, "Backlighting Sharpness" );
+			sp->backlightTransparency = get<float>( o, "Backlighting Transparency Factor" );
+			sp->backlightTintColor = FloatVector4( get<Color4>( o, "Backlighting Tint Color" ) );
+		}
+		sp->setFlags( CE2Material::EffectFlag_MVFixup, get<bool>( o, "Depth MV Fixup" ) );
+		sp->setFlags( CE2Material::EffectFlag_MVFixupEdgesOnly, get<bool>( o, "Depth MV Fixup Edges Only" ) );
+		sp->setFlags( CE2Material::EffectFlag_RenderBeforeOIT, get<bool>( o, "Force Render Before OIT" ) );
+		sp->setFlags( CE2Material::EffectFlag_RenderBeforeClouds, get<bool>( o, "Force Render Before Clouds" ) );
+		sp->depthBias = get<quint16>( o, "Depth Bias In Ulp" );
+		mat->effectSettings = sp;
+		mat->setFlags( CE2Material::Flag_IsEffect | CE2Material::Flag_AlphaBlending, true );
+	}
+
+	if ( ( mat->flags & CE2Material::Flag_IsEffect ) && get<bool>( m, "Use Layered Edge Falloff" )
+		&& ( o = getItem( m, "Layered Edge Falloff" ) ) != nullptr ) {
+		CE2Material::LayeredEdgeFalloff *	sp = bufs.constructObject< CE2Material::LayeredEdgeFalloff >();
+		FloatVector4	tmp = FloatVector4( get<Vector3>( o, "Falloff Start Angles" ) );
+		tmp.convertToVector3( &(sp->falloffStartAngles[0]) );
+		tmp = FloatVector4( get<Vector3>( o, "Falloff Stop Angles" ) );
+		tmp.convertToVector3( &(sp->falloffStopAngles[0]) );
+		tmp = FloatVector4( get<Vector3>( o, "Falloff Start Opacities" ) );
+		tmp.convertToVector3( &(sp->falloffStartOpacities[0]) );
+		tmp = FloatVector4( get<Vector3>( o, "Falloff Stop Opacities" ) );
+		tmp.convertToVector3( &(sp->falloffStopOpacities[0]) );
+		sp->activeLayersMask = get<quint8>( o, "Active Layers Mask" ) & 7;
+		sp->useRGBFalloff = get<bool>( o, "Use RGB Falloff" );
+		mat->layeredEdgeFalloff = sp;
+		mat->setFlags( CE2Material::Flag_LayeredEdgeFalloff, true );
+	}
+
+	if ( get<bool>( m, "Is Decal" ) && ( o = getItem( m, "Decal Settings" ) ) != nullptr ) {
+		CE2Material::DecalSettings *	sp = bufs.constructObject< CE2Material::DecalSettings >();
+		sp->isDecal = true;
+		sp->decalAlpha = get<float>( o, "Material Overall Alpha" );
+		sp->writeMask = get<quint32>( o, "Write Mask" );
+		sp->isPlanet = get<bool>( o, "Is Planet" );
+		sp->isProjected = get<bool>( o, "Is Projected" );
+		if ( sp->isProjected ) {
+			sp->useParallaxMapping = get<bool>( o, "Use Parallax Occlusion Mapping" );
+			sp->surfaceHeightMap = copySFMatString( bufs, get<QString>( o, "Surface Height Map" ) );
+			sp->parallaxOcclusionScale = get<float>( o, "Parallax Occlusion Scale" );
+			sp->parallaxOcclusionShadows = get<bool>( o, "Parallax Occlusion Shadows" );
+			sp->maxParallaxSteps = get<quint8>( o, "Max Parallax Occlusion Steps" );
+			// "Top", "Middle"
+			sp->renderLayer = get<quint8>( o, "Render Layer" ) & 1;
+			sp->useGBufferNormals = get<bool>( o, "Use G Buffer Normals" );
+		}
+		// "None", "Additive"
+		sp->blendMode = get<quint8>( o, "Blend Mode" ) & 1;
+		sp->animatedDecalIgnoresTAA = get<bool>( o, "Animated Decal Ignores TAA" );
+		mat->decalSettings = sp;
+		mat->setFlags( CE2Material::Flag_IsDecal | CE2Material::Flag_AlphaBlending, true );
+	}
+
+	if ( get<bool>( m, "Is Water" ) && ( o = getItem( m, "Water Settings" ) ) != nullptr ) {
+		CE2Material::WaterSettings *	sp = bufs.constructObject< CE2Material::WaterSettings >();
+		sp->waterEdgeFalloff = get<float>( o, "Water Edge Falloff" );
+		sp->waterWetnessMaxDepth = get<float>( o, "Water Wetness Max Depth" );
+		sp->waterEdgeNormalFalloff = get<float>( o, "Water Edge Normal Falloff" );
+		sp->waterDepthBlur = get<float>( o, "Water Depth Blur" );
+		sp->reflectance[3] = get<float>( o, "Water Refraction Magnitude" );
+		sp->phytoplanktonReflectance[0] = get<float>( o, "Phytoplankton Reflectance Color R" );
+		sp->phytoplanktonReflectance[1] = get<float>( o, "Phytoplankton Reflectance Color G" );
+		sp->phytoplanktonReflectance[2] = get<float>( o, "Phytoplankton Reflectance Color B" );
+		sp->sedimentReflectance[0] = get<float>( o, "Sediment Reflectance Color R" );
+		sp->sedimentReflectance[1] = get<float>( o, "Sediment Reflectance Color G" );
+		sp->sedimentReflectance[2] = get<float>( o, "Sediment Reflectance Color B" );
+		sp->yellowMatterReflectance[0] = get<float>( o, "Yellow Matter Reflectance Color R" );
+		sp->yellowMatterReflectance[1] = get<float>( o, "Yellow Matter Reflectance Color G" );
+		sp->yellowMatterReflectance[2] = get<float>( o, "Yellow Matter Reflectance Color B" );
+		sp->phytoplanktonReflectance[3] = get<float>( o, "Max Concentration Plankton" );
+		sp->sedimentReflectance[3] = get<float>( o, "Max Concentration Sediment" );
+		sp->yellowMatterReflectance[3] = get<float>( o, "Max Concentration Yellow Matter" );
+		sp->reflectance[0] = get<float>( o, "Reflectance R" );
+		sp->reflectance[1] = get<float>( o, "Reflectance G" );
+		sp->reflectance[2] = get<float>( o, "Reflectance B" );
+		sp->lowLOD = get<bool>( o, "Low LOD" );
+		sp->placedWater = get<bool>( o, "Placed Water" );
+		mat->waterSettings = sp;
+		mat->setFlags( CE2Material::Flag_IsWater | CE2Material::Flag_AlphaBlending, true );
+	}
+
+	if ( get<bool>( m, "Is Emissive" ) && ( o = getItem( m, "Emissive Settings" ) ) != nullptr ) {
+		CE2Material::EmissiveSettings *	sp = bufs.constructObject< CE2Material::EmissiveSettings >();
+		sp->isEnabled = true;
+		sp->sourceLayer = std::min< quint8 >( get<quint8>( o, "Emissive Source Layer" ), maxLayer );
+		sp->emissiveTint = FloatVector4( get<Color4>( o, "Emissive Tint" ) );
+		// "None", "Blender 0", "Blender 1", "Blender 2"
+		sp->maskSourceBlender = std::min< quint8 >( get<quint8>( o, "Emissive Mask Source Blender" ), 3 );
+		sp->clipThreshold = get<float>( o, "Emissive Clip Threshold" );
+		sp->adaptiveEmittance = get<bool>( o, "Adaptive Emittance" );
+		sp->luminousEmittance = get<float>( o, "Luminous Emittance" );
+		sp->exposureOffset = get<float>( o, "Exposure Offset" );
+		sp->enableAdaptiveLimits = get<bool>( o, "Enable Adaptive Limits" );
+		sp->maxOffset = get<float>( o, "Max Offset Emittance" );
+		sp->minOffset = get<float>( o, "Min Offset Emittance" );
+		mat->emissiveSettings = sp;
+		mat->setFlags( CE2Material::Flag_Emissive, true );
+	}
+
+	if ( get<bool>( m, "Layered Emissivity" ) && ( o = getItem( m, "Layered Emissivity Settings" ) ) != nullptr ) {
+		CE2Material::LayeredEmissiveSettings *	sp = bufs.constructObject< CE2Material::LayeredEmissiveSettings >();
+		sp->isEnabled = true;
+		sp->layer1Index = std::min< quint8 >( get<quint8>( o, "First Layer Index" ), maxLayer );
+		sp->layer1Tint = std::uint32_t( get<ByteColor4>( o, "First Layer Tint" ) );
+		// "None", "Blender 0", "Blender 1", "Blender 2"
+		sp->layer1MaskIndex = std::min< quint8 >( get<quint8>( o, "First Layer Mask Source" ), 3 );
+		sp->layer2Active = get<bool>( o, "Second Layer Active" );
+		if ( sp->layer2Active ) {
+			sp->layer2Index = std::min< quint8 >( get<quint8>( o, "Second Layer Index" ), maxLayer );
+			sp->layer2Tint = std::uint32_t( get<ByteColor4>( o, "Second Layer Tint" ) );
+			sp->layer2MaskIndex = std::min< quint8 >( get<quint8>( o, "Second Layer Mask Source" ), 3 );
+			sp->blender1Index = std::min< quint8 >( get<quint8>( o, "First Blender Index" ), maxBlender );
+			// "Lerp", "Additive", "Subtractive", "Multiplicative"
+			sp->blender1Mode = get<quint8>( o, "First Blender Mode" ) & 3;
+		}
+		sp->layer3Active = get<bool>( o, "Third Layer Active" );
+		if ( sp->layer3Active ) {
+			sp->layer3Index = std::min< quint8 >( get<quint8>( o, "Third Layer Index" ), maxLayer );
+			sp->layer3Tint = std::uint32_t( get<ByteColor4>( o, "Third Layer Tint" ) );
+			sp->layer3MaskIndex = std::min< quint8 >( get<quint8>( o, "Third Layer Mask Source" ), 3 );
+			sp->blender2Index = std::min< quint8 >( get<quint8>( o, "Second Blender Index" ), maxBlender );
+			sp->blender2Mode = get<quint8>( o, "Second Blender Mode" ) & 3;
+		}
+		sp->clipThreshold = get<float>( o, "Emissive Clip Threshold" );
+		sp->adaptiveEmittance = get<bool>( o, "Adaptive Emittance" );
+		sp->luminousEmittance = get<float>( o, "Luminous Emittance" );
+		sp->exposureOffset = get<float>( o, "Exposure Offset" );
+		sp->enableAdaptiveLimits = get<bool>( o, "Enable Adaptive Limits" );
+		sp->maxOffset = get<float>( o, "Max Offset Emittance" );
+		sp->minOffset = get<float>( o, "Min Offset Emittance" );
+		sp->ignoresFog = get<bool>( o, "Ignores Fog" );
+		mat->layeredEmissiveSettings = sp;
+		mat->setFlags( CE2Material::Flag_LayeredEmissivity, true );
+	}
+
+	if ( get<bool>( m, "Is Translucent" ) && ( o = getItem( m, "Translucency Settings" ) ) != nullptr ) {
+		CE2Material::TranslucencySettings *	sp = bufs.constructObject< CE2Material::TranslucencySettings >();
+		sp->isEnabled = true;
+		sp->isThin = get<bool>( o, "Is Thin" );
+		sp->flipBackFaceNormalsInVS = get<bool>( o, "Flip Back Face Normals In View Space" );
+		sp->useSSS = get<bool>( o, "Use Subsurface Scattering" );
+		if ( sp->useSSS ) {
+			sp->sssWidth = get<float>( o, "Subsurface Scattering Width" );
+			sp->sssStrength = get<float>( o, "Subsurface Scattering Strength" );
+		}
+		sp->transmissiveScale = get<float>( o, "Transmissive Scale" );
+		sp->transmittanceWidth = get<float>( o, "Transmittance Width" );
+		sp->specLobe0RoughnessScale = get<float>( o, "Spec Lobe 0 Roughness Scale" );
+		sp->specLobe1RoughnessScale = get<float>( o, "Spec Lobe 1 Roughness Scale" );
+		sp->sourceLayer = std::min< quint8 >( get<quint8>( o, "Transmittance Source Layer" ), maxLayer );
+		mat->translucencySettings = sp;
+		mat->setFlags( CE2Material::Flag_Translucency, true );
+	}
 
 	return mat;
 }

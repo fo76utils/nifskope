@@ -913,6 +913,7 @@ void BSShaderLightingProperty::clear()
 	sfMaterialDB_ID = std::uint64_t(-1);
 	sf_material_valid = false;
 	sfMaterialPath.clear();
+	sfMatDataBuf.clear();
 }
 
 int BSShaderLightingProperty::getSFTexture( int & texunit, FloatVector4 & replUniform, const std::string_view & texturePath, std::uint32_t textureReplacement, int textureReplacementMode, const CE2Material::UVStream * uvStream )
@@ -977,46 +978,91 @@ void BSShaderLightingProperty::setMaterial( Material * newMaterial )
 
 void BSShaderLightingProperty::setSFMaterial( const QString & mat_name )
 {
-	sf_material = nullptr;
-	sfMaterialDB_ID = std::uint64_t(-1);
-	sfMaterialPath = Game::GameManager::get_full_path( mat_name, "materials/", ".mat" );
+	if ( mat_name == sfMaterialPath ) {
+		const NifModel *	nif = scene->nifModel;
+		const NifItem *	i = nif->getItem( iBlock, "Material" );
+		if ( i && nif->get<bool>( i, "Is Modified" ) ) {
+			sf_material = nullptr;
+			sfMaterialDB_ID = std::uint64_t(-1);
+			sf_material_valid = false;
+			sfMatDataBuf.clear();
+			sf_material = reinterpret_cast< const CE2Material * >( nif->updateSFMaterial( sfMatDataBuf, iBlock ) );
+			if ( sf_material ) [[likely]] {
+				sfMaterialDB_ID = std::uint64_t(-2);
+				sf_material_valid = true;
+			}
+			return;
+		}
+	} else {
+		sfMaterialPath = mat_name;
+	}
+	loadSFMaterial();
 }
 
 void BSShaderLightingProperty::loadSFMaterial()
 {
+	if ( sfMaterialDB_ID == std::uint64_t(-2) )		// edited material
+		return;
 	sf_material = nullptr;
+	sfMaterialDB_ID = std::uint64_t(-1);
 	sf_material_valid = false;
+	sfMatDataBuf.clear();
 	const NifModel *	nif = scene->nifModel;
-	try {
-		CE2MaterialDB *	materials = nif->getCE2Materials();
-		if ( materials ) {
-			if ( sfMaterialPath.empty() && typeid( *this ) == typeid( BSEffectShaderProperty ) ) [[unlikely]] {
-				// default material for editor markers
-				sf_material = materials->loadMaterial( "materials/effects/xtests/effectmaterialchecker.mat" );
-			} else {
-				sf_material = materials->loadMaterial( sfMaterialPath );
-				sf_material_valid = bool( sf_material );
-				if ( !sf_material_valid )
-					sf_material = materials->loadMaterial( "materials/test/generic/test_generic_white.mat" );
+	const CE2Material *	mat = nullptr;
+	if ( !sfMaterialPath.isEmpty() ) {
+		std::string	fullPath( Game::GameManager::get_full_path( sfMaterialPath, "materials/", ".mat" ) );
+		try {
+			CE2MaterialDB *	materials = nif->getCE2Materials();
+			if ( materials )
+				mat = materials->loadMaterial( fullPath );
+		} catch ( std::exception & e ) {
+			if ( std::string_view( e.what() ).starts_with( "BA2File: unexpected change to size of loose file" ) ) {
+				Game::GameManager::GameResources &	r = nif->getGameResources();
+				if ( r.ba2File && r.ba2File->findFile( fullPath ) )
+					r.close_archives();
+				if ( r.parent && r.parent->ba2File && r.parent->ba2File->findFile( fullPath ) )
+					r.parent->close_archives();
+				loadSFMaterial();
+				return;
 			}
-			sfMaterialDB_ID = nif->getCE2MaterialDB_ID();
+			QMessageBox::critical( nullptr, "NifSkope error", QString("Error loading material '%1': %2" ).arg( fullPath.c_str() ).arg( e.what() ) );
 		}
-	} catch ( std::exception& e ) {
-		sf_material = nullptr;
-		sf_material_valid = false;
-		sfMaterialDB_ID = nif->getCE2MaterialDB_ID();
-		if ( std::string_view(e.what()).starts_with( "BA2File: unexpected change to size of loose file" ) ) {
-			Game::GameManager::GameResources &	r = nif->getGameResources();
-			if ( r.ba2File && r.ba2File->findFile( sfMaterialPath ) )
-				r.close_archives();
-			if ( r.parent && r.parent->ba2File && r.parent->ba2File->findFile( sfMaterialPath ) )
-				r.parent->close_archives();
-			loadSFMaterial();
-			return;
-		}
-		QMessageBox::critical( nullptr, "NifSkope error", QString("Error loading material '%1': %2" ).arg( sfMaterialPath.c_str() ).arg( e.what() ) );
 	}
-	const_cast< NifModel * >(nif)->loadSFMaterial( iBlock, ( sf_material_valid ? sf_material : nullptr ) );
+	sfMaterialDB_ID = nif->getCE2MaterialDB_ID();
+	sf_material = mat;
+	if ( !sf_material )
+		sf_material = createDefaultSFMaterial();
+	else
+		sf_material_valid = true;
+	const_cast< NifModel * >( nif )->loadSFMaterial( iBlock, mat );
+}
+
+const CE2Material * BSShaderLightingProperty::createDefaultSFMaterial()
+{
+	CE2Material *	mat = sfMatDataBuf.constructObject< CE2Material >();
+	if ( typeid( *this ) == typeid( BSEffectShaderProperty ) ) {
+		mat->shaderRoute = 1;			// "Effect"
+		CE2Material::EffectSettings *	sp = sfMatDataBuf.constructObject< CE2Material::EffectSettings >();
+		sp->setFlags( CE2Material::EffectFlag_ZWrite, false );
+		mat->effectSettings = sp;
+		mat->flags = CE2Material::Flag_IsEffect | CE2Material::Flag_AlphaBlending | CE2Material::Flag_TwoSided;
+	} else {
+		mat->shaderModel = 11;			// "1LayerStandard"
+		CE2Material::Layer *	l = sfMatDataBuf.constructObject< CE2Material::Layer >();
+		CE2Material::Material *	m = sfMatDataBuf.constructObject< CE2Material::Material >();
+		CE2Material::TextureSet *	t = sfMatDataBuf.constructObject< CE2Material::TextureSet >();
+		t->textureReplacementMask = 0x09;	// color, roughness
+		t->textureReplacements[0] = 0xFFFFFFFFU;
+		t->textureReplacements[3] = 0xFF808080U;
+		t->parent = m;
+		m->textureSet = t;
+		m->parent = l;
+		l->material = m;
+		l->parent = mat;
+		mat->layers[0] = l;
+		mat->layerMask = 0x01;
+	}
+	return mat;
 }
 
 bool BSShaderLightingProperty::bind( const QStringView & fname, bool forceTexturing, TexClampMode mode )
@@ -1318,10 +1364,8 @@ void BSLightingShaderProperty::updateParams( const NifModel * nif )
 {
 	resetParams();
 
-	if ( bsVersion >= 170 ) {
-		setSFMaterial( nif->get<QString>( iBlock, "Name" ) );
+	if ( bsVersion >= 170 )
 		return;
-	}
 
 	setFlags1( nif );
 	setFlags2( nif );
