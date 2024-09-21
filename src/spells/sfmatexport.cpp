@@ -25,11 +25,26 @@ public:
 	bool constant() const override final { return true; }
 	bool instant() const override final { return true; }
 
+	static bool canExportMaterial( const NifModel * nif, const QModelIndex & index, bool isModified = false )
+	{
+		if ( !( nif && nif->getBSVersion() >= 170 && index.isValid() ) )
+			return false;
+		auto	iBlock = nif->getBlockIndex( index );
+		if ( nif->isNiBlock( iBlock, "BSGeometry" ) )
+			iBlock = nif->getBlockIndex( nif->getLink( iBlock, "Shader Property" ) );
+		if ( !( nif->isNiBlock( iBlock, "BSLightingShaderProperty" )
+				|| nif->isNiBlock( iBlock, "BSEffectShaderProperty" ) ) ) {
+			return false;
+		}
+		const NifItem *	i = nif->getItem( iBlock, "Material" );
+		if ( !i )
+			return false;
+		return ( nif->get<bool>( i, "Is Modified" ) == isModified );
+	}
+
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
-		if ( nif && nif->getBSVersion() >= 170 && index.isValid() )
-			return nif->blockInherits( index, "BSGeometry" ) || nif->blockInherits( index, "BSLightingShaderProperty" );
-		return false;
+		return canExportMaterial( nif, index );
 	}
 
 	static std::mt19937_64	rndGen;
@@ -169,7 +184,7 @@ void spStarfieldMaterialExport::processItem( NifModel * nif, const QModelIndex &
 	QModelIndex	idx = nif->getBlockIndex( index );
 	if ( nif->blockInherits( idx, "BSGeometry" ) )
 		idx = nif->getBlockIndex( nif->getLink( idx, "Shader Property" ) );
-	if ( nif->blockInherits( idx, "BSLightingShaderProperty" ) )
+	if ( nif->blockInherits( idx, "BSShaderProperty" ) )
 		idx = nif->getIndex( idx, "Name" );
 	else
 		return;
@@ -214,9 +229,7 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
-		if ( nif && nif->getBSVersion() >= 170 && index.isValid() )
-			return nif->blockInherits( index, "BSGeometry" ) || nif->blockInherits( index, "BSLightingShaderProperty" );
-		return false;
+		return spStarfieldMaterialExport::canExportMaterial( nif, index );
 	}
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
@@ -243,9 +256,7 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
-		if ( nif && nif->getBSVersion() >= 170 && index.isValid() )
-			return nif->blockInherits( index, "BSGeometry" ) || nif->blockInherits( index, "BSLightingShaderProperty" );
-		return false;
+		return spStarfieldMaterialExport::canExportMaterial( nif, index );
 	}
 
 	static std::string getBaseName( const std::string_view & fullPath );
@@ -321,7 +332,7 @@ QModelIndex spStarfieldMaterialSaveAs::cast( NifModel * nif, const QModelIndex &
 	QModelIndex	idx = nif->getBlockIndex( index );
 	if ( nif->blockInherits( idx, "BSGeometry" ) )
 		idx = nif->getBlockIndex( nif->getLink( idx, "Shader Property" ) );
-	if ( nif->blockInherits( idx, "BSLightingShaderProperty" ) )
+	if ( nif->blockInherits( idx, "BSShaderProperty" ) )
 		idx = nif->getIndex( idx, "Name" );
 	else
 		return index;
@@ -373,4 +384,34 @@ QModelIndex spStarfieldMaterialSaveAs::cast( NifModel * nif, const QModelIndex &
 }
 
 REGISTER_SPELL( spStarfieldMaterialSaveAs )
+
+//! Save edited Starfield material as JSON format .mat file
+class spStarfieldEditedMaterialSaveAs final : public Spell
+{
+public:
+	QString name() const override final { return Spell::tr( "Save Edited Material..." ); }
+	QString page() const override final { return Spell::tr( "Material" ); }
+	QIcon icon() const override final
+	{
+		return QIcon();
+	}
+	bool constant() const override final { return true; }
+	bool instant() const override final { return true; }
+
+	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
+	{
+		return spStarfieldMaterialExport::canExportMaterial( nif, index, true );
+	}
+
+	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final;
+};
+
+QModelIndex spStarfieldEditedMaterialSaveAs::cast( NifModel * nif, const QModelIndex & index )
+{
+	// TODO: implement this
+	(void) nif;
+	return index;
+}
+
+REGISTER_SPELL( spStarfieldEditedMaterialSaveAs )
 
