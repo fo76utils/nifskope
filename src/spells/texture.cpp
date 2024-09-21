@@ -264,7 +264,7 @@ public:
 
 				if ( isSFMaterial ) {
 					for ( const NifItem * i = nif->getItem( iFile ); i; i = i->parent() ) {
-						if ( i->isAbstract() && i->hasStrType( "BSLayeredMaterial" ) ) {
+						if ( i->isAbstract() && i->hasStrType( "BSLayeredMaterial" ) && !nif->get<bool>( i, "Is Modified" ) ) {
 							nif->set<bool>( i, "Is Modified", true );
 							QMessageBox::warning( nullptr, "NifSkope warning", QString( "Changes to Starfield material data are not saved" ) );
 							break;
