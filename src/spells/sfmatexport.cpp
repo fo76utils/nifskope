@@ -423,7 +423,14 @@ protected:
 	MatObject * getObject( const CE2MaterialObject * o );
 	void createObject( const CE2MaterialObject * o );
 	static void createComponent( QJsonArray & components, const QJsonObject & data, const char * type, int n = 0 );
-	static QJsonObject createColor( FloatVector4 c );
+	static QJsonObject createBool( bool v, const char * fieldName, const char * componentType = nullptr, int n = -1 );
+	static QJsonObject createFloat( float v, const char * fieldName, const char * componentType = nullptr, int n = -1 );
+	static QJsonObject createXMFLOAT( FloatVector4 v, int channels,
+										const char * fieldName, const char * componentType = nullptr, int n = -1 );
+	static inline QJsonObject createColor( FloatVector4 c, int n = -1 )
+	{
+		return createXMFLOAT( c, 4, "Value", "BSMaterial::Color", n );
+	}
 	void createLink( QJsonArray & components, const CE2MaterialObject * o, int n = 0 );
 	void createLayeredMaterial( QJsonArray & components, const CE2Material * o );
 	void createBlender( QJsonArray & components, const CE2Material::Blender * o );
@@ -544,24 +551,60 @@ void CE2MaterialToJSON::createComponent( QJsonArray & components, const QJsonObj
 	components.append( componentObject );
 }
 
-QJsonObject CE2MaterialToJSON::createColor( FloatVector4 c )
+QJsonObject CE2MaterialToJSON::createBool( bool v, const char * fieldName, const char * componentType, int n )
+{
+	QJsonObject	boolData;
+	boolData.insert( fieldName, ( !v ? "false" : "true" ) );
+	if ( !componentType )
+		return boolData;
+	QJsonObject	boolComponent;
+	boolComponent.insert( "Data", boolData );
+	if ( n >= 0 )
+		boolComponent.insert( "Index", n );
+	boolComponent.insert( "Type", componentType );
+	return boolComponent;
+}
+
+QJsonObject CE2MaterialToJSON::createFloat( float v, const char * fieldName, const char * componentType, int n )
+{
+	QJsonObject	floatData;
+	floatData.insert( fieldName, QString::number( v ) );
+	if ( !componentType )
+		return floatData;
+	QJsonObject	floatComponent;
+	floatComponent.insert( "Data", floatData );
+	if ( n >= 0 )
+		floatComponent.insert( "Index", n );
+	floatComponent.insert( "Type", componentType );
+	return floatComponent;
+}
+
+QJsonObject CE2MaterialToJSON::createXMFLOAT( FloatVector4 v, int channels,
+												const char * fieldName, const char * componentType, int n )
 {
 	QJsonObject	xmfloatData;
-	xmfloatData.insert( "x", QString::number( c[0] ) );
-	xmfloatData.insert( "y", QString::number( c[1] ) );
-	xmfloatData.insert( "z", QString::number( c[2] ) );
-	xmfloatData.insert( "w", QString::number( c[3] ) );
+	xmfloatData.insert( "x", QString::number( v[0] ) );
+	xmfloatData.insert( "y", QString::number( v[1] ) );
+	if ( channels >= 3 )
+		xmfloatData.insert( "z", QString::number( v[2] ) );
+	if ( channels >= 4 )
+		xmfloatData.insert( "w", QString::number( v[3] ) );
 	QJsonObject	xmfloatValue;
 	xmfloatValue.insert( "Data", xmfloatData );
-	xmfloatValue.insert( "Type", "XMFLOAT4" );
+	xmfloatValue.insert( "Type", ( channels < 3 ? "XMFLOAT2" : ( channels < 4 ? "XMFLOAT3" : "XMFLOAT4" ) ) );
 
-	QJsonObject	colorData;
-	colorData.insert( "Value", xmfloatValue );
-	QJsonObject	colorObject;
-	colorObject.insert( "Data", colorData );
-	colorObject.insert( "Type", "BSMaterial::Color" );
+	QJsonObject	xmfloatObject;
+	xmfloatObject.insert( fieldName, xmfloatValue );
+	if ( !componentType )
+		return xmfloatObject;
 
-	return colorObject;
+	QJsonObject	xmfloatComponent;
+	xmfloatComponent.insert( "Data", xmfloatObject );
+	if ( n >= 0 )
+		xmfloatComponent.insert( "Index", n );
+	xmfloatComponent.insert( "Type", componentType );
+
+	return xmfloatComponent;
 }
 
 void CE2MaterialToJSON::createLink( QJsonArray & components, const CE2MaterialObject * o, int n )
@@ -613,11 +656,8 @@ void CE2MaterialToJSON::createLayeredMaterial( QJsonArray & components, const CE
 		shaderModel.insert( "FileName", getCE2MatString( CE2Material::shaderModelNames, o->shaderModel ) );
 		createComponent( components, shaderModel, "BSMaterial::ShaderModelComponent" );
 	}
-	if ( o->flags & CE2Material::Flag_TwoSided ) {
-		QJsonObject	paramBool;
-		paramBool.insert( "Value", "true" );
-		createComponent( components, paramBool, "BSMaterial::ParamBool" );
-	}
+	if ( o->flags & CE2Material::Flag_TwoSided )
+		components.append( createBool( true, "Value", "BSMaterial::ParamBool", 0 ) );
 	// TODO
 }
 
@@ -625,7 +665,27 @@ void CE2MaterialToJSON::createBlender( QJsonArray & components, const CE2Materia
 {
 	if ( o->uvStream )
 		createLink( components, o->uvStream );
-	// TODO
+	if ( o->texturePath && !o->texturePath->empty() ) {
+		QJsonObject	textureFile;
+		textureFile.insert( "FileName", QString::fromUtf8( o->texturePath->data(), o->texturePath->length() ) );
+		createComponent( components, textureFile, "BSMaterial::MRTextureFile" );
+	}
+	if ( o->textureReplacementEnabled ) {
+		QJsonObject	textureReplacement;
+		textureReplacement.insert( "Enabled", "true" );
+		textureReplacement.insert( "Color", createColor( FloatVector4( o->textureReplacement ) / 255.0f ) );
+		createComponent( components, textureReplacement, "BSMaterial::TextureReplacement" );
+	}
+	QJsonObject	blendMode;
+	blendMode.insert( "Value", getCE2MatString( CE2Material::alphaBlendModeNames, o->blendMode ) );
+	createComponent( components, blendMode, "BSMaterial::BlendModeComponent" );
+	QJsonObject	colorChannel;
+	colorChannel.insert( "Value", getCE2MatString( CE2Material::colorChannelNames, o->colorChannel ) );
+	createComponent( components, colorChannel, "BSMaterial::ColorChannelTypeComponent" );
+	for ( int i = 0; i < CE2Material::Blender::maxFloatParams; i++ )
+		components.append( createFloat( o->floatParams[i], "Value", "BSMaterial::MaterialParamFloat", i ) );
+	for ( int i = 0; i < CE2Material::Blender::maxBoolParams; i++ )
+		components.append( createBool( o->boolParams[i], "Value", "BSMaterial::ParamBool", i ) );
 }
 
 void CE2MaterialToJSON::createLayer( QJsonArray & components, const CE2Material::Layer * o )
@@ -640,7 +700,22 @@ void CE2MaterialToJSON::createMaterial( QJsonArray & components, const CE2Materi
 {
 	if ( o->textureSet )
 		createLink( components, o->textureSet );
-	// TODO
+	components.append( createColor( o->color, 0 ) );
+	{
+		QJsonObject	colorModeData;
+		colorModeData.insert( "Value", CE2Material::colorModeNames[o->colorModeFlags & 1] );
+		createComponent( components, colorModeData, "BSMaterial::MaterialOverrideColorTypeComponent" );
+	}
+	components.append( createBool( bool( o->colorModeFlags & 2 ), "Value", "BSMaterial::ParamBool", 0 ) );
+	if ( o->flipbookFlags & 1 ) {
+		QJsonObject	flipbookData;
+		flipbookData.insert( "IsAFlipbook", "true" );
+		flipbookData.insert( "Columns", QString::number( o->flipbookColumns ) );
+		flipbookData.insert( "Rows", QString::number( o->flipbookRows ) );
+		flipbookData.insert( "FPS", QString::number( o->flipbookFPS ) );
+		flipbookData.insert( "Loops", ( !( o->flipbookFlags & 2 ) ? "false" : "true" ) );
+		createComponent( components, flipbookData, "BSMaterial::FlipbookComponent" );
+	}
 }
 
 void CE2MaterialToJSON::createTextureSet( QJsonArray & components, const CE2Material::TextureSet * o )
@@ -659,12 +734,27 @@ void CE2MaterialToJSON::createTextureSet( QJsonArray & components, const CE2Mate
 			createComponent( components, textureReplacement, "BSMaterial::TextureReplacement", i );
 		}
 	}
-	// TODO
+	components.append( createFloat( o->floatParam, "Value", "BSMaterial::MaterialParamFloat", 0 ) );
+	{
+		QJsonObject	resolutionHint;
+		resolutionHint.insert( "ResolutionHint",
+								getCE2MatString( CE2Material::resolutionSettingNames, o->resolutionHint ) );
+		createComponent( components, resolutionHint, "BSMaterial::TextureResolutionSetting" );
+	}
+	components.append( createBool( o->disableMipBiasHint, "DisableMipBiasHint", "BSMaterial::MipBiasSetting", 0 ) );
 }
 
 void CE2MaterialToJSON::createUVStream( QJsonArray & components, const CE2Material::UVStream * o )
 {
-	// TODO
+	components.append( createXMFLOAT( o->scaleAndOffset, 2, "Value", "BSMaterial::Scale", 0 ) );
+	components.append( createXMFLOAT( FloatVector4( o->scaleAndOffset ).shuffleValues( 0xEE ), 2,
+										"Value", "BSMaterial::Offset", 0 ) );
+	QJsonObject	addressMode;
+	addressMode.insert( "Value", getCE2MatString( CE2Material::textureAddressModeNames, o->textureAddressMode ) );
+	createComponent( components, addressMode, "BSMaterial::TextureAddressModeComponent" );
+	QJsonObject	channel;
+	channel.insert( "Value", getCE2MatString( CE2Material::channelNames, o->channel ) );
+	createComponent( components, channel, "BSMaterial::Channel" );
 }
 
 CE2MaterialToJSON::CE2MaterialToJSON( NifModel * nif, const QString & matFilePath, const CE2MaterialObject * o )
