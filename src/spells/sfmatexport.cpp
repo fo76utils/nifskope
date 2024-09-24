@@ -658,7 +658,171 @@ void CE2MaterialToJSON::createLayeredMaterial( QJsonArray & components, const CE
 	}
 	if ( o->flags & CE2Material::Flag_TwoSided )
 		components.append( createBool( true, "Value", "BSMaterial::ParamBool", 0 ) );
-	// TODO
+
+	if ( o->physicsMaterialType ) {
+		const char *	physMatName = getCE2MatString( CE2Material::physicsMaterialNames, o->physicsMaterialType );
+		std::uint32_t	physMatHash = 0;
+		for ( ; *physMatName; physMatName++ )
+			hashFunctionCRC32( physMatHash, (unsigned char) ( *physMatName | 0x20 ) );
+		QJsonObject	physMatData;
+		physMatData.insert( "Value", QString::number( physMatHash ) );
+		QJsonObject	physMatObject;
+		physMatObject.insert( "Data", physMatData );
+		physMatObject.insert( "Type", "BSMaterial::PhysicsMaterialType" );
+		QJsonObject	collisionComponent;
+		collisionComponent.insert( "MaterialTypeOverride", physMatObject );
+		createComponent( components, collisionComponent, "BSMaterial::CollisionComponent" );
+	}
+
+	if ( o->flags & CE2Material::Flag_HasOpacity ) {
+		QJsonObject	alphaSettings;
+		alphaSettings.insert( "HasOpacity", "true" );
+		alphaSettings.insert( "AlphaTestThreshold", QString::number( o->alphaThreshold ) );
+		alphaSettings.insert( "OpacitySourceLayer", QString( "MATERIAL_LAYER_%1" ).arg( o->alphaSourceLayer ) );
+		alphaSettings.insert( "UseDitheredTransparency",
+								( !( o->flags & CE2Material::Flag_DitheredTransparency ) ? "false" : "true" ) );
+		QJsonObject	alphaBlenderSettings;
+		alphaBlenderSettings.insert( "Mode", getCE2MatString( CE2Material::alphaBlendModeNames, o->alphaBlendMode ) );
+		alphaBlenderSettings.insert( "UseDetailBlendMask",
+									( !( o->flags & CE2Material::Flag_UseDetailBlender ) ? "false" : "true" ) );
+		alphaBlenderSettings.insert( "UseVertexColor",
+									( !( o->flags & CE2Material::Flag_AlphaVertexColor ) ? "false" : "true" ) );
+		if ( o->flags & CE2Material::Flag_AlphaVertexColor ) {
+			alphaBlenderSettings.insert( "VertexColorChannel",
+										getCE2MatString( CE2Material::colorChannelNames, o->alphaVertexColorChannel ) );
+		}
+		if ( o->alphaUVStream ) {
+			QJsonObject	linkData;
+			linkData.insert( "ID", getObject( o->alphaUVStream )->getResourceID() );
+			QJsonObject	linkObject;
+			linkObject.insert( "Data", linkData );
+			linkObject.insert( "Type", "BSMaterial::UVStreamID" );
+			alphaBlenderSettings.insert( "OpacityUVStream", linkObject );
+		}
+		if ( o->flags & CE2Material::Flag_IsDecal ) {
+			alphaBlenderSettings.insert( "HeightBlendThreshold", QString::number( o->alphaHeightBlendThreshold ) );
+			alphaBlenderSettings.insert( "HeightBlendFactor", QString::number( o->alphaHeightBlendFactor ) );
+		}
+		if ( o->alphaBlendMode == 2 ) {
+			alphaBlenderSettings.insert( "Position", QString::number( o->alphaPosition ) );
+			alphaBlenderSettings.insert( "Contrast", QString::number( o->alphaContrast ) );
+		}
+		QJsonObject	alphaBlenderObject;
+		alphaBlenderObject.insert( "Data", alphaBlenderSettings );
+		alphaBlenderObject.insert( "Type", "BSMaterial::AlphaBlenderSettings" );
+		alphaSettings.insert( "Blender", alphaBlenderObject );
+		createComponent( components, alphaSettings, "BSMaterial::AlphaSettingsComponent" );
+	}
+
+	if ( o->flags & CE2Material::Flag_HasOpacityComponent ) {
+		QJsonObject	opacityComponent;
+		opacityComponent.insert( "FirstLayerIndex", QString( "MATERIAL_LAYER_%1" ).arg( o->opacityLayer1 ) );
+		opacityComponent.insert( "SecondLayerActive",
+								( !( o->flags & CE2Material::Flag_OpacityLayer2Active ) ? "false" : "true" ) );
+		if ( o->flags & CE2Material::Flag_OpacityLayer2Active ) {
+			opacityComponent.insert( "SecondLayerIndex", QString( "MATERIAL_LAYER_%1" ).arg( o->opacityLayer2 ) );
+			opacityComponent.insert( "FirstBlenderIndex", QString( "MATERIAL_BLENDER_%1" ).arg( o->opacityBlender1 ) );
+			opacityComponent.insert( "FirstBlenderMode",
+									getCE2MatString( CE2Material::blenderModeNames, o->opacityBlender1Mode ) );
+		}
+		opacityComponent.insert( "ThirdLayerActive",
+								( !( o->flags & CE2Material::Flag_OpacityLayer3Active ) ? "false" : "true" ) );
+		if ( o->flags & CE2Material::Flag_OpacityLayer3Active ) {
+			opacityComponent.insert( "ThirdLayerIndex", QString( "MATERIAL_LAYER_%1" ).arg( o->opacityLayer3 ) );
+			opacityComponent.insert( "SecondBlenderIndex", QString( "MATERIAL_BLENDER_%1" ).arg( o->opacityBlender2 ) );
+			opacityComponent.insert( "SecondBlenderMode",
+									getCE2MatString( CE2Material::blenderModeNames, o->opacityBlender2Mode ) );
+		}
+		opacityComponent.insert( "SpecularOpacityOverride", QString::number( o->specularOpacityOverride ) );
+		createComponent( components, opacityComponent, "BSMaterial::OpacityComponent" );
+	}
+
+	if ( ( o->flags & CE2Material::Flag_IsEffect ) && o->effectSettings ) {
+		static const std::uint32_t	effectFlags[19] = {
+			CE2Material::EffectFlag_UseFalloff, CE2Material::EffectFlag_UseRGBFalloff,
+			CE2Material::EffectFlag_VertexColorBlend, CE2Material::EffectFlag_IsAlphaTested,
+			CE2Material::EffectFlag_NoHalfResOpt, CE2Material::EffectFlag_SoftEffect,
+			CE2Material::EffectFlag_EmissiveOnly, CE2Material::EffectFlag_EmissiveOnlyAuto,
+			CE2Material::EffectFlag_DirShadows, CE2Material::EffectFlag_NonDirShadows,
+			CE2Material::EffectFlag_IsGlass, CE2Material::EffectFlag_Frosting,
+			CE2Material::EffectFlag_ZTest, CE2Material::EffectFlag_ZWrite,
+			CE2Material::EffectFlag_BacklightEnable, CE2Material::EffectFlag_RenderBeforeClouds,
+			CE2Material::EffectFlag_MVFixup, CE2Material::EffectFlag_MVFixupEdgesOnly,
+			CE2Material::EffectFlag_RenderBeforeOIT
+		};
+		static const char *	effectFlagNames[19] = {
+			"UseFallOff", "UseRGBFallOff",
+			"VertexColorBlend", "IsAlphaTested",
+			"NoHalfResOptimization", "SoftEffect",
+			"EmissiveOnlyEffect", "EmissiveOnlyAutomaticallyApplied",
+			"ReceiveDirectionalShadows", "ReceiveNonDirectionalShadows",
+			"IsGlass", "Frosting",
+			"ZTest", "ZWrite",
+			"BackLightingEnable", "ForceRenderBeforeClouds",
+			"DepthMVFixup", "DepthMVFixupEdgesOnly",
+			"ForceRenderBeforeOIT"
+		};
+		QJsonObject	effectSettings;
+		const CE2Material::EffectSettings *	sp = o->effectSettings;
+		for ( int i = 0; i < 19; i++ )
+			effectSettings.insert( effectFlagNames[i], ( !( sp->flags & effectFlags[i] ) ? "false" : "true" ) );
+		if ( sp->flags & ( CE2Material::EffectFlag_UseFalloff | CE2Material::EffectFlag_UseRGBFalloff ) ) {
+			effectSettings.insert( "FalloffStartAngle", QString::number( sp->falloffStartAngle ) );
+			effectSettings.insert( "FalloffStopAngle", QString::number( sp->falloffStopAngle ) );
+			effectSettings.insert( "FalloffStartOpacity", QString::number( sp->falloffStartOpacity ) );
+			effectSettings.insert( "FalloffStopOpacity", QString::number( sp->falloffStopOpacity ) );
+		}
+		if ( sp->flags & CE2Material::EffectFlag_IsAlphaTested )
+			effectSettings.insert( "AlphaTestThreshold", QString::number( sp->alphaThreshold ) );
+		if ( sp->flags & CE2Material::EffectFlag_SoftEffect )
+			effectSettings.insert( "SoftFalloffDepth", QString::number( sp->softFalloffDepth ) );
+		if ( sp->flags & CE2Material::EffectFlag_Frosting ) {
+			effectSettings.insert( "FrostingUnblurredBackgroundAlphaBlend", QString::number( sp->frostingBgndBlend ) );
+			effectSettings.insert( "FrostingBlurBias", QString::number( sp->frostingBlurBias ) );
+		}
+		effectSettings.insert( "MaterialOverallAlpha", QString::number( sp->materialAlpha ) );
+		effectSettings.insert( "BlendingMode", getCE2MatString( CE2Material::effectBlendModeNames, sp->blendMode ) );
+		if ( sp->flags & CE2Material::EffectFlag_BacklightEnable ) {
+			effectSettings.insert( "BacklightingScale", QString::number( sp->backlightScale ) );
+			effectSettings.insert( "BacklightingSharpness", QString::number( sp->backlightSharpness ) );
+			effectSettings.insert( "BacklightingTransparencyFactor", QString::number( sp->backlightTransparency ) );
+			effectSettings.insert( "BackLightingTintColor", createColor( sp->backlightTintColor ) );
+		}
+		effectSettings.insert( "DepthBiasInUlp", QString::number( sp->depthBias ) );
+		createComponent( components, effectSettings, "BSMaterial::EffectSettingsComponent" );
+	}
+
+	if ( ( o->flags & CE2Material::Flag_LayeredEdgeFalloff ) && o->layeredEdgeFalloff ) {
+		QJsonObject	layeredEdgeFalloff;
+		const CE2Material::LayeredEdgeFalloff *	sp = o->layeredEdgeFalloff;
+		for ( int i = 0; i < 4; i++ ) {
+			const char *	fieldName = "FalloffStartAngles";
+			const float *	fieldSrc = sp->falloffStartAngles;
+			if ( i == 1 ) {
+				fieldName = "FalloffStopAngles";
+				fieldSrc = sp->falloffStopAngles;
+			} else if ( i == 2 ) {
+				fieldName = "FalloffStartOpacities";
+				fieldSrc = sp->falloffStartOpacities;
+			} else if ( i == 3 ) {
+				fieldName = "FalloffStopOpacities";
+				fieldSrc = sp->falloffStopOpacities;
+			}
+			QJsonArray	fieldData;
+			for ( int j = 0; j < 3; j++ )
+				fieldData.append( QString::number( fieldSrc[j] ) );
+			QJsonObject	fieldObject;
+			fieldObject.insert( "Data", fieldData );
+			fieldObject.insert( "ElementType", "float" );
+			fieldObject.insert( "Type", "<collection>" );
+			layeredEdgeFalloff.insert( fieldName, fieldObject );
+		}
+		layeredEdgeFalloff.insert( "ActiveLayersMask", QString::number( sp->activeLayersMask ) );
+		layeredEdgeFalloff.insert( "UseRGBFallOff", ( !sp->useRGBFalloff ? "false" : "true" ) );
+		createComponent( components, layeredEdgeFalloff, "BSMaterial::LayeredEdgeFalloffComponent" );
+	}
+
+	// TODO: implement all supported material components
 }
 
 void CE2MaterialToJSON::createBlender( QJsonArray & components, const CE2Material::Blender * o )
@@ -679,11 +843,16 @@ void CE2MaterialToJSON::createBlender( QJsonArray & components, const CE2Materia
 	QJsonObject	blendMode;
 	blendMode.insert( "Value", getCE2MatString( CE2Material::alphaBlendModeNames, o->blendMode ) );
 	createComponent( components, blendMode, "BSMaterial::BlendModeComponent" );
-	QJsonObject	colorChannel;
-	colorChannel.insert( "Value", getCE2MatString( CE2Material::colorChannelNames, o->colorChannel ) );
-	createComponent( components, colorChannel, "BSMaterial::ColorChannelTypeComponent" );
-	for ( int i = 0; i < CE2Material::Blender::maxFloatParams; i++ )
+	if ( o->boolParams[5] ) {
+		QJsonObject	colorChannel;
+		colorChannel.insert( "Value", getCE2MatString( CE2Material::colorChannelNames, o->colorChannel ) );
+		createComponent( components, colorChannel, "BSMaterial::ColorChannelTypeComponent" );
+	}
+	for ( int i = 0; i < CE2Material::Blender::maxFloatParams; i++ ) {
+		if ( ( i <= 1 && o->blendMode != 0 ) || ( ( i == 2 || i == 3 ) && o->blendMode != 2 ) )
+			continue;
 		components.append( createFloat( o->floatParams[i], "Value", "BSMaterial::MaterialParamFloat", i ) );
+	}
 	for ( int i = 0; i < CE2Material::Blender::maxBoolParams; i++ )
 		components.append( createBool( o->boolParams[i], "Value", "BSMaterial::ParamBool", i ) );
 }
