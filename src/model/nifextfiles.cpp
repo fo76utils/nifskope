@@ -1013,8 +1013,8 @@ const void * NifModel::updateSFMaterial( AllocBuffers & bufs, const QModelIndex 
 			sp->parallaxOcclusionScale = get<float>( o, "Parallax Occlusion Scale" );
 			sp->parallaxOcclusionShadows = get<bool>( o, "Parallax Occlusion Shadows" );
 			sp->maxParallaxSteps = get<quint8>( o, "Max Parallax Occlusion Steps" );
-			// "Top", "Middle"
-			sp->renderLayer = get<quint8>( o, "Render Layer" ) & 1;
+			// "Top", "Middle", "Bottom"
+			sp->renderLayer = std::min< quint8 >( get<quint8>( o, "Render Layer" ), 2 );
 			sp->useGBufferNormals = get<bool>( o, "Use G Buffer Normals" );
 		}
 		// "None", "Additive"

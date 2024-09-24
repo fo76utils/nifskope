@@ -6877,6 +6877,7 @@
     <enum name="BSProjectedDecalRenderLayer" storage="byte" versions="#STF#">
         <option name="Top" value="0" />
         <option name="Middle" value="1" />
+        <option name="Bottom" value="2" />
     </enum>
 
     <struct name="BSDecalSettingsComponent" abstract="true" module="BSMain" versions="#STF#">
