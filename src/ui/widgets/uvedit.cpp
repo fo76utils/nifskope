@@ -821,13 +821,8 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 			}
 		} else {
 			// Starfield
-			std::string	matPath = Game::GameManager::get_full_path( nif->get<QString>( iTexProp, "Name" ), "materials/", ".mat" );
-			if ( matPath.empty() )
-				return;
-			CE2MaterialDB *	sfMaterials = nif->getCE2Materials();
-			if ( !sfMaterials )
-				return;
-			const CE2Material *	matData = sfMaterials->loadMaterial( matPath );
+			AllocBuffers	sfMatBuf;
+			auto	matData = reinterpret_cast< const CE2Material * >( nif->updateSFMaterial( sfMatBuf, iTexProp ) );
 			if ( !matData )
 				return;
 			for ( size_t i = 0; i < CE2Material::maxLayers; i++ ) {
