@@ -114,11 +114,35 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override
 	{
+		if ( nif->getBSVersion() >= 170 && index.isValid() ) {
+			const NifItem *	i = nif->getItem( index );
+			for ( const NifItem * j = i; j; j = j->parent() ) {
+				if ( j->isAbstract() && j->hasStrType( "BSLayeredMaterial" ) ) {
+					return ( i->hasName( "Layer Enable Mask" ) || i->hasName( "Blender Enable Mask" )
+							|| i->hasName( "Enable Mask" ) || i->hasName( "Write Mask" ) );
+				}
+			}
+		}
 		return queryType( nif, getFlagIndex( nif, index ) ) != None;
 	}
 
+	void sfMaterialFlags( NifModel * nif, const QModelIndex & index, NifItem * i );
+
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override
 	{
+		if ( nif->getBSVersion() >= 170 && index.isValid() ) {
+			NifItem *	i = nif->getItem( index );
+			for ( const NifItem * j = i; j; j = j->parent() ) {
+				if ( j->isAbstract() && j->hasStrType( "BSLayeredMaterial" ) ) {
+					if ( i->hasName( "Layer Enable Mask" ) || i->hasName( "Blender Enable Mask" )
+						|| i->hasName( "Enable Mask" ) || i->hasName( "Write Mask" ) ) {
+						sfMaterialFlags( nif, index, i );
+					}
+					return index;
+				}
+			}
+		}
+
 		QModelIndex iFlags = getFlagIndex( nif, index );
 
 		switch ( queryType( nif, iFlags ) ) {
@@ -958,6 +982,75 @@ public:
 		QObject::connect( btReject, &QPushButton::clicked, dlg, &QDialog::reject );
 	}
 };
+
+void spEditFlags::sfMaterialFlags( NifModel * nif, const QModelIndex & index, NifItem * i )
+{
+	static const char *	flagNames_layerEnableMask[6] = {
+		"Enable Layer 1", "Enable Layer 2", "Enable Layer 3", "Enable Layer 4", "Enable Layer 5", "Enable Layer 6"
+	};
+	static const char *	flagNames_blenderEnableMask[5] = {
+		"Enable Blender 1", "Enable Blender 2", "Enable Blender 3", "Enable Blender 4", "Enable Blender 5"
+	};
+	static const char *	flagNames_textureEnableMask[21] = {
+		"Enable Albedo", "Enable Normal Map", "Enable Opacity", "Enable Roughness", "Enable Metalness",
+		"Enable Ambient Occlusion", "Enable Height Map", "Enable Emissive Map", "Enable Transmissive Map",
+		"Enable Curvature Map", "Enable Mask", "Enable Texture 11", "Enable Z Offset Map", "Enable Texture 13",
+		"Enable Overlay Color", "Enable Overlay Roughness", "Enable Overlay Metalness", "Enable Texture 17",
+		"Enable Texture 18", "Enable Texture 19", "Enable ID Texture"
+	};
+	static const char *	flagNames_decalWriteMask[11] = {
+		"Output Albedo R", "Output Albedo G", "Output Albedo B", "Unused", "Output Normal X", "Output Normal Y",
+		"Unused", "Unused", "Output Ambient Occlusion", "Output Roughness", "Output Metalness"
+	};
+
+	quint32 flags = nif->get<int>( index );
+
+	QDialog dlg;
+	QVBoxLayout * vbox = new QVBoxLayout( &dlg );
+
+	QStringList flagNames;
+	const char * const *	flagNamesData = flagNames_layerEnableMask;
+	size_t	flagNamesSize = sizeof( flagNames_layerEnableMask ) / sizeof( char * );
+	if ( i->hasName( "Blender Enable Mask" ) ) {
+		flagNamesData = flagNames_blenderEnableMask;
+		flagNamesSize = sizeof( flagNames_blenderEnableMask ) / sizeof( char * );
+	} else if ( i->hasName( "Enable Mask" ) ) {
+		flagNamesData = flagNames_textureEnableMask;
+		flagNamesSize = sizeof( flagNames_textureEnableMask ) / sizeof( char * );
+	} else if ( i->hasName( "Write Mask" ) ) {
+		flagNamesData = flagNames_decalWriteMask;
+		flagNamesSize = sizeof( flagNames_decalWriteMask ) / sizeof( char * );
+	}
+	for ( size_t i = 0; i < flagNamesSize; i++ )
+		flagNames.append( QString::fromLatin1( flagNamesData[i] ) );
+
+	QList<QCheckBox *> chkBoxes;
+	int x = 0;
+	for ( const QString& flagName : flagNames ) {
+		chkBoxes << dlgCheck( vbox, QString( "%1: %2 (%3)" ).arg( Spell::tr( "Bit %1" ).arg( x ) )
+							  .arg( flagName ).arg( (uint)(1 << x) ) );
+		chkBoxes.last()->setChecked( flags & (1 << x) );
+		x++;
+	}
+
+	dlgButtons( &dlg, vbox );
+
+	if ( dlg.exec() == QDialog::Accepted ) {
+		x = 0;
+		for ( QCheckBox * chk : chkBoxes ) {
+			flags = (flags & (~(1 << x))) | (chk->isChecked() ? 1 << x : 0);
+			x++;
+		}
+		for ( i = nif->getItem( index ); i; i = i->parent() ) {
+			if ( i->hasStrType( "BSLayeredMaterial" ) && !nif->get<bool>( i, "Is Modified" ) ) {
+				nif->set<bool>( i, "Is Modified", true );
+				QMessageBox::warning( nullptr, "NifSkope warning", QString( "Changes to material data are not saved automatically, use the spell 'Material/Save Edited Material...'" ) );
+				break;
+			}
+		}
+		nif->set<int>( index, flags );
+	}
+}
 
 REGISTER_SPELL( spEditFlags )
 
