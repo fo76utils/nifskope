@@ -200,8 +200,7 @@ NifSkope::NifSkope()
 	ui->setupUi( this );
 
 	for ( const auto & s : QStyleFactory::keys() ) {
-		if ( s.compare( "Fusion", Qt::CaseInsensitive ) != 0 )
-			ui->mTheme->addAction( s )->setCheckable( true );
+		ui->mTheme->addAction( s )->setCheckable( true );
 	}
 
 	qApp->installEventFilter( this );
