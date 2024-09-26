@@ -128,7 +128,7 @@ public:
 										if ( !nif->get<bool>( i, "Is Modified" ) ) {
 											if ( !item->hasName( "Is Modified" ) )
 												nif->set<bool>( i, "Is Modified", true );
-											QMessageBox::warning( nullptr, "NifSkope warning", QString( "Changes to Starfield material data are not saved" ) );
+											QMessageBox::warning( nullptr, "NifSkope warning", QString( "Changes to material data are not saved automatically, use the spell 'Material/Save Edited Material...'" ) );
 										}
 										break;
 									} else {

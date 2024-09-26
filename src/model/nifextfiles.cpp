@@ -269,15 +269,28 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, const void *matPtr, i
 
 	setValue<QString>( m, "Name", ( material ? material->name : "" ) );
 	setValue<bool>( m, "Is Modified", false );
-	for ( int l = 0; l < CE2Material::maxLayers; l++ ) {
-		bool	layerEnabled = false;
-		if ( material )
-			layerEnabled = bool( material->layerMask & (1 << l) );
-		setValue<bool>( m, QString("Layer %1 Enabled").arg(l), layerEnabled );
-		if ( layerEnabled ) {
-			loadSFLayer( getItem( m, QString("Layer %1").arg(l) ), material->layers[l] );
-			if ( l > 0 && material->blenders[l - 1] )
-				loadSFBlender( getItem( m, QString("Blender %1").arg(l - 1) ), material->blenders[l - 1] );
+	{
+		std::uint32_t	layerMask = 0;
+		std::uint32_t	blenderMask = 0;
+		if ( material ) {
+			for ( int l = 0; l < CE2Material::maxLayers; l++ ) {
+				if ( ( material->layerMask & ( 1U << l ) ) && material->layers[l] )
+					layerMask |= std::uint32_t( 1U << l );
+			}
+			for ( int l = 0; l < CE2Material::maxBlenders; l++ ) {
+				if ( material->blenders[l] )
+					blenderMask |= std::uint32_t( 1U << l );
+			}
+		}
+		setValue<quint32>( m, "Layer Enable Mask", layerMask );
+		for ( int l = 0; layerMask; l++, layerMask = layerMask >> 1 ) {
+			if ( layerMask & 1 )
+				loadSFLayer( getItem( m, QString("Layer %1").arg(l + 1) ), material->layers[l] );
+		}
+		setValue<quint32>( m, "Blender Enable Mask", blenderMask );
+		for ( int l = 0; blenderMask; l++, blenderMask = blenderMask >> 1 ) {
+			if ( blenderMask & 1 )
+				loadSFBlender( getItem( m, QString("Blender %1").arg(l + 1) ), material->blenders[l] );
 		}
 	}
 	setValue<QString>( m, "Shader Model", QString( material ? CE2Material::shaderModelNames[material->shaderModel] : "BaseMaterial" ) );
@@ -840,21 +853,26 @@ const void * NifModel::updateSFMaterial( AllocBuffers & bufs, const QModelIndex 
 	CE2Material *	mat = bufs.constructObject< CE2Material >();
 	mat->name = copySFMatString( bufs, get<QString>( m, "Name" ) )->data();
 
+	quint32	layerMask = get<quint32>( m, "Layer Enable Mask" );
 	for ( int l = 0; l < CE2Material::maxLayers; l++ ) {
-		if ( !get<bool>( m, QString( "Layer %1 Enabled" ).arg( l ) ) )
+		if ( !( layerMask & ( 1U << l ) ) )
 			continue;
 
 		mat->layers[l] = reinterpret_cast< const CE2Material::Layer * >(
-							createSFLayer( bufs, getItem( m, QString( "Layer %1" ).arg( l ) ) ) );
-		if ( mat->layers[l] )
+							createSFLayer( bufs, getItem( m, QString( "Layer %1" ).arg( l + 1 ) ) ) );
+		if ( mat->layers[l] ) {
 			const_cast< CE2Material::Layer * >( mat->layers[l] )->parent = mat;
-		if ( l > 0 ) {
-			mat->blenders[l - 1] = reinterpret_cast< const CE2Material::Blender * >(
-										createSFBlender( bufs, getItem( m, QString( "Blender %1" ).arg( l - 1 ) ) ) );
-			if ( mat->blenders[l - 1] )
-				const_cast< CE2Material::Blender * >( mat->blenders[l - 1] )->parent = mat;
+			mat->layerMask |= std::uint32_t( 1U << l );
 		}
-		mat->layerMask |= std::uint32_t( 1 << l );
+	}
+	quint32	blenderMask = get<quint32>( m, "Blender Enable Mask" );
+	for ( int l = 0; l < CE2Material::maxBlenders; l++ ) {
+		if ( !( blenderMask & ( 1U << l ) ) )
+			continue;
+		mat->blenders[l] = reinterpret_cast< const CE2Material::Blender * >(
+								createSFBlender( bufs, getItem( m, QString( "Blender %1" ).arg( l + 1 ) ) ) );
+		if ( mat->blenders[l] )
+			const_cast< CE2Material::Blender * >( mat->blenders[l] )->parent = mat;
 	}
 
 	QString	shaderModel = get<QString>( m, "Shader Model" ).trimmed();

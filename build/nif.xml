@@ -6729,6 +6729,15 @@
         <field name="UV Stream" type="BSUVStream" />
     </struct>
 
+    <enum name="BSLayerIndex" storage="byte" versions="#STF#">
+        <option name="Layer 1" value="0" />
+        <option name="Layer 2" value="1" />
+        <option name="Layer 3" value="2" />
+        <option name="Layer 4" value="3" />
+        <option name="Layer 5" value="4" />
+        <option name="Layer 6" value="5" />
+    </enum>
+
     <enum name="BSBlenderMode" storage="byte" versions="#STF#">
         <option name="Linear" value="0" />
         <option name="Additive" value="1" />
@@ -6766,6 +6775,14 @@
         <field name="Use Detail Blend Mask" type="bool" />
     </struct>
 
+    <enum name="BSBlenderIndex" storage="byte" versions="#STF#">
+        <option name="Blender 1" value="0" />
+        <option name="Blender 2" value="1" />
+        <option name="Blender 3" value="2" />
+        <option name="Blender 4" value="3" />
+        <option name="Blender 5" value="4" />
+    </enum>
+
     <enum name="BSAlphaBlendMode" storage="byte" versions="#STF#">
         <option name="Linear" value="0" />
         <option name="Additive" value="1" />
@@ -6775,7 +6792,7 @@
 
     <struct name="BSAlphaSettingsComponent" abstract="true" module="BSMain" versions="#STF#">
         <field name="Alpha Test Threshold" type="float" />
-        <field name="Opacity Source Layer" type="byte" />
+        <field name="Opacity Source Layer" type="BSLayerIndex" />
         <field name="Alpha Blender Mode" type="BSAlphaBlendMode" />
         <field name="Use Detail Blend Mask" type="bool" />
         <field name="Use Vertex Color" type="bool" />
@@ -6801,14 +6818,14 @@
     </enum>
 
     <struct name="BSOpacityComponent" abstract="true" module="BSMain" versions="#STF#">
-        <field name="First Layer Index" type="byte" />
+        <field name="First Layer Index" type="BSLayerIndex" />
         <field name="Second Layer Active" type="bool" />
-        <field name="Second Layer Index" type="byte" />
-        <field name="First Blender Index" type="byte" />
+        <field name="Second Layer Index" type="BSLayerIndex" />
+        <field name="First Blender Index" type="BSBlenderIndex" />
         <field name="First Blender Mode" type="BSOpacityBlenderMode" />
         <field name="Third Layer Active" type="bool" />
-        <field name="Third Layer Index" type="byte" />
-        <field name="Second Blender Index" type="byte" />
+        <field name="Third Layer Index" type="BSLayerIndex" />
+        <field name="Second Blender Index" type="BSBlenderIndex" />
         <field name="Second Blender Mode" type="BSOpacityBlenderMode" />
         <field name="Specular Opacity Override" type="float" />
     </struct>
@@ -6880,6 +6897,11 @@
         <option name="Bottom" value="2" />
     </enum>
 
+    <enum name="BSDecalBlendMode" storage="byte" versions="#STF#">
+        <option name="None" value="0" />
+        <option name="Additive" value="1" />
+    </enum>
+
     <struct name="BSDecalSettingsComponent" abstract="true" module="BSMain" versions="#STF#">
         <field name="Material Overall Alpha" type="float" />
         <field name="Write Mask" type="uint" />
@@ -6892,7 +6914,7 @@
         <field name="Max Parallax Occlusion Steps" type="byte" cond="Is Projected" />
         <field name="Render Layer" type="BSProjectedDecalRenderLayer" cond="Is Projected" />
         <field name="Use G Buffer Normals" type="bool" cond="Is Projected" />
-        <field name="Blend Mode" type="BSAlphaBlendMode" />
+        <field name="Blend Mode" type="BSDecalBlendMode" />
         <field name="Animated Decal Ignores TAA" type="bool" />
     </struct>
 
@@ -6923,13 +6945,13 @@
 
     <enum name="BSMaskSourceBlender" storage="byte" versions="#STF#">
         <option name="None" value="0" />
-        <option name="Blender 0" value="1" />
-        <option name="Blender 1" value="2" />
-        <option name="Blender 2" value="3" />
+        <option name="Blender 1" value="1" />
+        <option name="Blender 2" value="2" />
+        <option name="Blender 3" value="3" />
     </enum>
 
     <struct name="BSEmissiveSettingsComponent" abstract="true" module="BSMain" versions="#STF#">
-        <field name="Emissive Source Layer" type="byte" />
+        <field name="Emissive Source Layer" type="BSLayerIndex" />
         <field name="Emissive Tint" type="Color4" />
         <field name="Emissive Mask Source Blender" type="BSMaskSourceBlender" />
         <field name="Emissive Clip Threshold" type="float" />
@@ -6942,20 +6964,20 @@
     </struct>
 
     <struct name="BSLayeredEmissivityComponent" abstract="true" module="BSMain" versions="#STF#">
-        <field name="First Layer Index" type="byte" />
+        <field name="First Layer Index" type="BSLayerIndex" />
         <field name="First Layer Tint" type="Color4" />
         <field name="First Layer Mask Source" type="BSMaskSourceBlender" />
         <field name="Second Layer Active" type="bool" />
-        <field name="Second Layer Index" type="byte" cond="Second Layer Active" />
+        <field name="Second Layer Index" type="BSLayerIndex" cond="Second Layer Active" />
         <field name="Second Layer Tint" type="Color4" cond="Second Layer Active" />
         <field name="Second Layer Mask Source" type="BSMaskSourceBlender" cond="Second Layer Active" />
-        <field name="First Blender Index" type="byte" cond="Second Layer Active" />
+        <field name="First Blender Index" type="BSBlenderIndex" cond="Second Layer Active" />
         <field name="First Blender Mode" type="BSOpacityBlenderMode" cond="Second Layer Active" />
         <field name="Third Layer Active" type="bool" />
-        <field name="Third Layer Index" type="byte" cond="Third Layer Active" />
+        <field name="Third Layer Index" type="BSLayerIndex" cond="Third Layer Active" />
         <field name="Third Layer Tint" type="Color4" cond="Third Layer Active" />
         <field name="Third Layer Mask Source" type="BSMaskSourceBlender" cond="Third Layer Active" />
-        <field name="Second Blender Index" type="byte" cond="Third Layer Active" />
+        <field name="Second Blender Index" type="BSBlenderIndex" cond="Third Layer Active" />
         <field name="Second Blender Mode" type="BSOpacityBlenderMode" cond="Third Layer Active" />
         <field name="Emissive Clip Threshold" type="float" />
         <field name="Adaptive Emittance" type="bool" />
@@ -6977,7 +6999,7 @@
         <field name="Transmittance Width" type="float" />
         <field name="Spec Lobe 0 Roughness Scale" type="float" />
         <field name="Spec Lobe 1 Roughness Scale" type="float" />
-        <field name="Transmittance Source Layer" type="byte" />
+        <field name="Transmittance Source Layer" type="BSLayerIndex" />
     </struct>
 
     <enum name="BSShaderRoute" storage="byte" versions="#STF#">
@@ -7001,23 +7023,19 @@
 
     <struct name="BSLayeredMaterial" abstract="true" module="BSMain" versions="#STF#">
         <field name="Name" type="SizedString" />
-        <field name="Layer 0 Enabled" type="bool" />
-        <field name="Layer 0" type="BSLayer" cond="Layer 0 Enabled" />
-        <field name="Layer 1 Enabled" type="bool" />
-        <field name="Layer 1" type="BSLayer" cond="Layer 1 Enabled" />
-        <field name="Blender 0" type="BSBlender" cond="Layer 1 Enabled" />
-        <field name="Layer 2 Enabled" type="bool" />
-        <field name="Layer 2" type="BSLayer" cond="Layer 2 Enabled" />
-        <field name="Blender 1" type="BSBlender" cond="Layer 2 Enabled" />
-        <field name="Layer 3 Enabled" type="bool" />
-        <field name="Layer 3" type="BSLayer" cond="Layer 3 Enabled" />
-        <field name="Blender 2" type="BSBlender" cond="Layer 3 Enabled" />
-        <field name="Layer 4 Enabled" type="bool" />
-        <field name="Layer 4" type="BSLayer" cond="Layer 4 Enabled" />
-        <field name="Blender 3" type="BSBlender" cond="Layer 4 Enabled" />
-        <field name="Layer 5 Enabled" type="bool" />
-        <field name="Layer 5" type="BSLayer" cond="Layer 5 Enabled" />
-        <field name="Blender 4" type="BSBlender" cond="Layer 5 Enabled" />
+        <field name="Layer Enable Mask" type="uint" />
+        <field name="Layer 1" type="BSLayer" cond="Layer Enable Mask #BITAND# 1" />
+        <field name="Layer 2" type="BSLayer" cond="Layer Enable Mask #BITAND# 2" />
+        <field name="Blender Enable Mask" type="uint" />
+        <field name="Blender 1" type="BSBlender" cond="Blender Enable Mask #BITAND# 1" />
+        <field name="Layer 3" type="BSLayer" cond="Layer Enable Mask #BITAND# 4" />
+        <field name="Blender 2" type="BSBlender" cond="Blender Enable Mask #BITAND# 2" />
+        <field name="Layer 4" type="BSLayer" cond="Layer Enable Mask #BITAND# 8" />
+        <field name="Blender 3" type="BSBlender" cond="Blender Enable Mask #BITAND# 4" />
+        <field name="Layer 5" type="BSLayer" cond="Layer Enable Mask #BITAND# 16" />
+        <field name="Blender 4" type="BSBlender" cond="Blender Enable Mask #BITAND# 8" />
+        <field name="Layer 6" type="BSLayer" cond="Layer Enable Mask #BITAND# 32" />
+        <field name="Blender 5" type="BSBlender" cond="Blender Enable Mask #BITAND# 16" />
         <field name="Shader Model" type="SizedString" default="BaseMaterial" />
         <field name="Shader Route" type="BSShaderRoute" />
         <field name="Two Sided" type="bool" />

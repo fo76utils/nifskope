@@ -1,5 +1,7 @@
  == CHANGELOG ==
 
+#### NifSkope-2.0.dev9-20240926
+
 * Added support for editing Starfield materials, and a new spell to save the edited material in .mat format. Water settings and global layer data are not saved yet, nor any material setting that is not shown on the user interface.
 * Implemented the 'Transform/Scale Vertices' spell for Skyrim: Special Edition, Fallout 4, Fallout 76 and Starfield. Note that skin partitions are currently not supported, and normals, tangent space and bounds should be updated after using this spell.
 * CharacterCombine blend mode is now correctly implemented on Starfield materials as multiplicative blending, and defaults to multiplying by 1.0 if the overlay textures are missing.

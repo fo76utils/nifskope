@@ -650,15 +650,13 @@ void CE2MaterialToJSON::createLink( QJsonArray & components, const CE2MaterialOb
 void CE2MaterialToJSON::createLayeredMaterial( QJsonArray & components, const CE2Material * o )
 {
 	for ( int i = 0; i < CE2Material::maxLayers; i++ ) {
-		if ( !( ( o->layerMask & ( 1U << i ) ) && o->layers[i] ) )
-			continue;
-
-		createLink( components, o->layers[i], i );
-
-		if ( i > 0 && i <= CE2Material::maxBlenders && o->blenders[i - 1] )
-			createLink( components, o->blenders[i - 1], i - 1 );
+		if ( ( o->layerMask & ( 1U << i ) ) && o->layers[i] )
+			createLink( components, o->layers[i], i );
 	}
-
+	for ( int i = 0; i < CE2Material::maxBlenders; i++ ) {
+		if ( o->blenders[i] )
+			createLink( components, o->blenders[i], i );
+	}
 	for ( int i = 0; i < CE2Material::maxLODMaterials; i++ ) {
 		if ( o->lodMaterials[i] )
 			createLink( components, o->lodMaterials[i], i );
