@@ -1,5 +1,7 @@
  == CHANGELOG ==
 
+* Fixed bug in 'Show Blocks in List' mode that caused all data fields to be expanded in the block list after loading a model.
+
 #### NifSkope-2.0.dev9-20240926
 
 * Added support for editing Starfield materials, and a new spell to save the edited material in .mat format. Water settings and global layer data are not saved yet, nor any material setting that is not shown on the user interface.

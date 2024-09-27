@@ -873,8 +873,9 @@ void NifSkope::onLoadComplete( bool success, QString & fname )
 	// Center the model on load
 	ogl->center();
 
-	// Expand the top level of Block List tree
-	ui->list->expandToDepth(0);
+	// Only in tree view mode: expand the top level of Block List tree
+	if ( ui->list->model() != nif )
+		ui->list->expandToDepth(0);
 
 	// Hide Progress Bar
 	QTimer::singleShot( timeout, progress, SLOT( hide() ) );
