@@ -1,6 +1,7 @@
  == CHANGELOG ==
 
 * Fixed bug in 'Show Blocks in List' mode that caused all data fields to be expanded in the block list after loading a model.
+* Fixed emissive channels missing from the decal write mask in the Starfield material editor.
 
 #### NifSkope-2.0.dev9-20240926
 

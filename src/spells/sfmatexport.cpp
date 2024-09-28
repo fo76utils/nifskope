@@ -826,7 +826,7 @@ void CE2MaterialToJSON::createLayeredMaterial( QJsonArray & components, const CE
 		QJsonObject	decalSettings;
 		decalSettings.insert( "IsDecal", "true" );
 		decalSettings.insert( "MaterialOverallAlpha", QString::number( sp->decalAlpha ) );
-		decalSettings.insert( "WriteMask", QString::number( sp->writeMask & 0x0737 ) );
+		decalSettings.insert( "WriteMask", QString::number( sp->writeMask & 0x00F00737 ) );
 		insertBool( decalSettings, "IsPlanet", sp->isPlanet );
 		insertBool( decalSettings, "IsProjected", sp->isProjected );
 		if ( sp->isProjected ) {

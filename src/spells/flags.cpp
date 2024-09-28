@@ -998,9 +998,11 @@ void spEditFlags::sfMaterialFlags( NifModel * nif, const QModelIndex & index, Ni
 		"Enable Overlay Color", "Enable Overlay Roughness", "Enable Overlay Metalness", "Enable Texture 17",
 		"Enable Texture 18", "Enable Texture 19", "Enable ID Texture"
 	};
-	static const char *	flagNames_decalWriteMask[11] = {
+	static const char *	flagNames_decalWriteMask[24] = {
 		"Output Albedo R", "Output Albedo G", "Output Albedo B", "Unused", "Output Normal X", "Output Normal Y",
-		"Unused", "Unused", "Output Ambient Occlusion", "Output Roughness", "Output Metalness"
+		"Unused", "Unused", "Output Ambient Occlusion", "Output Roughness", "Output Metalness", "Unused",
+		"Unused", "Unused", "Unused", "Unused", "Unused", "Unused", "Unused", "Unused",
+		"Output Emissive R", "Output Emissive G", "Output Emissive B", "Output Emissive A"
 	};
 
 	quint32 flags = nif->get<int>( index );
