@@ -511,12 +511,15 @@ static void scan( const QModelIndex & idx, NifModel * nif, QMap<QString, qint32>
 				continue;
 
 			auto str = nif->get<QString>( child );
-			if ( !usedStrings.contains( str ) ) {
-				qsizetype	n = usedStrings.size();
-				usedStrings.insert( str, qint32( n - int( n <= cedIdx ) ) );
-			}
+			qint32 value = -1;
+			if ( !str.isEmpty() ) {
+				if ( !usedStrings.contains( str ) ) {
+					qsizetype	n = usedStrings.size();
+					usedStrings.insert( str, qint32( n - int( n <= cedIdx ) ) );
+				}
 
-			qint32 value = usedStrings[str];
+				value = usedStrings[str];
+			}
 
 			nif->set<int>( child, value );
 		}
@@ -551,7 +554,7 @@ public:
 		for ( qint32 b = 0; b < nif->getBlockCount(); b++ )
 			scan( nif->getBlockIndex( b ), nif, usedStrings, cedIdx );
 		while ( usedStrings.size() <= cedIdx )
-			usedStrings.insert( "", qint32( usedStrings.size() - 1 ) );
+			usedStrings.insert( "<unused>", qint32( usedStrings.size() - 1 ) );
 
 		QVector<QString> newStrings( usedStrings.size() );
 		for ( auto kv : usedStrings.toStdMap() )
