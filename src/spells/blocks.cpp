@@ -269,6 +269,15 @@ void setStringsNiMesh( NifModel * nif, const QModelIndex & iBlock, QStringList &
 		setStringsArray( nif, nif->getIndex( iData, i ), strings, "Component Semantics", "Name" );
 }
 //! Get strings for NiSequence
+static const char * controlledBlockStringNames[7] = {
+	"Target Name",
+	"Node Name",
+	"Property Type",
+	"Controller Type",
+	"Controller ID",
+	"Interpolator ID",
+	nullptr
+};
 QStringList getStringsNiSequence( NifModel * nif, const QModelIndex & iBlock )
 {
 	QStringList strings;
@@ -278,12 +287,13 @@ QStringList getStringsNiSequence( NifModel * nif, const QModelIndex & iBlock )
 
 	for ( int i = 0; i < nif->rowCount( iControlledBlocks ); i++ ) {
 		auto iChild = nif->getIndex( iControlledBlocks, i );
-		strings << nif->resolveString( iChild, "Target Name" )
-				<< nif->resolveString( iChild, "Node Name" )
-				<< nif->resolveString( iChild, "Property Type" )
-				<< nif->resolveString( iChild, "Controller Type" )
-				<< nif->resolveString( iChild, "Controller ID" )
-				<< nif->resolveString( iChild, "Interpolator ID" );
+		for ( int j = 0; controlledBlockStringNames[j]; j++ ) {
+			auto iString = nif->getIndex( iChild, controlledBlockStringNames[j] );
+			QString s;
+			if ( iString.isValid() )
+				s = nif->resolveString( iString );
+			strings << s;
+		}
 	}
 
 	return strings;
@@ -297,12 +307,12 @@ void setStringsNiSequence( NifModel * nif, const QModelIndex & iBlock, QStringLi
 
 	for ( int i = 0; i < nif->rowCount( iControlledBlocks ); i++ ) {
 		auto iChild = nif->getIndex( iControlledBlocks, i );
-		nif->set<QString>( iChild, "Target Name", strings.takeFirst() );
-		nif->set<QString>( iChild, "Node Name", strings.takeFirst() );
-		nif->set<QString>( iChild, "Property Type", strings.takeFirst() );
-		nif->set<QString>( iChild, "Controller Type", strings.takeFirst() );
-		nif->set<QString>( iChild, "Controller ID", strings.takeFirst() );
-		nif->set<QString>( iChild, "Interpolator ID", strings.takeFirst() );
+		for ( int j = 0; controlledBlockStringNames[j]; j++ ) {
+			QString s = strings.takeFirst();
+			auto iString = nif->getIndex( iChild, controlledBlockStringNames[j] );
+			if ( iString.isValid() )
+				nif->set<QString>( iString, s );
+		}
 	}
 }
 
