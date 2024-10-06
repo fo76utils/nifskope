@@ -38,7 +38,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "gl/gltex.h"
 #include "io/material.h"
 #include "gamemanager.h"
-#include "qtcompat.h"
 #include "libfo76utils/src/ddstxt16.hpp"
 #include "glview.h"
 
@@ -1211,7 +1210,7 @@ QString BSShaderLightingProperty::fileName( int id ) const
 			id++;
 		if ( id >= 0 && id < nif->get<int>(iTextureSet, "Num Textures") ) {
 			QModelIndex iTextures = nif->getIndex(iTextureSet, "Textures");
-			return nif->get<QString>( QModelIndex_child( iTextures, id ) );
+			return nif->get<QString>( nif->getIndex( iTextures, id ) );
 		}
 
 		return QString();

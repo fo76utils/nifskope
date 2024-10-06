@@ -33,7 +33,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "gltools.h"
 
 #include "model/nifmodel.h"
-#include "qtcompat.h"
 #include "glview.h"
 
 #include <QMap>
@@ -61,7 +60,7 @@ BoneWeights::BoneWeights( const NifModel * nif, const QModelIndex & index, int b
 	QModelIndex idxWeights = nif->getIndex( index, "Vertex Weights" );
 	if ( vcnt && idxWeights.isValid() ) {
 		for ( int c = 0; c < nif->rowCount( idxWeights ); c++ ) {
-			QModelIndex idx = QModelIndex_child( idxWeights, c );
+			QModelIndex idx = nif->getIndex( idxWeights, c );
 			weights.append( VertexWeight( nif->get<int>( idx, "Index" ), nif->get<float>( idx, "Weight" ) ) );
 		}
 	}
@@ -106,8 +105,8 @@ SkinPartition::SkinPartition( const NifModel * nif, const QModelIndex & index )
 
 	for ( int v = 0; v < vertexMap.count(); v++ ) {
 		for ( int w = 0; w < numWeightsPerVertex; w++ ) {
-			QModelIndex iw = QModelIndex_child( QModelIndex_child( iWeights, v ), w );
-			QModelIndex ib = QModelIndex_child( QModelIndex_child( iBoneIndices, v ), w );
+			QModelIndex iw = nif->getIndex( nif->getIndex( iWeights, v ), w );
+			QModelIndex ib = nif->getIndex( nif->getIndex( iBoneIndices, v ), w );
 
 			weights[ v * numWeightsPerVertex + w ].first  = ( ib.isValid() ? nif->get<int>( ib ) : 0 );
 			weights[ v * numWeightsPerVertex + w ].second = ( iw.isValid() ? nif->get<float>( iw ) : 0 );
@@ -117,7 +116,7 @@ SkinPartition::SkinPartition( const NifModel * nif, const QModelIndex & index )
 	QModelIndex iStrips = nif->getIndex( index, "Strips" );
 
 	for ( int s = 0; s < nif->rowCount( iStrips ); s++ ) {
-		tristrips << nif->getArray<quint16>( QModelIndex_child( iStrips, s ) );
+		tristrips << nif->getArray<quint16>( nif->getIndex( iStrips, s ) );
 	}
 
 	triangles = nif->getArray<Triangle>( index, "Triangles" );
@@ -1099,7 +1098,7 @@ void drawNiTSS( const NifModel * nif, const QModelIndex & iShape, bool solid )
 {
 	QModelIndex iStrips = nif->getIndex( iShape, "Strips Data" );
 	for ( int r = 0; r < nif->rowCount( iStrips ); r++ ) {
-		QModelIndex iStripData = nif->getBlockIndex( nif->getLink( QModelIndex_child( iStrips, r ) ), "NiTriStripsData" );
+		QModelIndex iStripData = nif->getBlockIndex( nif->getLink( nif->getIndex( iStrips, r ) ), "NiTriStripsData" );
 		if ( iStripData.isValid() ) {
 			QVector<Vector3> verts = nif->getArray<Vector3>( iStripData, "Vertices" );
 
@@ -1110,7 +1109,7 @@ void drawNiTSS( const NifModel * nif, const QModelIndex & iShape, bool solid )
 			QModelIndex iPoints = nif->getIndex( iStripData, "Points" );
 			for ( int r = 0; r < nif->rowCount( iPoints ); r++ ) {	// draw the strips like they appear in the tescs
 				// (use the unstich strips spell to avoid the spider web effect)
-				QVector<quint16> strip = nif->getArray<quint16>( QModelIndex_child( iPoints, r ) );
+				QVector<quint16> strip = nif->getArray<quint16>( nif->getIndex( iPoints, r ) );
 				if ( strip.count() >= 3 ) {
 					quint16 a = strip[0];
 					quint16 b = strip[1];
@@ -1147,7 +1146,7 @@ void drawCMS( const NifModel * nif, const QModelIndex & iShape, bool solid )
 		glDisable( GL_CULL_FACE );
 
 		for ( int r = 0; r < nif->rowCount( iBigTris ); r++ ) {
-			Triangle tri = nif->get<Triangle>( QModelIndex_child( iBigTris, r ), "Triangle" );
+			Triangle tri = nif->get<Triangle>( nif->getIndex( iBigTris, r ), "Triangle" );
 
 			glBegin( GL_TRIANGLES );
 
@@ -1167,9 +1166,9 @@ void drawCMS( const NifModel * nif, const QModelIndex & iShape, bool solid )
 			Vector4 chunkOrigin = nif->get<Vector4>( iChunk, "Translation" );
 
 			quint32 transformIndex = nif->get<quint32>( iChunk, "Transform Index" );
-			QModelIndex chunkTransform = QModelIndex_child( iChunkTrans, transformIndex );
-			Vector4 chunkTranslation = nif->get<Vector4>( QModelIndex_child( chunkTransform ) );
-			Quat chunkRotation = nif->get<Quat>( QModelIndex_child( chunkTransform, 1 ) );
+			QModelIndex chunkTransform = nif->getIndex( iChunkTrans, transformIndex );
+			Vector4 chunkTranslation = nif->get<Vector4>( nif->getIndex( chunkTransform, 0 ) );
+			Quat chunkRotation = nif->get<Quat>( nif->getIndex( chunkTransform, 1 ) );
 
 			quint32 numOffsets = nif->get<quint32>( iChunk, "Num Vertices" ) / 3;
 			quint32 numIndices = nif->get<quint32>( iChunk, "Num Indices" );

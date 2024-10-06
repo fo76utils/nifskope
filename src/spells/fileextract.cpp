@@ -16,7 +16,6 @@
 #include "libfo76utils/src/material.hpp"
 #include "model/nifmodel.h"
 #include "io/nifstream.h"
-#include "qtcompat.h"
 
 #ifdef Q_OS_WIN32
 #  include <direct.h>
@@ -430,7 +429,7 @@ bool spMeshFileExport::processItem( NifModel * nif, NifItem * item, const std::s
 	auto	meshesIndex = nif->getIndex( item, "Meshes" );
 	if ( meshesIndex.isValid() ) {
 		for ( int l = 0; l < 4; l++ ) {
-			auto	meshIndex = QModelIndex_child( meshesIndex, l );
+			auto	meshIndex = nif->getIndex( meshesIndex, l );
 			if ( !( meshIndex.isValid() && nif->get<bool>(meshIndex, "Has Mesh") ) )
 				continue;
 			auto	meshData = nif->getIndex( nif->getIndex( meshIndex, "Mesh" ), "Mesh Data" );
@@ -466,7 +465,7 @@ bool spMeshFileExport::processItem( NifModel * nif, NifItem * item, const std::s
 
 	meshesIndex = nif->getIndex( item, "Meshes" );
 	for ( int l = 0; l < 4; l++ ) {
-		auto	meshIndex = QModelIndex_child( meshesIndex, l );
+		auto	meshIndex = nif->getIndex( meshesIndex, l );
 		if ( !( meshIndex.isValid() && nif->get<bool>(meshIndex, "Has Mesh") ) )
 			continue;
 		nif->set<QString>( nif->getIndex( meshIndex, "Mesh" ), "Mesh Path", meshPaths[l] );
@@ -541,7 +540,7 @@ bool spMeshFileImport::processItem( NifModel * nif, NifItem * item )
 	auto	meshesIndex = nif->getIndex( item, "Meshes" );
 	if ( meshesIndex.isValid() ) {
 		for ( int l = 0; l < 4; l++ ) {
-			auto	meshIndex = QModelIndex_child( meshesIndex, l );
+			auto	meshIndex = nif->getIndex( meshesIndex, l );
 			if ( !( meshIndex.isValid() && nif->get<bool>(meshIndex, "Has Mesh") ) )
 				continue;
 			QString	meshPath = nif->get<QString>( nif->getIndex( meshIndex, "Mesh" ), "Mesh Path" );
@@ -560,7 +559,7 @@ bool spMeshFileImport::processItem( NifModel * nif, NifItem * item )
 
 	meshesIndex = nif->getIndex( item, "Meshes" );
 	for ( int l = 0; l < 4; l++ ) {
-		auto	meshIndex = QModelIndex_child( meshesIndex, l );
+		auto	meshIndex = nif->getIndex( meshesIndex, l );
 		if ( !( meshIndex.isValid() && nif->get<bool>(meshIndex, "Has Mesh") ) )
 			continue;
 

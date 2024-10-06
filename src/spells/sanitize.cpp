@@ -1,7 +1,6 @@
 #include "spellbook.h"
 #include "sanitize.h"
 #include "spells/misc.h"
-#include "qtcompat.h"
 
 #include <QInputDialog>
 
@@ -63,7 +62,7 @@ public:
 				QList<QPair<qint32, bool>> links;
 
 				for ( int r = 0; r < nif->rowCount( iChildren ); r++ ) {
-					qint32 l = nif->getLink( QModelIndex_child( iChildren, r ) );
+					qint32 l = nif->getLink( nif->getIndex( iChildren, r ) );
 
 					if ( l >= 0 ) {
 						links.append( QPair<qint32, bool>( l, nif->blockInherits(nif->getBlockIndex(l), {"NiTriBasedGeom", "BSTriShape"}) ) );
@@ -77,8 +76,8 @@ public:
 				std::stable_sort( links.begin(), links.end(), compareFn );
 
 				for ( int r = 0; r < links.count(); r++ ) {
-					if ( links[r].first != nif->getLink( QModelIndex_child( iChildren, r ) ) ) {
-						nif->setLink( QModelIndex_child( iChildren, r ), links[r].first );
+					if ( links[r].first != nif->getLink( nif->getIndex( iChildren, r ) ) ) {
+						nif->setLink( nif->getIndex( iChildren, r ), links[r].first );
 					}
 				}
 
@@ -309,7 +308,7 @@ public:
 	QModelIndex check( NifModel * nif, const QModelIndex & iParent )
 	{
 		for ( int r = 0; r < nif->rowCount( iParent ); r++ ) {
-			QModelIndex idx = QModelIndex_child( iParent, r );
+			QModelIndex idx = nif->getIndex( iParent, r );
 
 			if ( nif->isLink( idx ) ) {
 				qint32 l = nif->getLink( idx );
@@ -566,8 +565,8 @@ public:
 			auto numBlocks = nif->rowCount( controlledBlocks );
 
 			for ( int i = 0; i < numBlocks; i++ ) {
-				auto ctrlrType =  nif->getIndex( QModelIndex_child( controlledBlocks, i ), "Controller Type" );
-				auto nodeName = nif->getIndex( QModelIndex_child( controlledBlocks, i ), "Node Name" );
+				auto ctrlrType =  nif->getIndex( nif->getIndex( controlledBlocks, i ), "Controller Type" );
+				auto nodeName = nif->getIndex( nif->getIndex( controlledBlocks, i ), "Node Name" );
 
 				auto ctrlrTypeIdx = nif->get<int>( ctrlrType );
 				if ( ctrlrTypeIdx == -1 ) {
