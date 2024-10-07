@@ -36,7 +36,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "model/basemodel.h"
 #include "model/nifproxymodel.h"
 #include "model/undocommands.h"
-#include "qtcompat.h"
 
 #include <QApplication>
 #include <QMimeData>
@@ -264,7 +263,7 @@ void NifTreeView::pasteArray()
 	ChangeValueCommand::createTransaction();
 	nif->setState( BaseModel::Processing );
 	for ( int i = 0; i < cnt && i < int( valueClipboard->getValues().size() ); i++ ) {
-		auto iDest = QModelIndex_child( root, i, NifModel::ValueCol );
+		auto iDest = nif->getIndex( root, i, NifModel::ValueCol );
 		auto srcValue = valueClipboard->getValues().at( iDest.row() );
 
 		pasteTo( iDest, srcValue );
@@ -272,7 +271,7 @@ void NifTreeView::pasteArray()
 	nif->restoreState();
 
 	if ( cnt > 0 )
-		emit nif->dataChanged( QModelIndex_child( root, 0, NifModel::ValueCol ), QModelIndex_child( root, cnt - 1, NifModel::ValueCol ) );
+		emit nif->dataChanged( nif->getIndex( root, 0, NifModel::ValueCol ), nif->getIndex( root, cnt - 1, NifModel::ValueCol ) );
 }
 
 void NifTreeView::drawBranches( QPainter * painter, const QRect & rect, const QModelIndex & index ) const
@@ -401,7 +400,7 @@ void NifTreeView::keyPressEvent( QKeyEvent * e )
 				nif->setData( newValue, v );
 
 				// Change the selected row
-				selectionModel()->select( QModelIndex_child( parent, row ), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows );
+				selectionModel()->select( nif->getIndex( parent, row ), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows );
 
 				// Add row swap to undo
 				ChangeValueCommand::createTransaction();

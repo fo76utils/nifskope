@@ -36,7 +36,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "model/nifmodel.h"
 #include "nifskope.h"
 #include "spells/tangentspace.h"
-#include "qtcompat.h"
 
 #include "lib/nvtristripwrapper.h"
 
@@ -76,7 +75,7 @@ static void writeData( const NifModel * nif, const QModelIndex & iData, QTextStr
 		// copy texcoords
 
 		QModelIndex iUV = nif->getIndex( iData, "UV Sets" );
-		QVector<Vector2> texco = nif->getArray<Vector2>( QModelIndex_child( iUV, 0, 0 ) );
+		QVector<Vector2> texco = nif->getArray<Vector2>( nif->getIndex( iUV, 0, 0 ) );
 		foreach( Vector2 t, texco )
 		{
 			obj << "vt " << t[0] << " " << 1.0 - t[1] << "\r\n";
@@ -101,7 +100,7 @@ static void writeData( const NifModel * nif, const QModelIndex & iData, QTextStr
 			QVector<QVector<quint16> > strips;
 
 			for ( int r = 0; r < nif->rowCount( iPoints ); r++ )
-				strips.append( nif->getArray<quint16>( QModelIndex_child( iPoints, r, 0 ) ) );
+				strips.append( nif->getArray<quint16>( nif->getIndex( iPoints, r, 0 ) ) );
 
 			tris = triangulate( strips );
 		} else {
@@ -270,8 +269,8 @@ static void writeShape( const NifModel * nif, const QModelIndex & iShape, QTextS
 				if ( nif->getBSVersion() >= 151 && nif->isNiBlock( iProp, "BSLightingShaderProperty" ) )
 					iProp = nif->getIndex( iProp, "Shader Property Data" );
 				QModelIndex iArray = nif->getIndex( nif->getBlockIndex( nif->getLink( iProp, "Texture Set" ) ), "Textures" );
-				map_Kd = TexCache::find( nif->get<QString>( QModelIndex_child( iArray, 0, 0 ) ) );
-				map_Kn = TexCache::find( nif->get<QString>( QModelIndex_child( iArray, 1, 0 ) ) );
+				map_Kd = TexCache::find( nif->get<QString>( nif->getIndex( iArray, 0, 0 ) ) );
+				map_Kn = TexCache::find( nif->get<QString>( nif->getIndex( iArray, 1, 0 ) ) );
 			}
 
 			auto iSpec = nif->getIndex( iProp, "Specular Color" );
@@ -369,8 +368,8 @@ static void writeParent( const NifModel * nif, const QModelIndex & iNode, QTextS
 							QModelIndex iTris = nif->getIndex( iData, "Triangles" );
 
 							for ( int t = 0; t < nif->rowCount( iTris ); t++ ) {
-								Triangle tri = nif->get<Triangle>( QModelIndex_child( iTris, t, 0 ), "Triangle" );
-								Vector3 n = nif->get<Vector3>( QModelIndex_child( iTris, t, 0 ), "Normal" );
+								Triangle tri = nif->get<Triangle>( nif->getIndex( iTris, t, 0 ), "Triangle" );
+								Vector3 n = nif->get<Vector3>( nif->getIndex( iTris, t, 0 ), "Normal" );
 
 								Vector3 a = verts.value( tri[0] );
 								Vector3 b = verts.value( tri[1] );
@@ -397,7 +396,7 @@ static void writeParent( const NifModel * nif, const QModelIndex & iNode, QTextS
 					QModelIndex iStrips = nif->getIndex( iShape, "Strips Data" );
 
 					for ( int r = 0; r < nif->rowCount( iStrips ); r++ )
-						writeData( nif, nif->getBlockIndex( nif->getLink( QModelIndex_child( iStrips, r, 0 ) ), "NiTriStripsData" ), obj, ofs, t * bt );
+						writeData( nif, nif->getBlockIndex( nif->getLink( nif->getIndex( iStrips, r, 0 ) ), "NiTriStripsData" ), obj, ofs, t * bt );
 				}
 			}
 		}
@@ -595,7 +594,7 @@ static void addLink( NifModel * nif, const QModelIndex & iBlock, const QString &
 	int numIndices = nif->get<int>( iSize );
 	nif->set<int>( iSize, numIndices + 1 );
 	nif->updateArraySize( iArray );
-	nif->setLink( QModelIndex_child( iArray, numIndices, 0 ), link );
+	nif->setLink( nif->getIndex( iArray, numIndices, 0 ), link );
 }
 
 void importObjMain( NifModel * nif, const QModelIndex & index, bool collision )
@@ -912,12 +911,12 @@ void importObjMain( NifModel * nif, const QModelIndex & index, bool collision )
 						nif->set<quint32>( shaderProp, "Num SF1", quint32( haveVertexColors ) + 4 );
 						QModelIndex	iSF1 = nif->getIndex( shaderProp, "SF1" );
 						nif->updateArraySize( iSF1 );
-						nif->set<quint32>( QModelIndex_child( iSF1, 0 ), ShaderFlags::CAST_SHADOWS );
-						nif->set<quint32>( QModelIndex_child( iSF1, 1 ), ShaderFlags::ZBUFFER_TEST );
-						nif->set<quint32>( QModelIndex_child( iSF1, 2 ), ShaderFlags::ZBUFFER_WRITE );
-						nif->set<quint32>( QModelIndex_child( iSF1, 3 ), ShaderFlags::PBR );
+						nif->set<quint32>( nif->getIndex( iSF1, 0 ), ShaderFlags::CAST_SHADOWS );
+						nif->set<quint32>( nif->getIndex( iSF1, 1 ), ShaderFlags::ZBUFFER_TEST );
+						nif->set<quint32>( nif->getIndex( iSF1, 2 ), ShaderFlags::ZBUFFER_WRITE );
+						nif->set<quint32>( nif->getIndex( iSF1, 3 ), ShaderFlags::PBR );
 						if ( haveVertexColors )
-							nif->set<quint32>( QModelIndex_child( iSF1, 4 ), ShaderFlags::VERTEXCOLORS );
+							nif->set<quint32>( nif->getIndex( iSF1, 4 ), ShaderFlags::VERTEXCOLORS );
 					}
 				}
 
@@ -941,8 +940,8 @@ void importObjMain( NifModel * nif, const QModelIndex & index, bool collision )
 					auto iTextures = nif->getIndex( textureSet, "Textures" );
 					nif->updateArraySize( iTextures );
 
-					nif->set<QString>( QModelIndex_child( iTextures, 0 ), mtl.map_Kd );
-					nif->set<QString>( QModelIndex_child( iTextures, 1 ), mtl.map_Kn );
+					nif->set<QString>( nif->getIndex( iTextures, 0 ), mtl.map_Kd );
+					nif->set<QString>( nif->getIndex( iTextures, 1 ), mtl.map_Kn );
 				} else if ( nif->getVersionNumber() >= 0x0303000D ) {
 					//Newer versions use NiTexturingProperty and NiSourceTexture
 					if ( iTexProp.isValid() == false || first_tri_shape == false || nif->itemStrType( iTexProp ) != "NiTexturingProperty" ) {
@@ -1031,8 +1030,8 @@ void importObjMain( NifModel * nif, const QModelIndex & index, bool collision )
 
 				QModelIndex iTexCo = nif->getIndex( iData, "UV Sets" );
 				nif->updateArraySize( iTexCo );
-				nif->updateArraySize( QModelIndex_child( iTexCo, 0, 0 ) );
-				nif->setArray<Vector2>( QModelIndex_child( iTexCo, 0, 0 ), texco );
+				nif->updateArraySize( nif->getIndex( iTexCo, 0, 0 ) );
+				nif->setArray<Vector2>( nif->getIndex( iTexCo, 0, 0 ), texco );
 
 				nif->set<int>( iData, "Has Triangles", 1 );
 				nif->set<int>( iData, "Num Triangles", triangles.count() );
@@ -1062,7 +1061,7 @@ void importObjMain( NifModel * nif, const QModelIndex & index, bool collision )
 				QModelIndex	iVerts = nif->getIndex( iShape, "Vertex Data" );
 				nif->updateArraySize( iVerts );
 				for ( qsizetype i = 0; i < verts.size(); i++ ) {
-					QModelIndex	iVertex = QModelIndex_child( iVerts, int( i ) );
+					QModelIndex	iVertex = nif->getIndex( iVerts, int( i ) );
 					if ( !iVertex.isValid() )
 						continue;
 					nif->set<Vector3>( iVertex, "Vertex", verts.at( i ) );
@@ -1145,8 +1144,8 @@ void importObjMain( NifModel * nif, const QModelIndex & index, bool collision )
 				int x = 0;
 				int z = 0;
 				for ( const QVector<quint16> & strip : strips ) {
-					nif->set<int>( QModelIndex_child( iLengths, x, 0 ), strip.count() );
-					QModelIndex iStrip = QModelIndex_child( iPoints, x, 0 );
+					nif->set<int>( nif->getIndex( iLengths, x, 0 ), strip.count() );
+					QModelIndex iStrip = nif->getIndex( iPoints, x, 0 );
 					nif->updateArraySize( iStrip );
 					nif->setArray<quint16>( iStrip, strip );
 					x++;
@@ -1166,7 +1165,7 @@ void importObjMain( NifModel * nif, const QModelIndex & index, bool collision )
 				QPersistentModelIndex iBody = nif->insertNiBlock( "bhkRigidBody" );
 				nif->setLink( iBody, "Shape", nif->getBlockNumber( iStripsShape ) );
 				for( int i = 0; i < nif->rowCount( iBody ); i++ ) {
-					auto iChild = QModelIndex_child( iBody, i, 0 );
+					auto iChild = nif->getIndex( iBody, i, 0 );
 					if ( nif->isArray( iChild ) )
 						nif->updateArraySize( iChild );
 				}

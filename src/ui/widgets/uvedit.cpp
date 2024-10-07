@@ -38,7 +38,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "gl/gltools.h"
 #include "model/nifmodel.h"
 #include "ui/settingsdialog.h"
-#include "qtcompat.h"
 
 #include "libfo76utils/src/fp32vec4.hpp"
 #include "libfo76utils/src/filebuf.hpp"
@@ -861,7 +860,7 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 				for ( int texSlot = 0; texSlot <= 9; texSlot++ ) {
 					if ( texSlot >= texfiles.size() )
 						texfiles.append( QString() );
-					texfiles[texSlot] = TexCache::find( nif->get<QString>( QModelIndex_child( iTextures, texSlot ) ), nif );
+					texfiles[texSlot] = TexCache::find( nif->get<QString>( nif->getIndex( iTextures, texSlot ) ), nif );
 				}
 			}
 		}
@@ -972,7 +971,7 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 	}
 
 	if ( nif->blockInherits( iShapeData, "NiTriBasedGeomData" ) ) {
-		iTexCoords = QModelIndex_child( nif->getIndex( iShapeData, "UV Sets" ) );
+		iTexCoords = nif->getIndex( nif->getIndex( iShapeData, "UV Sets" ), 0 );
 
 		if ( !iTexCoords.isValid() || !nif->rowCount( iTexCoords ) ) {
 			return false;
@@ -1010,7 +1009,7 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 		}
 		int	lodDiff = 255;
 		for ( int i = 0; i <= 3; i++ ) {
-			auto mesh = QModelIndex_child( meshes, i );
+			auto mesh = nif->getIndex( meshes, i );
 			if ( !mesh.isValid() )
 				continue;
 			auto hasMesh = nif->getIndex( mesh, "Has Mesh" );
@@ -1067,7 +1066,7 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 
 					if ( iTexSource.isValid() ) {
 						currentCoordSet = nif->get<int>( iTex, "UV Set" );
-						iTexCoords = QModelIndex_child( nif->getIndex( iShapeData, "UV Sets" ), currentCoordSet );
+						iTexCoords = nif->getIndex( nif->getIndex( iShapeData, "UV Sets" ), currentCoordSet );
 						texsource  = iTexSource;
 
 						if ( setTexCoords() )
@@ -1113,7 +1112,7 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 							int	n = nif->rowCount( iTextures );
 							for ( int i = 0; i < n; i++ ) {
 								if ( i != 4 )
-									texfiles.append( TexCache::find( nif->get<QString>( QModelIndex_child( iTextures, i ) ), nif ) );
+									texfiles.append( TexCache::find( nif->get<QString>( nif->getIndex( iTextures, i ) ), nif ) );
 							}
 							return true;
 						}
@@ -1149,7 +1148,7 @@ bool UVWidget::setTexCoords( const QVector<Triangle> * triangles )
 			return false;
 
 		for ( int r = 0; r < nif->rowCount( iPoints ); r++ ) {
-			tris += triangulate( nif->getArray<quint16>( QModelIndex_child( iPoints, r ) ) );
+			tris += triangulate( nif->getArray<quint16>( nif->getIndex( iPoints, r ) ) );
 		}
 	} else if ( nif->blockInherits( iShape, "BSTriShape" ) ) {
 		if ( !isDataOnSkin ) {
@@ -1842,7 +1841,7 @@ void UVWidget::selectTexSlot()
 
 				if ( iTexSource.isValid() ) {
 					currentCoordSet = nif->get<int>( iTex, "UV Set" );
-					iTexCoords = QModelIndex_child( nif->getIndex( iShapeData, "UV Sets" ), currentCoordSet );
+					iTexCoords = nif->getIndex( nif->getIndex( iShapeData, "UV Sets" ), currentCoordSet );
 					texsource  = iTexSource;
 					setTexCoords();
 					update();
@@ -1898,7 +1897,7 @@ void UVWidget::changeCoordSet( int setToUse )
 	currentCoordSet = setToUse;
 	nif->set<quint8>( iTex, "UV Set", currentCoordSet );
 	// read new coordinate set
-	iTexCoords = QModelIndex_child( nif->getIndex( iShapeData, "UV Sets" ), currentCoordSet );
+	iTexCoords = nif->getIndex( nif->getIndex( iShapeData, "UV Sets" ), currentCoordSet );
 	setTexCoords();
 }
 
@@ -1916,7 +1915,7 @@ void UVWidget::duplicateCoordSet()
 	nif->set<quint8>( iShapeData, "Data Flags", numUvSets );
 	QModelIndex uvSets = nif->getIndex( iShapeData, "UV Sets" );
 	nif->updateArraySize( uvSets );
-	nif->setArray<Vector2>( QModelIndex_child( uvSets, numUvSets ), nif->getArray<Vector2>( QModelIndex_child( uvSets, currentCoordSet ) ) );
+	nif->setArray<Vector2>( nif->getIndex( uvSets, numUvSets ), nif->getArray<Vector2>( nif->getIndex( uvSets, currentCoordSet ) ) );
 	// switch to that coordinate set
 	changeCoordSet( numUvSets );
 	// reconnect data changed signal
