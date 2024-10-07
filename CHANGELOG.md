@@ -3,6 +3,7 @@
 * The 'Optimize/Remove Unused Strings' spell now also removes empty strings from the string table, and replaces the string index with -1.
 * Fixed bug in 'Show Blocks in List' mode that caused all data fields to be expanded in the block list after loading a model.
 * Fixed emissive channels missing from the decal write mask in the Starfield material editor.
+* Fixed issue with pasting Fallout 76 and Starfield shader property blocks, due to the block name (that determines whether an external material file is used) not being set before the block data is loaded.
 * Fixed error on copying and pasting NiControllerSequence blocks.
 
 #### NifSkope-2.0.dev9-20240926
