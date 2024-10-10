@@ -51,7 +51,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ui/widgets/xmlcheck.h"
 #include "ui/about_dialog.h"
 #include "ui/settingsdialog.h"
-#include "qtcompat.h"
 
 #include <QAction>
 #include <QActionGroup>
@@ -841,7 +840,7 @@ void NifSkope::onLoadComplete( bool success, QString & fname )
 
 		header->setRootIndex( nif->getHeaderIndex() );
 		// Refresh the header rows
-		header->updateConditions( QModelIndex_child( nif->getHeaderIndex() ), QModelIndex_child( nif->getHeaderIndex(), 20 ) );
+		header->updateConditions( nif->getIndex( nif->getHeaderIndex(), 0 ), nif->getIndex( nif->getHeaderIndex(), 20 ) );
 
 		ogl->setOrientation( ogl->cfg.startupDirection );
 

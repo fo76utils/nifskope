@@ -1,5 +1,4 @@
 #include "spellbook.h"
-#include "qtcompat.h"
 
 #include <QFileDialog>
 
@@ -88,13 +87,13 @@ public:
 					QModelIndex iCtrlBlcks = kf.getIndex( iSeq, "Controlled Blocks" );
 
 					for ( int r = 0; r < kf.rowCount( iCtrlBlcks ); r++ ) {
-						QString nodeName = kf.resolveString( QModelIndex_child( iCtrlBlcks, r ), "Node Name" );
+						QString nodeName = kf.resolveString( nif->getIndex( iCtrlBlcks, r ), "Node Name" );
 
 						if ( nodeName.isEmpty() )
-							nodeName = kf.resolveString( QModelIndex_child( iCtrlBlcks, r ), "Target Name" ); // 10.0.1.0
+							nodeName = kf.resolveString( nif->getIndex( iCtrlBlcks, r ), "Target Name" ); // 10.0.1.0
 
 						if ( nodeName.isEmpty() ) {
-							QModelIndex iNodeName = kf.getIndex( QModelIndex_child( iCtrlBlcks, r ), "Node Name Offset" );
+							QModelIndex iNodeName = kf.getIndex( nif->getIndex( iCtrlBlcks, r ), "Node Name Offset" );
 							nodeName = iNodeName.sibling( iNodeName.row(), NifModel::ValueCol ).data( NifSkopeDisplayRole ).toString();
 						}
 
@@ -141,14 +140,14 @@ public:
 					int numSeq  = nif->get<int>( iCtrlManager, "Num Controller Sequences" );
 					nif->set<int>( iCtrlManager, "Num Controller Sequences", numSeq + 1 );
 					nif->updateArraySize( iCtrlManager, "Controller Sequences" );
-					nif->setLink( QModelIndex_child( nif->getIndex( iCtrlManager, "Controller Sequences" ), numSeq ), nSeq );
+					nif->setLink( nif->getIndex( nif->getIndex( iCtrlManager, "Controller Sequences" ), numSeq ), nSeq );
 					QModelIndex iSeq = nif->getBlockIndex( nSeq, "NiControllerSequence" );
 					nif->setLink( iSeq, "Manager", nif->getBlockNumber( iCtrlManager ) );
 
 					QModelIndex iCtrlBlcks = nif->getIndex( iSeq, "Controlled Blocks" );
 
 					for ( int r = 0; r < nif->rowCount( iCtrlBlcks ); r++ ) {
-						QModelIndex iCtrlBlck = QModelIndex_child( iCtrlBlcks, r );
+						QModelIndex iCtrlBlck = nif->getIndex( iCtrlBlcks, r );
 
 						if ( nif->getLink( iCtrlBlck, "Controller" ) == -1 )
 							nif->setLink( iCtrlBlck, "Controller", iMultiTransformerIdx );
@@ -275,7 +274,7 @@ public:
 			int r;
 
 			for ( r = 0; r < nif->rowCount( iArray ); r++ ) {
-				if ( nif->get<QString>( QModelIndex_child( iArray, r ), "Name" ) == name )
+				if ( nif->get<QString>( nif->getIndex( iArray, r ), "Name" ) == name )
 					break;
 			}
 
@@ -287,8 +286,8 @@ public:
 		nif->set<int>( iNum, r + blocksToAdd.count() );
 		nif->updateArraySize( iArray );
 		for ( const QPersistentModelIndex& idx : blocksToAdd ) {
-			nif->set<QString>( QModelIndex_child( iArray, r ), "Name", nif->get<QString>( idx, "Name" ) );
-			nif->setLink( QModelIndex_child( iArray, r ), "AV Object", nif->getBlockNumber( idx ) );
+			nif->set<QString>( nif->getIndex( iArray, r ), "Name", nif->get<QString>( idx, "Name" ) );
+			nif->setLink( nif->getIndex( iArray, r ), "AV Object", nif->getBlockNumber( idx ) );
 			r++;
 		}
 	}
@@ -328,7 +327,7 @@ public:
 
 	    for( int i = 0; i < 3; i++ )
 	    {
-	        QModelIndex iRot = QModelIndex_child( iRots, i );
+	        QModelIndex iRot = nif->getIndex( iRots, i );
 	        nif->set<int>( iRot, "Num Keys", nif->get<int>(index, "Num Rotation Keys") );
 	        nif->set<int>( iRot, "Interpolation", rotationType );
 	        nif->updateArraySize( iRot, "Keys" );
@@ -336,7 +335,7 @@ public:
 
 	    for ( int q = 0; q < nif->rowCount( iQuats ); q++ )
 	    {
-	        QModelIndex iQuat = QModelIndex_child( iQuats, q );
+	        QModelIndex iQuat = nif->getIndex( iQuats, q );
 
 	        float time = nif->get<float>( iQuat, "Time" );
 	        Quat value = nif->get<Quat>( iQuat, "Value" );
@@ -347,9 +346,9 @@ public:
 	        float x, y, z;
 	        tlocal.toEuler( x, y, z );
 
-	        QModelIndex xRot = QModelIndex_child( iRots );
-	        QModelIndex yRot = QModelIndex_child( iRots, 1 );
-	        QModelIndex zRot = QModelIndex_child( iRots, 2 );
+	        QModelIndex xRot = nif->getIndex( iRots, 0 );
+	        QModelIndex yRot = nif->getIndex( iRots, 1 );
+	        QModelIndex zRot = nif->getIndex( iRots, 2 );
 
 	        xRot = nif->getIndex( xRot, "Keys" );
 
@@ -392,7 +391,7 @@ public:
 		auto objs = nif->getIndex( index, "Objs" );
 		auto numObjs = nif->rowCount( objs );
 		for ( int i = 0; i < numObjs; i++ ) {
-			auto c = QModelIndex_child( objs, i );
+			auto c = nif->getIndex( objs, i );
 			auto iAV = nif->getIndex( c, "AV Object" );
 
 

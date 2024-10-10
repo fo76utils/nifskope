@@ -37,7 +37,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "gl/glproperty.h"
 #include "gl/glscene.h"
 #include "model/nifmodel.h"
-#include "qtcompat.h"
 
 // `NiControllerManager` blocks
 
@@ -67,7 +66,7 @@ bool ControllerManager::update( const NifModel * nif, const QModelIndex & index 
 						QModelIndex iTags = nif->getIndex( iKeys, "Text Keys" );
 
 						for ( int r = 0; r < nif->rowCount( iTags ); r++ ) {
-							tags.insert( nif->get<QString>( QModelIndex_child( iTags, r ), "Value" ), nif->get<float>( QModelIndex_child( iTags, r ), "Time" ) );
+							tags.insert( nif->get<QString>( nif->getIndex( iTags, r ), "Value" ), nif->get<float>( nif->getIndex( iTags, r ), "Time" ) );
 						}
 
 						scene->animTags[name] = tags;
@@ -107,7 +106,7 @@ void ControllerManager::setSequence( const QString & seqname )
 				QModelIndex iCtrlBlcks = nif->getIndex( iSeq, "Controlled Blocks" );
 
 				for ( int r = 0; r < nif->rowCount( iCtrlBlcks ); r++ ) {
-					QModelIndex iCB = QModelIndex_child( iCtrlBlcks, r );
+					QModelIndex iCB = nif->getIndex( iCtrlBlcks, r );
 
 					QModelIndex iInterp = nif->getBlockIndex( nif->getLink( iCB, "Interpolator" ), "NiInterpolator" );
 
@@ -459,16 +458,16 @@ bool MorphController::update( const NifModel * nif, const QModelIndex & index )
 				iInterpolatorWeights = nif->getIndex( iBlock, "Interpolator Weights" );
 			}
 
-			QModelIndex iKey = QModelIndex_child( midx, r );
+			QModelIndex iKey = nif->getIndex( midx, r );
 
 			MorphKey * key = new MorphKey;
 			key->index = 0;
 
 			// this is ugly...
 			if ( iInterpolators.isValid() ) {
-				key->iFrames = nif->getIndex( nif->getBlockIndex( nif->getLink( nif->getBlockIndex( nif->getLink( QModelIndex_child( iInterpolators, r ) ), "NiFloatInterpolator" ), "Data" ), "NiFloatData" ), "Data" );
+				key->iFrames = nif->getIndex( nif->getBlockIndex( nif->getLink( nif->getBlockIndex( nif->getLink( nif->getIndex( iInterpolators, r ) ), "NiFloatInterpolator" ), "Data" ), "NiFloatData" ), "Data" );
 			} else if ( iInterpolatorWeights.isValid() ) {
-				key->iFrames = nif->getIndex( nif->getBlockIndex( nif->getLink( nif->getBlockIndex( nif->getLink( QModelIndex_child( iInterpolatorWeights, r ), "Interpolator" ), "NiFloatInterpolator" ), "Data" ), "NiFloatData" ), "Data" );
+				key->iFrames = nif->getIndex( nif->getBlockIndex( nif->getLink( nif->getBlockIndex( nif->getLink( nif->getIndex( iInterpolatorWeights, r ), "Interpolator" ), "NiFloatInterpolator" ), "Data" ), "NiFloatData" ), "Data" );
 			} else {
 				key->iFrames = iKey;
 			}
@@ -507,7 +506,7 @@ void UVController::updateTime( float time )
 
 	if ( uvGroups.isValid() ) {
 		for ( int i = 0; i < 4 && i < nif->rowCount( uvGroups ); i++ ) {
-			interpolate( val[i], QModelIndex_child( uvGroups, i ), ctrlTime( time ), luv );
+			interpolate( val[i], nif->getIndex( uvGroups, i ), ctrlTime( time ), luv );
 		}
 
 		// adjust coords; verified in SceneImmerse
@@ -602,11 +601,11 @@ bool ParticleController::update( const NifModel * nif, const QModelIndex & index
 			//{
 			for ( int p = 0; p < numValid && p < nif->rowCount( iParticles ); p++ ) {
 				Particle particle;
-				particle.velocity = nif->get<Vector3>( QModelIndex_child( iParticles, p ), "Velocity" );
-				particle.lifetime = nif->get<float>( QModelIndex_child( iParticles, p ), "Age" );
-				particle.lifespan = nif->get<float>( QModelIndex_child( iParticles, p ), "Life Span" );
-				particle.lasttime = nif->get<float>( QModelIndex_child( iParticles, p ), "Last Update" );
-				particle.vertex = nif->get<int>( QModelIndex_child( iParticles, p ), "Code" );
+				particle.velocity = nif->get<Vector3>( nif->getIndex( iParticles, p ), "Velocity" );
+				particle.lifetime = nif->get<float>( nif->getIndex( iParticles, p ), "Age" );
+				particle.lifespan = nif->get<float>( nif->getIndex( iParticles, p ), "Life Span" );
+				particle.lasttime = nif->get<float>( nif->getIndex( iParticles, p ), "Last Update" );
+				particle.vertex = nif->get<int>( nif->getIndex( iParticles, p ), "Code" );
 				// Display saved particle start on initial load
 				list.append( particle );
 			}
@@ -891,9 +890,9 @@ void TexFlipController::updateTime( float time )
 
 	// TexturingProperty
 	if ( target ) {
-		target->textures[flipSlot & 7].iSource = nif->getBlockIndex( nif->getLink( QModelIndex_child( iSources, int(r) ) ), "NiSourceTexture" );
+		target->textures[flipSlot & 7].iSource = nif->getBlockIndex( nif->getLink( nif->getIndex( iSources, int(r) ) ), "NiSourceTexture" );
 	} else if ( oldTarget ) {
-		oldTarget->iImage = nif->getBlockIndex( nif->getLink( QModelIndex_child( iSources, int(r) ) ), "NiImage" );
+		oldTarget->iImage = nif->getBlockIndex( nif->getLink( nif->getIndex( iSources, int(r) ) ), "NiImage" );
 	}
 }
 

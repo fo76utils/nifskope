@@ -4,7 +4,6 @@
 #include "model/kfmmodel.h"
 #include "model/nifmodel.h"
 #include "ui/widgets/fileselect.h"
-#include "qtcompat.h"
 
 #include "spells/sanitize.h"
 
@@ -605,7 +604,7 @@ QList<TestMessage> TestThread::checkLinks( const NifModel * nif, const QModelInd
 	QList<TestMessage> messages;
 
 	for ( int r = 0; r < nif->rowCount( iParent ); r++ ) {
-		QModelIndex idx = QModelIndex_child( iParent, r );
+		QModelIndex idx = nif->getIndex( iParent, r );
 
 		if ( nif->isLink( idx ) ) {
 			qint32 l = nif->getLink( idx );

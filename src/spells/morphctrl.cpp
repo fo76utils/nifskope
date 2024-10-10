@@ -1,5 +1,4 @@
 #include "spellbook.h"
-#include "qtcompat.h"
 
 
 // Brief description is deliberately not autolinked to class Spell
@@ -51,23 +50,23 @@ public:
 				qCWarning( nsSpell ) << Spell::tr( "overriding base key frame, all other frames will be cleared" );
 				nif->set<int>( iMorphData, "Num Vertices", nif->get<int>( iMeshData, "Num Vertices" ) );
 				QVector<Vector3> verts = nif->getArray<Vector3>( iMeshData, "Vertices" );
-				nif->updateArraySize( QModelIndex_child( iFrames ), "Vectors" );
-				nif->setArray( QModelIndex_child( iFrames ), "Vectors", verts );
+				nif->updateArraySize( nif->getIndex( iFrames, 0 ), "Vectors" );
+				nif->setArray( nif->getIndex( iFrames, 0 ), "Vectors", verts );
 				verts.fill( Vector3() );
 
 				for ( int f = 1; f < nif->rowCount( iFrames ); f++ ) {
-					nif->updateArraySize( QModelIndex_child( iFrames, f ), "Vectors" );
-					nif->setArray<Vector3>( QModelIndex_child( iFrames, f ), "Vectors", verts );
+					nif->updateArraySize( nif->getIndex( iFrames, f ), "Vectors" );
+					nif->setArray<Vector3>( nif->getIndex( iFrames, f ), "Vectors", verts );
 				}
 			} else {
 				QVector<Vector3> verts = nif->getArray<Vector3>( iMeshData, "Vertices" );
-				QVector<Vector3> base  = nif->getArray<Vector3>( QModelIndex_child( iFrames ), "Vectors" );
+				QVector<Vector3> base  = nif->getArray<Vector3>( nif->getIndex( iFrames, 0 ), "Vectors" );
 				QVector<Vector3> frame( base.count(), Vector3() );
 
 				for ( int n = 0; n < base.count(); n++ )
 					frame[ n ] = verts.value( n ) - base[ n ];
 
-				nif->setArray<Vector3>( QModelIndex_child( iFrames, selFrame ), "Vectors", frame );
+				nif->setArray<Vector3>( nif->getIndex( iFrames, selFrame ), "Vectors", frame );
 			}
 		}
 
@@ -112,7 +111,7 @@ public:
 			QStringList list;
 
 			for ( int i = 0; i < nif->rowCount( iFrames ); i++ ) {
-				list << nif->get<QString>( QModelIndex_child( iFrames, i ), "Frame Name" );
+				list << nif->get<QString>( nif->getIndex( iFrames, i ), "Frame Name" );
 			}
 
 			return list;

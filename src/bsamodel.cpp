@@ -31,7 +31,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***** END LICENCE BLOCK *****/
 
 #include "bsamodel.h"
-#include "qtcompat.h"
 
 #include <QByteArray>
 #include <QDateTime>
@@ -186,8 +185,12 @@ bool BSAProxyModel::lessThan( const QModelIndex & left, const QModelIndex & righ
 	QString leftString = sourceModel()->data( left ).toString();
 	QString rightString = sourceModel()->data( right ).toString();
 
-	QModelIndex leftChild = QModelIndex_child( left );
-	QModelIndex rightChild = QModelIndex_child( right );
+	QModelIndex leftChild;
+	if ( left.model() )
+		leftChild = left.model()->index( 0, 0, left );
+	QModelIndex rightChild;
+	if ( right.model() )
+		rightChild = right.model()->index( 0, 0, right );
 
 	if ( !leftChild.isValid() && rightChild.isValid() )
 		return false;

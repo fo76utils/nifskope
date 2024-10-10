@@ -34,7 +34,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "gl/glscene.h"
 #include "model/nifmodel.h"
-#include "qtcompat.h"
 
 //! @file glcontroller.cpp Controllable management, Interpolation management
 
@@ -302,14 +301,14 @@ bool Controller::timeIndex( float time, const NifModel * nif, const QModelIndex 
 	int count;
 
 	if ( array.isValid() && ( count = nif->rowCount( array ) ) > 0 ) {
-		if ( time <= nif->get<float>( QModelIndex_child( array ), "Time" ) ) {
+		if ( time <= nif->get<float>( nif->getIndex( array, 0 ), "Time" ) ) {
 			i = j = 0;
 			x = 0.0;
 
 			return true;
 		}
 
-		if ( time >= nif->get<float>( QModelIndex_child( array, count - 1 ), "Time" ) ) {
+		if ( time >= nif->get<float>( nif->getIndex( array, count - 1 ), "Time" ) ) {
 			i = j = count - 1;
 			x = 0.0;
 
@@ -319,13 +318,13 @@ bool Controller::timeIndex( float time, const NifModel * nif, const QModelIndex 
 		if ( i < 0 || i >= count )
 			i = 0;
 
-		float tI = nif->get<float>( QModelIndex_child( array, i ), "Time" );
+		float tI = nif->get<float>( nif->getIndex( array, i ), "Time" );
 
 		if ( time > tI ) {
 			j = i + 1;
 			float tJ;
 
-			while ( time >= ( tJ = nif->get<float>( QModelIndex_child( array, j ), "Time" ) ) ) {
+			while ( time >= ( tJ = nif->get<float>( nif->getIndex( array, j ), "Time" ) ) ) {
 				i  = j++;
 				tI = tJ;
 			}
@@ -337,7 +336,7 @@ bool Controller::timeIndex( float time, const NifModel * nif, const QModelIndex 
 			j = i - 1;
 			float tJ;
 
-			while ( time <= ( tJ = nif->get<float>( QModelIndex_child( array, j ), "Time" ) ) ) {
+			while ( time <= ( tJ = nif->get<float>( nif->getIndex( array, j ), "Time" ) ) ) {
 				i  = j--;
 				tI = tJ;
 			}
@@ -380,8 +379,8 @@ template <typename T> bool interpolate( T & value, const QModelIndex & array, fl
 		float x;
 
 		if ( Controller::timeIndex( time, nif, frames, last, next, x ) ) {
-			T v1 = nif->get<T>( QModelIndex_child( frames, last ), "Value" );
-			T v2 = nif->get<T>( QModelIndex_child( frames, next ), "Value" );
+			T v1 = nif->get<T>( nif->getIndex( frames, last ), "Value" );
+			T v2 = nif->get<T>( nif->getIndex( frames, next ), "Value" );
 
 			switch ( nif->get<int>( array, "Interpolation" ) ) {
 
@@ -395,9 +394,9 @@ template <typename T> bool interpolate( T & value, const QModelIndex & array, fl
 				*/
 
 				// Tangent 1
-				T t1 = nif->get<T>( QModelIndex_child( frames, last ), "Backward" );
+				T t1 = nif->get<T>( nif->getIndex( frames, last ), "Backward" );
 				// Tangent 2
-				T t2 = nif->get<T>( QModelIndex_child( frames, next ), "Forward" );
+				T t2 = nif->get<T>( nif->getIndex( frames, next ), "Forward" );
 
 				float x2 = x * x;
 				float x3 = x2 * x;
@@ -457,7 +456,7 @@ template <> bool Controller::interpolate( bool & value, const QModelIndex & arra
 		QModelIndex frames = nif->getIndex( array, "Keys" );
 
 		if ( timeIndex( time, nif, frames, last, next, x ) ) {
-			value = nif->get<int>( QModelIndex_child( frames, last ), "Value" );
+			value = nif->get<int>( nif->getIndex( frames, last ), "Value" );
 
 			return true;
 		}
@@ -483,7 +482,7 @@ template <> bool Controller::interpolate( Matrix & value, const QModelIndex & ar
 
 					for ( int s = 0; s < 3 && s < nif->rowCount( subkeys ); s++ ) {
 						r[s] = 0;
-						interpolate( r[s], QModelIndex_child( subkeys, s ), time, last );
+						interpolate( r[s], nif->getIndex( subkeys, s ), time, last );
 					}
 
 					value = Matrix::euler( 0, 0, r[2] ) * Matrix::euler( 0, r[1], 0 ) * Matrix::euler( r[0], 0, 0 );
@@ -497,8 +496,8 @@ template <> bool Controller::interpolate( Matrix & value, const QModelIndex & ar
 				QModelIndex frames = nif->getIndex( array, "Quaternion Keys" );
 
 				if ( timeIndex( time, nif, frames, last, next, x ) ) {
-					Quat v1 = nif->get<Quat>( QModelIndex_child( frames, last ), "Value" );
-					Quat v2 = nif->get<Quat>( QModelIndex_child( frames, next ), "Value" );
+					Quat v1 = nif->get<Quat>( nif->getIndex( frames, last ), "Value" );
+					Quat v2 = nif->get<Quat>( nif->getIndex( frames, next ), "Value" );
 
 					if ( Quat::dotproduct( v1, v2 ) < 0 )
 						v1.negate(); // don't take the long path
@@ -554,7 +553,7 @@ struct qarray
 
 	T operator[]( uint index ) const
 	{
-		return nif_->get<T>( QModelIndex_child( array_, index + off_ ) );
+		return nif_->get<T>( nif_->getIndex( array_, index + off_ ) );
 	}
 	const NifModel * nif_;
 	const QModelIndex & array_;

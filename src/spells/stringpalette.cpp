@@ -1,6 +1,5 @@
 #include "stringpalette.h"
 #include "spellbook.h"
-#include "qtcompat.h"
 
 #include <QDialog>
 #include <QLabel>
@@ -406,23 +405,23 @@ public:
 			QPersistentModelIndex blocks = nif->getIndex( nextBlock, "Controlled Blocks" );
 
 			for ( int i = 0; i < nif->rowCount( blocks ); i++ ) {
-				QPersistentModelIndex thisBlock = QModelIndex_child( blocks, i );
+				QPersistentModelIndex thisBlock = nif->getIndex( blocks, i );
 
 				for ( int j = 0; j < nif->rowCount( thisBlock ); j++ ) {
-					if ( nif->getValue( QModelIndex_child( thisBlock, j ) ).type() == NifValue::tStringOffset ) {
+					if ( nif->getValue( nif->getIndex( thisBlock, j ) ).type() == NifValue::tStringOffset ) {
 						// we shouldn't ever exceed the limit of an int, even though the type
 						// is properly a uint
-						int oldValue = nif->get<int>( QModelIndex_child( thisBlock, j ) );
-						qDebug() << "Index " << QModelIndex_child( thisBlock, j )
+						int oldValue = nif->get<int>( nif->getIndex( thisBlock, j ) );
+						qDebug() << "Index " << nif->getIndex( thisBlock, j )
 						           << " is a string offset with name "
-						           << nif->itemName( QModelIndex_child( thisBlock, j ) )
+						           << nif->itemName( nif->getIndex( thisBlock, j ) )
 						           << " and value "
-						           << nif->get<int>( QModelIndex_child( thisBlock, j ) );
+						           << nif->get<int>( nif->getIndex( thisBlock, j ) );
 
 
 						if ( oldValue != -1 ) {
 							int newValue = offsetMap.value( oldValue );
-							nif->set<int>( QModelIndex_child( thisBlock, j ), newValue );
+							nif->set<int>( nif->getIndex( thisBlock, j ), newValue );
 							numRefsUpdated++;
 						}
 					}

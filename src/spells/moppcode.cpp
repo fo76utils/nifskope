@@ -1,5 +1,4 @@
 #include "spellbook.h"
-#include "qtcompat.h"
 
 
 // Brief description is deliberately not autolinked to class Spell
@@ -179,7 +178,7 @@ public:
 			subshapeVerts.resize( nSubShapes );
 
 			for ( int t = 0; t < nSubShapes; t++ ) {
-				subshapeVerts[t] = nif->get<int>( QModelIndex_child( ihkSubShapes, t ), "Num Vertices" );
+				subshapeVerts[t] = nif->get<int>( nif->getIndex( ihkSubShapes, t ), "Num Vertices" );
 			}
 		} else if ( nif->checkVersion( 0x14020007, 0x14020007 ) ) {
 			int nSubShapes = nif->get<int>( ihkPackedNiTriStripsData, "Num Sub Shapes" );
@@ -187,7 +186,7 @@ public:
 			subshapeVerts.resize( nSubShapes );
 
 			for ( int t = 0; t < nSubShapes; t++ ) {
-				subshapeVerts[t] = nif->get<int>( QModelIndex_child( ihkSubShapes, t ), "Num Vertices" );
+				subshapeVerts[t] = nif->get<int>( nif->getIndex( ihkSubShapes, t ), "Num Vertices" );
 			}
 		}
 
@@ -199,7 +198,7 @@ public:
 		triangles.resize( nTriangles );
 
 		for ( int t = 0; t < nTriangles; t++ ) {
-			triangles[t] = nif->get<Triangle>( QModelIndex_child( iTriangles, t ), "Triangle" );
+			triangles[t] = nif->get<Triangle>( nif->getIndex( iTriangles, t ), "Triangle" );
 		}
 
 		if ( verts.isEmpty() || triangles.isEmpty() ) {
@@ -221,7 +220,7 @@ public:
 			nif->set<Vector4>( nif->getIndex( iMoppCode, "Offset" ), Vector4(origin, scale) );
 
 			QModelIndex iCodeSize = nif->getIndex( iMoppCode, "Data Size" );
-			QModelIndex iCode = QModelIndex_child( nif->getIndex( iMoppCode, "Data" ) );
+			QModelIndex iCode = nif->getIndex( nif->getIndex( iMoppCode, "Data" ), 0 );
 
 			if ( iCodeSize.isValid() && iCode.isValid() ) {
 				nif->set<int>( iCodeSize, moppcode.size() );

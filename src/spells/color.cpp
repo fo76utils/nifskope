@@ -1,5 +1,4 @@
 #include "spellbook.h"
-#include "qtcompat.h"
 
 #include "ui/widgets/colorwheel.h"
 
@@ -58,12 +57,12 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
-		return nif->isArray( index ) && nif->getValue( QModelIndex_child( index ) ).isColor();
+		return nif->isArray( index ) && nif->getValue( nif->getIndex( index, 0 ) ).isColor();
 	}
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
 	{
-		QModelIndex colorIdx = (nif->isArray( index )) ? QModelIndex_child( index ) : index;
+		QModelIndex colorIdx = (nif->isArray( index )) ? nif->getIndex( index, 0 ) : index;
 
 		auto typ = nif->getValue( colorIdx ).type();
 		if ( typ == NifValue::tColor3 )

@@ -218,7 +218,6 @@ HEADERS += \
 	src/glview.h \
 	src/message.h \
 	src/nifskope.h \
-	src/qtcompat.h \
 	src/spellbook.h \
 	src/version.h \
 	lib/dds.h \

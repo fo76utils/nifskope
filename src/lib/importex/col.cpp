@@ -34,7 +34,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "gl/gltex.h"
 #include "gl/glscene.h"
 #include "model/nifmodel.h"
-#include "qtcompat.h"
 
 #include "lib/nvtristripwrapper.h"
 
@@ -771,7 +770,7 @@ void attachNiShape ( const NifModel * nif, QDomElement parentNode, int idx )
 			QModelIndex iUV = nif->getIndex( iProp, "UV Sets" );
 
 			for ( int row = 0; row < uvCount; row++ ) {
-				QVector<Vector2> uvMap = nif->getArray<Vector2>( QModelIndex_child( iUV, row ) );
+				QVector<Vector2> uvMap = nif->getArray<Vector2>( nif->getIndex( iUV, row ) );
 				mesh.appendChild( uvMapElement( uvMap, idx, row ) );
 
 				if ( uvMap.size() > 0 )
@@ -846,7 +845,7 @@ void attachNiShape ( const NifModel * nif, QDomElement parentNode, int idx )
 				QVector<QVector<quint16> > strips;
 
 				for ( int r = 0; r < nif->rowCount( iPoints ); r++ )
-					strips.append( nif->getArray<quint16>( QModelIndex_child( iPoints, r ) ) );
+					strips.append( nif->getArray<quint16>( nif->getIndex( iPoints, r ) ) );
 
 				tri = triangulate( strips );
 			} else {

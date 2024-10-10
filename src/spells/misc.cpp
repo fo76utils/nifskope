@@ -1,6 +1,5 @@
 #include "misc.h"
 #include "model/undocommands.h"
-#include "qtcompat.h"
 
 #include <QFileDialog>
 
@@ -227,7 +226,7 @@ public:
 		if ( item->isArray() && item->isBinary() ) {
 			parent = item;
 			iParent = index;
-			idx = QModelIndex_child( index );
+			idx = nif->getIndex( index, 0 );
 		}
 
 		QString filename = QFileDialog::getOpenFileName( qApp->activeWindow(), tr( "Import Binary File" ), "", "*.*" );
@@ -281,7 +280,7 @@ QModelIndex spCollapseArray::numCollapser( NifModel * nif, QModelIndex & iNumEle
 		QVector<qint32> links;
 
 		for ( int r = 0; r < nif->rowCount( iArray ); r++ ) {
-			qint32 l = nif->getLink( QModelIndex_child( iArray, r ) );
+			qint32 l = nif->getLink( nif->getIndex( iArray, r ) );
 
 			if ( l >= 0 )
 				links.append( l );
