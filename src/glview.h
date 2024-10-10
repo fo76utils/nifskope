@@ -247,8 +247,8 @@ private:
 	QString fnDragTex, fnDragTexOrg;
 
 	bool isDisabled = true;
-	bool doCompile;
-	bool doCenter;
+	bool doCompile = false;
+	bool doCenter = false;
 	unsigned char updatePending = 0;
 
 	QTimer * lightVisTimer;

@@ -453,7 +453,9 @@ void GLView::paintGL()
 
 
 	// Compile the model
-	if ( doCompile ) {
+	if ( doCompile ) [[unlikely]] {
+		// avoid potential infinite recursion in case a message box is opened while initializing the scene
+		isDisabled = true;
 		textures->setNifFolder( model->getFolder() );
 		scene->make( model );
 		scene->transform( Transform(), scene->timeMin() );
@@ -471,6 +473,7 @@ void GLView::paintGL()
 			emit sequencesDisabled( true );
 		}
 		emit sceneTimeChanged( time, scene->timeMin(), scene->timeMax() );
+		isDisabled = false;
 		doCompile = false;
 	}
 
