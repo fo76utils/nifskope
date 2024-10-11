@@ -23,7 +23,7 @@ The resource manager in this version of NifSkope is optimized for PCs with solid
 Compiling NifSkope requires Qt 6.2 or newer. On Windows, [MSYS2](https://www.msys2.org/) can be used for building. After running the MSYS2 installer, use the following commands in the MSYS2-UCRT64 shell to install required packages:
 
     pacman -S base-devel mingw-w64-ucrt-x86_64-gcc
-    pacman -S mingw-w64-ucrt-x86_64-qt6-base mingw-w64-ucrt-x86_64-qt6-3d mingw-w64-ucrt-x86_64-qt6-5compat
+    pacman -S mingw-w64-ucrt-x86_64-qt6-base mingw-w64-ucrt-x86_64-qt6-5compat
     pacman -S mingw-w64-ucrt-x86_64-qt6-imageformats mingw-w64-ucrt-x86_64-qt6-tools
     pacman -S git
 

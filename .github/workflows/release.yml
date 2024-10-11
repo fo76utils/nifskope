@@ -23,7 +23,7 @@ jobs:
         msystem: UCRT64
         update: true
         cache: true
-        install: 'base-devel mingw-w64-ucrt-x86_64-gcc msys/p7zip mingw-w64-ucrt-x86_64-qt6-base mingw-w64-ucrt-x86_64-qt6-3d mingw-w64-ucrt-x86_64-qt6-5compat mingw-w64-ucrt-x86_64-qt6-imageformats mingw-w64-ucrt-x86_64-qt6-tools'
+        install: 'base-devel mingw-w64-ucrt-x86_64-gcc msys/p7zip mingw-w64-ucrt-x86_64-qt6-base mingw-w64-ucrt-x86_64-qt6-5compat mingw-w64-ucrt-x86_64-qt6-imageformats mingw-w64-ucrt-x86_64-qt6-tools'
 
     - name: 'Build with qmake'
       shell: msys2 {0}
@@ -63,7 +63,7 @@ jobs:
     - name: 'Install required packages'
       run: |
         sudo apt-get update
-        sudo apt-get -y install libsdl2-dev qt6-base-dev qt6-base-private-dev qt6-base-dev-tools qt6-5compat-dev qt6-3d-dev qmake6 qt6-image-formats-plugins 7zip
+        sudo apt-get -y install libsdl2-dev qt6-base-dev qt6-base-private-dev qt6-base-dev-tools qt6-5compat-dev qmake6 qt6-image-formats-plugins 7zip
 
     - name: 'Build with qmake'
       run: |
@@ -102,7 +102,7 @@ jobs:
     - name: 'Install required packages'
       uses: jurplel/install-qt-action@v4
       with:
-        version: '6.7.2'
+        version: '6.7.3'
         modules: 'qt5compat'
 
     - name: 'Install clang'
@@ -145,7 +145,7 @@ jobs:
         msystem: CLANG64
         update: true
         cache: true
-        install: 'base-devel mingw-w64-clang-x86_64-gcc msys/p7zip mingw-w64-clang-x86_64-qt6-base mingw-w64-clang-x86_64-qt6-3d mingw-w64-clang-x86_64-qt6-5compat mingw-w64-clang-x86_64-qt6-imageformats mingw-w64-clang-x86_64-qt6-tools'
+        install: 'base-devel mingw-w64-clang-x86_64-gcc msys/p7zip mingw-w64-clang-x86_64-qt6-base mingw-w64-clang-x86_64-qt6-5compat mingw-w64-clang-x86_64-qt6-imageformats mingw-w64-clang-x86_64-qt6-tools'
 
     - name: 'Build with qmake'
       shell: msys2 {0}
