@@ -2065,8 +2065,8 @@
 
     <struct name="TexCoord" size="8" module="NiMain">
         Texture coordinates (u,v). As in OpenGL; image origin is in the lower left corner.
-        <field name="u" type="float" range="#FPM_100#">First coordinate.</field>
-        <field name="v" type="float" range="#FPM_100#">Second coordinate.</field>
+        <field name="u" type="float" range="#FPM_1000#">First coordinate.</field>
+        <field name="v" type="float" range="#FPM_1000#">Second coordinate.</field>
     </struct>
 
     <struct name="HalfTexCoord" size="4" module="NiMain">
@@ -2116,12 +2116,6 @@
         <field name="v1" type="ushort">First vertex index.</field>
         <field name="v2" type="ushort">Second vertex index.</field>
         <field name="v3" type="ushort">Third vertex index.</field>
-    </struct>
-
-    <struct name="Vector3S16" size="6" module="NiMain" versions="#STF#">
-        <field name="X" type="short" />
-        <field name="Y" type="short" />
-        <field name="Z" type="short" />
     </struct>
 
     <bitflags name="VertexAttribute" storage="ushort" prefix="VF" versions="#SSE# #FO4# #F76#">
@@ -6654,10 +6648,8 @@
 
     <struct name="BSUVStream" abstract="true" module="BSMain" versions="#STF#">
         <field name="Name" type="SizedString" />
-        <field name="U Scale" type="float" default="1.0" />
-        <field name="V Scale" type="float" default="1.0" />
-        <field name="U Offset" type="float" />
-        <field name="V Offset" type="float" />
+        <field name="Scale" type="TexCoord" default="#VEC2_ONE#" />
+        <field name="Offset" type="TexCoord" />
         <field name="Texture Address Mode" type="BSTextureAddressMode" />
         <field name="Channel" type="BSUVStreamChannel" default="One" />
     </struct>
@@ -6924,21 +6916,13 @@
         <field name="Water Edge Normal Falloff" type="float" />
         <field name="Water Depth Blur" type="float" />
         <field name="Water Refraction Magnitude" type="float" />
-        <field name="Phytoplankton Reflectance Color R" type="float" />
-        <field name="Phytoplankton Reflectance Color G" type="float" />
-        <field name="Phytoplankton Reflectance Color B" type="float" />
-        <field name="Sediment Reflectance Color R" type="float" />
-        <field name="Sediment Reflectance Color G" type="float" />
-        <field name="Sediment Reflectance Color B" type="float" />
-        <field name="Yellow Matter Reflectance Color R" type="float" />
-        <field name="Yellow Matter Reflectance Color G" type="float" />
-        <field name="Yellow Matter Reflectance Color B" type="float" />
+        <field name="Phytoplankton Reflectance Color" type="Vector3" />
+        <field name="Sediment Reflectance Color" type="Vector3" />
+        <field name="Yellow Matter Reflectance Color" type="Vector3" />
         <field name="Max Concentration Plankton" type="float" />
         <field name="Max Concentration Sediment" type="float" />
         <field name="Max Concentration Yellow Matter" type="float" />
-        <field name="Reflectance R" type="float" />
-        <field name="Reflectance G" type="float" />
-        <field name="Reflectance B" type="float" />
+        <field name="Reflectance Color" type="Vector3" />
         <field name="Low LOD" type="bool" />
         <field name="Placed Water" type="bool" />
     </struct>
@@ -7002,6 +6986,43 @@
         <field name="Transmittance Source Layer" type="BSLayerIndex" />
     </struct>
 
+    <struct name="BSHairSettingsComponent" abstract="true" module="BSMain" versions="#STF#">
+        <field name="Is Spiky Hair" type="bool" />
+        <field name="Spec Scale" type="float" />
+        <field name="Specular Transmission Scale" type="float" />
+        <field name="Direct Transmission Scale" type="float" />
+        <field name="Diffuse Transmission Scale" type="float" />
+        <field name="Roughness" type="float" />
+        <field name="Contact Shadow Softening" type="float" />
+        <field name="Backscatter Strength" type="float" />
+        <field name="Backscatter Wrap" type="float" />
+        <field name="Variation Strength" type="float" />
+        <field name="Indirect Specular Scale" type="float" />
+        <field name="Indirect Specular Transmission Scale" type="float" />
+        <field name="Indirect Spec Roughness" type="float" />
+        <field name="Edge Mask Contrast" type="float" />
+        <field name="Edge Mask Min" type="float" />
+        <field name="Edge Mask Distance Min" type="float" />
+        <field name="Edge Mask Distance Max" type="float" />
+        <field name="Max Depth Offset" type="float" />
+        <field name="Dither Scale" type="float" />
+        <field name="Dither Distance Min" type="float" />
+        <field name="Dither Distance Max" type="float" />
+        <field name="Tangent" type="Vector3" />
+        <field name="Tangent Bend" type="float" />
+        <field name="Depth Offset Mask Vertex Color Channel" type="BSColorChannel" />
+        <field name="AO Vertex Color Channel" type="BSColorChannel" />
+    </struct>
+
+    <struct name="BSVegetationSettingsComponent" abstract="true" module="BSMain" versions="#STF#">
+        <field name="Leaf Frequency" type="float" />
+        <field name="Leaf Amplitude" type="float" />
+        <field name="Branch Flexibility" type="float" />
+        <field name="Trunk Flexibility" type="float" />
+        <field name="Terrain Blend Strength (Deprecated)" type="float" />
+        <field name="Terrain Blend Gradient Factor (Deprecated)" type="float" />
+    </struct>
+
     <enum name="BSShaderRoute" storage="byte" versions="#STF#">
         <option name="Deferred" value="0" />
         <option name="Effect" value="1" />
@@ -7060,6 +7081,10 @@
         <field name="Layered Emissivity Settings" type="BSLayeredEmissivityComponent" cond="Layered Emissivity" />
         <field name="Is Translucent" type="bool" />
         <field name="Translucency Settings" type="BSTranslucencySettingsComponent" cond="Is Translucent" />
+        <field name="Is Hair" type="bool" />
+        <field name="Hair Settings" type="BSHairSettingsComponent" cond="Is Hair" />
+        <field name="Is Vegetation" type="bool" />
+        <field name="Vegetation Settings" type="BSVegetationSettingsComponent" cond="Is Vegetation" />
         <field name="Is Modified" type="bool" />
     </struct>
 

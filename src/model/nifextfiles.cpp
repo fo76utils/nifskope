@@ -49,101 +49,88 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 void NifModel::loadSFBlender( NifItem * parent, const void * o )
 {
-	const char *	name = "";
-	const char *	maskTexture = "";
-	bool	maskTextureReplacementEnabled = false;
-	std::uint32_t	maskTextureReplacement = 0xFFFFFFFFU;
-	const CE2Material::UVStream *	maskUVStream = nullptr;
-	unsigned char	blendMode = 0;
-	unsigned char	vertexColorChannel = 0;
+	if ( !parent )
+		return;
+	if ( !o )
+		o = &CE2Material::defaultBlender;
+
+	const CE2Material::Blender *	blender = reinterpret_cast< const CE2Material::Blender * >(o);
+	const char *	name = blender->name;
+	const char *	maskTexture = blender->texturePath->data();
+	bool	maskTextureReplacementEnabled = blender->textureReplacementEnabled;
+	std::uint32_t	maskTextureReplacement = blender->textureReplacement;
+	const CE2Material::UVStream *	maskUVStream = blender->uvStream;
+	unsigned char	blendMode = blender->blendMode;
+	unsigned char	vertexColorChannel = blender->colorChannel;
 	float	floatParams[5];
-	bool	boolParams[8];
 	for ( int i = 0; i < 5; i++ )
-		floatParams[i] = 0.5f;
+		floatParams[i] = blender->floatParams[i];
+	bool	boolParams[8];
 	for ( int i = 0; i < 8; i++ )
-		boolParams[i] = false;
-	if ( o ) {
-		const CE2Material::Blender *	blender = reinterpret_cast< const CE2Material::Blender * >(o);
-		name = blender->name;
-		maskTexture = blender->texturePath->data();
-		maskTextureReplacementEnabled = blender->textureReplacementEnabled;
-		maskTextureReplacement = blender->textureReplacement;
-		maskUVStream = blender->uvStream;
-		blendMode = blender->blendMode;
-		vertexColorChannel = blender->colorChannel;
-		for ( int i = 0; i < 5; i++ )
-			floatParams[i] = blender->floatParams[i];
-		for ( int i = 0; i < 8; i++ )
-			boolParams[i] = blender->boolParams[i];
-	}
-	if ( parent ) {
-		setValue<QString>( parent, "Name", name );
-		loadSFUVStream( getItem( parent, "UV Stream" ), maskUVStream );
-		loadSFTextureWithReplacement( getItem( parent, "Mask Texture" ), maskTexture, maskTextureReplacementEnabled, maskTextureReplacement );
-		setValue<quint8>( parent, "Blend Mode", blendMode );
-		setValue<quint8>( parent, "Vertex Color Channel", vertexColorChannel );
-		setValue<float>( parent, "Height Blend Threshold", floatParams[0] );
-		setValue<float>( parent, "Height Blend Factor", floatParams[1] );
-		setValue<float>( parent, "Position", floatParams[2] );
-		setValue<float>( parent, "Contrast", 1.0f - floatParams[3] );
-		setValue<float>( parent, "Mask Intensity", floatParams[4] );
-		setValue<bool>( parent, "Blend Color", boolParams[0] );
-		setValue<bool>( parent, "Blend Metalness", boolParams[1] );
-		setValue<bool>( parent, "Blend Roughness", boolParams[2] );
-		setValue<bool>( parent, "Blend Normals", boolParams[3] );
-		setValue<bool>( parent, "Blend Normals Additively", boolParams[4] );
-		setValue<bool>( parent, "Use Vertex Color", boolParams[5] );
-		setValue<bool>( parent, "Blend Ambient Occlusion", boolParams[6] );
-		setValue<bool>( parent, "Use Detail Blend Mask", boolParams[7] );
-	}
+		boolParams[i] = blender->boolParams[i];
+
+	setValue<QString>( parent, "Name", name );
+	loadSFUVStream( getItem( parent, "UV Stream" ), maskUVStream );
+	loadSFTextureWithReplacement( getItem( parent, "Mask Texture" ), maskTexture, maskTextureReplacementEnabled, maskTextureReplacement );
+	setValue<quint8>( parent, "Blend Mode", blendMode );
+	setValue<quint8>( parent, "Vertex Color Channel", vertexColorChannel );
+	setValue<float>( parent, "Height Blend Threshold", floatParams[0] );
+	setValue<float>( parent, "Height Blend Factor", floatParams[1] );
+	setValue<float>( parent, "Position", floatParams[2] );
+	setValue<float>( parent, "Contrast", 1.0f - floatParams[3] );
+	setValue<float>( parent, "Mask Intensity", floatParams[4] );
+	setValue<bool>( parent, "Blend Color", boolParams[0] );
+	setValue<bool>( parent, "Blend Metalness", boolParams[1] );
+	setValue<bool>( parent, "Blend Roughness", boolParams[2] );
+	setValue<bool>( parent, "Blend Normals", boolParams[3] );
+	setValue<bool>( parent, "Blend Normals Additively", boolParams[4] );
+	setValue<bool>( parent, "Use Vertex Color", boolParams[5] );
+	setValue<bool>( parent, "Blend Ambient Occlusion", boolParams[6] );
+	setValue<bool>( parent, "Use Detail Blend Mask", boolParams[7] );
 }
 
 void NifModel::loadSFLayer( NifItem * parent, const void * o )
 {
-	const char *	name = "";
-	const CE2Material::UVStream *	uvStream = nullptr;
-	const CE2Material::Material *	material = nullptr;
-	if ( o ) {
-		const CE2Material::Layer *	layer = reinterpret_cast< const CE2Material::Layer * >(o);
-		name = layer->name;
-		uvStream = layer->uvStream;
-		material = layer->material;
-	}
-	if ( parent ) {
-		setValue<QString>( parent, "Name", name );
-		loadSFUVStream( getItem( parent, QString("UV Stream") ), uvStream );
-		loadSFMaterial( getItem( parent, QString("Material") ), material );
-	}
+	if ( !parent )
+		return;
+	if ( !o )
+		o = &CE2Material::defaultLayer;
+
+	const CE2Material::Layer *	layer = reinterpret_cast< const CE2Material::Layer * >(o);
+	const char *	name = layer->name;
+	const CE2Material::UVStream *	uvStream = layer->uvStream;
+	const CE2Material::Material *	material = layer->material;
+
+	setValue<QString>( parent, "Name", name );
+	loadSFUVStream( getItem( parent, "UV Stream" ), uvStream );
+	loadSFMaterial( getItem( parent, "Material" ), material );
 }
 
 void NifModel::loadSFMaterial( NifItem * parent, const void * o )
 {
-	const char *	name = "";
-	FloatVector4	color(1.0f);
-	unsigned char	colorMode = 0;
-	bool	isFlipbook = false;
-	const CE2Material::TextureSet *	textureSet = nullptr;
-	const CE2Material::Material * material = reinterpret_cast< const CE2Material::Material * >(o);
-	if ( o ) {
-		name = material->name;
-		color = material->color;
-		colorMode = material->colorModeFlags;
-		isFlipbook = bool(material->flipbookFlags & 1);
-		textureSet = material->textureSet;
+	if ( !parent )
+		return;
+	if ( !o )
+		o = &CE2Material::defaultMaterial;
+
+	const CE2Material::Material *	material = reinterpret_cast< const CE2Material::Material * >(o);
+	const char *	name = material->name;
+	FloatVector4	color = material->color;
+	unsigned char	colorMode = material->colorModeFlags;
+	bool	isFlipbook = bool(material->flipbookFlags & 1);
+	const CE2Material::TextureSet *	textureSet = material->textureSet;
+
+	setValue<QString>( parent, "Name", name );
+	setValue<Color4>( parent, "Color", Color4(color[0], color[1], color[2], color[3]) );
+	setValue<quint8>( parent, "Color Override Mode", colorMode );
+	setValue<bool>( parent, "Is Flipbook", isFlipbook );
+	if ( isFlipbook ) {
+		setValue<quint8>( parent, "Flipbook Columns", material->flipbookColumns );
+		setValue<quint8>( parent, "Flipbook Rows", material->flipbookRows );
+		setValue<float>( parent, "Flipbook FPS", material->flipbookFPS );
+		setValue<bool>( parent, "Flipbook Loops", bool(material->flipbookFlags & 2) );
 	}
-	if ( parent ) {
-		setValue<QString>( parent, "Name", name );
-		setValue<Color4>( parent, "Color", Color4(color[0], color[1], color[2], color[3]) );
-		setValue<quint8>( parent, "Color Override Mode", colorMode );
-		setValue<bool>( parent, "Is Flipbook", isFlipbook );
-		if ( isFlipbook ) {
-			setValue<quint8>( parent, "Flipbook Columns", material->flipbookColumns );
-			setValue<quint8>( parent, "Flipbook Rows", material->flipbookRows );
-			setValue<float>( parent, "Flipbook FPS", material->flipbookFPS );
-			setValue<bool>( parent, "Flipbook Loops", bool(material->flipbookFlags & 2) );
-		}
-		loadSFTextureSet( getItem( parent, QString("Texture Set") ), textureSet );
-	}
+	loadSFTextureSet( getItem( parent, "Texture Set" ), textureSet );
 }
 
 void NifModel::loadSFTextureWithReplacement( NifItem * parent, const char * texturePath, bool replacementEnabled, std::uint32_t replacementColor )
@@ -163,21 +150,17 @@ void NifModel::loadSFTextureSet( NifItem * parent, const void * o )
 {
 	if ( !parent )
 		return;
-	const char *	name = "";
-	float	floatParam = 1.0f;
-	unsigned char	resolutionHint = 0;
-	bool			disableMipBiasHint = false;
-	std::uint32_t	texturePathMask = 0;
-	std::uint32_t	textureReplacementMask = 0;
+	if ( !o )
+		o = &CE2Material::defaultTextureSet;
+
 	const CE2Material::TextureSet *	textureSet = reinterpret_cast< const CE2Material::TextureSet * >(o);
-	if ( o ) {
-		name = textureSet->name;
-		floatParam = textureSet->floatParam;
-		resolutionHint = textureSet->resolutionHint;
-		disableMipBiasHint = textureSet->disableMipBiasHint;
-		texturePathMask = textureSet->texturePathMask;
-		textureReplacementMask = textureSet->textureReplacementMask;
-	}
+	const char *	name = textureSet->name;
+	float	floatParam = textureSet->floatParam;
+	unsigned char	resolutionHint = textureSet->resolutionHint;
+	bool			disableMipBiasHint = textureSet->disableMipBiasHint;
+	std::uint32_t	texturePathMask = textureSet->texturePathMask;
+	std::uint32_t	textureReplacementMask = textureSet->textureReplacementMask;
+
 	std::uint32_t	textureEnableMask = texturePathMask | textureReplacementMask;
 	setValue<QString>( parent, "Name", name );
 	setValue<float>( parent, "Normal Intensity", floatParam );
@@ -201,30 +184,29 @@ void NifModel::loadSFTextureSet( NifItem * parent, const void * o )
 
 void NifModel::loadSFUVStream( NifItem * parent, const void * o )
 {
-	const char *	name = "";
-	FloatVector4	scaleAndOffset( 1.0f, 1.0f, 0.0f, 0.0f );
-	unsigned char	textureAddressMode = 0;
-	unsigned char	channel = 1;
-	if ( o ) {
-		const CE2Material::UVStream *	uvStream = reinterpret_cast< const CE2Material::UVStream * >(o);
-		name = uvStream->name;
-		scaleAndOffset = uvStream->scaleAndOffset;
-		textureAddressMode = uvStream->textureAddressMode;
-		channel = uvStream->channel;
-	}
-	if ( parent ) {
-		setValue<QString>( parent, "Name", name );
-		setValue<float>( parent, "U Scale", scaleAndOffset[0] );
-		setValue<float>( parent, "V Scale", scaleAndOffset[1] );
-		setValue<float>( parent, "U Offset", scaleAndOffset[2] );
-		setValue<float>( parent, "V Offset", scaleAndOffset[3] );
-		setValue<quint8>( parent, "Texture Address Mode", textureAddressMode );
-		setValue<quint8>( parent, "Channel", channel );
-	}
+	if ( !parent )
+		return;
+	if ( !o )
+		o = &CE2Material::defaultUVStream;
+
+	const CE2Material::UVStream *	uvStream = reinterpret_cast< const CE2Material::UVStream * >(o);
+	const char *	name = uvStream->name;
+	FloatVector4	scaleAndOffset = uvStream->scaleAndOffset;
+	unsigned char	textureAddressMode = uvStream->textureAddressMode;
+	unsigned char	channel = uvStream->channel;
+
+	setValue<QString>( parent, "Name", name );
+	setValue<Vector2>( parent, "Scale", Vector2( scaleAndOffset[0], scaleAndOffset[1] ) );
+	setValue<Vector2>( parent, "Offset", Vector2( scaleAndOffset[2], scaleAndOffset[3] ) );
+	setValue<quint8>( parent, "Texture Address Mode", textureAddressMode );
+	setValue<quint8>( parent, "Channel", channel );
 }
 
-void NifModel::loadSFMaterial( const QModelIndex & parent, const void *matPtr, int lodLevel )
+void NifModel::loadSFMaterial( const QModelIndex & parent, const void * matPtr, int lodLevel )
 {
+	if ( !matPtr )
+		matPtr = &CE2Material::defaultLayeredMaterial;
+
 	NifItem *	p = getItem( parent, false );
 	if ( !p )
 		return;
@@ -258,7 +240,7 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, const void *matPtr, i
 
 	const CE2Material *	material = reinterpret_cast< const CE2Material * >( matPtr );
 
-	if ( lodLevel > 0 && material ) {
+	if ( lodLevel > 0 ) {
 		for ( int i = lodLevel - 1; i >= 0; i-- ) {
 			if ( i <= 2 && material->lodMaterials[i] ) {
 				material = material->lodMaterials[i];
@@ -267,20 +249,18 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, const void *matPtr, i
 		}
 	}
 
-	setValue<QString>( m, "Name", ( material ? material->name : "" ) );
+	setValue<QString>( m, "Name", material->name );
 	setValue<bool>( m, "Is Modified", false );
 	{
 		std::uint32_t	layerMask = 0;
 		std::uint32_t	blenderMask = 0;
-		if ( material ) {
-			for ( int l = 0; l < CE2Material::maxLayers; l++ ) {
-				if ( ( material->layerMask & ( 1U << l ) ) && material->layers[l] )
-					layerMask |= std::uint32_t( 1U << l );
-			}
-			for ( int l = 0; l < CE2Material::maxBlenders; l++ ) {
-				if ( material->blenders[l] )
-					blenderMask |= std::uint32_t( 1U << l );
-			}
+		for ( int l = 0; l < CE2Material::maxLayers; l++ ) {
+			if ( ( material->layerMask & ( 1U << l ) ) && material->layers[l] )
+				layerMask |= std::uint32_t( 1U << l );
+		}
+		for ( int l = 0; l < CE2Material::maxBlenders; l++ ) {
+			if ( material->blenders[l] )
+				blenderMask |= std::uint32_t( 1U << l );
 		}
 		setValue<quint32>( m, "Layer Enable Mask", layerMask );
 		for ( int l = 0; layerMask; l++, layerMask = layerMask >> 1 ) {
@@ -293,12 +273,12 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, const void *matPtr, i
 				loadSFBlender( getItem( m, QString("Blender %1").arg(l + 1) ), material->blenders[l] );
 		}
 	}
-	setValue<QString>( m, "Shader Model", QString( material ? CE2Material::shaderModelNames[material->shaderModel] : "BaseMaterial" ) );
-	setValue<quint8>( m, "Shader Route", ( material ? material->shaderRoute : 0 ) );
-	setValue<bool>( m, "Two Sided", ( material ? bool(material->flags & CE2Material::Flag_TwoSided) : false ) );
-	setValue<quint8>( m, "Physics Material Type", ( material ? material->physicsMaterialType : 0 ) );
+	setValue<QString>( m, "Shader Model", QString( CE2Material::shaderModelNames[material->shaderModel] ) );
+	setValue<quint8>( m, "Shader Route", material->shaderRoute );
+	setValue<bool>( m, "Two Sided", bool( material->flags & CE2Material::Flag_TwoSided ) );
+	setValue<quint8>( m, "Physics Material Type", material->physicsMaterialType );
 	NifItem *	o;
-	if ( material && material->shaderRoute == 1 ) {	// effect material
+	if ( material->shaderRoute == 1 ) {	// effect material
 		bool	hasOpacityComponent = bool( material->flags & CE2Material::Flag_HasOpacityComponent );
 		setValue<bool>( m, "Has Opacity Component", hasOpacityComponent );
 		if ( hasOpacityComponent && ( o = getItem( m, "Opacity Settings" ) ) != nullptr ) {
@@ -314,9 +294,7 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, const void *matPtr, i
 			setValue<float>( o, "Specular Opacity Override", material->specularOpacityOverride );
 		}
 	} else {
-		bool	hasOpacity = false;
-		if ( material )
-			hasOpacity = bool( material->flags & CE2Material::Flag_HasOpacity );
+		bool	hasOpacity = bool( material->flags & CE2Material::Flag_HasOpacity );
 		setValue<bool>( m, "Has Opacity", hasOpacity );
 		if ( hasOpacity && ( o = getItem( m, "Alpha Settings" ) ) != nullptr ) {
 			setValue<float>( o, "Alpha Test Threshold", material->alphaThreshold );
@@ -334,18 +312,14 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, const void *matPtr, i
 			setValue<bool>( o, "Use Dithered Transparency", bool(material->flags & CE2Material::Flag_DitheredTransparency) );
 		}
 	}
-	bool	useDetailBlendMask = false;
-	if ( material )
-		useDetailBlendMask = bool( material->flags & CE2Material::Flag_UseDetailBlender );
+	bool	useDetailBlendMask = bool( material->flags & CE2Material::Flag_UseDetailBlender );
 	setValue<bool>( m, "Detail Blend Mask Supported", useDetailBlendMask );
 	if ( useDetailBlendMask && ( o = getItem( m, "Detail Blender Settings" ) ) != nullptr ) {
 		const CE2Material::DetailBlenderSettings *	sp = material->detailBlenderSettings;
 		loadSFTextureWithReplacement( getItem( o, "Texture" ), sp->texturePath->data(), sp->textureReplacementEnabled, sp->textureReplacement );
 		loadSFUVStream( getItem( o, "UV Stream" ), sp->uvStream );
 	}
-	bool	isEffect = false;
-	if ( material )
-		isEffect = bool( material->flags & CE2Material::Flag_IsEffect );
+	bool	isEffect = bool( material->flags & CE2Material::Flag_IsEffect );
 	setValue<bool>( m, "Is Effect", isEffect );
 	if ( isEffect && ( o = getItem( m, "Effect Settings" ) ) != nullptr ) {
 		const CE2Material::EffectSettings *	sp = material->effectSettings;
@@ -396,7 +370,7 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, const void *matPtr, i
 	}
 	bool	layeredEdgeFalloff = false;
 	if ( isEffect ) {
-		layeredEdgeFalloff = ( material && material->layeredEdgeFalloff );
+		layeredEdgeFalloff = bool( material->layeredEdgeFalloff );
 		setValue<bool>( m, "Use Layered Edge Falloff", layeredEdgeFalloff );
 	}
 	if ( layeredEdgeFalloff && ( o = getItem( m, "Layered Edge Falloff" ) ) != nullptr ) {
@@ -408,9 +382,7 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, const void *matPtr, i
 		setValue<quint8>( o, "Active Layers Mask", sp->activeLayersMask );
 		setValue<bool>( o, "Use RGB Falloff", sp->useRGBFalloff );
 	}
-	bool	isDecal = false;
-	if ( material )
-		isDecal = bool( material->flags & CE2Material::Flag_IsDecal );
+	bool	isDecal = bool( material->flags & CE2Material::Flag_IsDecal );
 	setValue<bool>( m, "Is Decal", isDecal );
 	if ( isDecal && ( o = getItem( m, "Decal Settings" ) ) != nullptr ) {
 		const CE2Material::DecalSettings *	sp = material->decalSettings;
@@ -430,9 +402,7 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, const void *matPtr, i
 		setValue<quint8>( o, "Blend Mode", sp->blendMode );
 		setValue<bool>( o, "Animated Decal Ignores TAA", sp->animatedDecalIgnoresTAA );
 	}
-	bool	isWater = false;
-	if ( material )
-		isWater = bool( material->flags & CE2Material::Flag_IsWater );
+	bool	isWater = bool( material->flags & CE2Material::Flag_IsWater );
 	setValue<bool>( m, "Is Water", isWater );
 	if ( isWater && ( o = getItem( m, "Water Settings" ) ) != nullptr ) {
 		const CE2Material::WaterSettings *	sp = material->waterSettings;
@@ -441,27 +411,17 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, const void *matPtr, i
 		setValue<float>( o, "Water Edge Normal Falloff", sp->waterEdgeNormalFalloff );
 		setValue<float>( o, "Water Depth Blur", sp->waterDepthBlur );
 		setValue<float>( o, "Water Refraction Magnitude", sp->reflectance[3] );
-		setValue<float>( o, "Phytoplankton Reflectance Color R", sp->phytoplanktonReflectance[0] );
-		setValue<float>( o, "Phytoplankton Reflectance Color G", sp->phytoplanktonReflectance[1] );
-		setValue<float>( o, "Phytoplankton Reflectance Color B", sp->phytoplanktonReflectance[2] );
-		setValue<float>( o, "Sediment Reflectance Color R", sp->sedimentReflectance[0] );
-		setValue<float>( o, "Sediment Reflectance Color G", sp->sedimentReflectance[1] );
-		setValue<float>( o, "Sediment Reflectance Color B", sp->sedimentReflectance[2] );
-		setValue<float>( o, "Yellow Matter Reflectance Color R", sp->yellowMatterReflectance[0] );
-		setValue<float>( o, "Yellow Matter Reflectance Color G", sp->yellowMatterReflectance[1] );
-		setValue<float>( o, "Yellow Matter Reflectance Color B", sp->yellowMatterReflectance[2] );
+		setValue<Vector3>( o, "Phytoplankton Reflectance Color", Vector3( sp->phytoplanktonReflectance ) );
+		setValue<Vector3>( o, "Sediment Reflectance Color", Vector3( sp->sedimentReflectance ) );
+		setValue<Vector3>( o, "Yellow Matter Reflectance Color", Vector3( sp->yellowMatterReflectance ) );
 		setValue<float>( o, "Max Concentration Plankton", sp->phytoplanktonReflectance[3] );
 		setValue<float>( o, "Max Concentration Sediment", sp->sedimentReflectance[3] );
 		setValue<float>( o, "Max Concentration Yellow Matter", sp->yellowMatterReflectance[3] );
-		setValue<float>( o, "Reflectance R", sp->reflectance[0] );
-		setValue<float>( o, "Reflectance G", sp->reflectance[1] );
-		setValue<float>( o, "Reflectance B", sp->reflectance[2] );
+		setValue<Vector3>( o, "Reflectance Color", Vector3( sp->reflectance ) );
 		setValue<bool>( o, "Low LOD", sp->lowLOD );
 		setValue<bool>( o, "Placed Water", sp->placedWater );
 	}
-	bool	isEmissive = false;
-	if ( material )
-		isEmissive = bool( material->flags & CE2Material::Flag_Emissive );
+	bool	isEmissive = bool( material->flags & CE2Material::Flag_Emissive );
 	setValue<bool>( m, "Is Emissive", isEmissive );
 	if ( isEmissive && ( o = getItem( m, "Emissive Settings" ) ) != nullptr ) {
 		const CE2Material::EmissiveSettings *	sp = material->emissiveSettings;
@@ -476,9 +436,7 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, const void *matPtr, i
 		setValue<float>( o, "Max Offset Emittance", sp->maxOffset );
 		setValue<float>( o, "Min Offset Emittance", sp->minOffset );
 	}
-	bool	layeredEmissivity = false;
-	if ( material )
-		layeredEmissivity = bool( material->flags & CE2Material::Flag_LayeredEmissivity );
+	bool	layeredEmissivity = bool( material->flags & CE2Material::Flag_LayeredEmissivity );
 	setValue<bool>( m, "Layered Emissivity", layeredEmissivity );
 	if ( layeredEmissivity && ( o = getItem( m, "Layered Emissivity Settings" ) ) != nullptr ) {
 		const CE2Material::LayeredEmissiveSettings *	sp = material->layeredEmissiveSettings;
@@ -510,9 +468,7 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, const void *matPtr, i
 		setValue<float>( o, "Min Offset Emittance", sp->minOffset );
 		setValue<bool>( o, "Ignores Fog", sp->ignoresFog );
 	}
-	bool	isTranslucent = false;
-	if ( material )
-		isTranslucent = bool( material->flags & CE2Material::Flag_Translucency );
+	bool	isTranslucent = bool( material->flags & CE2Material::Flag_Translucency );
 	setValue<bool>( m, "Is Translucent", isTranslucent );
 	if ( isTranslucent && ( o = getItem( m, "Translucency Settings" ) ) != nullptr ) {
 		const CE2Material::TranslucencySettings *	sp = material->translucencySettings;
@@ -528,6 +484,51 @@ void NifModel::loadSFMaterial( const QModelIndex & parent, const void *matPtr, i
 		setValue<float>( o, "Spec Lobe 0 Roughness Scale", sp->specLobe0RoughnessScale );
 		setValue<float>( o, "Spec Lobe 1 Roughness Scale", sp->specLobe1RoughnessScale );
 		setValue<quint8>( o, "Transmittance Source Layer", sp->sourceLayer );
+	}
+	bool	isHair = false;
+	if ( ( material->flags & CE2Material::Flag_IsHair ) && material->hairSettings )
+		isHair = material->hairSettings->isEnabled;
+	setValue<bool>( m, "Is Hair", isHair );
+	if ( isHair && ( o = getItem( m, "Hair Settings" ) ) != nullptr ) {
+		const CE2Material::HairSettings *	sp = material->hairSettings;
+		setValue<bool>( o, "Is Spiky Hair", sp->isSpikyHair );
+		setValue<float>( o, "Spec Scale", sp->specScale );
+		setValue<float>( o, "Specular Transmission Scale", sp->specularTransmissionScale );
+		setValue<float>( o, "Direct Transmission Scale", sp->directTransmissionScale );
+		setValue<float>( o, "Diffuse Transmission Scale", sp->diffuseTransmissionScale );
+		setValue<float>( o, "Roughness", sp->roughness );
+		setValue<float>( o, "Contact Shadow Softening", sp->contactShadowSoftening );
+		setValue<float>( o, "Backscatter Strength", sp->backscatterStrength );
+		setValue<float>( o, "Backscatter Wrap", sp->backscatterWrap );
+		setValue<float>( o, "Variation Strength", sp->variationStrength );
+		setValue<float>( o, "Indirect Specular Scale", sp->indirectSpecularScale );
+		setValue<float>( o, "Indirect Specular Transmission Scale", sp->indirectSpecularTransmissionScale );
+		setValue<float>( o, "Indirect Spec Roughness", sp->indirectSpecRoughness );
+		setValue<float>( o, "Edge Mask Contrast", sp->edgeMaskContrast );
+		setValue<float>( o, "Edge Mask Min", sp->edgeMaskMin );
+		setValue<float>( o, "Edge Mask Distance Min", sp->edgeMaskDistanceMin );
+		setValue<float>( o, "Edge Mask Distance Max", sp->edgeMaskDistanceMax );
+		setValue<float>( o, "Max Depth Offset", sp->maxDepthOffset );
+		setValue<float>( o, "Dither Scale", sp->ditherScale );
+		setValue<float>( o, "Dither Distance Min", sp->ditherDistanceMin );
+		setValue<float>( o, "Dither Distance Max", sp->ditherDistanceMax );
+		setValue<Vector3>( o, "Tangent", Vector3( sp->tangent ) );
+		setValue<float>( o, "Tangent Bend", sp->tangent[3] );
+		setValue<quint8>( o, "Depth Offset Mask Vertex Color Channel", sp->depthOffsetMaskVertexColorChannel );
+		setValue<quint8>( o, "AO Vertex Color Channel", sp->aoVertexColorChannel );
+	}
+	bool	isVegetation = false;
+	if ( ( material->flags & CE2Material::Flag_IsVegetation ) && material->vegetationSettings )
+		isVegetation = material->vegetationSettings->isEnabled;
+	setValue<bool>( m, "Is Vegetation", isVegetation );
+	if ( isVegetation && ( o = getItem( m, "Vegetation Settings" ) ) != nullptr ) {
+		const CE2Material::VegetationSettings *	sp = material->vegetationSettings;
+		setValue<float>( o, "Leaf Frequency", sp->leafFrequency );
+		setValue<float>( o, "Leaf Amplitude", sp->leafAmplitude );
+		setValue<float>( o, "Branch Flexibility", sp->branchFlexibility );
+		setValue<float>( o, "Trunk Flexibility", sp->trunkFlexibility );
+		setValue<float>( o, "Terrain Blend Strength (Deprecated)", sp->terrainBlendStrength );
+		setValue<float>( o, "Terrain Blend Gradient Factor (Deprecated)", sp->terrainBlendGradientFactor );
 	}
 }
 
@@ -830,10 +831,9 @@ const void * NifModel::createSFUVStream( AllocBuffers & bufs, const NifItem * pa
 	CE2Material::UVStream *	uvStream = bufs.constructObject< CE2Material::UVStream >();
 	if ( parent ) {
 		uvStream->name = copySFMatString( bufs, get<QString>( parent, "Name" ) )->data();
-		uvStream->scaleAndOffset[0] = get<float>( parent, "U Scale" );
-		uvStream->scaleAndOffset[1] = get<float>( parent, "V Scale" );
-		uvStream->scaleAndOffset[2] = get<float>( parent, "U Offset" );
-		uvStream->scaleAndOffset[3] = get<float>( parent, "V Offset" );
+		Vector2	uvScale = get<Vector2>( parent, "Scale" );
+		Vector2	uvOffset = get<Vector2>( parent, "Offset" );
+		uvStream->scaleAndOffset = FloatVector4( uvScale[0], uvScale[1], uvOffset[0], uvOffset[1] );
 		uvStream->textureAddressMode = get<quint8>( parent, "Texture Address Mode" ) & 3;
 		uvStream->channel = ( ( get<quint8>( parent, "Channel" ) - 1 ) & 1 ) + 1;
 	}
@@ -1049,21 +1049,13 @@ const void * NifModel::updateSFMaterial( AllocBuffers & bufs, const QModelIndex 
 		sp->waterEdgeNormalFalloff = get<float>( o, "Water Edge Normal Falloff" );
 		sp->waterDepthBlur = get<float>( o, "Water Depth Blur" );
 		sp->reflectance[3] = get<float>( o, "Water Refraction Magnitude" );
-		sp->phytoplanktonReflectance[0] = get<float>( o, "Phytoplankton Reflectance Color R" );
-		sp->phytoplanktonReflectance[1] = get<float>( o, "Phytoplankton Reflectance Color G" );
-		sp->phytoplanktonReflectance[2] = get<float>( o, "Phytoplankton Reflectance Color B" );
-		sp->sedimentReflectance[0] = get<float>( o, "Sediment Reflectance Color R" );
-		sp->sedimentReflectance[1] = get<float>( o, "Sediment Reflectance Color G" );
-		sp->sedimentReflectance[2] = get<float>( o, "Sediment Reflectance Color B" );
-		sp->yellowMatterReflectance[0] = get<float>( o, "Yellow Matter Reflectance Color R" );
-		sp->yellowMatterReflectance[1] = get<float>( o, "Yellow Matter Reflectance Color G" );
-		sp->yellowMatterReflectance[2] = get<float>( o, "Yellow Matter Reflectance Color B" );
+		sp->phytoplanktonReflectance = FloatVector4( get<Vector3>( o, "Phytoplankton Reflectance Color" ) );
+		sp->sedimentReflectance = FloatVector4( get<Vector3>( o, "Sediment Reflectance Color" ) );
+		sp->yellowMatterReflectance = FloatVector4( get<Vector3>( o, "Yellow Matter Reflectance Color" ) );
 		sp->phytoplanktonReflectance[3] = get<float>( o, "Max Concentration Plankton" );
 		sp->sedimentReflectance[3] = get<float>( o, "Max Concentration Sediment" );
 		sp->yellowMatterReflectance[3] = get<float>( o, "Max Concentration Yellow Matter" );
-		sp->reflectance[0] = get<float>( o, "Reflectance R" );
-		sp->reflectance[1] = get<float>( o, "Reflectance G" );
-		sp->reflectance[2] = get<float>( o, "Reflectance B" );
+		sp->reflectance.blendValues( FloatVector4( get<Vector3>( o, "Reflectance Color" ) ), 0x07 );
 		sp->lowLOD = get<bool>( o, "Low LOD" );
 		sp->placedWater = get<bool>( o, "Placed Water" );
 		mat->waterSettings = sp;
@@ -1141,6 +1133,51 @@ const void * NifModel::updateSFMaterial( AllocBuffers & bufs, const QModelIndex 
 		sp->sourceLayer = std::min< quint8 >( get<quint8>( o, "Transmittance Source Layer" ), maxLayer );
 		mat->translucencySettings = sp;
 		mat->setFlags( CE2Material::Flag_Translucency, true );
+	}
+
+	if ( get<bool>( m, "Is Hair" ) && ( o = getItem( m, "Hair Settings" ) ) != nullptr ) {
+		CE2Material::HairSettings *	sp = bufs.constructObject< CE2Material::HairSettings >();
+		sp->isEnabled = true;
+		sp->isSpikyHair = get<bool>( o, "Is Spiky Hair" );
+		sp->specScale = get<float>( o, "Spec Scale" );
+		sp->specularTransmissionScale = get<float>( o, "Specular Transmission Scale" );
+		sp->directTransmissionScale = get<float>( o, "Direct Transmission Scale" );
+		sp->diffuseTransmissionScale = get<float>( o, "Diffuse Transmission Scale" );
+		sp->roughness = get<float>( o, "Roughness" );
+		sp->contactShadowSoftening = get<float>( o, "Contact Shadow Softening" );
+		sp->backscatterStrength = get<float>( o, "Backscatter Strength" );
+		sp->backscatterWrap = get<float>( o, "Backscatter Wrap" );
+		sp->variationStrength = get<float>( o, "Variation Strength" );
+		sp->indirectSpecularScale = get<float>( o, "Indirect Specular Scale" );
+		sp->indirectSpecularTransmissionScale = get<float>( o, "Indirect Specular Transmission Scale" );
+		sp->indirectSpecRoughness = get<float>( o, "Indirect Spec Roughness" );
+		sp->edgeMaskContrast = get<float>( o, "Edge Mask Contrast" );
+		sp->edgeMaskMin = get<float>( o, "Edge Mask Min" );
+		sp->edgeMaskDistanceMin = get<float>( o, "Edge Mask Distance Min" );
+		sp->edgeMaskDistanceMax = get<float>( o, "Edge Mask Distance Max" );
+		sp->maxDepthOffset = get<float>( o, "Max Depth Offset" );
+		sp->ditherScale = get<float>( o, "Dither Scale" );
+		sp->ditherDistanceMin = get<float>( o, "Dither Distance Min" );
+		sp->ditherDistanceMax = get<float>( o, "Dither Distance Max" );
+		sp->tangent = FloatVector4( get<Vector3>( o, "Tangent" ) );
+		sp->tangent[3] = get<float>( o, "Tangent Bend" );
+		sp->depthOffsetMaskVertexColorChannel = get<quint8>( o, "Depth Offset Mask Vertex Color Channel" ) & 3;
+		sp->aoVertexColorChannel = get<quint8>( o, "AO Vertex Color Channel" ) & 3;
+		mat->hairSettings = sp;
+		mat->setFlags( CE2Material::Flag_IsHair, true );
+	}
+
+	if ( get<bool>( m, "Is Vegetation" ) && ( o = getItem( m, "Vegetation Settings" ) ) != nullptr ) {
+		CE2Material::VegetationSettings *	sp = bufs.constructObject< CE2Material::VegetationSettings >();
+		sp->isEnabled = true;
+		sp->leafFrequency = get<float>( o, "Leaf Frequency" );
+		sp->leafAmplitude = get<float>( o, "Leaf Amplitude" );
+		sp->branchFlexibility = get<float>( o, "Branch Flexibility" );
+		sp->trunkFlexibility = get<float>( o, "Trunk Flexibility" );
+		sp->terrainBlendStrength = get<float>( o, "Terrain Blend Strength (Deprecated)" );
+		sp->terrainBlendGradientFactor = get<float>( o, "Terrain Blend Gradient Factor (Deprecated)" );
+		mat->vegetationSettings = sp;
+		mat->setFlags( CE2Material::Flag_IsVegetation, true );
 	}
 
 	return mat;

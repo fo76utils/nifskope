@@ -1018,10 +1018,6 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 		return false;
 	texunit++;
 
-	CE2Material::UVStream	defaultUVStream;
-	defaultUVStream.scaleAndOffset = FloatVector4( 1.0f, 1.0f, 0.0f, 0.0f );
-	defaultUVStream.textureAddressMode = 0;	// "Wrap"
-	defaultUVStream.channel = 1;	// "One"
 	static const std::string_view	emptyTexturePath = "";
 
 	prog->uni1i( HAS_SPECULAR, int(scene->hasOption(Scene::DoSpecular)) );
@@ -1191,7 +1187,7 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 		prog->uni1i( "lm.alphaSettings.vertexColorChannel", mat->alphaVertexColorChannel );
 		const CE2Material::UVStream *	uvStream = mat->alphaUVStream;
 		if ( !uvStream )
-			uvStream = &defaultUVStream;
+			uvStream = &CE2Material::defaultUVStream;
 		prog->uni4f_l( prog->uniLocation("lm.alphaSettings.opacityUVstream.scaleAndOffset"), uvStream->scaleAndOffset );
 		prog->uni1b( "lm.alphaSettings.opacityUVstream.useChannelTwo", (uvStream->channel > 1) );
 		prog->uni1f( "lm.alphaSettings.heightBlendThreshold", mat->alphaHeightBlendThreshold );
@@ -1209,7 +1205,7 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 		prog->uni1b( "lm.detailBlender.detailBlendMaskSupported", true );
 		const CE2Material::UVStream *	uvStream = sp->uvStream;
 		if ( !uvStream )
-			uvStream = &defaultUVStream;
+			uvStream = &CE2Material::defaultUVStream;
 		FloatVector4	replUniform( 0.0f );
 		int	texUniform = lsp->getSFTexture( texunit, replUniform, *(sp->texturePath), sp->textureReplacement, int(sp->textureReplacementEnabled), uvStream );
 		prog->uni1i( "lm.detailBlender.maskTexture", texUniform );
@@ -1289,7 +1285,7 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 
 		const CE2Material::UVStream *	uvStream = layer->uvStream;
 		if ( !uvStream )
-			uvStream = &defaultUVStream;
+			uvStream = &CE2Material::defaultUVStream;
 		FloatVector4	uvScaleAndOffset( uvStream->scaleAndOffset );
 		if ( layer->material ) [[likely]] {
 			prog->uni4srgb_l( prog->uniLocation("lm.layers[%d].material.color", i), layer->material->color );
@@ -1309,7 +1305,7 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 			continue;
 		uvStream = blender->uvStream;
 		if ( !uvStream )
-			uvStream = &defaultUVStream;
+			uvStream = &CE2Material::defaultUVStream;
 		prog->uni4f_l( prog->uniLocation("lm.blenders[%d].uvStream.scaleAndOffset", i - 1), uvStream->scaleAndOffset );
 		prog->uni1b_l( prog->uniLocation("lm.blenders[%d].uvStream.useChannelTwo", i - 1), (uvStream->channel > 1) );
 		FloatVector4	replUniform( 0.0f );
