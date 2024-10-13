@@ -1232,53 +1232,73 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 		std::uint32_t	textureSlotMap = 0;
 		std::uint32_t	textureReplModes = 0x0055955E;	// 2, 3, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1
 		const CE2Material::Blender *	blender = nullptr;
+		unsigned char	blendMode = 3;	// "None"
 		if ( i ) {
 			blender = mat->blenders[i - 1];
-			if ( !blender ) [[unlikely]] {
-				prog->uni1i_l( prog->uniLocation("lm.blenders[%d].maskTexture", i - 1), -1 );
-				prog->uni4f_l( prog->uniLocation("lm.blenders[%d].maskTextureReplacement", i - 1), FloatVector4( 0.0f ) );
-				prog->uni1i_l( prog->uniLocation("lm.blenders[%d].blendMode", i - 1), 3 );
-				prog->uni1i_l( prog->uniLocation("lm.blenders[%d].colorChannel", i - 1), 0 );
-			} else if ( blender->blendMode == 4 ) {
+			if ( !blender ) [[unlikely]]
+				blender = &CE2Material::defaultBlender;
+			else
+				blendMode = blender->blendMode;
+			if ( blendMode == 4 ) {
 				// CharacterCombine: remap color, roughness and metalness to overlay texture slots (0,3,4 -> 14,15,16)
 				textureSlotMap = 0x000CC00E;
 			}
 		}
-		if ( layer->material && layer->material->textureSet ) {
-			const CE2Material::TextureSet *	textureSet = layer->material->textureSet;
-			prog->uni1f_l( prog->uniLocation("lm.layers[%d].material.textureSet.floatParam", i), textureSet->floatParam );
-			for ( int j = 0; j < 9 && j < CE2Material::TextureSet::maxTexturePaths; j++ ) {
-				int	k = j + int( textureSlotMap & 15U );
-				const std::string_view *	texturePath = textureSet->texturePaths[k];
-				std::uint32_t	textureReplacement = textureSet->textureReplacements[k];
-				int	textureReplacementMode =
-					( !( textureSet->textureReplacementMask & (1 << k) ) ? 0 : int( textureReplModes & 3U ) );
-				textureSlotMap = textureSlotMap >> 4;
-				textureReplModes = textureReplModes >> 2;
-				if ( j == 0 ) {
-					if ( (scene->hasOption(Scene::DoLighting) && scene->hasVisMode(Scene::VisNormalsOnly)) || useErrorColor ) {
-						texturePath = &emptyTexturePath;
-						textureReplacement = (useErrorColor ? 0xFFFF00FFU : 0xFFFFFFFFU);
-						textureReplacementMode = 1;
-					} else if ( !texturePath->empty() && !textureReplacementMode && scene->hasOption(Scene::DoErrorColor) ) {
-						textureReplacement = 0xFFFF00FFU;
-						textureReplacementMode = 1;
-					}
-				}
-				if ( j == 1 && !scene->hasOption(Scene::DoLighting) ) {
+		const CE2Material::Material *	material = layer->material;
+		if ( !material ) [[unlikely]]
+			material = &CE2Material::defaultMaterial;
+		const CE2Material::TextureSet *	textureSet = material->textureSet;
+		if ( !textureSet ) [[unlikely]]
+			textureSet = &CE2Material::defaultTextureSet;
+		prog->uni1f_l( prog->uniLocation("lm.layers[%d].material.textureSet.floatParam", i), textureSet->floatParam );
+		for ( int j = 0; j < 9 && j < CE2Material::TextureSet::maxTexturePaths; j++ ) {
+			int	k = j + int( textureSlotMap & 15U );
+			const std::string_view *	texturePath = textureSet->texturePaths[k];
+			std::uint32_t	textureReplacement = textureSet->textureReplacements[k];
+			int	textureReplacementMode =
+				( !( textureSet->textureReplacementMask & (1 << k) ) ? 0 : int( textureReplModes & 3U ) );
+			textureSlotMap = textureSlotMap >> 4;
+			textureReplModes = textureReplModes >> 2;
+			if ( j == 0 ) {
+				if ( (scene->hasOption(Scene::DoLighting) && scene->hasVisMode(Scene::VisNormalsOnly)) || useErrorColor ) {
 					texturePath = &emptyTexturePath;
-					textureReplacement = 0xFFFF8080U;
-					textureReplacementMode = 3;
+					textureReplacement = (useErrorColor ? 0xFFFF00FFU : 0xFFFFFFFFU);
+					textureReplacementMode = 1;
+				} else if ( !texturePath->empty() && !textureReplacementMode && scene->hasOption(Scene::DoErrorColor) ) {
+					textureReplacement = 0xFFFF00FFU;
+					textureReplacementMode = 1;
 				}
-				const CE2Material::UVStream *	uvStream = layer->uvStream;
-				if ( j == 2 && i == mat->alphaSourceLayer )
-					uvStream = mat->alphaUVStream;
-				texUniforms[j] = lsp->getSFTexture( texunit, replUniforms[j], *texturePath, textureReplacement, textureReplacementMode, uvStream );
+			} else if ( j == 1 && !scene->hasOption(Scene::DoLighting) ) {
+				texturePath = &emptyTexturePath;
+				textureReplacement = 0xFFFF8080U;
+				textureReplacementMode = 3;
 			}
-		} else {
-			prog->uni1f_l( prog->uniLocation("lm.layers[%d].material.textureSet.floatParam", i), 1.0f );
-			for ( int j = 0; j < 9 && j < CE2Material::TextureSet::maxTexturePaths; j++ )
-				texUniforms[j] = 0;
+			const CE2Material::UVStream *	uvStream = layer->uvStream;
+			if ( j == 2 && i == mat->alphaSourceLayer )
+				uvStream = mat->alphaUVStream;
+			texUniforms[j] = lsp->getSFTexture( texunit, replUniforms[j], *texturePath, textureReplacement, textureReplacementMode, uvStream );
+		}
+		if ( blendMode == 4 ) [[unlikely]] {
+			// set default color (0.5) for overlay textures in CharacterCombine blend mode
+			if ( !texUniforms[0] ) {
+				texUniforms[0] = -1;
+				replUniforms[0] = FloatVector4( 0.5f );
+			}
+			if ( !texUniforms[3] ) {
+				texUniforms[3] = -1;
+				replUniforms[3] = FloatVector4( 0.5f );
+			}
+			if ( !texUniforms[4] ) {
+				texUniforms[4] = -1;
+				replUniforms[4] = FloatVector4( 0.5f );
+			}
+		}
+		if ( mat->shaderModel == 44 ) [[unlikely]] {	// Hair1Layer
+			if ( !texUniforms[3] && ( mat->flags & CE2Material::Flag_IsHair ) && mat->hairSettings ) {
+				float	hairRoughness = float( std::sqrt( std::max( mat->hairSettings->roughness, 0.0f ) ) );
+				texUniforms[3] = -1;
+				replUniforms[3] = FloatVector4( hairRoughness );
+			}
 		}
 		prog->uni1iv_l( prog->uniLocation("lm.layers[%d].material.textureSet.textures", i), texUniforms, 9 );
 		prog->uni4fv_l( prog->uniLocation("lm.layers[%d].material.textureSet.textureReplacements", i), replUniforms, 9 );
@@ -1287,17 +1307,12 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 		if ( !uvStream )
 			uvStream = &CE2Material::defaultUVStream;
 		FloatVector4	uvScaleAndOffset( uvStream->scaleAndOffset );
-		if ( layer->material ) [[likely]] {
-			prog->uni4srgb_l( prog->uniLocation("lm.layers[%d].material.color", i), layer->material->color );
-			// disable vertex color tint for 1LayerMouth
-			int	materialFlags = layer->material->colorModeFlags & ( mat->shaderModel != 9 ? 3 : 1 );
-			if ( layer->material->flipbookFlags & 1 ) [[unlikely]]
-				materialFlags = materialFlags | setFlipbookParameters( *(layer->material), uvScaleAndOffset );
-			prog->uni1i_l( prog->uniLocation("lm.layers[%d].material.flags", i), materialFlags );
-		} else {
-			prog->uni4f_l( prog->uniLocation("lm.layers[%d].material.color", i), FloatVector4(1.0f) );
-			prog->uni1i_l( prog->uniLocation("lm.layers[%d].material.flags", i), 0 );
-		}
+		prog->uni4srgb_l( prog->uniLocation("lm.layers[%d].material.color", i), layer->material->color );
+		// disable vertex color tint for 1LayerMouth
+		int	materialFlags = layer->material->colorModeFlags & ( mat->shaderModel != 9 ? 3 : 1 );
+		if ( layer->material->flipbookFlags & 1 ) [[unlikely]]
+			materialFlags = materialFlags | setFlipbookParameters( *(layer->material), uvScaleAndOffset );
+		prog->uni1i_l( prog->uniLocation("lm.layers[%d].material.flags", i), materialFlags );
 		prog->uni4f_l( prog->uniLocation("lm.layers[%d].uvStream.scaleAndOffset", i), uvScaleAndOffset );
 		prog->uni1b_l( prog->uniLocation("lm.layers[%d].uvStream.useChannelTwo", i), (uvStream->channel > 1) );
 
@@ -1313,7 +1328,7 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 		prog->uni1i_l( prog->uniLocation("lm.blenders[%d].maskTexture", i - 1), texUniform );
 		if ( texUniform < 0 )
 			prog->uni4f_l( prog->uniLocation("lm.blenders[%d].maskTextureReplacement", i - 1), replUniform );
-		prog->uni1i_l( prog->uniLocation("lm.blenders[%d].blendMode", i - 1), int(blender->blendMode) );
+		prog->uni1i_l( prog->uniLocation("lm.blenders[%d].blendMode", i - 1), int(blendMode) );
 		prog->uni1i_l( prog->uniLocation("lm.blenders[%d].colorChannel", i - 1), int(blender->colorChannel) );
 		prog->uni1fv_l( prog->uniLocation("lm.blenders[%d].floatParams", i - 1), blender->floatParams, CE2Material::Blender::maxFloatParams );
 		prog->uni1bv_l( prog->uniLocation("lm.blenders[%d].boolParams", i - 1), blender->boolParams, CE2Material::Blender::maxBoolParams );

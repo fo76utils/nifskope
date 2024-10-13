@@ -286,11 +286,7 @@ vec3 tonemap(vec3 x, float y)
 
 vec2 getTexCoord(in UVStream uvStream)
 {
-	vec2	offset;
-	if ( uvStream.useChannelTwo )
-		offset = gl_TexCoord[0].pq;	// this may be incorrect
-	else
-		offset = gl_TexCoord[0].st;
+	vec2	offset = ( !uvStream.useChannelTwo ? gl_TexCoord[0].st : gl_TexCoord[0].pq );
 	return offset * uvStream.scaleAndOffset.xy + uvStream.scaleAndOffset.zw;
 }
 
@@ -393,17 +389,11 @@ void main()
 	for ( int i = 0; i < numLayers; i++ ) {
 		vec3	layerBaseMap = vec3(0.0);
 		vec3	layerNormal = vec3(0.0, 0.0, 1.0);
-		vec3	layerPBRMap = vec3((lm.shaderModel != 44 ? 0.0 : 0.53), 0.0, 1.0);	// default roughness for Hair1Layer
+		vec3	layerPBRMap = vec3(0.0, 0.0, 1.0);
 
 		int	blendMode = 3;	// "None"
-		if ( i > 0 ) {
+		if ( i > 0 )
 			blendMode = lm.blenders[i - 1].blendMode;
-			if ( blendMode == 4 ) {
-				// overlay texture defaults for CharacterCombine blending
-				layerBaseMap = vec3(0.5);
-				layerPBRMap = vec3(0.5, 0.5, 1.0);
-			}
-		}
 
 		vec2	offset = getTexCoord( lm.layers[i].uvStream );
 		// _height.dds
@@ -469,6 +459,7 @@ void main()
 				// TODO: correctly implement Skin, instead of interpreting it as Linear
 				float	srcMask = layerMask;
 				if ( blendMode == 2 ) {
+					// PositionContrast
 					float	blendPosition = lm.blenders[i - 1].floatParams[2];
 					float	blendContrast = lm.blenders[i - 1].floatParams[3];
 					blendContrast = max( blendContrast * min(blendPosition, 1.0 - blendPosition), 0.001 );
@@ -476,7 +467,7 @@ void main()
 					blendPosition = ( blendPosition * blendPosition + 1.0 ) * blendPosition + 0.5;
 					float	maskMin = blendPosition - blendContrast;
 					float	maskMax = blendPosition + blendContrast;
-					srcMask = clamp( (srcMask - maskMin) / (maskMax - maskMin), 0.0, 1.0 );
+					srcMask = ( srcMask - maskMin ) / ( maskMax - maskMin );
 				} else if ( blendMode == 4 ) {
 					// CharacterCombine: blend color, roughness and metalness multiplicatively
 					layerBaseMap = layerBaseMap * baseMap * 2.0;
@@ -485,26 +476,31 @@ void main()
 						layerPBRMap.g = layerPBRMap.g * pbrMap.g;
 					else
 						layerPBRMap.g = layerPBRMap.g + pbrMap.g - layerPBRMap.g * pbrMap.g;
+				} else if ( blendMode == 1 ) {
+					// Additive
+					layerBaseMap += baseMap;
+					layerPBRMap += pbrMap;
+					if ( !lm.blenders[i - 1].boolParams[4] )
+						layerNormal += normal;
 				}
-				srcMask *= f;
-				float	dstMask = 1.0 - ( blendMode != 1 ? srcMask : 0.0 );
+				srcMask = clamp( srcMask, 0.0, 1.0 ) * f;
 				if ( lm.blenders[i - 1].boolParams[0] )
-					baseMap = min( baseMap * dstMask + layerBaseMap * srcMask, vec3(1.0) );	// blend color
+					baseMap = min( mix( baseMap, layerBaseMap, srcMask ), vec3(1.0) );	// blend color
+				layerPBRMap = min( mix( pbrMap, layerPBRMap, srcMask ), vec3(1.0) );
 				if ( lm.blenders[i - 1].boolParams[1] )
-					pbrMap.g = pbrMap.g * dstMask + layerPBRMap.g * srcMask;	// blend metalness
+					pbrMap.g = layerPBRMap.g;	// blend metalness
 				if ( lm.blenders[i - 1].boolParams[2] )
-					pbrMap.r = pbrMap.r * dstMask + layerPBRMap.r * srcMask;	// blend roughness
+					pbrMap.r = layerPBRMap.r;	// blend roughness
 				if ( lm.blenders[i - 1].boolParams[3] ) {
 					if ( lm.blenders[i - 1].boolParams[4] ) {
 						normal.rg = normal.rg + ( layerNormal.rg * srcMask );	// blend normals additively
 						normal.b = sqrt( max( 1.0 - dot(normal.rg, normal.rg), 0.0 ) );
 					} else {
-						normal = normalize( normal * dstMask + layerNormal * srcMask );
+						normal = normalize( mix( normal, layerNormal, srcMask ) );
 					}
 				}
 				if ( lm.blenders[i - 1].boolParams[6] )
-					pbrMap.b = pbrMap.b * dstMask + layerPBRMap.b * srcMask;	// blend ambient occlusion
-				pbrMap = min( pbrMap, vec3(1.0) );
+					pbrMap.b = layerPBRMap.b;	// blend ambient occlusion
 			}
 		}
 
