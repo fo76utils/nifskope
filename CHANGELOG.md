@@ -1,5 +1,8 @@
  == CHANGELOG ==
 
+* Implemented support for editing and saving Starfield hair and vegetation settings. Note however that currently only hair roughness is used by the renderer.
+* Starfield water settings can be saved by the "Save Edited Material..." spell.
+* Added limited support for Shattered Space material paths in the Starfield material browser.
 * The 'Optimize/Remove Unused Strings' spell now also removes empty strings from the string table, and replaces the string index with -1.
 * Fixed bug in 'Show Blocks in List' mode that caused all data fields to be expanded in the block list after loading a model.
 * Fixed emissive channels missing from the decal write mask in the Starfield material editor.

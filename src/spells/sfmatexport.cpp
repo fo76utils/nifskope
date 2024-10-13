@@ -612,6 +612,8 @@ QJsonObject CE2MaterialToJSON::createXMFLOAT( FloatVector4 v, int channels,
 		xmfloatData.insert( "w", QString::number( v[3] ) );
 	QJsonObject	xmfloatValue =
 		createStructure( xmfloatData, ( channels < 3 ? "XMFLOAT2" : ( channels < 4 ? "XMFLOAT3" : "XMFLOAT4" ) ) );
+	if ( !fieldName )
+		return xmfloatValue;
 
 	QJsonObject	xmfloatObject;
 	xmfloatObject.insert( fieldName, xmfloatValue );
@@ -976,20 +978,89 @@ void CE2MaterialToJSON::createLayeredMaterial( QJsonArray & components, const CE
 		createComponent( components, translucencySettings, "BSMaterial::TranslucencySettingsComponent" );
 	}
 
+	if ( ( o->flags & CE2Material::Flag_IsVegetation ) && o->vegetationSettings && o->vegetationSettings->isEnabled ) {
+		const CE2Material::VegetationSettings *	sp = o->vegetationSettings;
+		QJsonObject	vegetationSettings;
+		vegetationSettings.insert( "Enabled", "true" );
+		vegetationSettings.insert( "LeafFrequency", QString::number( sp->leafFrequency ) );
+		vegetationSettings.insert( "LeafAmplitude", QString::number( sp->leafAmplitude ) );
+		vegetationSettings.insert( "BranchFlexibility", QString::number( sp->branchFlexibility ) );
+		vegetationSettings.insert( "TrunkFlexibility", QString::number( sp->trunkFlexibility ) );
+#if 0
+		vegetationSettings.insert( "DEPRECATEDTerrainBlendStrength", QString::number( sp->terrainBlendStrength ) );
+		vegetationSettings.insert( "DEPRECATEDTerrainBlendGradientFactor",
+									QString::number( sp->terrainBlendGradientFactor ) );
+#endif
+		createComponent( components, vegetationSettings, "BSMaterial::VegetationSettingsComponent" );
+	}
+
+	if ( ( o->flags & CE2Material::Flag_IsWater ) && o->waterSettings ) {
+		const CE2Material::WaterSettings *	sp = o->waterSettings;
+		QJsonObject	waterSettings;
+		waterSettings.insert( "WaterEdgeFalloff", QString::number( sp->waterEdgeFalloff ) );
+		waterSettings.insert( "WaterWetnessMaxDepth", QString::number( sp->waterWetnessMaxDepth ) );
+		waterSettings.insert( "WaterEdgeNormalFalloff", QString::number( sp->waterEdgeNormalFalloff ) );
+		waterSettings.insert( "WaterDepthBlur", QString::number( sp->waterDepthBlur ) );
+		waterSettings.insert( "WaterRefractionMagnitude", QString::number( sp->reflectance[3] ) );
+		waterSettings.insert( "PhytoplanktonReflectanceColorR", QString::number( sp->phytoplanktonReflectance[0] ) );
+		waterSettings.insert( "PhytoplanktonReflectanceColorG", QString::number( sp->phytoplanktonReflectance[1] ) );
+		waterSettings.insert( "PhytoplanktonReflectanceColorB", QString::number( sp->phytoplanktonReflectance[2] ) );
+		waterSettings.insert( "SedimentReflectanceColorR", QString::number( sp->sedimentReflectance[0] ) );
+		waterSettings.insert( "SedimentReflectanceColorG", QString::number( sp->sedimentReflectance[1] ) );
+		waterSettings.insert( "SedimentReflectanceColorB", QString::number( sp->sedimentReflectance[2] ) );
+		waterSettings.insert( "YellowMatterReflectanceColorR", QString::number( sp->yellowMatterReflectance[0] ) );
+		waterSettings.insert( "YellowMatterReflectanceColorG", QString::number( sp->yellowMatterReflectance[1] ) );
+		waterSettings.insert( "YellowMatterReflectanceColorB", QString::number( sp->yellowMatterReflectance[2] ) );
+		waterSettings.insert( "MaxConcentrationPlankton", QString::number( sp->phytoplanktonReflectance[3] ) );
+		waterSettings.insert( "MaxConcentrationSediment", QString::number( sp->sedimentReflectance[3] ) );
+		waterSettings.insert( "MaxConcentrationYellowMatter", QString::number( sp->yellowMatterReflectance[3] ) );
+		waterSettings.insert( "ReflectanceR", QString::number( sp->reflectance[0] ) );
+		waterSettings.insert( "ReflectanceG", QString::number( sp->reflectance[1] ) );
+		waterSettings.insert( "ReflectanceB", QString::number( sp->reflectance[2] ) );
+		insertBool( waterSettings, "LowLOD", sp->lowLOD );
+		insertBool( waterSettings, "PlacedWater", sp->placedWater );
+		createComponent( components, waterSettings, "BSMaterial::WaterSettingsComponent" );
+	}
+
+	if ( ( o->flags & CE2Material::Flag_IsHair ) && o->hairSettings && o->hairSettings->isEnabled ) {
+		const CE2Material::HairSettings *	sp = o->hairSettings;
+		QJsonObject	hairSettings;
+		hairSettings.insert( "Enabled", "true" );
+		insertBool( hairSettings, "IsSpikyHair", sp->isSpikyHair );
+		hairSettings.insert( "SpecScale", QString::number( sp->specScale ) );
+		hairSettings.insert( "SpecularTransmissionScale", QString::number( sp->specularTransmissionScale ) );
+		hairSettings.insert( "DirectTransmissionScale", QString::number( sp->directTransmissionScale ) );
+		hairSettings.insert( "DiffuseTransmissionScale", QString::number( sp->diffuseTransmissionScale ) );
+		hairSettings.insert( "Roughness", QString::number( sp->roughness ) );
+		hairSettings.insert( "ContactShadowSoftening", QString::number( sp->contactShadowSoftening ) );
+		hairSettings.insert( "BackscatterStrength", QString::number( sp->backscatterStrength ) );
+		hairSettings.insert( "BackscatterWrap", QString::number( sp->backscatterWrap ) );
+		hairSettings.insert( "VariationStrength", QString::number( sp->variationStrength ) );
+		hairSettings.insert( "IndirectSpecularScale", QString::number( sp->indirectSpecularScale ) );
+		hairSettings.insert( "IndirectSpecularTransmissionScale",
+							QString::number( sp->indirectSpecularTransmissionScale ) );
+		hairSettings.insert( "IndirectSpecRoughness", QString::number( sp->indirectSpecRoughness ) );
+		hairSettings.insert( "EdgeMaskContrast", QString::number( sp->edgeMaskContrast ) );
+		hairSettings.insert( "EdgeMaskMin", QString::number( sp->edgeMaskMin ) );
+		hairSettings.insert( "EdgeMaskDistanceMin", QString::number( sp->edgeMaskDistanceMin ) );
+		hairSettings.insert( "EdgeMaskDistanceMax", QString::number( sp->edgeMaskDistanceMax ) );
+		hairSettings.insert( "MaxDepthOffset", QString::number( sp->maxDepthOffset ) );
+		hairSettings.insert( "DitherScale", QString::number( sp->ditherScale ) );
+		hairSettings.insert( "DitherDistanceMin", QString::number( sp->ditherDistanceMin ) );
+		hairSettings.insert( "DitherDistanceMax", QString::number( sp->ditherDistanceMax ) );
+		hairSettings.insert( "Tangent", createXMFLOAT( sp->tangent, 3, nullptr ) );
+		hairSettings.insert( "TangentBend", QString::number( sp->tangent[3] ) );
+		hairSettings.insert( "DepthOffsetMaskVertexColorChannel",
+							getCE2MatString( CE2Material::colorChannelNames, sp->depthOffsetMaskVertexColorChannel ) );
+		hairSettings.insert( "AOVertexColorChannel",
+							getCE2MatString( CE2Material::colorChannelNames, sp->aoVertexColorChannel ) );
+		createComponent( components, hairSettings, "BSMaterial::HairSettingsComponent" );
+	}
+
 	// TODO: implement all supported material components
 	if ( ( o->flags & CE2Material::Flag_GlobalLayerData ) && o->globalLayerData ) {
 		QMessageBox::warning( nullptr, "NifSkope warning",
 								QString( "Saving global layer data is not implemented yet" ) );
-	}
-	if ( ( o->flags & CE2Material::Flag_IsVegetation ) && o->vegetationSettings && o->vegetationSettings->isEnabled ) {
-		QMessageBox::warning( nullptr, "NifSkope warning",
-								QString( "Saving vegetation settings is not implemented yet" ) );
-	}
-	if ( ( o->flags & CE2Material::Flag_IsWater ) && o->waterSettings ) {
-		QMessageBox::warning( nullptr, "NifSkope warning", QString( "Saving water settings is not implemented yet" ) );
-	}
-	if ( ( o->flags & CE2Material::Flag_IsHair ) && o->hairSettings && o->hairSettings->isEnabled ) {
-		QMessageBox::warning( nullptr, "NifSkope warning", QString( "Saving hair settings is not implemented yet" ) );
 	}
 }
 
