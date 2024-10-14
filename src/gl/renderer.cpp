@@ -1295,9 +1295,9 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 		}
 		if ( mat->shaderModel == 44 ) [[unlikely]] {	// Hair1Layer
 			if ( !texUniforms[3] && ( mat->flags & CE2Material::Flag_IsHair ) && mat->hairSettings ) {
-				float	hairRoughness = float( std::sqrt( std::max( mat->hairSettings->roughness, 0.0f ) ) );
+				float	hairRoughness = mat->hairSettings->roughness;
 				texUniforms[3] = -1;
-				replUniforms[3] = FloatVector4( hairRoughness );
+				replUniforms[3] = FloatVector4( ( ( hairRoughness - 2.0f ) * hairRoughness + 2.0f ) * hairRoughness );
 			}
 		}
 		prog->uni1iv_l( prog->uniLocation("lm.layers[%d].material.textureSet.textures", i), texUniforms, 9 );
