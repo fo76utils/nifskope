@@ -1259,10 +1259,11 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 				( !( textureSet->textureReplacementMask & (1 << k) ) ? 0 : int( textureReplModes & 3U ) );
 			textureSlotMap = textureSlotMap >> 4;
 			textureReplModes = textureReplModes >> 2;
+			const CE2Material::UVStream *	uvStream = layer->uvStream;
 			if ( j == 0 ) {
 				if ( (scene->hasOption(Scene::DoLighting) && scene->hasVisMode(Scene::VisNormalsOnly)) || useErrorColor ) {
 					texturePath = &emptyTexturePath;
-					textureReplacement = (useErrorColor ? 0xFFFF00FFU : 0xFFFFFFFFU);
+					textureReplacement = ( useErrorColor ? 0xFFFF00FFU : 0xFFFFFFFFU );
 					textureReplacementMode = 1;
 				} else if ( !texturePath->empty() && !textureReplacementMode && scene->hasOption(Scene::DoErrorColor) ) {
 					textureReplacement = 0xFFFF00FFU;
@@ -1272,10 +1273,9 @@ bool Renderer::setupProgramCE2( const NifModel * nif, Program * prog, Shape * me
 				texturePath = &emptyTexturePath;
 				textureReplacement = 0xFFFF8080U;
 				textureReplacementMode = 3;
-			}
-			const CE2Material::UVStream *	uvStream = layer->uvStream;
-			if ( j == 2 && i == mat->alphaSourceLayer )
+			} else if ( j == 2 && ( mat->flags & CE2Material::Flag_HasOpacity ) && i == mat->alphaSourceLayer ) {
 				uvStream = mat->alphaUVStream;
+			}
 			texUniforms[j] = lsp->getSFTexture( texunit, replUniforms[j], *texturePath, textureReplacement, textureReplacementMode, uvStream );
 		}
 		if ( blendMode == 4 ) [[unlikely]] {
