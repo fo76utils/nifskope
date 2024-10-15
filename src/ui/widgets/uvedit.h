@@ -186,16 +186,29 @@ private:
 
 	QSize sHint;
 
+	struct TextureInfo {
+		QString	name;
+		int	clampMode;	// 0 = wrap, 1 = clamp, 2 = mirror, 3 = border
+		FloatVector4	scaleAndOffset;
+		TextureInfo()
+			: clampMode( 0 ), scaleAndOffset( 1.0f, 1.0f, 0.0f, 0.0f )
+		{
+		}
+		TextureInfo( const NifModel * nif, const QString & texturePath );
+		TextureInfo( const NifModel * nif, const std::string_view * texturePath, const void * uvStream );
+		~TextureInfo()
+		{
+		}
+	};
 	TexCache * textures;
-	QStringList texfiles;
+	QVector<TextureInfo>	texfiles;
 	QModelIndex texsource;
-	QString texfilePath;
 
 	void drawTexCoords();
 
 	void setupViewport();
 	void updateViewRect( int width, int height );
-	bool bindTexture( const QString & filename );
+	bool bindTexture( const TextureInfo & t );
 	bool bindTexture( const QModelIndex & iSource );
 
 	QVector<int> indices( const QPoint & p ) const;
@@ -216,14 +229,14 @@ private:
 	QMenu * menuTexSelect;
 	//! Group that holds texture slot selection actions
 	QActionGroup * texSlotGroup;
-	//! List of valid textures
-	QStringList validTexs;
+	//! List of valid texture slots in texnames
+	QVector<int> validTexs;
 
 	//! Names of texture slots
 	static QStringList texnames;
 
-	//! Texture slot currently being operated on
-	int currentTexSlot = 0;
+	//! Texture file currently being operated on
+	int currentTexFile = 0;
 	//! Read texcoords from the nif
 	bool setTexCoords( const QVector<Triangle> * triangles = nullptr );
 	//! Coordinate set currently in use

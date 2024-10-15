@@ -227,10 +227,8 @@ void UVWidget::initializeGL()
 
 	glClearColor( cfg.background.redF(), cfg.background.greenF(), cfg.background.blueF(), cfg.background.alphaF() );
 
-	if ( currentTexSlot < texfiles.size() && !texfiles[currentTexSlot].isEmpty() )
-		bindTexture( texfiles[currentTexSlot] );
-	else if ( !texfilePath.isEmpty() )
-		bindTexture( texfilePath );
+	if ( currentTexFile >= 0 && currentTexFile < texfiles.size() && !texfiles[currentTexFile].name.isEmpty() )
+		bindTexture( texfiles[currentTexFile] );
 	else
 		bindTexture( texsource );
 
@@ -288,16 +286,17 @@ void UVWidget::paintGL()
 	else
 		glDisable( GL_BLEND );
 
-	if ( currentTexSlot < texfiles.size() && !texfiles[currentTexSlot].isEmpty() )
-		bindTexture( texfiles[currentTexSlot] );
-	else if ( !texfilePath.isEmpty() )
-		bindTexture( texfilePath );
+	if ( currentTexFile >= 0 && currentTexFile < texfiles.size() && !texfiles[currentTexFile].name.isEmpty() )
+		bindTexture( texfiles[currentTexFile] );
 	else
 		bindTexture( texsource );
 
 	glTranslatef( -0.5f, -0.5f, 0.0f );
 
 	glTranslatef( -1.0f, -1.0f, 0.0f );
+	glMatrixMode( GL_TEXTURE );
+	glTranslatef( -1.0f, -1.0f, 0.0f );
+	glMatrixMode( GL_MODELVIEW );
 
 	for ( int i = 0; i < 3; i++ ) {
 		for ( int j = 0; j < 3; j++ ) {
@@ -310,12 +309,21 @@ void UVWidget::paintGL()
 			glDrawArrays( GL_QUADS, 0, 4 );
 
 			glTranslatef( 1.0f, 0.0f, 0.0f );
+			glMatrixMode( GL_TEXTURE );
+			glTranslatef( 1.0f, 0.0f, 0.0f );
+			glMatrixMode( GL_MODELVIEW );
 		}
 
 		glTranslatef( -3.0f, 1.0f, 0.0f );
+		glMatrixMode( GL_TEXTURE );
+		glTranslatef( -3.0f, 1.0f, 0.0f );
+		glMatrixMode( GL_MODELVIEW );
 	}
 
 	glTranslatef( 1.0f, -2.0f, 0.0f );
+	glMatrixMode( GL_TEXTURE );
+	glTranslatef( 1.0f, -2.0f, 0.0f );
+	glMatrixMode( GL_MODELVIEW );
 
 	glDisable( GL_TEXTURE_2D );
 
@@ -541,20 +549,33 @@ QVector<int> UVWidget::indices( const QRegion & region ) const
 	return hits.toVector();
 }
 
-bool UVWidget::bindTexture( const QString & filename )
+bool UVWidget::bindTexture( const TextureInfo & t )
 {
 	GLuint mipmaps = 0;
-	mipmaps = textures->bind( filename, nif );
+	mipmaps = textures->bind( t.name, nif );
 
 	if ( mipmaps ) {
 		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, mipmaps > 1 ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR );
+		if ( t.clampMode == 0 ) {
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
+		} else if ( t.clampMode != 2 ) {
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+		} else {
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT );
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT );
+		}
 		glTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 
 		// TODO: Add support for non-square textures
 
 		glMatrixMode( GL_TEXTURE );
 		glLoadIdentity();
+
+		glTranslatef( t.scaleAndOffset[2], t.scaleAndOffset[3], 0.0f );
+		glScalef( t.scaleAndOffset[0], t.scaleAndOffset[1], 1.0f );
 
 		glMatrixMode( GL_MODELVIEW );
 		return true;
@@ -796,6 +817,22 @@ void UVWidget::keyReleaseEvent( QKeyEvent * e )
 	}
 }
 
+UVWidget::TextureInfo::TextureInfo( const NifModel * nif, const QString & texturePath )
+{
+	clampMode = 0;	// Wrap
+	scaleAndOffset = FloatVector4( 1.0f, 1.0f, 0.0f, 0.0f );
+	name = TexCache::find( texturePath, nif );
+}
+
+UVWidget::TextureInfo::TextureInfo( const NifModel * nif, const std::string_view * texturePath, const void * uvStream )
+{
+	if ( !uvStream )
+		uvStream = &CE2Material::defaultUVStream;
+	name = TexCache::find( QString::fromLatin1( texturePath->data(), qsizetype( texturePath->length() ) ), nif );
+	clampMode = reinterpret_cast< const CE2Material::UVStream * >( uvStream )->textureAddressMode & 3;
+	scaleAndOffset = reinterpret_cast< const CE2Material::UVStream * >( uvStream )->scaleAndOffset;
+}
+
 void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 {
 	if ( !iTexProp.isValid() )
@@ -814,9 +851,14 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 		if ( nif->getBSVersion() < 170 ) {
 			// Fallout 76
 			for ( int texSlot = 0; texSlot <= 9; texSlot++ ) {
-				if ( texSlot >= texfiles.size() )
-					texfiles.append( QString() );
-				texfiles[texSlot] = TexCache::find( nif->get<QString>( iTexPropData, QString( "Texture %1" ).arg( texSlot ) ), nif );
+				TextureInfo	t( nif, nif->get<QString>( iTexPropData, QString( "Texture %1" ).arg( texSlot ) ) );
+				if ( t.name.isEmpty() )
+					continue;
+				t.clampMode = int( ( nif->get<quint16>( iTexPropData, "Shader Flags 1" ) & 3 ) == 0 );
+				Vector2	uvOffset = nif->get<Vector2>( iTexPropData, "UV Offset" );
+				Vector2	uvScale = nif->get<Vector2>( iTexPropData, "UV Scale" );
+				t.scaleAndOffset = FloatVector4( uvScale[0], uvScale[1], uvOffset[0], uvOffset[1] );
+				texfiles.append( t );
 			}
 		} else {
 			// Starfield
@@ -833,13 +875,32 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 				std::uint32_t	texPathMask = txtSet->texturePathMask;
 				if ( !texPathMask )
 					continue;
-				for ( int texSlot = 0; texPathMask && texSlot < CE2Material::TextureSet::maxTexturePaths; texSlot++, texPathMask = texPathMask >> 1 ) {
-					if ( texSlot >= texfiles.size() )
-						texfiles.append( QString() );
-					if ( ( texPathMask & 1 ) && !txtSet->texturePaths[texSlot]->empty() )
-						texfiles[texSlot] = TexCache::find( QString::fromLatin1( txtSet->texturePaths[texSlot]->data(), qsizetype(txtSet->texturePaths[texSlot]->length()) ), nif );
+				for ( size_t j = 0; texPathMask && j < CE2Material::TextureSet::maxTexturePaths; j++, texPathMask = texPathMask >> 1 ) {
+					if ( !( texPathMask & 1 ) || txtSet->texturePaths[j]->empty() )
+						continue;
+					const CE2Material::UVStream *	uvStream = matData->layers[i]->uvStream;
+					if ( j == 2 && ( matData->flags & CE2Material::Flag_HasOpacity ) && i == matData->alphaSourceLayer )
+						uvStream = matData->alphaUVStream;
+					TextureInfo	t( nif, txtSet->texturePaths[j], uvStream );
+					if ( !t.name.isEmpty() )
+						texfiles.append( t );
 				}
-				break;
+				if ( i > 0 && i <= CE2Material::maxBlenders && matData->blenders[i - 1] ) {
+					const CE2Material::Blender *	blender = matData->blenders[i - 1];
+					if ( !blender->texturePath->empty() ) {
+						TextureInfo	t( nif, blender->texturePath, blender->uvStream );
+						if ( !t.name.isEmpty() )
+							texfiles.append( t );
+					}
+				}
+			}
+			if ( ( matData->flags & CE2Material::Flag_UseDetailBlender ) && matData->detailBlenderSettings ) {
+				const CE2Material::DetailBlenderSettings *	sp = matData->detailBlenderSettings;
+				if ( sp->isEnabled && !sp->texturePath->empty() ) {
+					TextureInfo	t( nif, sp->texturePath, sp->uvStream );
+					if ( !t.name.isEmpty() )
+						texfiles.append( t );
+				}
 			}
 		}
 		return;
@@ -851,17 +912,19 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 		iTexPropData = iTexProp;
 	if ( !iTexPropData.isValid() )
 		return;
+	Vector2	uvOffset = nif->get<Vector2>( iTexPropData, "UV Offset" );
+	Vector2	uvScale = nif->get<Vector2>( iTexPropData, "UV Scale" );
 	if ( blockType == "BSLightingShaderProperty" ) {
 		QModelIndex iTexSource = nif->getBlockIndex( nif->getLink( iTexPropData, "Texture Set" ) );
+		QModelIndex	iTextures;
 
-		if ( iTexSource.isValid() ) {
-			QModelIndex iTextures = nif->getIndex( iTexSource, "Textures" );
-			if ( iTextures.isValid() ) {
-				for ( int texSlot = 0; texSlot <= 9; texSlot++ ) {
-					if ( texSlot >= texfiles.size() )
-						texfiles.append( QString() );
-					texfiles[texSlot] = TexCache::find( nif->get<QString>( nif->getIndex( iTextures, texSlot ) ), nif );
-				}
+		if ( iTexSource.isValid() && ( iTextures = nif->getIndex( iTexSource, "Textures" ) ).isValid() ) {
+			for ( int texSlot = 0; texSlot <= 9; texSlot++ ) {
+				TextureInfo	t( nif, nif->get<QString>( nif->getIndex( iTextures, texSlot ) ) );
+				if ( t.name.isEmpty() )
+					continue;
+				t.scaleAndOffset = FloatVector4( uvScale[0], uvScale[1], uvOffset[0], uvOffset[1] );
+				texfiles.append( t );
 			}
 		}
 	} else {
@@ -869,9 +932,11 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 			QModelIndex	iTexturePath = nif->getIndex( iTexPropData, ( texSlot == 0 ? "Source Texture" : "Normal Texture" ) );
 			if ( !iTexturePath.isValid() )
 				continue;
-			while ( texSlot >= texfiles.size() )
-				texfiles.append( QString() );
-			texfiles[texSlot] = TexCache::find( nif->get<QString>( iTexturePath ), nif );
+			TextureInfo	t( nif, nif->get<QString>( iTexturePath ) );
+			if ( t.name.isEmpty() )
+				continue;
+			t.scaleAndOffset = FloatVector4( uvScale[0], uvScale[1], uvOffset[0], uvOffset[1] );
+			texfiles.append( t );
 		}
 	}
 }
@@ -1044,8 +1109,9 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 		}
 	}
 
+	currentTexFile = 0;
+	validTexs.clear();
 	texfiles.clear();
-	texfilePath.clear();
 	auto props = nif->getLinkArray( iShape, "Properties" );
 	props << nif->getLink( iShape, "Shader Property" );
 	for ( const auto l : props )
@@ -1053,27 +1119,23 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 		QModelIndex iTexProp = nif->getBlockIndex( l, "NiTexturingProperty" );
 
 		if ( iTexProp.isValid() ) {
-			while ( currentTexSlot < texnames.size() ) {
+			for ( int currentTexSlot = 0; currentTexSlot < texnames.size(); currentTexSlot++ ) {
 				iTex = nif->getIndex( iTexProp, texnames[currentTexSlot] );
 
-				if ( !iTex.isValid() && ( currentTexSlot == 4 || currentTexSlot == 5 ) ) {
-					texfilePath = getTES4NormalOrGlowMap( nif, iTexProp, currentTexSlot );
+				if ( !iTex.isValid() && ( currentTexSlot == 4 || currentTexSlot == 5 ) )
 					iTex = nif->getIndex( iTexProp, texnames[0] );
-				}
+				if ( !iTex.isValid() )
+					continue;
 
-				if ( iTex.isValid() ) {
-					QModelIndex iTexSource = nif->getBlockIndex( nif->getLink( iTex, "Source" ) );
+				QModelIndex iTexSource = nif->getBlockIndex( nif->getLink( iTex, "Source" ) );
 
-					if ( iTexSource.isValid() ) {
-						currentCoordSet = nif->get<int>( iTex, "UV Set" );
-						iTexCoords = nif->getIndex( nif->getIndex( iShapeData, "UV Sets" ), currentCoordSet );
-						texsource  = iTexSource;
+				if ( iTexSource.isValid() ) {
+					currentCoordSet = nif->get<int>( iTex, "UV Set" );
+					iTexCoords = nif->getIndex( nif->getIndex( iShapeData, "UV Sets" ), currentCoordSet );
+					texsource  = iTexSource;
 
-						if ( setTexCoords() )
-							return true;
-					}
-				} else {
-					currentTexSlot++;
+					if ( setTexCoords() )
+						return true;
 				}
 			}
 		} else {
@@ -1111,8 +1173,11 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 						if ( iTextures.isValid() ) {
 							int	n = nif->rowCount( iTextures );
 							for ( int i = 0; i < n; i++ ) {
-								if ( i != 4 )
-									texfiles.append( TexCache::find( nif->get<QString>( nif->getIndex( iTextures, i ) ), nif ) );
+								if ( i == 4 )
+									continue;
+								TextureInfo	t( nif, nif->get<QString>( nif->getIndex( iTextures, i ) ) );
+								if ( !t.name.isEmpty() )
+									texfiles.append( t );
 							}
 							return true;
 						}
@@ -1761,66 +1826,79 @@ void UVWidget::exportSFMesh()
 
 void UVWidget::getTexSlots()
 {
-	menuTexSelect->clear();
-	validTexs.clear();
-
-	if ( texfiles.size() > 0 ) {
-		for ( const QString& name : texfiles ) {
-			if ( name.isEmpty() || validTexs.indexOf( name ) >= 0 )
+	if ( texfiles.isEmpty() && validTexs.isEmpty() && nif->getBSVersion() < 83 ) {
+		auto props = nif->getLinkArray( iShape, "Properties" );
+		props << nif->getLink( iShape, "Shader Property" );
+		for ( const auto l : props )
+		{
+			QModelIndex iTexProp = nif->getBlockIndex( l, "NiTexturingProperty" );
+			if ( !iTexProp.isValid() )
 				continue;
-			validTexs << name;
-			QAction * temp = new QAction( name, this );
-			menuTexSelect->addAction( temp );
-			texSlotGroup->addAction( temp );
-			temp->setCheckable( true );
 
-			if ( currentTexSlot < texfiles.size() && name == texfiles[currentTexSlot] )
-				temp->setChecked( true );
-		}
-		return;
-	}
-
-	auto props = nif->getLinkArray( iShape, "Properties" );
-	props << nif->getLink( iShape, "Shader Property" );
-	for ( const auto l : props )
-	{
-		QModelIndex iTexProp = nif->getBlockIndex( l, "NiTexturingProperty" );
-
-		if ( iTexProp.isValid() ) {
-			for ( const QString& name : texnames ) {
-				if ( nif->get<bool>( iTexProp, QString( "Has %1" ).arg( name ) )
-					|| ( name == "Glow Texture" && !getTES4NormalOrGlowMap( nif, iTexProp, 4 ).isEmpty() )
-					|| ( name == "Bump Map Texture" && !getTES4NormalOrGlowMap( nif, iTexProp, 5 ).isEmpty() ) ) {
-					if ( validTexs.indexOf( name ) == -1 ) {
-						validTexs << name;
-						QAction * temp;
-						menuTexSelect->addAction( temp = new QAction( name, this ) );
-						texSlotGroup->addAction( temp );
-						temp->setCheckable( true );
-
-						if ( name == texnames[currentTexSlot] ) {
-							temp->setChecked( true );
+			int	n = 0;
+			for ( const QString & name : texnames ) {
+				QString	texturePath;
+				if ( nif->get<bool>( iTexProp, QString( "Has %1" ).arg( name ) ) ) {
+					QModelIndex	i = nif->getIndex( iTexProp, name );
+					if ( i.isValid() ) {
+						i = nif->getBlockIndex( nif->getLink( i, "Source" ) );
+						if ( i.isValid() ) {
+							i = nif->getIndex( i, "File Name" );
+							if ( i.isValid() )
+								texturePath = nif->get<QString>( i );
 						}
 					}
+				} else if ( n == 4 || n == 5 ) {
+					texturePath = getTES4NormalOrGlowMap( nif, iTexProp, n );
 				}
+				if ( !texturePath.isEmpty() ) {
+					TextureInfo	t( nif, texturePath );
+					if ( !t.name.isEmpty() ) {
+						texfiles.append( t );
+						validTexs.append( n );
+					}
+				}
+				n++;
 			}
 		}
+	}
+
+	if ( !texSlotGroup->actions().isEmpty() )
+		return;
+	menuTexSelect->clear();
+	int	i = 0;
+	for ( const auto & t : texfiles ) {
+		const QString &	name = ( i < validTexs.size() ? texnames[validTexs[i]] : t.name );
+		QAction * temp = new QAction( name, this );
+		menuTexSelect->addAction( temp );
+		texSlotGroup->addAction( temp );
+		temp->setCheckable( true );
+		if ( i == currentTexFile )
+			temp->setChecked( true );
+		i++;
 	}
 }
 
 void UVWidget::selectTexSlot()
 {
-	QString selected = texSlotGroup->checkedAction()->text();
+	auto	a = texSlotGroup->actions();
+	auto	selected = texSlotGroup->checkedAction();
 
-	if ( texfiles.size() > 0 ) {
-		currentTexSlot = texfiles.indexOf( selected );
-		if ( currentTexSlot < 0 )
-			currentTexSlot = 0;
-		return;
+	currentTexFile = -1;
+	for ( qsizetype i = 0; i < a.size(); i++ ) {
+		if ( a[i] == selected ) {
+			currentTexFile = int( i );
+			break;
+		}
 	}
+	if ( currentTexFile < 0 || currentTexFile >= texfiles.size() )
+		currentTexFile = 0;
+	if ( nif->getBSVersion() >= 83 )
+		return;
 
-	currentTexSlot = texnames.indexOf( selected );
-	texfilePath.clear();
+	int	currentTexSlot = 0;
+	if ( currentTexFile >= 0 && currentTexFile < validTexs.size() )
+		currentTexSlot = validTexs[currentTexFile];
 
 	auto props = nif->getLinkArray( iShape, "Properties" );
 	props << nif->getLink( iShape, "Shader Property" );
@@ -1831,10 +1909,8 @@ void UVWidget::selectTexSlot()
 		if ( iTexProp.isValid() ) {
 			iTex = nif->getIndex( iTexProp, texnames[currentTexSlot] );
 
-			if ( !iTex.isValid() && ( currentTexSlot == 4 || currentTexSlot == 5 ) ) {
-				texfilePath = getTES4NormalOrGlowMap( nif, iTexProp, currentTexSlot );
+			if ( !iTex.isValid() && ( currentTexSlot == 4 || currentTexSlot == 5 ) )
 				iTex = nif->getIndex( iTexProp, texnames[0] );
-			}
 
 			if ( iTex.isValid() ) {
 				QModelIndex iTexSource = nif->getBlockIndex( nif->getLink( iTex, "Source" ) );

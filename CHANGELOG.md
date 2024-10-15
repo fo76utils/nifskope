@@ -1,5 +1,6 @@
  == CHANGELOG ==
 
+* The UV editor now allows selecting Starfield textures from all layers, and also blender masks. Textures are rendered in the editor with the UV scale, offset and wrap mode applied. The latter change is implemented for Skyrim to Fallout 76 as well, with limitations (wrap modes are mostly unsupported).
 * Implemented support for editing and saving Starfield hair and vegetation settings. Note however that currently only hair roughness is used by the renderer.
 * Starfield water settings can be saved by the "Save Edited Material..." spell.
 * Added limited support for Shattered Space material paths in the Starfield material browser.
