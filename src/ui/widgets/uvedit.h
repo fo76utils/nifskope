@@ -189,9 +189,10 @@ private:
 	struct TextureInfo {
 		QString	name;
 		int	clampMode;	// 0 = wrap, 1 = clamp, 2 = mirror, 3 = border
+		int	isSRGB;
 		FloatVector4	scaleAndOffset;
 		TextureInfo()
-			: clampMode( 0 ), scaleAndOffset( 1.0f, 1.0f, 0.0f, 0.0f )
+			: clampMode( 0 ), isSRGB( 0 ), scaleAndOffset( 1.0f, 1.0f, 0.0f, 0.0f )
 		{
 		}
 		TextureInfo( const NifModel * nif, const QString & texturePath );

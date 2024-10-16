@@ -55,6 +55,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QLabel>
 #include <QMenu>
 #include <QMouseEvent>
+#include <QColorSpace>
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
 #include <QPushButton>
@@ -113,8 +114,10 @@ UVWidget::UVWidget( QWidget * parent )
 {
 	{
 		QSurfaceFormat	fmt = format();
+		fmt.setColorSpace( QColorSpace::SRgb );
 		fmt.setSamples( 4 );
 		setFormat( fmt );
+		setTextureFormat( GL_SRGB8 );
 	}
 
 	setWindowTitle( tr( "UV Editor" ) );
@@ -286,10 +289,20 @@ void UVWidget::paintGL()
 	else
 		glDisable( GL_BLEND );
 
-	if ( currentTexFile >= 0 && currentTexFile < texfiles.size() && !texfiles[currentTexFile].name.isEmpty() )
-		bindTexture( texfiles[currentTexFile] );
-	else
+	FloatVector4	c0( 0.5f, 0.5f, 0.5f, 1.0f );
+	FloatVector4	c1( 0.75f, 0.75f, 0.75f, 1.0f );
+
+	if ( currentTexFile >= 0 && currentTexFile < texfiles.size() && !texfiles[currentTexFile].name.isEmpty() ) {
+		const TextureInfo &	t = texfiles.at( currentTexFile );
+		bindTexture( t );
+		if ( t.isSRGB ) {
+			glEnable( GL_FRAMEBUFFER_SRGB );
+			c0 *= c0;
+			c1 *= c1;
+		}
+	} else {
 		bindTexture( texsource );
+	}
 
 	glTranslatef( -0.5f, -0.5f, 0.0f );
 
@@ -300,11 +313,7 @@ void UVWidget::paintGL()
 
 	for ( int i = 0; i < 3; i++ ) {
 		for ( int j = 0; j < 3; j++ ) {
-			if ( i == 1 && j == 1 ) {
-				glColor4f( 0.75f, 0.75f, 0.75f, 1.0f );
-			} else {
-				glColor4f( 0.5f, 0.5f, 0.5f, 1.0f );
-			}
+			glColor4fv( ( i == 1 && j == 1 ) ? &( c1[0] ) : &( c0[0] ) );
 
 			glDrawArrays( GL_QUADS, 0, 4 );
 
@@ -319,6 +328,8 @@ void UVWidget::paintGL()
 		glTranslatef( -3.0f, 1.0f, 0.0f );
 		glMatrixMode( GL_MODELVIEW );
 	}
+
+	glDisable( GL_FRAMEBUFFER_SRGB );
 
 	glTranslatef( 1.0f, -2.0f, 0.0f );
 	glMatrixMode( GL_TEXTURE );
@@ -820,6 +831,7 @@ void UVWidget::keyReleaseEvent( QKeyEvent * e )
 UVWidget::TextureInfo::TextureInfo( const NifModel * nif, const QString & texturePath )
 {
 	clampMode = 0;	// Wrap
+	isSRGB = 0;
 	scaleAndOffset = FloatVector4( 1.0f, 1.0f, 0.0f, 0.0f );
 	name = TexCache::find( texturePath, nif );
 }
@@ -830,6 +842,7 @@ UVWidget::TextureInfo::TextureInfo( const NifModel * nif, const std::string_view
 		uvStream = &CE2Material::defaultUVStream;
 	name = TexCache::find( QString::fromLatin1( texturePath->data(), qsizetype( texturePath->length() ) ), nif );
 	clampMode = reinterpret_cast< const CE2Material::UVStream * >( uvStream )->textureAddressMode & 3;
+	isSRGB = 0;
 	scaleAndOffset = reinterpret_cast< const CE2Material::UVStream * >( uvStream )->scaleAndOffset;
 }
 
@@ -855,6 +868,8 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 				if ( t.name.isEmpty() )
 					continue;
 				t.clampMode = int( ( nif->get<quint16>( iTexPropData, "Shader Flags 1" ) & 3 ) == 0 );
+				if ( texSlot == 0 || texSlot == 5 || texSlot == 6 )
+					t.isSRGB = 1;
 				Vector2	uvOffset = nif->get<Vector2>( iTexPropData, "UV Offset" );
 				Vector2	uvScale = nif->get<Vector2>( iTexPropData, "UV Scale" );
 				t.scaleAndOffset = FloatVector4( uvScale[0], uvScale[1], uvOffset[0], uvOffset[1] );
@@ -882,6 +897,8 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 					if ( j == 2 && ( matData->flags & CE2Material::Flag_HasOpacity ) && i == matData->alphaSourceLayer )
 						uvStream = matData->alphaUVStream;
 					TextureInfo	t( nif, txtSet->texturePaths[j], uvStream );
+					if ( j == 0 || j == 7 || j == 14 )
+						t.isSRGB = 1;
 					if ( !t.name.isEmpty() )
 						texfiles.append( t );
 				}
@@ -919,10 +936,13 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 		QModelIndex	iTextures;
 
 		if ( iTexSource.isValid() && ( iTextures = nif->getIndex( iTexSource, "Textures" ) ).isValid() ) {
-			for ( int texSlot = 0; texSlot <= 9; texSlot++ ) {
+			int	texSlots = nif->rowCount( iTextures );
+			for ( int texSlot = 0; texSlot < texSlots; texSlot++ ) {
 				TextureInfo	t( nif, nif->get<QString>( nif->getIndex( iTextures, texSlot ) ) );
 				if ( t.name.isEmpty() )
 					continue;
+				if ( ( texSlot == 0 || texSlot == 9 ) && nif->getBSVersion() >= 151 )
+					t.isSRGB = 1;
 				t.scaleAndOffset = FloatVector4( uvScale[0], uvScale[1], uvOffset[0], uvOffset[1] );
 				texfiles.append( t );
 			}
@@ -935,6 +955,8 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 			TextureInfo	t( nif, nif->get<QString>( iTexturePath ) );
 			if ( t.name.isEmpty() )
 				continue;
+			if ( texSlot == 0 && nif->getBSVersion() >= 151 )
+				t.isSRGB = 1;
 			t.scaleAndOffset = FloatVector4( uvScale[0], uvScale[1], uvOffset[0], uvOffset[1] );
 			texfiles.append( t );
 		}

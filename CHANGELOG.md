@@ -9,6 +9,7 @@
 * Fixed emissive channels missing from the decal write mask in the Starfield material editor.
 * Fixed issue with pasting Fallout 76 and Starfield shader property blocks, due to the block name (that determines whether an external material file is used) not being set before the block data is loaded.
 * Fixed error on copying and pasting NiControllerSequence blocks.
+* Fixed color correction on Fallout 76 and Starfield sRGB textures in the UV editor.
 
 #### NifSkope-2.0.dev9-20240926
 
