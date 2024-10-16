@@ -1829,7 +1829,7 @@ bool NifModel::load( QIODevice & device, const char* fileName )
 	QSettings settings;
 	bool ignoreSize = settings.value( "Ignore Block Size", true ).toBool();
 	bool convertSFMeshes =
-		settings.value( "Settings/Nif/Convert Starfield meshes to internal geometry on load", true ).toBool();
+		settings.value( "Settings/Nif/Convert Starfield meshes to internal geometry on load", false ).toBool();
 
 	clear();
 
