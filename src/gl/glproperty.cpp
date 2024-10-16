@@ -915,16 +915,21 @@ void BSShaderLightingProperty::clear()
 	sfMatDataBuf.clear();
 }
 
-int BSShaderLightingProperty::getSFTexture( int & texunit, FloatVector4 & replUniform, const std::string_view & texturePath, std::uint32_t textureReplacement, int textureReplacementMode, const CE2Material::UVStream * uvStream )
+// replacementMode = 1: linear, 2: sRGB, 3: signed
+
+static inline FloatVector4 convertTextureReplacementColor( std::uint32_t textureReplacement, int replacementMode )
 {
 	FloatVector4	c( textureReplacement );
 	c *= 1.0f / 255.0f;
-	if ( textureReplacementMode >= 2 ) {
-		if ( textureReplacementMode == 2 )
-			c = DDSTexture16::srgbExpand( c );	// SRGB
-		else
-			c = c + c - 1.0f;					// SNORM
-	}
+	if ( replacementMode < 2 )
+		return c;
+	if ( replacementMode == 2 )
+		return DDSTexture16::srgbExpand( c );
+	return c + c - 1.0f;
+}
+
+int BSShaderLightingProperty::getSFTexture( int & texunit, FloatVector4 & replUniform, const std::string_view & texturePath, std::uint32_t textureReplacement, int textureReplacementMode, const CE2Material::UVStream * uvStream )
+{
 	do {
 		size_t	n = texturePath.length();
 		if ( ( n - 1 ) & ~( size_t(1023) ) )
@@ -933,15 +938,12 @@ int BSShaderLightingProperty::getSFTexture( int & texunit, FloatVector4 & replUn
 			break;
 
 		TexClampMode	clampMode = TexClampMode::WRAP_S_WRAP_T;
-		if ( uvStream && uvStream->textureAddressMode ) {
-			if ( uvStream->textureAddressMode == 3 ) {
-				// this may be incorrect
-				glTexParameterfv( GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, &(c[0]) );
-				clampMode = TexClampMode::BORDER_S_BORDER_T;
-			} else if ( uvStream->textureAddressMode == 2 )
-				clampMode = TexClampMode::MIRRORED_S_MIRRORED_T;
-			else
-				clampMode = TexClampMode::CLAMP_S_CLAMP_T;
+		if ( uvStream ) {
+			static const unsigned char	clampModes[4] = {
+				TexClampMode::WRAP_S_WRAP_T, TexClampMode::CLAMP_S_CLAMP_T,
+				TexClampMode::MIRRORED_S_MIRRORED_T, TexClampMode::BORDER_S_BORDER_T
+			};
+			clampMode = TexClampMode( clampModes[uvStream->textureAddressMode & 3] );
 		}
 
 		// convert std::string_view to a temporary array of QChar
@@ -951,15 +953,22 @@ int BSShaderLightingProperty::getSFTexture( int & texunit, FloatVector4 & replUn
 		if ( !bind( QStringView( tmpBuf, qsizetype( n ) ), false, clampMode ) )
 			break;
 
+		if ( clampMode == TexClampMode::BORDER_S_BORDER_T ) [[unlikely]] {
+			// use replacement color as border (this may be incorrect)
+			FloatVector4	c( convertTextureReplacementColor( textureReplacement, textureReplacementMode ) );
+			glTexParameterfv( GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, &(c[0]) );
+		}
+
 		texunit++;
 		return texunit - 3;
 
 	} while ( false );
 
 	if ( textureReplacementMode > 0 ) {
-		replUniform = c;
+		replUniform = convertTextureReplacementColor( textureReplacement, textureReplacementMode );
 		return -1;
 	}
+
 	return 0;
 }
 
