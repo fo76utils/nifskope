@@ -1,10 +1,12 @@
  == CHANGELOG ==
 
-* The UV editor now allows selecting Starfield textures from all layers, and also blender masks. Textures are rendered in the editor with the UV scale, offset and wrap mode applied. The latter change is implemented for Skyrim to Fallout 76 as well, with limitations (wrap modes are mostly unsupported).
+* The UV editor now allows selecting Starfield textures from all layers, and also blender masks. Textures are rendered in the editor with the UV scale, offset and wrap mode applied. The latter change is implemented for Skyrim to Fallout 76 as well, but wrap modes are not fully supported.
+* Starfield texture coordinate sets can be selected in the UV editor, if the mesh has more than one and internal geometry is being used.
 * Implemented support for editing and saving Starfield hair and vegetation settings. Note however that currently only hair roughness is used by the renderer.
 * Starfield water settings can be saved by the "Save Edited Material..." spell.
 * Added limited support for Shattered Space material paths in the Starfield material browser.
 * The 'Optimize/Remove Unused Strings' spell now also removes empty strings from the string table, and replaces the string index with -1.
+* Converting Starfield meshes to internal geometry on load is no longer enabled by default, due to compatibility issues with the game. Most of the mesh editing functionality and spells in NifSkope only work with the internal format, however, requiring a temporary conversion to that and re-exporting the modified meshes.
 * Fixed bug in 'Show Blocks in List' mode that caused all data fields to be expanded in the block list after loading a model.
 * Fixed emissive channels missing from the decal write mask in the Starfield material editor.
 * Fixed issue with pasting Fallout 76 and Starfield shader property blocks, due to the block name (that determines whether an external material file is used) not being set before the block data is loaded.

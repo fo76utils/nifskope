@@ -244,7 +244,7 @@ private:
 	int currentCoordSet = 0;
 
 	//! Submenu for coordinate set selection
-	QMenu * coordSetSelect;
+	QMenu * coordSetSelect = nullptr;
 	//! Group that holds coordinate set actions
 	QActionGroup * coordSetGroup;
 	//! Action to trigger duplication of current coordinate set

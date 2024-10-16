@@ -931,6 +931,9 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 		return;
 	Vector2	uvOffset = nif->get<Vector2>( iTexPropData, "UV Offset" );
 	Vector2	uvScale = nif->get<Vector2>( iTexPropData, "UV Scale" );
+	int	clampMode = 0;
+	if ( nif->getBSVersion() < 151 )
+		clampMode = int( ( nif->get<quint32>( iTexPropData, "Texture Clamp Mode" ) & 3 ) == 0 );
 	if ( blockType == "BSLightingShaderProperty" ) {
 		QModelIndex iTexSource = nif->getBlockIndex( nif->getLink( iTexPropData, "Texture Set" ) );
 		QModelIndex	iTextures;
@@ -941,6 +944,7 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 				TextureInfo	t( nif, nif->get<QString>( nif->getIndex( iTextures, texSlot ) ) );
 				if ( t.name.isEmpty() )
 					continue;
+				t.clampMode = clampMode;
 				if ( ( texSlot == 0 || texSlot == 9 ) && nif->getBSVersion() >= 151 )
 					t.isSRGB = 1;
 				t.scaleAndOffset = FloatVector4( uvScale[0], uvScale[1], uvOffset[0], uvOffset[1] );
@@ -955,6 +959,7 @@ void UVWidget::setTexturePaths( NifModel * nif, QModelIndex iTexProp )
 			TextureInfo	t( nif, nif->get<QString>( iTexturePath ) );
 			if ( t.name.isEmpty() )
 				continue;
+			t.clampMode = clampMode;
 			if ( texSlot == 0 && nif->getBSVersion() >= 151 )
 				t.isSRGB = 1;
 			t.scaleAndOffset = FloatVector4( uvScale[0], uvScale[1], uvOffset[0], uvOffset[1] );
@@ -1115,19 +1120,33 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 		MeshFile	meshFile( nif, sfMeshIndex );
 		if ( !( meshFile.isValid() && meshFile.coords.size() > 0 && meshFile.triangles.size() > 0 ) )
 			return false;
-		for ( qsizetype i = 0; i < meshFile.coords.size(); i++ )
-			texcoords << Vector2( meshFile.coords[i][0], meshFile.coords[i][1] );
-		if ( !setTexCoords( &(meshFile.triangles) ) )
-			return false;
 
 		if ( ( nif->get<quint32>(iShape, "Flags") & 0x0200 ) == 0 ) {
+			for ( qsizetype i = 0; i < meshFile.coords.size(); i++ )
+				texcoords << Vector2( meshFile.coords[i][0], meshFile.coords[i][1] );
+			if ( !setTexCoords( &(meshFile.triangles) ) )
+				return false;
+
 			QAction * aExportSFMesh = new QAction( tr( "Export Mesh File" ), this );
 			connect( aExportSFMesh, &QAction::triggered, this, &UVWidget::exportSFMesh );
 			addAction( aExportSFMesh );
 			// Fake index so that isValid() checks do not fail
 			iTexCoords = iShape;
 		} else {
-			iTexCoords = nif->getIndex( nif->getIndex( sfMeshIndex, "Mesh Data" ), "UVs" );
+			iShapeData = nif->getIndex( sfMeshIndex, "Mesh Data" );
+			iTexCoords = nif->getIndex( iShapeData, "UVs" );
+
+			if ( !setTexCoords() )
+				return false;
+
+			if ( meshFile.haveTexCoord2 && !coordSetSelect ) {
+				coordSetSelect = new QMenu( tr( "Select Coordinate Set" ) );
+				addAction( coordSetSelect->menuAction() );
+				connect( coordSetSelect, &QMenu::aboutToShow, this, &UVWidget::getCoordSets );
+
+				coordSetGroup = new QActionGroup( this );
+				connect( coordSetGroup, &QActionGroup::triggered, this, &UVWidget::selectCoordSet );
+			}
 		}
 	}
 
@@ -1221,12 +1240,14 @@ bool UVWidget::setNifData( NifModel * nifModel, const QModelIndex & nifIndex )
 
 bool UVWidget::setTexCoords( const QVector<Triangle> * triangles )
 {
-	if ( nif->blockInherits( iShape, "NiTriBasedGeom" ) )
+	if ( iTexCoords.isValid() && nif->isArray( iTexCoords ) )
 		texcoords = nif->getArray<Vector2>( iTexCoords );
 
 	QVector<Triangle> tris;
 
-	if ( nif->isNiBlock( iShapeData, "NiTriShapeData" ) ) {
+	if ( triangles ) {
+		tris = *triangles;
+	} else if ( nif->isNiBlock( iShapeData, "NiTriShapeData" ) || nif->getBSVersion() >= 170 ) {
 		tris = nif->getArray<Triangle>( iShapeData, "Triangles" );
 	} else if ( nif->isNiBlock( iShapeData, "NiTriStripsData" ) ) {
 		QModelIndex iPoints = nif->getIndex( iShapeData, "Points" );
@@ -1246,8 +1267,6 @@ bool UVWidget::setTexCoords( const QVector<Triangle> * triangles )
 				tris << nif->getArray<Triangle>( nif->index( i, 0, partIdx ), "Triangles" );
 			}
 		}
-	} else if ( triangles ) {
-		tris = *triangles;
 	}
 
 	if ( tris.isEmpty() )
@@ -1954,12 +1973,24 @@ void UVWidget::getCoordSets()
 {
 	coordSetSelect->clear();
 
-	quint8 numUvSets = (nif->get<quint16>( iShapeData, "Data Flags" ) & 0x3F)
-						| (nif->get<quint16>( iShapeData, "BS Data Flags" ) & 0x1);
+	quint8	numUvSets = 0;
+	int	uvSetOffs = 0;
+
+	if ( nif->getBSVersion() >= 170 ) {
+		quint32	numVerts = nif->get<quint32>( iShapeData, "Num Verts" );
+		if ( nif->get<quint32>( iShapeData, "Num UVs" ) >= numVerts )
+			numUvSets++;
+		if ( nif->get<quint32>( iShapeData, "Num UVs 2" ) >= numVerts )
+			numUvSets++;
+		uvSetOffs = 1;
+	} else {
+		numUvSets = ( nif->get<quint16>( iShapeData, "Data Flags" ) & 0x3F )
+					| ( nif->get<quint16>( iShapeData, "BS Data Flags" ) & 0x1 );
+	}
 
 	for ( int i = 0; i < numUvSets; i++ ) {
-		QAction * temp;
-		coordSetSelect->addAction( temp = new QAction( QString( "%1" ).arg( i ), this ) );
+		QAction * temp = new QAction( QString::number( i + uvSetOffs ), this );
+		coordSetSelect->addAction( temp );
 		coordSetGroup->addAction( temp );
 		temp->setCheckable( true );
 
@@ -1968,19 +1999,28 @@ void UVWidget::getCoordSets()
 		}
 	}
 
-	coordSetSelect->addSeparator();
-	aDuplicateCoords = new QAction( tr( "Duplicate current" ), this );
-	coordSetSelect->addAction( aDuplicateCoords );
-	connect( aDuplicateCoords, &QAction::triggered, this, &UVWidget::duplicateCoordSet );
+	if ( !uvSetOffs ) {
+		// TODO: implement this for Starfield
+		coordSetSelect->addSeparator();
+		aDuplicateCoords = new QAction( tr( "Duplicate current" ), this );
+		coordSetSelect->addAction( aDuplicateCoords );
+		connect( aDuplicateCoords, &QAction::triggered, this, &UVWidget::duplicateCoordSet );
+	}
 }
 
 void UVWidget::selectCoordSet()
 {
-	QString selected = coordSetGroup->checkedAction()->text();
-	bool ok;
-	quint8 setToUse = selected.toInt( &ok );
+	auto	a = coordSetSelect->actions();
+	auto	selected = coordSetGroup->checkedAction();
 
-	if ( !ok )
+	int	setToUse = -1;
+	for ( qsizetype i = 0; i < a.size(); i++ ) {
+		if ( a[i] == selected ) {
+			setToUse = int( i );
+			break;
+		}
+	}
+	if ( setToUse < 0 )
 		return;
 
 	// write all changes
@@ -1991,11 +2031,15 @@ void UVWidget::selectCoordSet()
 
 void UVWidget::changeCoordSet( int setToUse )
 {
-	// update
 	currentCoordSet = setToUse;
-	nif->set<quint8>( iTex, "UV Set", currentCoordSet );
-	// read new coordinate set
-	iTexCoords = nif->getIndex( nif->getIndex( iShapeData, "UV Sets" ), currentCoordSet );
+	if ( nif->getBSVersion() < 170 ) {
+		// update
+		nif->set<quint8>( iTex, "UV Set", currentCoordSet );
+		// read new coordinate set
+		iTexCoords = nif->getIndex( nif->getIndex( iShapeData, "UV Sets" ), currentCoordSet );
+	} else {
+		iTexCoords = nif->getIndex( iShapeData, ( !setToUse ? "UVs" : "UVs 2" ) );
+	}
 	setTexCoords();
 }
 
