@@ -35,7 +35,8 @@
 
 /* C interface */
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 /**
@@ -269,6 +270,7 @@ MESHOPTIMIZER_API int meshopt_decodeIndexSequence(void* destination, size_t inde
  * Returns encoded data size on success, 0 on error; the only error condition is if buffer doesn't have enough space
  * This function works for a single vertex stream; for multiple vertex streams, call meshopt_encodeVertexBuffer for each stream.
  * Note that all vertex_size bytes of each vertex are encoded verbatim, including padding which should be zero-initialized.
+ * For maximum efficiency the vertex buffer being encoded has to be quantized and optimized for locality of reference (cache/fetch) first.
  *
  * buffer must contain enough space for the encoded vertex buffer (use meshopt_encodeVertexBufferBound to compute worst case size)
  */
@@ -600,7 +602,7 @@ MESHOPTIMIZER_EXPERIMENTAL void meshopt_spatialSortTriangles(unsigned int* desti
  * Note that all algorithms only allocate memory for temporary use.
  * allocate/deallocate are always called in a stack-like order - last pointer to be allocated is deallocated first.
  */
-MESHOPTIMIZER_API void meshopt_setAllocator(void* (MESHOPTIMIZER_ALLOC_CALLCONV *allocate)(size_t), void (MESHOPTIMIZER_ALLOC_CALLCONV *deallocate)(void*));
+MESHOPTIMIZER_API void meshopt_setAllocator(void* (MESHOPTIMIZER_ALLOC_CALLCONV* allocate)(size_t), void (MESHOPTIMIZER_ALLOC_CALLCONV* deallocate)(void*));
 
 #ifdef __cplusplus
 } /* extern "C" */
@@ -748,8 +750,8 @@ public:
 	template <typename T>
 	struct StorageT
 	{
-		static void* (MESHOPTIMIZER_ALLOC_CALLCONV *allocate)(size_t);
-		static void (MESHOPTIMIZER_ALLOC_CALLCONV *deallocate)(void*);
+		static void* (MESHOPTIMIZER_ALLOC_CALLCONV* allocate)(size_t);
+		static void (MESHOPTIMIZER_ALLOC_CALLCONV* deallocate)(void*);
 	};
 
 	typedef StorageT<void> Storage;
@@ -789,9 +791,9 @@ private:
 
 // This makes sure that allocate/deallocate are lazily generated in translation units that need them and are deduplicated by the linker
 template <typename T>
-void* (MESHOPTIMIZER_ALLOC_CALLCONV *meshopt_Allocator::StorageT<T>::allocate)(size_t) = operator new;
+void* (MESHOPTIMIZER_ALLOC_CALLCONV* meshopt_Allocator::StorageT<T>::allocate)(size_t) = operator new;
 template <typename T>
-void (MESHOPTIMIZER_ALLOC_CALLCONV *meshopt_Allocator::StorageT<T>::deallocate)(void*) = operator delete;
+void (MESHOPTIMIZER_ALLOC_CALLCONV* meshopt_Allocator::StorageT<T>::deallocate)(void*) = operator delete;
 #endif
 
 /* Inline implementation for C++ templated wrappers */
