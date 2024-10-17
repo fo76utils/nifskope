@@ -20,25 +20,25 @@ AboutDialog::AboutDialog( QWidget * parent )
 
 	<p>The most recent version of NifSkope can be downloaded from the <a href='https://github.com/niftools/nifskope/releases'>
 	official GitHub release page</a>.</p>
-	
-	<p>A detailed changelog and the latest developmental builds of NifSkope 
+
+	<p>A detailed changelog and the latest developmental builds of NifSkope
 	<a href='https://github.com/fo76utils/nifskope/releases'>can be found here</a>.</p>
-	
+
 	<p>For the generation of mopp code on Windows builds, NifSkope uses <a href='http://www.havok.com'>Havok(R)</a>:<br>
-	Copyright (c) 1999-2008 Havok.com Inc. (and its Licensors).<br>
+	Copyright © 1999-2008 Havok.com Inc. (and its Licensors).<br>
 	All Rights Reserved.</p>
-	
+
 	<p>NifSkope uses <a href='http://gli.g-truc.net/'>OpenGL Image (GLI)</a>:<br>
 	MIT License<br>
-	Copyright (c) 2010 - 2016 G-Truc Creation</p>
+	Copyright © 2010 - 2016 G-Truc Creation</p>
 
 	<p>For the generation of convex hulls, NifSkope uses <a href='http://www.qhull.org'>Qhull</a>:<br>
-	Copyright (c) 1993-2015  C.B. Barber and The Geometry Center.<br><center>
-						Qhull, Copyright (c) 1993-2015<br><br>
-                    
+	Copyright © 1993-2015  C.B. Barber and The Geometry Center.<br><center>
+						Qhull, Copyright © 1993-2015<br><br>
+
 								C.B. Barber<br>
 							   Arlington, MA <br><br>
-                          
+
 								   and<br><br>
 
 		   The National Science and Technology Research Center for<br>
@@ -73,11 +73,17 @@ AboutDialog::AboutDialog( QWidget * parent )
 	   qhull_bug@qhull.org; the authors may or may not act on them as <br>
 	   they desire.<br></center>
 	</p>
-	
-	<p>For bounding sphere calculation, NifSkope uses <a href="https://github.com/hbf/miniball">Miniball</a> by Kaspar Fischer, Bernd Gärtner and Martin Kutz, the code is available under the <a href="http://www.apache.org/licenses/LICENSE-2.0.html">Apache 2 License</a>.
+
+	<p>For bounding sphere calculation, NifSkope uses <a href='https://github.com/hbf/miniball'>Miniball</a> by Kaspar Fischer, Bernd Gärtner and Martin Kutz, the code is available under the <a href='http://www.apache.org/licenses/LICENSE-2.0.html'>Apache 2 License</a>.
 	</p>
-	
-	<p>Starfield meshlet and LOD generation are based on code from <a href="https://github.com/zeux/meshoptimizer">meshoptimizer</a> (MIT License, Copyright (c) 2016-2024 Arseny Kapoulkine) and <a href="https://github.com/microsoft/DirectXMesh">DirectXMesh</a> (MIT License, Copyright (c) by Microsoft Corporation).
+
+	<p>Starfield meshlet and LOD generation are based on code from <a href='https://github.com/zeux/meshoptimizer'>meshoptimizer</a> (MIT License, Copyright © 2016-2024 Arseny Kapoulkine) and <a href='https://github.com/microsoft/DirectXMesh'>DirectXMesh</a> (MIT License, Copyright © by Microsoft Corporation).
+	</p>
+
+	<p><a href='https://github.com/syoyo/tinygltf'>Tiny glTF</a> is copyright © 2015-present by Syoyo Fujita, Aurélien Chatelain and many contributors under the MIT License.
+	</p>
+
+	<p><a href='https://github.com/nlohmann/json'>JSON for Modern C++</a> library is copyright © 2013-2023 by Niels Lohmann, MIT License.
 	</p>
 	)rhtml" );
 

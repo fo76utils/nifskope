@@ -48,6 +48,12 @@ Starfield meshlet and LOD generation are based on code from [meshoptimizer](http
 (MIT License, Copyright (c) 2016-2024 Arseny Kapoulkine) and [DirectXMesh](https://github.com/microsoft/DirectXMesh)
 (MIT License, Copyright (c) by Microsoft Corporation).
 
+[Tiny glTF](https://github.com/syoyo/tinygltf) is copyright (c) 2015-present by
+Syoyo Fujita, Aurélien Chatelain and many contributors under the MIT License.
+
+[JSON for Modern C++](https://github.com/nlohmann/json) library is copyright (c)
+2013-2023 by Niels Lohmann, MIT License.
+
 NOTICE
 
 Parts of NifSkope (i.e. included libraries) might be subject to
