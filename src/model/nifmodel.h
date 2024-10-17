@@ -97,6 +97,8 @@ public:
 	// BaseModel
 
 	void clear() override final;
+	//! Check if a Starfield model uses internal geometry data, and optionally convert meshes. Returns true on success.
+	bool checkInternalGeometry( const QModelIndex & blockIndex );
 	bool load( QIODevice & device, const char* fileName = nullptr ) override final;
 	bool save( QIODevice & device ) const override final;
 
