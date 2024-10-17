@@ -1,5 +1,7 @@
  == CHANGELOG ==
 
+#### NifSkope-2.0.dev9-20241017
+
 * The UV editor now allows selecting Starfield textures from all layers, and also blender masks. Textures are rendered in the editor with the UV scale, offset and wrap mode applied. The latter change is implemented for Skyrim to Fallout 76 as well, but wrap modes are not fully supported.
 * Starfield texture coordinate sets can be selected in the UV editor, if the mesh has more than one and internal geometry is being used.
 * Implemented support for editing and saving Starfield hair and vegetation settings. Note however that currently only hair roughness is used by the renderer.

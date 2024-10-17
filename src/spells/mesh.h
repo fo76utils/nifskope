@@ -63,7 +63,7 @@ public:
 			return false;
 		if ( !index.isValid() )
 			return true;
-		return ( nif->blockInherits( index, "BSGeometry" ) && ( nif->get<quint32>(index, "Flags") & 0x0200 ) != 0 );
+		return nif->isNiBlock( index, "BSGeometry" );
 	}
 
 	static void clearMeshlets( NifModel * nif, const QModelIndex & iMeshData );
@@ -85,8 +85,8 @@ public:
 	{
 		if ( !nif )
 			return false;
-		if ( nif->getBSVersion() >= 170 && nif->blockInherits( index, "BSGeometry" ) )
-			return bool( nif->get<quint32>(index, "Flags") & 0x0200 );
+		if ( nif->getBSVersion() >= 170 && nif->isNiBlock( index, "BSGeometry" ) )
+			return true;
 		if ( nif->blockInherits( index, "BSTriShape" ) )
 			return nif->getIndex( index, "Vertex Data" ).isValid();
 		return getShape( nif, index ).isValid();

@@ -64,7 +64,7 @@ public:
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
 		if ( nif->getBSVersion() >= 170 && nif->isNiBlock( index, "BSGeometry" ) )
-			return ( ( nif->get<quint32>(index, "Flags") & 0x0200 ) != 0 );
+			return true;
 		return getShapeData( nif, index ).isValid();
 	}
 
@@ -73,7 +73,8 @@ public:
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
 	{
 		if ( nif->getBSVersion() >= 170 && nif->isNiBlock( index, "BSGeometry" ) ) {
-			faceNormalsSFMesh( nif, index );
+			if ( nif->checkInternalGeometry( index ) )
+				faceNormalsSFMesh( nif, index );
 			return index;
 		}
 
@@ -267,7 +268,7 @@ public:
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
 		if ( nif->getBSVersion() >= 170 && nif->isNiBlock( index, "BSGeometry" ) )
-			return ( ( nif->get<quint32>(index, "Flags") & 0x0200 ) != 0 );
+			return true;
 		QModelIndex iData = spFaceNormals::getShapeData( nif, index );
 		return ( iData.isValid() && nif->get<bool>( iData, "Has Normals" ) );
 	}
@@ -277,7 +278,8 @@ public:
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
 	{
 		if ( nif->getBSVersion() >= 170 && nif->isNiBlock( index, "BSGeometry" ) ) {
-			flipNormalsSFMesh( nif, index );
+			if ( nif->checkInternalGeometry( index ) )
+				flipNormalsSFMesh( nif, index );
 			return index;
 		}
 
@@ -335,7 +337,7 @@ public:
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
 		if ( nif->getBSVersion() >= 170 && nif->isNiBlock( index, "BSGeometry" ) )
-			return ( ( nif->get<quint32>(index, "Flags") & 0x0200 ) != 0 );
+			return true;
 		return spFaceNormals::getShapeData( nif, index ).isValid();
 	}
 
@@ -359,7 +361,7 @@ public:
 
 		if ( !isSFMesh )
 			smoothNormals( nif, index, maxa, maxd );
-		else
+		else if ( nif->checkInternalGeometry( index ) )
 			smoothNormalsSFMesh( nif, index, maxa, maxd );
 
 		return index;

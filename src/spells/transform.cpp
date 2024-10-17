@@ -395,7 +395,7 @@ public:
 	{
 		return ( nif->blockInherits( index, "NiGeometry" )
 				|| ( nif->blockInherits( index, "BSTriShape" ) && nif->getIndex( index, "Vertex Data" ).isValid() )
-				|| ( nif->blockInherits( index, "BSGeometry" ) && ( nif->get<quint32>(index, "Flags") & 0x0200 ) ) );
+				|| nif->isNiBlock( index, "BSGeometry" ) );
 	}
 
 	static void cast_Starfield( NifModel * nif, const QModelIndex & index, FloatVector4 scaleVector, bool scaleNormals );
@@ -438,7 +438,8 @@ public:
 		settings.setValue( key, scaleNormals );
 
 		if ( nif->blockInherits( index, "BSGeometry" ) ) {
-			cast_Starfield( nif, index, scaleVector, scaleNormals );
+			if ( nif->checkInternalGeometry( index ) )
+				cast_Starfield( nif, index, scaleVector, scaleNormals );
 			return index;
 		}
 

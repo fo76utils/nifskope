@@ -47,7 +47,7 @@ public:
 			return false;
 		if ( !index.isValid() )
 			return true;
-		return ( nif->blockInherits( index, "BSGeometry" ) && ( nif->get<quint32>(index, "Flags") & 0x0200 ) != 0 );
+		return nif->isNiBlock( index, "BSGeometry" );
 	}
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final;
@@ -366,7 +366,7 @@ void spSimplifySFMesh::Meshes::saveGeometryData( NifModel * nif ) const
 
 QModelIndex spSimplifySFMesh::cast( NifModel * nif, const QModelIndex & index )
 {
-	if ( !( nif && nif->getBSVersion() >= 170 ) )
+	if ( !( nif && nif->getBSVersion() >= 170 && nif->checkInternalGeometry( index ) ) )
 		return index;
 
 	Meshes	m;

@@ -337,8 +337,8 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
-		if ( nif->getBSVersion() >= 170 && nif->blockInherits( index, "BSGeometry" ) )
-			return bool( nif->get<quint32>( index, "Flags" ) & 0x0200 );
+		if ( nif->getBSVersion() >= 170 && nif->isNiBlock( index, "BSGeometry" ) )
+			return true;
 		if ( nif->blockInherits( index, "BSTriShape" ) && nif->getIndex( index, "Vertex Data" ).isValid() )
 			return true;
 		return nif->itemStrType( index ).toLower() == "texcoord" || nif->blockInherits( index, "NiTriBasedGeomData" );
@@ -358,6 +358,8 @@ public:
 			} else if ( nif->itemStrType( index ).toLower() != "texcoord" ) {
 				idx = nif->getIndex( nif->getBlockIndex( index ), "UV Sets" );
 			}
+		} else if ( !nif->checkInternalGeometry( index ) ) {
+			return index;
 		}
 
 		QMenu menu;
@@ -546,8 +548,8 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
-		if ( nif->getBSVersion() >= 170 && nif->blockInherits( index, "BSGeometry" ) )
-			return bool( nif->get<quint32>( index, "Flags" ) & 0x0200 );
+		if ( nif->getBSVersion() >= 170 && nif->isNiBlock( index, "BSGeometry" ) )
+			return true;
 		return getTriShapeData( nif, index ).isValid();
 	}
 
@@ -556,7 +558,8 @@ public:
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
 	{
 		if ( nif->getBSVersion() >= 170 && nif->blockInherits( index, "BSGeometry" ) ) {
-			cast_Starfield( nif, index );
+			if ( nif->checkInternalGeometry( index ) )
+				cast_Starfield( nif, index );
 			return index;
 		}
 		QModelIndex iData = getTriShapeData( nif, index );
@@ -634,8 +637,8 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
-		if ( nif->getBSVersion() >= 170 && nif->blockInherits( index, "BSGeometry" ) )
-			return bool( nif->get<quint32>( index, "Flags" ) & 0x0200 );
+		if ( nif->getBSVersion() >= 170 && nif->isNiBlock( index, "BSGeometry" ) )
+			return true;
 		if ( nif->blockInherits( index, "BSTriShape" ) && nif->getIndex( index, "Triangles" ).isValid() )
 			return true;
 		return getTriShapeData( nif, index ).isValid();
@@ -654,9 +657,11 @@ public:
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
 	{
 		if ( nif->getBSVersion() >= 170 && nif->blockInherits( index, "BSGeometry" ) ) {
-			nif->setState( BaseModel::Processing );
-			cast_Starfield( nif, index );
-			nif->restoreState();
+			if ( nif->checkInternalGeometry( index ) ) {
+				nif->setState( BaseModel::Processing );
+				cast_Starfield( nif, index );
+				nif->restoreState();
+			}
 			return index;
 		}
 
@@ -839,8 +844,8 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
-		if ( nif->getBSVersion() >= 170 && nif->blockInherits( index, "BSGeometry" ) )
-			return bool( nif->get<quint32>( index, "Flags" ) & 0x0200 );
+		if ( nif->getBSVersion() >= 170 && nif->isNiBlock( index, "BSGeometry" ) )
+			return true;
 		return spRemoveWasteVertices::getShape( nif, index ).isValid();
 	}
 
@@ -849,7 +854,7 @@ public:
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
 	{
 		if ( nif->getBSVersion() >= 170 && nif->blockInherits( index, "BSGeometry" ) ) {
-			if ( nif->get<quint32>( index, "Flags" ) & 0x0200 ) {
+			if ( nif->checkInternalGeometry( index ) ) {
 				nif->setState( BaseModel::Processing );
 				cast_Starfield( nif, index );
 				spRemoveWasteVertices::cast_Starfield( nif, index, false );
@@ -1324,9 +1329,11 @@ void spRemoveWasteVertices::cast_Starfield( NifModel * nif, const QModelIndex & 
 QModelIndex spRemoveWasteVertices::cast( NifModel * nif, const QModelIndex & index )
 {
 	if ( nif->blockInherits( index, "BSGeometry" ) ) {
-		nif->setState( BaseModel::Processing );
-		cast_Starfield( nif, index );
-		nif->restoreState();
+		if ( nif->checkInternalGeometry( index ) ) {
+			nif->setState( BaseModel::Processing );
+			cast_Starfield( nif, index );
+			nif->restoreState();
+		}
 	} else if ( nif->blockInherits( index, "BSTriShape" ) ) {
 		removeWasteVertices( nif, index );
 	} else {
@@ -1799,11 +1806,11 @@ QModelIndex spGenerateMeshlets::cast( NifModel * nif, const QModelIndex & index 
 		return index;
 	}
 
-	if ( !nif->blockInherits( index, "BSGeometry" ) )
+	if ( !( nif->isNiBlock( index, "BSGeometry" ) && nif->checkInternalGeometry( index ) ) )
 		return index;
 
 	auto	meshes = nif->getIndex( index, "Meshes" );
-	if ( meshes.isValid() && ( nif->get<quint32>(index, "Flags") & 0x0200 ) != 0 ) {
+	if ( meshes.isValid() ) {
 		for ( int i = 0; i <= 3; i++ ) {
 			auto mesh = nif->getIndex( meshes, i );
 			if ( !mesh.isValid() )
