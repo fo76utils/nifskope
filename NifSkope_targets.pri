@@ -11,11 +11,18 @@ else:EXE = ""
 ## lupdate / lrelease
 ###############################
 
-QMAKE_LUPDATE = $$[QT_INSTALL_BINS]/lupdate$${EXE}
+win32-g++|win32-clang-g++ {
+	QMAKE_LUPDATE = $$[QT_INSTALL_BINS]/lupdate-qt6$${EXE}
+	QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease-qt6$${EXE}
+} else {
+	QMAKE_LUPDATE = $$[QT_INSTALL_BINS]/lupdate$${EXE}
+	QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease$${EXE}
+}
+
 exists($$QMAKE_LUPDATE) {
 	# Make target for Updating .ts
 	updatets.target = updatets
-	updatets.commands += cd $${_PRO_FILE_PWD_} && $$[QT_INSTALL_BINS]/lupdate $${_PRO_FILE_} $$nt
+	updatets.commands += cd $${_PRO_FILE_PWD_} && $$QMAKE_LUPDATE $${_PRO_FILE_} $$nt
 	updatets.CONFIG += no_check_exist no_link no_clean
 
 	QMAKE_EXTRA_TARGETS += updatets
@@ -23,12 +30,11 @@ exists($$QMAKE_LUPDATE) {
 	message("lupdate could not be found, ignoring make target")
 }
 
-QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease$${EXE}
 exists($$QMAKE_LRELEASE) {
 	# Build Step for Releasing .ts->.qm
 	updateqm.input = TRANSLATIONS
 	updateqm.output = $$syspath($${DESTDIR}/lang/${QMAKE_FILE_BASE}.qm)
-	updateqm.commands = $$[QT_INSTALL_BINS]/lrelease ${QMAKE_FILE_IN} -qm $$syspath($${DESTDIR}/lang/${QMAKE_FILE_BASE}.qm) $$nt
+	updateqm.commands = $$QMAKE_LRELEASE ${QMAKE_FILE_IN} -qm $$syspath($${DESTDIR}/lang/${QMAKE_FILE_BASE}.qm) $$nt
 	updateqm.CONFIG += no_check_exist no_link no_clean target_predeps
 
 	QMAKE_EXTRA_COMPILERS += updateqm
