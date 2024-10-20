@@ -282,7 +282,7 @@ void NifModel::updateSettings()
 {
 	QSettings settings;
 
-	settings.beginGroup( "Settings/NIF/Startup Defaults" );
+	settings.beginGroup( "Settings/Nif/Startup Defaults" );
 
 	cfg.startupVersion = settings.value( "Version", "20.0.0.5" ).toString();
 	cfg.userVersion = settings.value( "User Version", "11" ).toInt();

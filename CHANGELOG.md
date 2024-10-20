@@ -1,5 +1,7 @@
  == CHANGELOG ==
 
+* Fixed setting the NIF version in new windows from the startup defaults.
+
 #### NifSkope-2.0.dev9-20241017
 
 * The UV editor now allows selecting Starfield textures from all layers, and also blender masks. Textures are rendered in the editor with the UV scale, offset and wrap mode applied. The latter change is implemented for Skyrim to Fallout 76 as well, but wrap modes are not fully supported.
