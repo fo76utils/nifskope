@@ -109,7 +109,11 @@ void SettingsPane::readPane( QWidget * w, QSettings & settings )
 			if ( !val.isNull() )
 				chk->setChecked( val.toBool() );
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 8, 0)
+			connect( chk, &QCheckBox::stateChanged, this, &SettingsPane::modifyPane );
+#else
 			connect( chk, &QCheckBox::checkStateChanged, this, &SettingsPane::modifyPane );
+#endif
 		}
 
 		auto cmb = qobject_cast<QComboBox *>(c);
