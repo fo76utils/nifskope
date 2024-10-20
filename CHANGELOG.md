@@ -1,6 +1,7 @@
  == CHANGELOG ==
 
 * Fixed setting the NIF version in new windows from the startup defaults.
+* Fixed issue reading version 22 Fallout 76 BGEM files due to unknown new fGlassBlurScaleFactor setting.
 
 #### NifSkope-2.0.dev9-20241017
 

@@ -229,6 +229,8 @@ bool EffectMaterial::readFile()
 				// FIXME: the order of these may be incorrect
 				in >> fGlassRefractionScaleBase;
 				in >> fGlassBlurScaleBase;
+				if ( version > 21 )
+					in >> fGlassBlurScaleFactor;
 			}
 		}
 		in >> bEnvironmentMapping;

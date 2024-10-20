@@ -653,7 +653,9 @@ void NifModel::loadFO76Material( const QModelIndex & parent, const void * materi
 		if ( bgem->bGlassEnabled ) {
 			setValue<Color3>( p, "Glass Fresnel Color", bgem->cGlassFresnelColor );
 			setValue<float>( p, "Glass Refraction Scale", bgem->fGlassRefractionScaleBase );
-			setValue<float>( p, "Glass Blur Scale", bgem->fGlassBlurScaleBase );
+			setValue<float>( p, "Glass Blur Scale Base", bgem->fGlassBlurScaleBase );
+			if ( bgem->version >= 22 )
+				setValue<float>( p, "Glass Blur Scale Factor", bgem->fGlassBlurScaleFactor );
 		}
 		setValue<float>( p, "Environment Map Scale", bgem->fEnvironmentMappingMaskScale );
 		setValue<Color3>( p, "Base Color", bgem->cBaseColor );

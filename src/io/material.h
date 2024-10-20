@@ -237,6 +237,8 @@ protected:
 	Color3 cGlassFresnelColor;
 	float fGlassRefractionScaleBase = 0.0f;
 	float fGlassBlurScaleBase = 0.0f;
+	// version >= 22
+	float fGlassBlurScaleFactor = 0.0f;
 };
 
 
