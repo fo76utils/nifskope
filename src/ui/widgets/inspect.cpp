@@ -314,8 +314,8 @@ InspectView::InspectView( QWidget * parent, Qt::WindowFlags f )
 	grid->addWidget( impl->lenText,     8, 1 );
 	grid->addWidget( impl->refreshBtn,  9, 1 );
 
-	connect( impl->localCheck, &QCheckBox::stateChanged, this, &InspectView::update );
-	connect( impl->invertCheck, &QCheckBox::stateChanged, this, &InspectView::update );
+	connect( impl->localCheck, &QCheckBox::checkStateChanged, this, &InspectView::update );
+	connect( impl->invertCheck, &QCheckBox::checkStateChanged, this, &InspectView::update );
 	connect( impl->refreshBtn, &QPushButton::clicked, this, &InspectView::update );
 	connect( impl->btnCopyTransform, &QPushButton::clicked, this, &InspectView::copyTransformToMimedata );
 }
