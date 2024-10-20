@@ -21,6 +21,7 @@ uniform bool greyscaleColor;
 
 uniform bool useFalloff;
 uniform bool hasRGBFalloff;
+uniform bool isGlass;
 
 uniform bool hasWeaponBlood;
 
@@ -139,7 +140,7 @@ void main( void )
 	// Specular
 	float g = 1.0;
 	float s = 1.0;
-	if ( hasSpecularMap ) {
+	if ( hasSpecularMap && !isGlass ) {
 		vec4 lightingMap = texture2D(LightingMap, offset);
 		s = lightingMap.r;
 		g = lightingMap.g;
@@ -150,11 +151,11 @@ void main( void )
 	if ( hasCubeMap ) {
 		float	m = roughness * (roughness * -4.0 + 10.0);
 		vec3	cube = textureCubeLod( CubeMap, reflectedWS, max(m, 0.0) ).rgb;
-		cube.rgb *= envReflection * g;
-		cube.rgb = mix( cube.rgb, cube.rgb * D.rgb, lightingInfluence );
+		cube *= envReflection * g;
+		cube = mix( cube, cube * D.rgb, lightingInfluence );
 		if ( hasEnvMask )
-			cube.rgb *= texture2D( EnvironmentMap, offset ).rgb;
-		color.rgb += cube.rgb * falloff;
+			cube *= texture2D( EnvironmentMap, offset ).rgb;
+		color.rgb += cube * falloff;
 	}
 
 	gl_FragColor.rgb = color.rgb * D.a;
