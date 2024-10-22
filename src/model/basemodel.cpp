@@ -264,7 +264,7 @@ QModelIndex BaseModel::index( int row, int column, const QModelIndex & parent ) 
 
 QModelIndex BaseModel::getIndex( const QModelIndex & itemParent, int row, int column ) const
 {
-	if ( itemParent.isValid() && itemParent.model() == this ) [[likely]] {
+	if ( ( itemParent.row() | itemParent.column() ) >= 0 && itemParent.model() == this ) [[likely]] {
 		const NifItem *	i = indexToItem( itemParent );
 		if ( i ) [[likely]] {
 			i = i->child( row );

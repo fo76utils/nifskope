@@ -424,6 +424,7 @@ void NifModel::clear()
 	cacheBSVersion( header );
 
 	lockUpdates = false;
+	batchProcessingMode = false;
 	needUpdates = utNone;
 
 	Game::GameManager::removeNIFResourcePath( this );

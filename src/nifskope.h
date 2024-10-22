@@ -158,6 +158,13 @@ public:
 		return ogl;
 	}
 
+	/*! For each NIF path on fileList, load the file, run processFunc() on the model, and save the modified file
+	 * if processFunc() returned true. The optional processFuncData pointer is passed to the function.
+	 * Returns true if processing has been successfully completed.
+	 */
+	bool batchProcessFiles( const QStringList & fileList,
+							bool (*processFunc)( NifModel *, void * ), void * processFuncData = nullptr );
+
 signals:
 	void beginLoading();
 	void completeLoading( bool, QString & );

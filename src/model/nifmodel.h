@@ -512,7 +512,19 @@ protected:
 public:
 	void loadSFMaterial( const QModelIndex & parent, const void * matPtr, int lodLevel = 0 );
 	void loadFO76Material( const QModelIndex & parent, const void * material );
+	//! Create and return CE2Material object from abstract material data in Starfield shader property block.
 	const void * updateSFMaterial( AllocBuffers & bufs, const QModelIndex & parent ) const;
+
+	//! Set batch processing mode flag (can be used by spells to disable messages).
+	inline void setBatchProcessingMode( bool n )
+	{
+		batchProcessingMode = n;
+	}
+	//! Get batch processing mode flag.
+	inline bool getBatchProcessingMode() const
+	{
+		return batchProcessingMode;
+	}
 
 	// String resolving ("get ex")
 public:
@@ -712,12 +724,14 @@ protected:
 
 	//! NIF file version
 	quint32 version;
+	quint32 bsVersion;
 
 	QHash<int, QList<int> > childLinks;
 	QHash<int, QList<int> > parentLinks;
 	QList<int> rootLinks;
 
 	bool lockUpdates;
+	bool batchProcessingMode;
 
 	enum UpdateType
 	{
@@ -731,7 +745,6 @@ protected:
 
 	void updateModel( UpdateType value = utAll );
 
-	quint32 bsVersion;
 	void cacheBSVersion( const NifItem * headerItem );
 
 	QString topItemRepr( const NifItem * item ) const override final;
