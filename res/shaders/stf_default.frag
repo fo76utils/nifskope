@@ -657,16 +657,13 @@ void main()
 		ambient *= (vec3(1.0) - f0) * fDiffEnv;
 	}
 	float	ao = pbrMap.b;
+	float	specOcc = max( ( ao - 1.0 ) / ( NdotV * 0.5 + 0.5 ) + 1.0, 0.0 );
 	refl *= f * envLUT.g;
 
 	// Diffuse
-	color.rgb = diffuse * albedo * D.rgb;
-	// Ambient
-	color.rgb += ambient * albedo;
+	color.rgb = ( diffuse * D.rgb + ambient ) * albedo * ao;
 	// Specular
-	color.rgb += spec;
-	color.rgb += refl;
-	color.rgb *= ao;
+	color.rgb += ( spec + refl ) * specOcc;
 
 	// Emissive
 	if ( lm.emissiveSettings.isEnabled ) {
