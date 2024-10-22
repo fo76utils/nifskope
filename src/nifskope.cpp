@@ -1444,3 +1444,69 @@ void NifSkope::migrateSettings() const
 	}
 #endif
 }
+
+bool NifSkope::batchProcessFiles(
+	const QStringList & fileList, bool (*processFunc)( NifModel *, void * ), void * processFuncData )
+{
+	qsizetype	n = fileList.size();
+	if ( n < 1 || !processFunc )
+		return true;
+
+	QDialog	dlg;
+	QLabel *	lb = new QLabel( &dlg );
+	lb->setText( QString( "Processing file %1..." ).arg( fileList.first() ) );
+	QProgressBar *	pb = new QProgressBar( &dlg );
+	pb->setMinimum( 0 );
+	pb->setMaximum( int( n ) );
+	QPushButton *	cb = new QPushButton( "Cancel", &dlg );
+	QGridLayout *	grid = new QGridLayout;
+	dlg.setLayout( grid );
+	grid->addWidget( lb, 0, 0, 1, 3 );
+	grid->addWidget( pb, 1, 0, 1, 3 );
+	grid->addWidget( cb, 2, 1, 1, 1 );
+	QObject::connect( cb, &QPushButton::clicked, &dlg, &QDialog::reject );
+	dlg.setModal( true );
+	dlg.setResult( QDialog::Accepted );
+	dlg.show();
+
+	bool	noErrors = true;
+	for ( qsizetype i = 0; i < n; i++ ) {
+		const QString &	filePath = fileList[i];
+		lb->setText( QString( "Processing file %1..." ).arg( filePath ) );
+		try {
+			QCoreApplication::processEvents();
+			if ( dlg.result() == QDialog::Rejected )
+				return false;
+
+			loadFile( filePath );
+			QCoreApplication::processEvents();
+			if ( dlg.result() == QDialog::Rejected )
+				return false;
+
+			nif->setBatchProcessingMode( true );
+			bool	saveFlag = processFunc( nif, processFuncData );
+			nif->setBatchProcessingMode( false );
+			QCoreApplication::processEvents();
+			if ( dlg.result() == QDialog::Rejected )
+				return false;
+
+			if ( saveFlag ) {
+				saveFile( filePath );
+				QCoreApplication::processEvents();
+				if ( dlg.result() == QDialog::Rejected )
+					return false;
+			}
+		} catch ( std::exception & e ) {
+			nif->setBatchProcessingMode( false );
+			if ( QMessageBox::critical( this, "NifSkope error",
+										QString( "Error processing '%1': %2. Continue?" ).arg( filePath ).arg( e.what() ),
+										QMessageBox::Yes | QMessageBox::No ) != QMessageBox::Yes ) {
+				return false;
+			}
+			noErrors = false;
+		}
+		pb->setValue( int( i + 1 ) );
+	}
+
+	return noErrors;
+}
