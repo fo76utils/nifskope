@@ -731,7 +731,7 @@ protected:
 	QList<int> rootLinks;
 
 	bool lockUpdates;
-	bool batchProcessingMode;
+	bool batchProcessingMode = false;
 
 	enum UpdateType
 	{

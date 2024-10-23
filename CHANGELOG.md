@@ -1,7 +1,11 @@
  == CHANGELOG ==
 
+* Added an experimental new spell for batch processing multiple NIF files, casting any from a selection of currently 7 spells. The files to be processed can be selected with a file dialog, and are overwritten with the modified data (it is recommended to back up the original NIFs).
+* Converting Starfield geometry to external mesh files can now use a custom sub-directory under 'geometries'. This can be configured in the general settings under NIF, and if the name is not empty, exported mesh paths will be in the format 'geometries/SUBDIR/SHA1.mesh', and the full hash (40 characters) will be used as the base name of the file.
+* The default startup NIF version has been changed from Oblivion to Skyrim: Special Edition.
 * Fixed setting the NIF version in new windows from the startup defaults.
 * Fixed issue reading version 22 Fallout 76 BGEM files due to unknown new fGlassBlurScaleFactor setting.
+* Fixed exporting Starfield mesh files with no meshlet data.
 
 #### NifSkope-2.0.dev9-20241017
 

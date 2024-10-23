@@ -539,7 +539,17 @@ public:
 
 		return QModelIndex();
 	}
+
+	static QModelIndex cast_Static( NifModel * nif, const QModelIndex & index );
 };
+
+QModelIndex spAddAllTangentSpaces::cast_Static( NifModel * nif, const QModelIndex & index )
+{
+	spAddAllTangentSpaces	tmp;
+	if ( tmp.isApplicable( nif, index ) )
+		return tmp.cast( nif, index );
+	return index;
+}
 
 REGISTER_SPELL( spAddAllTangentSpaces )
 

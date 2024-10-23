@@ -1640,7 +1640,17 @@ public:
 
 		return QModelIndex();
 	}
+
+	static QModelIndex cast_Static( NifModel * nif, const QModelIndex & index );
 };
+
+QModelIndex spUpdateAllBounds::cast_Static( NifModel * nif, const QModelIndex & index )
+{
+	spUpdateAllBounds	tmp;
+	if ( tmp.isApplicable( nif, index ) )
+		return tmp.cast( nif, index );
+	return index;
+}
 
 REGISTER_SPELL( spUpdateAllBounds )
 
@@ -1829,6 +1839,14 @@ QModelIndex spGenerateMeshlets::cast( NifModel * nif, const QModelIndex & index 
 	}
 
 	return spUpdateBounds::cast_Starfield( nif, index );
+}
+
+QModelIndex spGenerateMeshlets::cast_Static( NifModel * nif, const QModelIndex & index )
+{
+	spGenerateMeshlets	tmp;
+	if ( tmp.isApplicable( nif, index ) )
+		return tmp.cast( nif, index );
+	return index;
 }
 
 REGISTER_SPELL( spGenerateMeshlets )

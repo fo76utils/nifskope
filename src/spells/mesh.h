@@ -69,6 +69,7 @@ public:
 	static void clearMeshlets( NifModel * nif, const QModelIndex & iMeshData );
 	static void updateMeshlets( NifModel * nif, const QPersistentModelIndex & iMeshData, const MeshFile & meshFile );
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final;
+	static QModelIndex cast_Static( NifModel * nif, const QModelIndex & index );
 };
 
 //! Removes unused vertices

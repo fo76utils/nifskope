@@ -36,7 +36,7 @@ public:
 		}
 		static void getTransform( Transform & t, const NifModel * nif, const QModelIndex & index );
 		void loadGeometryData( const NifModel * nif, const QModelIndex & index );
-		void simplifyMeshes();
+		void simplifyMeshes( bool noMessages = false );
 		int vertexBlockNum( unsigned int v ) const;
 		void saveGeometryData( NifModel * nif ) const;
 	};
@@ -51,6 +51,8 @@ public:
 	}
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final;
+
+	static QModelIndex cast_Static( NifModel * nif, const QModelIndex & index );
 };
 
 void spSimplifySFMesh::Meshes::getTransform( Transform & t, const NifModel * nif, const QModelIndex & index )
@@ -152,7 +154,7 @@ void spSimplifySFMesh::Meshes::loadGeometryData( const NifModel * nif, const QMo
 	blockVertexRanges.push_back( (unsigned int) totalVertices );
 }
 
-void spSimplifySFMesh::Meshes::simplifyMeshes()
+void spSimplifySFMesh::Meshes::simplifyMeshes( bool noMessages )
 {
 	if ( blockNumbers.empty() || !( totalIndices >= 3 && totalVertices >= 1 ) )
 		return;
@@ -190,6 +192,8 @@ void spSimplifySFMesh::Meshes::simplifyMeshes()
 		newIndices[l].resize( newIndicesCnt );
 	}
 
+	if ( noMessages )
+		return;
 	QString	msg = QString( "LOD0: %1 triangles" ).arg( numTriangles );
 	for ( int l = 0; l < 3; l++ )
 		msg.append( QString("\nLOD%1: %2 triangles, error = %3").arg(l + 1).arg(newIndices[l].size() / 3).arg(err[l]) );
@@ -372,10 +376,18 @@ QModelIndex spSimplifySFMesh::cast( NifModel * nif, const QModelIndex & index )
 	Meshes	m;
 	nif->setState( BaseModel::Processing );
 	m.loadGeometryData( nif, index );
-	m.simplifyMeshes();
+	m.simplifyMeshes( nif->getBatchProcessingMode() );
 	m.saveGeometryData( nif );
 	nif->restoreState();
 
+	return index;
+}
+
+QModelIndex spSimplifySFMesh::cast_Static( NifModel * nif, const QModelIndex & index )
+{
+	spSimplifySFMesh	tmp;
+	if ( tmp.isApplicable( nif, index ) )
+		return tmp.cast( nif, index );
 	return index;
 }
 

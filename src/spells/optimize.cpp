@@ -573,16 +573,27 @@ public:
 		for ( const auto & s : newStrings )
 			originalStrings.removeAll( s );
 
-		QString msg;
-		if ( originalStrings.size() )
-			msg = "Removed:\r\n" + QStringList::fromVector( originalStrings ).join( "\r\n" );
+		if ( !nif->getBatchProcessingMode() ) {
+			QString msg;
+			if ( originalStrings.size() )
+				msg = "Removed:\r\n" + QStringList::fromVector( originalStrings ).join( "\r\n" );
 
-		Message::info( nullptr, Spell::tr( "Strings Removed: %1. New string table has %2 entries." )
-					   .arg( originalStrings.size() ).arg( newSize ), msg
-		);
+			Message::info( nullptr, Spell::tr( "Strings Removed: %1. New string table has %2 entries." )
+									.arg( originalStrings.size() ).arg( newSize ), msg );
+		}
 
 		return QModelIndex();
 	}
+
+	static QModelIndex cast_Static( NifModel * nif, const QModelIndex & index );
 };
+
+QModelIndex spRemoveUnusedStrings::cast_Static( NifModel * nif, const QModelIndex & index )
+{
+	spRemoveUnusedStrings	tmp;
+	if ( tmp.isApplicable( nif, index ) )
+		return tmp.cast( nif, index );
+	return index;
+}
 
 REGISTER_SPELL( spRemoveUnusedStrings )

@@ -1469,6 +1469,7 @@ bool NifSkope::batchProcessFiles(
 	dlg.setResult( QDialog::Accepted );
 	dlg.show();
 
+	NifModel *	tmpNif = nullptr;
 	bool	noErrors = true;
 	for ( qsizetype i = 0; i < n; i++ ) {
 		const QString &	filePath = fileList[i];
@@ -1478,26 +1479,42 @@ bool NifSkope::batchProcessFiles(
 			if ( dlg.result() == QDialog::Rejected )
 				return false;
 
-			loadFile( filePath );
+			QString	fileName( QDir::fromNativeSeparators( filePath ) );
+			tmpNif = new NifModel();
+			tmpNif->setBatchProcessingMode( true );
+			{
+				QFile	f( fileName );
+				if ( !f.open( QIODeviceBase::ReadOnly ) )
+					throw FO76UtilsError( "error opening file" );
+				std::string	tmp( fileName.toStdString() );
+				tmpNif->load( f, tmp.c_str() );
+			}
+
 			QCoreApplication::processEvents();
 			if ( dlg.result() == QDialog::Rejected )
 				return false;
 
-			nif->setBatchProcessingMode( true );
-			bool	saveFlag = processFunc( nif, processFuncData );
-			nif->setBatchProcessingMode( false );
+			bool	saveFlag = processFunc( tmpNif, processFuncData );
+			tmpNif->setBatchProcessingMode( false );
+
 			QCoreApplication::processEvents();
 			if ( dlg.result() == QDialog::Rejected )
 				return false;
 
 			if ( saveFlag ) {
-				saveFile( filePath );
-				QCoreApplication::processEvents();
-				if ( dlg.result() == QDialog::Rejected )
-					return false;
+				QFile	f( fileName );
+				if ( !f.open( QIODeviceBase::WriteOnly ) )
+					throw FO76UtilsError( "error opening file" );
+				tmpNif->save( f );
 			}
+
+			delete tmpNif;
+			tmpNif = nullptr;
 		} catch ( std::exception & e ) {
-			nif->setBatchProcessingMode( false );
+			if ( tmpNif ) {
+				delete tmpNif;
+				tmpNif = nullptr;
+			}
 			if ( QMessageBox::critical( this, "NifSkope error",
 										QString( "Error processing '%1': %2. Continue?" ).arg( filePath ).arg( e.what() ),
 										QMessageBox::Yes | QMessageBox::No ) != QMessageBox::Yes ) {
