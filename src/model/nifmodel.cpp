@@ -284,9 +284,9 @@ void NifModel::updateSettings()
 
 	settings.beginGroup( "Settings/Nif/Startup Defaults" );
 
-	cfg.startupVersion = settings.value( "Version", "20.0.0.5" ).toString();
-	cfg.userVersion = settings.value( "User Version", "11" ).toInt();
-	cfg.userVersion2 = settings.value( "User Version 2", "11" ).toInt();
+	cfg.startupVersion = settings.value( "Version", "20.2.0.7" ).toString();
+	cfg.userVersion = settings.value( "User Version", "12" ).toInt();
+	cfg.userVersion2 = settings.value( "User Version 2", "100" ).toInt();
 
 	settings.endGroup();
 }
@@ -424,7 +424,6 @@ void NifModel::clear()
 	cacheBSVersion( header );
 
 	lockUpdates = false;
-	batchProcessingMode = false;
 	needUpdates = utNone;
 
 	Game::GameManager::removeNIFResourcePath( this );
@@ -1854,7 +1853,7 @@ bool NifModel::load( QIODevice & device, const char* fileName )
 	QSettings settings;
 	bool ignoreSize = settings.value( "Ignore Block Size", true ).toBool();
 	bool convertSFMeshes =
-		settings.value( "Settings/Nif/Convert Starfield meshes to internal geometry on load", false ).toBool();
+		settings.value( "Settings/Nif/Convert meshes to internal geometry on load", false ).toBool();
 
 	clear();
 
