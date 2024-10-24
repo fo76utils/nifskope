@@ -1147,7 +1147,7 @@ gli::texture load_if_valid( const char * data, unsigned int size )
 	dx DX;
 
 	format Format( static_cast<format>(FORMAT_UNDEFINED) );
-	if ( (Header.Format.flags & (dx::DDPF_RGB | dx::DDPF_ALPHAPIXELS | dx::DDPF_ALPHA | dx::DDPF_YUV | dx::DDPF_LUMINANCE)) && Format == static_cast<format>(gli::FORMAT_UNDEFINED) && Header.Format.bpp != 0 ) {
+	if ( (Header.Format.flags & (dx::DDPF_RGB | dx::DDPF_ALPHAPIXELS | dx::DDPF_ALPHA | dx::DDPF_YUV | dx::DDPF_LUMINANCE | 0x00080000)) && Format == static_cast<format>(gli::FORMAT_UNDEFINED) && Header.Format.bpp != 0 ) {
 		switch ( Header.Format.bpp ) {
 		default:
 			break;
@@ -1206,7 +1206,7 @@ gli::texture load_if_valid( const char * data, unsigned int size )
 				else if ( glm::all( glm::equal( Header.Format.Mask, DX.translate( FORMAT_BGRA8_UNORM_PACK8 ).Mask ) ) )
 					Format = FORMAT_BGRA8_UNORM_PACK8;
 				else if ( glm::all( glm::equal( Header.Format.Mask, DX.translate( FORMAT_RGBA8_UNORM_PACK8 ).Mask ) ) )
-					Format = FORMAT_RGBA8_UNORM_PACK8;
+					Format = ( !( Header.Format.flags & 0x00080000 ) ? FORMAT_RGBA8_UNORM_PACK8 : FORMAT_RGBA8_SNORM_PACK8 );
 				else if ( glm::all( glm::equal( Header.Format.Mask, DX.translate( FORMAT_RGB10A2_UNORM_PACK32 ).Mask ) ) )
 					Format = FORMAT_RGB10A2_UNORM_PACK32;
 				else if ( glm::all( glm::equal( Header.Format.Mask, DX.translate( FORMAT_LA16_UNORM_PACK16 ).Mask ) ) )
