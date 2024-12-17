@@ -279,9 +279,14 @@ QModelIndex spApplyTransformation::cast( NifModel * nif, const QModelIndex & ind
 		for ( int i = 0; i < nif->rowCount( iVertData ); i++ ) {
 			auto iVert = nif->getIndex( iVertData, i );
 
-			auto vertex = t * nif->get<Vector3>( iVert, "Vertex" );
-			if ( !nif->set<HalfVector3>( iVert, "Vertex", vertex ) )
-				nif->set<Vector3>( iVert, "Vertex", vertex );
+			auto iVertex = nif->getItem( iVert, "Vertex" );
+			if ( iVertex ) {
+				auto vertex = t * nif->get<Vector3>( iVertex );
+				if ( iVertex->hasValueType( NifValue::tHalfVector3 ) )
+					nif->set<HalfVector3>( iVertex, vertex );
+				else
+					nif->set<Vector3>( iVertex, vertex );
+			}
 
 			// Transform BTN if applicable
 			if ( !(t.rotation == Matrix()) ) {

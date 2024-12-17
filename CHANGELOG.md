@@ -6,6 +6,7 @@
 * Exported UV layouts can be solid filled.
 * Improvements to OBJ export.
 * Added support for more Skyrim Havok material types that were previously unknown.
+* Fixed error message on using Transform/Apply on BSTriShape geometry with full precision vertex positions.
 * Fixed the block types NiMeshPSysData and NiMeshParticleSystem being incorrectly filtered out by 'Block/Insert'.
 
 #### NifSkope-2.0.dev9-20241112
