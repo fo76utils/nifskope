@@ -1816,6 +1816,7 @@ static QString getNIFDataPath( const char * pathName )
 			if ( QFileInfo( dataPath ).isDir() )
 				return dataPath;
 		}
+		break;
 	}
 	return QString();
 }
