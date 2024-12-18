@@ -46,6 +46,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QFileInfo>
 #include <QSettings>
 #include <QStringBuilder>
+#include <cctype>
 
 //! @file nifmodel.cpp The NIF data model.
 
@@ -1786,34 +1787,35 @@ bool NifModel::setHeaderString( const QString & s, uint ver )
 
 static QString getNIFDataPath( const char * pathName )
 {
-	std::string	tmpPath( pathName ? pathName : "" );
+	std::string_view	tmpPath( pathName ? pathName : "" );
 	while ( !tmpPath.empty() ) {
 		std::uint32_t	extStr = 0U;
 		if ( tmpPath.length() > 4 ) {
-			extStr = FileBuffer::readUInt32Fast( tmpPath.c_str() + (tmpPath.length() - 4) );
+			extStr = FileBuffer::readUInt32Fast( tmpPath.data() + (tmpPath.length() - 4) );
 			extStr = extStr | ((extStr >> 1) & 0x20202020U);
 		}
-		if ( FileBuffer::checkType( extStr, ".nif" ) ) {
+		if ( FileBuffer::checkType( extStr, ".nif" )
+			|| FileBuffer::checkType( extStr, ".bto" ) || FileBuffer::checkType( extStr, ".btr" ) ) {
 			size_t	n1 = tmpPath.rfind('/');
-			size_t	n2 = tmpPath.rfind('\\');
-			if ( n1 == std::string::npos )
+			if ( n1 == std::string_view::npos )
 				n1 = 0;
-			if ( n2 == std::string::npos )
+#if defined(_WIN32) || defined(_WIN64)
+			size_t	n2 = tmpPath.rfind('\\');
+			if ( n2 == std::string_view::npos )
 				n2 = 0;
 			n1 = std::max( n1, n2 );
-#if defined(_WIN32) || defined(_WIN64)
 			// do not remove slash from after drive letter and :
-			if ( n1 == 2 && tmpPath[1] == ':' && ( (unsigned int) std::uint8_t(tmpPath[0] | 0x20) - 0x61U ) < 0x1AU )
+			if ( n1 == 2 && tmpPath[1] == ':' && std::isalpha( (unsigned char) tmpPath[0] ) )
 				n1++;
 #endif
-			tmpPath.resize( n1 );
+			tmpPath = tmpPath.substr( 0, n1 );
 			continue;
 		}
-		if ( FileBuffer::checkType( extStr, ".ba2" ) || FileBuffer::checkType( extStr, ".bsa" ) )
-			break;
-		QString	dataPath = QString::fromStdString( tmpPath );
-		if ( QFileInfo( dataPath ).isDir() )
-			return dataPath;
+		if ( !( FileBuffer::checkType( extStr, ".ba2" ) || FileBuffer::checkType( extStr, ".bsa" ) ) ) {
+			QString	dataPath = QString::fromUtf8( tmpPath.data(), qsizetype( tmpPath.length() ) );
+			if ( QFileInfo( dataPath ).isDir() )
+				return dataPath;
+		}
 	}
 	return QString();
 }
