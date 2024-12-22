@@ -9,6 +9,7 @@
 * Fixed error message on using Transform/Apply on BSTriShape geometry with full precision vertex positions.
 * Fixed hang on opening loose .bto and .btr files.
 * Fixed the block types NiMeshPSysData and NiMeshParticleSystem being incorrectly filtered out by 'Block/Insert'.
+* Fixed bug in checking vertex attribute flags for enabling the Skyrim multilayer parallax shader.
 
 #### NifSkope-2.0.dev9-20241112
 
