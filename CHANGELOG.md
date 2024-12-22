@@ -10,6 +10,7 @@
 * Fixed hang on opening loose .bto and .btr files.
 * Fixed the block types NiMeshPSysData and NiMeshParticleSystem being incorrectly filtered out by 'Block/Insert'.
 * Fixed bug in checking vertex attribute flags for enabling the Skyrim multilayer parallax shader.
+* Fixed issue with opening data paths that contain non-ASCII characters on Windows. Note that currently the paths need to be valid in the local 8-bit code page.
 
 #### NifSkope-2.0.dev9-20241112
 
