@@ -1,5 +1,7 @@
  == CHANGELOG ==
 
+#### NifSkope-2.0.dev9-20241228
+
 * Implemented rendering bhkCylinderShape (fix to issue https://github.com/hexabits/nifskope/issues/37).
 * Added a new resource setting to disable the message box that is shown if an archive or data folder cannot be opened.
 * Added keyboard shortcuts to moving and deleting data paths in the resource settings.

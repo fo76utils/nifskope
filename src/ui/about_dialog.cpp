@@ -83,7 +83,7 @@ AboutDialog::AboutDialog( QWidget * parent )
 	<p><a href='https://github.com/syoyo/tinygltf'>Tiny glTF</a> is copyright © 2015-present by Syoyo Fujita, Aurélien Chatelain and many contributors under the MIT License.
 	</p>
 
-	<p><a href='https://github.com/nlohmann/json'>JSON for Modern C++</a> library is copyright © 2013-2023 by Niels Lohmann, MIT License.
+	<p><a href='https://github.com/nlohmann/json'>JSON for Modern C++</a> library is copyright © 2013-2024 by Niels Lohmann, MIT License.
 	</p>
 	)rhtml" );
 

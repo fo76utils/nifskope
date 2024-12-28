@@ -52,7 +52,7 @@ Starfield meshlet and LOD generation are based on code from [meshoptimizer](http
 Syoyo Fujita, Aurélien Chatelain and many contributors under the MIT License.
 
 [JSON for Modern C++](https://github.com/nlohmann/json) library is copyright (c)
-2013-2023 by Niels Lohmann, MIT License.
+2013-2024 by Niels Lohmann, MIT License.
 
 NOTICE
 
