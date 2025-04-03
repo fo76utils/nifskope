@@ -183,7 +183,7 @@ GLView::~GLView()
 QWidget * GLView::createWindowContainer( QWidget * parent )
 {
 	graphicsView = QWidget::createWindowContainer( this, parent );
-	graphicsView->setContextMenuPolicy( Qt::CustomContextMenu );
+	graphicsView->setContextMenuPolicy( Qt::PreventContextMenu );
 	graphicsView->setFocusPolicy( Qt::ClickFocus );
 	graphicsView->setAcceptDrops( true );
 	graphicsView->setMinimumSize( QSize( 50, 50 ) );
@@ -1995,58 +1995,64 @@ void GLView::mousePressEvent( QMouseEvent * event )
 void GLView::mouseReleaseEvent( QMouseEvent * event )
 {
 	mouseButtonState &= ~( std::uint32_t( event->button() ) );
-	if ( !(model && (pressPos - event->localPos()).manhattanLength() <= 3) )
-		return;
-
-	if ( event->button() == Qt::ForwardButton || event->button() == Qt::BackButton || event->button() == Qt::MiddleButton ) {
-		event->ignore();
-		return;
-	}
 
 #ifdef Q_OS_LINUX
 	bool	isColorPicker = bool( event->modifiers() & ( Qt::AltModifier | Qt::ControlModifier ) );
 #else
 	bool	isColorPicker = bool( event->modifiers() & Qt::AltModifier );
 #endif
-	if ( !isColorPicker ) {
-		QModelIndex idx = indexAt( event->localPos(), bool( event->modifiers() & Qt::ShiftModifier ) );
-		scene->currentBlock = model->getBlockIndex( idx );
-		scene->currentIndex = idx.sibling( idx.row(), 0 );
-
-		if ( idx.isValid() ) {
-#if 0
-			// this makes vertex selection slow, and may no longer be needed with newer Qt versions
-			emit clicked( QModelIndex() ); // HACK: To get Block Details to update
-#endif
-			emit clicked( idx );
+	if ( model && (pressPos - event->localPos()).manhattanLength() <= 3 ) {
+		if ( event->button() == Qt::ForwardButton || event->button() == Qt::BackButton
+			|| event->button() == Qt::MiddleButton ) {
+			event->ignore();
+			return;
 		}
 
-	} else {
-		// Color Picker / Eyedrop tool
-		QOpenGLFramebufferObjectFormat fboFmt;
-		fboFmt.setTextureTarget( GL_TEXTURE_2D );
-		fboFmt.setInternalTextureFormat( GL_SRGB8 );
-		fboFmt.setMipmap( false );
-		fboFmt.setAttachment( QOpenGLFramebufferObject::Attachment::Depth );
+		if ( !isColorPicker ) {
+			QModelIndex idx = indexAt( event->localPos(), bool( event->modifiers() & Qt::ShiftModifier ) );
+			scene->currentBlock = model->getBlockIndex( idx );
+			scene->currentIndex = idx.sibling( idx.row(), 0 );
 
-		QOpenGLFramebufferObject fbo( pixelWidth, pixelHeight, fboFmt );
-		fbo.bind();
+			if ( idx.isValid() ) {
+#if 0
+				// this makes vertex selection slow, and may no longer be needed with newer Qt versions
+				emit clicked( QModelIndex() ); // HACK: To get Block Details to update
+#endif
+				emit clicked( idx );
+			}
 
-		paintGL();
+		} else {
+			// Color Picker / Eyedrop tool
+			QOpenGLFramebufferObjectFormat fboFmt;
+			fboFmt.setTextureTarget( GL_TEXTURE_2D );
+			fboFmt.setInternalTextureFormat( GL_SRGB8 );
+			fboFmt.setMipmap( false );
+			fboFmt.setAttachment( QOpenGLFramebufferObject::Attachment::Depth );
 
-		fbo.release();
+			QOpenGLFramebufferObject fbo( pixelWidth, pixelHeight, fboFmt );
+			fbo.bind();
 
-		QImage * img = new QImage( fbo.toImage() );
+			paintGL();
 
-		QColor what = QColor( img->pixel( ( event->localPos() * devicePixelRatioF() ).toPoint() ) );
+			fbo.release();
 
-		glClearColor( what.redF(), what.greenF(), what.blueF(), what.alphaF() );
-		// qDebug() << what;
+			QImage * img = new QImage( fbo.toImage() );
 
-		delete img;
+			QColor what = QColor( img->pixel( ( event->localPos() * devicePixelRatioF() ).toPoint() ) );
+
+			glClearColor( what.redF(), what.greenF(), what.blueF(), what.alphaF() );
+			// qDebug() << what;
+
+			delete img;
+		}
+
+		update();
 	}
 
-	update();
+	if ( event->button() == Qt::RightButton && !isColorPicker ) {
+		QContextMenuEvent	e( QContextMenuEvent::Mouse, event->pos(), event->globalPos(), event->modifiers() );
+		contextMenuEvent( &e );
+	}
 }
 
 void GLView::wheelEvent( QWheelEvent * event )
