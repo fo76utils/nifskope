@@ -608,7 +608,7 @@ const NifItem * BaseModel::getItemInternal( const NifItem * parent, const QStrin
 	return nullptr;
 }
 
-const NifItem * BaseModel::getItemInternal( const NifItem * parent, const QLatin1StringView & name, bool reportErrors ) const
+const NifItem * BaseModel::getItemInternal( const NifItem * parent, const QLatin1String & name, bool reportErrors ) const
 {
 	for ( auto item : parent->children() ) {
 		if ( item->hasName(name) && evalCondition(item) )
@@ -621,7 +621,7 @@ const NifItem * BaseModel::getItemInternal( const NifItem * parent, const QLatin
 }
 
 static const QString DOTS_QSTRING("..");
-static const QLatin1StringView DOTS_LATIN("..");
+static const QLatin1String DOTS_LATIN("..");
 
 const NifItem * BaseModel::getItem( const NifItem * parent, const QString & name, bool reportErrors ) const
 {
@@ -640,16 +640,16 @@ const NifItem * BaseModel::getItem( const NifItem * parent, const QString & name
 	return getItemInternal( parent, name, reportErrors );
 }
 
-const NifItem * BaseModel::getItem( const NifItem * parent, const QLatin1StringView & name, bool reportErrors ) const
+const NifItem * BaseModel::getItem( const NifItem * parent, const QLatin1String & name, bool reportErrors ) const
 {
 	if ( !parent )
 		return nullptr;
 
-	size_t	nameLen = size_t( name.length() );
+	size_t	nameLen = size_t( name.size() );
 	size_t	slashPos = std::string_view( name.data(), nameLen ).find( '\\' );
 	if ( slashPos != std::string_view::npos && slashPos > 0 ) {
-		QLatin1StringView left  = name.left( slashPos );
-		QLatin1StringView right = name.right( nameLen - slashPos - 1 );
+		QLatin1String left  = name.left( slashPos );
+		QLatin1String right = name.right( nameLen - slashPos - 1 );
 
 		const NifItem * pp = ( left == DOTS_LATIN ) ? parent->parent() : getItemInternal( parent, left, reportErrors );
 		return getItem( pp, right, reportErrors );
@@ -705,7 +705,7 @@ const NifItem * BaseModel::getItem( const QModelIndex & index, bool reportErrors
 /*
 *  Uses implicit load order
 */
-const NifItem * BaseModel::getItemX( const NifItem * item, const QLatin1StringView & name ) const
+const NifItem * BaseModel::getItemX( const NifItem * item, const QLatin1String & name ) const
 {
 	while ( item ) {
 		const NifItem * parent = item->parent();
@@ -724,7 +724,7 @@ const NifItem * BaseModel::getItemX( const NifItem * item, const QLatin1StringVi
 	return nullptr;
 }
 
-const NifItem * BaseModel::findItemX( const NifItem * parent, const QLatin1StringView & name ) const
+const NifItem * BaseModel::findItemX( const NifItem * parent, const QLatin1String & name ) const
 {
 	while ( parent ) {
 		const NifItem * c = getItem( parent, name, false );
@@ -915,7 +915,7 @@ BaseModelEval::BaseModelEval( const BaseModel * model, const NifItem * item )
 
 QVariant BaseModelEval::operator()( const QVariant & v ) const
 {
-	if ( v.typeId() == QMetaType::QString ) {
+	if ( v.type() == QVariant::String ) {
 
 		// Resolve "ARG"
 		QString left = v.toString();

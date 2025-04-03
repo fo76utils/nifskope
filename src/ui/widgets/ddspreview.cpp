@@ -242,7 +242,7 @@ DDSTextureInfo::DDSTextureInfo(
 	Game::GameManager::GameResources & gameResources, const QString & filePath, QWidget * parent )
 	: QWidget( parent )
 {
-	bool	isHDR = ( filePath.endsWith( QLatin1StringView( ".hdr" ), Qt::CaseInsensitive ) );
+	bool	isHDR = ( filePath.endsWith( QLatin1String( ".hdr" ), Qt::CaseInsensitive ) );
 	bool	invertCubeZAxis = ( gameResources.game == Game::FALLOUT_4 || gameResources.game == Game::FALLOUT_76 );
 	std::string	fullPath = Game::GameManager::get_full_path( filePath, "textures/", ( !isHDR ? ".dds" : ".hdr" ) );
 	if ( gameResources.find_file( fullPath ).isEmpty() )

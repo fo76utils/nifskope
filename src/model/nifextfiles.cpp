@@ -914,7 +914,7 @@ const void * NifModel::updateSFMaterial( AllocBuffers & bufs, const QModelIndex 
 		size_t	n2 = sizeof( CE2Material::shaderModelNames ) / sizeof( char * );
 		while ( n2 > n0 ) {
 			size_t	n1 = ( n0 + n2 ) >> 1;
-			int	d = shaderModel.compare( QLatin1StringView( CE2Material::shaderModelNames[n1] ), Qt::CaseInsensitive );
+			int	d = shaderModel.compare( QLatin1String( CE2Material::shaderModelNames[n1] ), Qt::CaseInsensitive );
 			if ( d && n1 > n0 ) [[likely]] {
 				if ( d < 0 )
 					n2 = n1;

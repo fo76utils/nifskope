@@ -280,8 +280,8 @@ void ColorWheel::mousePressEvent( QMouseEvent * e )
 	if ( e->button() != Qt::LeftButton )
 		return;
 
-	double x = e->position().x();
-	double y = e->position().y();
+	double x = e->localPos().x();
+	double y = e->localPos().y();
 	double dx = abs( x - width() * 0.5 );
 	double dy = abs( y - height() * 0.5 );
 	double d  = sqrt( dx * dx + dy * dy );
@@ -302,7 +302,7 @@ void ColorWheel::mousePressEvent( QMouseEvent * e )
 void ColorWheel::mouseMoveEvent( QMouseEvent * e )
 {
 	if ( e->buttons() & Qt::LeftButton )
-		setColor( e->position().x(), e->position().y() );
+		setColor( e->localPos().x(), e->localPos().y() );
 }
 
 void ColorWheel::contextMenuEvent( QContextMenuEvent * e )

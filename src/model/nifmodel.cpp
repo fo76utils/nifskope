@@ -3087,7 +3087,7 @@ NifModelEval::NifModelEval( const NifModel * model, const NifItem * item )
 
 QVariant NifModelEval::operator()( const QVariant & v ) const
 {
-	if ( v.typeId() == QMetaType::QString ) {
+	if ( v.type() == QVariant::String ) {
 		QString left = v.toString();
 		const NifItem * itemLeft = model->getItem( item, left, false );
 

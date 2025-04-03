@@ -52,9 +52,10 @@ QCoreApplication * createApplication( int &argc, char *argv[] )
 {
 	QCoreApplication::setAttribute( Qt::AA_UseDesktopOpenGL );
 	QCoreApplication::setAttribute( Qt::AA_ShareOpenGLContexts );
+	QCoreApplication::setAttribute( Qt::AA_EnableHighDpiScaling );
 	QGuiApplication::setHighDpiScaleFactorRoundingPolicy( Qt::HighDpiScaleFactorRoundingPolicy::PassThrough );
 	if ( auto fmt = QSurfaceFormat::defaultFormat(); true ) {
-		fmt.setColorSpace( QColorSpace( QColorSpace::SRgb ) );
+		fmt.setColorSpace( QSurfaceFormat::sRGBColorSpace );
 		QSurfaceFormat::setDefaultFormat( fmt );
 	}
 

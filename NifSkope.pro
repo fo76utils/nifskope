@@ -17,16 +17,17 @@ macx: {
 	ICON = res/nifskope.icns
 }
 
-QT += xml opengl network widgets openglwidgets
+QT += xml opengl network widgets
 
-# Require Qt 6.4 or higher
-contains(QT_VERSION, ^6\\.[0-1]\\..*) {
+# Require Qt 5.15 or higher
+contains(QT_VERSION, ^5\\.15\\..*) {
+} else {
 	message("Cannot build NifSkope with Qt version $${QT_VERSION}")
-	error("Minimum required version is Qt 6.4")
+	error("Minimum required version is Qt 5.15")
 }
 
 # C++ Standard Support
-CONFIG += c++20
+CONFIG += c++2a
 
 # Dependencies
 CONFIG += qhull gli libfo76utils
@@ -554,7 +555,7 @@ build_pass|!debug_and_release {
 			$$[QT_INSTALL_PLUGINS]/imageformats/qwebp$${DLLEXT}
 
 		styles += \
-			$$[QT_INSTALL_PLUGINS]/styles/qmodernwindowsstyle$${DLLEXT}
+			$$[QT_INSTALL_PLUGINS]/styles/qwindowsvistastyle$${DLLEXT}
 
 		copyFiles( $$platforms, platforms, true )
 		copyFiles( $$imageformats, imageformats, true )

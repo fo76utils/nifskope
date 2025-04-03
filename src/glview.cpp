@@ -1791,7 +1791,7 @@ void GLView::dragMoveEvent( QDragMoveEvent * e )
 		fnDragTexOrg = QString();
 	}
 
-	QModelIndex iObj = model->getBlockIndex( indexAt( e->position() ), "NiAVObject" );
+	QModelIndex iObj = model->getBlockIndex( indexAt( e->posF() ), "NiAVObject" );
 
 	if ( iObj.isValid() ) {
 		for ( const auto l : model->getChildLinks( model->getBlockNumber( iObj ) ) ) {
@@ -1951,7 +1951,7 @@ void GLView::mouseDoubleClickEvent( QMouseEvent * )
 
 void GLView::mouseMoveEvent( QMouseEvent * event )
 {
-	auto	newPos = event->position();
+	auto	newPos = event->localPos();
 	float	dx = newPos.x() - lastPos.x();
 	float	dy = newPos.y() - lastPos.y();
 	Qt::MouseButtons	buttonMask = Qt::MouseButtons( mouseButtonState );
@@ -1987,7 +1987,7 @@ void GLView::mousePressEvent( QMouseEvent * event )
 		return;
 	}
 
-	lastPos = event->position();
+	lastPos = event->localPos();
 
 	pressPos = lastPos;
 }
@@ -1995,7 +1995,7 @@ void GLView::mousePressEvent( QMouseEvent * event )
 void GLView::mouseReleaseEvent( QMouseEvent * event )
 {
 	mouseButtonState &= ~( std::uint32_t( event->button() ) );
-	if ( !(model && (pressPos - event->position()).manhattanLength() <= 3) )
+	if ( !(model && (pressPos - event->localPos()).manhattanLength() <= 3) )
 		return;
 
 	if ( event->button() == Qt::ForwardButton || event->button() == Qt::BackButton || event->button() == Qt::MiddleButton ) {
@@ -2009,7 +2009,7 @@ void GLView::mouseReleaseEvent( QMouseEvent * event )
 	bool	isColorPicker = bool( event->modifiers() & Qt::AltModifier );
 #endif
 	if ( !isColorPicker ) {
-		QModelIndex idx = indexAt( event->position(), bool( event->modifiers() & Qt::ShiftModifier ) );
+		QModelIndex idx = indexAt( event->localPos(), bool( event->modifiers() & Qt::ShiftModifier ) );
 		scene->currentBlock = model->getBlockIndex( idx );
 		scene->currentIndex = idx.sibling( idx.row(), 0 );
 
@@ -2038,7 +2038,7 @@ void GLView::mouseReleaseEvent( QMouseEvent * event )
 
 		QImage * img = new QImage( fbo.toImage() );
 
-		QColor what = QColor( img->pixel( ( event->position() * devicePixelRatioF() ).toPoint() ) );
+		QColor what = QColor( img->pixel( ( event->localPos() * devicePixelRatioF() ).toPoint() ) );
 
 		glClearColor( what.redF(), what.greenF(), what.blueF(), what.alphaF() );
 		// qDebug() << what;

@@ -994,7 +994,7 @@ QString Mesh::textStats() const
 {
 	QString	tmp = Node::textStats();
 	if ( shader ) {
-		tmp.append( QLatin1StringView( "\nshader: " ) );
+		tmp.append( QLatin1String( "\nshader: " ) );
 		tmp.append( QString::fromUtf8( shader->name.data(), qsizetype( shader->name.length() ) ) );
 	}
 	tmp.append( QChar('\n') );

@@ -606,7 +606,7 @@ int UVWidget::heightForWidth( int width ) const
 void UVWidget::mousePressEvent( QMouseEvent * e )
 {
 	double	p = devicePixelRatioF();
-	QPoint	pixelPos( ( e->position() * p ).toPoint() );
+	QPoint	pixelPos( ( e->localPos() * p ).toPoint() );
 	QPoint	dPos( pixelPos - mousePos );
 	mousePos = pixelPos;
 
@@ -654,7 +654,7 @@ void UVWidget::mousePressEvent( QMouseEvent * e )
 void UVWidget::mouseMoveEvent( QMouseEvent * e )
 {
 	double	p = devicePixelRatioF();
-	QPoint	pixelPos( ( e->position() * p ).toPoint() );
+	QPoint	pixelPos( ( e->localPos() * p ).toPoint() );
 	QPoint	dPos( pixelPos - mousePos );
 
 	switch ( e->buttons() ) {
@@ -715,7 +715,7 @@ void UVWidget::mouseMoveEvent( QMouseEvent * e )
 void UVWidget::mouseReleaseEvent( QMouseEvent * e )
 {
 	double	p = devicePixelRatioF();
-	QPoint	pixelPos( ( e->position() * p ).toPoint() );
+	QPoint	pixelPos( ( e->localPos() * p ).toPoint() );
 
 	switch ( e->button() ) {
 	case Qt::LeftButton:

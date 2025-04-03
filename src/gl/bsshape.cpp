@@ -255,7 +255,7 @@ void BSShape::drawShapes( NodeList * secondPass )
 		return;
 
 	// TODO: Only run this if BSXFlags has "EditorMarkers present" flag
-	if ( !scene->hasOption(Scene::ShowMarkers) && name.contains( QLatin1StringView("EditorMarker") ) )
+	if ( !scene->hasOption(Scene::ShowMarkers) && name.contains( QLatin1String("EditorMarker") ) )
 		return;
 
 	// Draw translucent meshes in second pass
@@ -357,7 +357,7 @@ void BSShape::drawSelection() const
 			return;
 		// Is the current block extra data
 		if ( auto i = nif->getItem( blk ); i != nullptr )
-			extraData = i->name().startsWith( QLatin1StringView("BSPackedCombined") );
+			extraData = i->name().startsWith( QLatin1String("BSPackedCombined") );
 		// Don't do anything if this block is not the current block
 		//	or if there is not extra data
 		if ( blk != iBlock && blk != iSkin && blk != iSkinData && blk != iSkinPart && !extraData )
@@ -416,7 +416,7 @@ void BSShape::drawSelection() const
 		QVector<QModelIndex> idxs;
 		if ( n == "Bounding Sphere" ) {
 			idxs += idx;
-		} else if ( n.startsWith( QLatin1StringView("BSPackedCombined") ) ) {
+		} else if ( n.startsWith( QLatin1String("BSPackedCombined") ) ) {
 			auto data = nif->getIndex( idx, "Object Data" );
 			int dataCt = nif->rowCount( data );
 
@@ -479,11 +479,11 @@ void BSShape::drawSelection() const
 
 	// Draw Normals, Tangents or Bitangents
 	int	btnMask = 0;
-	if ( n.contains( QLatin1StringView("Normal") ) )
+	if ( n.contains( QLatin1String("Normal") ) )
 		btnMask = 0x04;
-	else if ( n.contains( QLatin1StringView("Tangent") ) )
+	else if ( n.contains( QLatin1String("Tangent") ) )
 		btnMask = 0x02;
-	else if ( n.contains( QLatin1StringView("Bitangent") ) )
+	else if ( n.contains( QLatin1String("Bitangent") ) )
 		btnMask = 0x01;
 	if ( btnMask ) {
 		int	s = scene->currentIndex.parent().row();

@@ -274,7 +274,7 @@ void Material::createMaterialData( QByteArray & data, const NifModel * nif, cons
 		return;
 
 	QBuffer	f( &data );
-	if ( !f.open( QIODeviceBase::WriteOnly ) )
+	if ( !f.open( QIODevice::WriteOnly ) )
 		return;
 	QDataStream	s( &f );
 	s.setByteOrder( QDataStream::LittleEndian );

@@ -193,7 +193,7 @@ public:
 			return true;
 		}
 
-		if ( !( itemName == "File Name" || itemName == "Path" || itemName.startsWith( QLatin1StringView( "Texture" ) ) ) )
+		if ( !( itemName == "File Name" || itemName == "Path" || itemName.startsWith( QLatin1String( "Texture" ) ) ) )
 			return false;
 
 		if ( nif->isNiBlock( iBlock, "BSShaderNoLightingProperty" ) && itemName == "File Name" )
@@ -206,7 +206,7 @@ public:
 			return true;
 		else if ( nif->getBSVersion() >= 130
 					&& ( itemName == "Path"
-						|| ( itemName.back().isDigit() && itemName.startsWith( QLatin1StringView( "Texture " ) ) ) )
+						|| ( itemName.back().isDigit() && itemName.startsWith( QLatin1String( "Texture " ) ) ) )
 					&& nif->blockInherits( iBlock, "BSShaderProperty" ) )
 			return true;
 
@@ -233,7 +233,7 @@ public:
 			iFile = idx;
 		} else if ( nif->isNiBlock( iBlock, "TileShaderProperty" ) && i->hasName( "File Name" ) ) {
 			iFile = idx;
-		} else if ( nif->getBSVersion() >= 130 && ( i->name() == "Path" || i->name().startsWith( QLatin1StringView( "Texture " ) ) )
+		} else if ( nif->getBSVersion() >= 130 && ( i->name() == "Path" || i->name().startsWith( QLatin1String( "Texture " ) ) )
 					&& nif->blockInherits( iBlock, "BSShaderProperty" ) ) {
 			iFile = ( nif->getBSVersion() < 170 || i->name() == "Path" ? idx : nif->getIndex( i, "Path" ) );
 			isMaterialFile = true;
@@ -275,7 +275,7 @@ public:
 						if ( !i->isAbstract() )
 							continue;
 						const QString &	t = i->strType();
-						if ( !( t == "BSLayeredMaterial" || t.startsWith( QLatin1StringView( "BSMaterialData" ) ) ) )
+						if ( !( t == "BSLayeredMaterial" || t.startsWith( QLatin1String( "BSMaterialData" ) ) ) )
 							continue;
 						if ( !nif->get<bool>( i, "Is Modified" ) ) {
 							nif->set<bool>( i, "Is Modified", true );
@@ -804,11 +804,11 @@ class spTextureLayout final : public Spell
 		QString filename = file->text();
 
 		// TODO: Fix FileSelector class so that this isn't necessary.
-		if ( !filename.endsWith( QLatin1StringView( ".PNG" ), Qt::CaseInsensitive )
-			&& !filename.endsWith( QLatin1StringView( ".BMP" ), Qt::CaseInsensitive ) )
+		if ( !filename.endsWith( QLatin1String( ".PNG" ), Qt::CaseInsensitive )
+			&& !filename.endsWith( QLatin1String( ".BMP" ), Qt::CaseInsensitive ) )
 			filename.append( ".png" );
 
-		if ( filename.endsWith( QLatin1StringView( ".PNG" ), Qt::CaseInsensitive ) ) {
+		if ( filename.endsWith( QLatin1String( ".PNG" ), Qt::CaseInsensitive ) ) {
 			// Transparent PNG
 			img.save( filename );
 
@@ -947,7 +947,7 @@ public:
 			return true;
 
 		return ( item->isString()
-				&& nif->get<QString>( item ).endsWith( QLatin1StringView( ".dds" ), Qt::CaseInsensitive ) );
+				&& nif->get<QString>( item ).endsWith( QLatin1String( ".dds" ), Qt::CaseInsensitive ) );
 	}
 
 	static void showTexture( NifModel * nif, const QString & filename );
@@ -962,7 +962,7 @@ public:
 
 		if ( item->isString() ) {
 			filename = nif->get<QString>( item );
-			if ( filename.endsWith( QLatin1StringView( ".dds" ), Qt::CaseInsensitive ) ) {
+			if ( filename.endsWith( QLatin1String( ".dds" ), Qt::CaseInsensitive ) ) {
 				showTexture( nif, filename );
 				return index;
 			}

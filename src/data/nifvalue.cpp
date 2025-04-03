@@ -662,7 +662,7 @@ bool NifValue::setFromVariant( const QVariant & var )
 	if ( var.canConvert<NifValue>() ) {
 		operator=( var.value<NifValue>() );
 		return true;
-	} else if ( var.typeId() == QMetaType::QString ) {
+	} else if ( var.type() == QVariant::String ) {
 		return set<QString>( var.toString(), nullptr, nullptr );
 	}
 

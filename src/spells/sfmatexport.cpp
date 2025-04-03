@@ -287,7 +287,7 @@ QString spStarfieldMaterialSaveAs::getOutputFileName(
 	QString	fileName = QFileDialog::getSaveFileName( qApp->activeWindow(), QString( "Choose a %1 file for export" ).arg( e ), dirName, QString( "Material (*%1)" ).arg( e ) );
 	if ( fileName.isEmpty() )
 		return QString();
-	if ( !fileName.endsWith( QLatin1StringView( e ), Qt::CaseInsensitive ) )
+	if ( !fileName.endsWith( QLatin1String( e ), Qt::CaseInsensitive ) )
 		fileName.append( e );
 	if ( setLastFilePath ) {
 		QSettings	settings;
@@ -1252,7 +1252,7 @@ void spStarfieldEditedMaterialSaveAs::exportFO76Material( const NifModel * nif, 
 																			"materials/", e ), e );
 		if ( !matFilePath.isEmpty() ) {
 			QFile	matFile( matFilePath );
-			if ( !matFile.open( QIODeviceBase::WriteOnly ) )
+			if ( !matFile.open( QIODevice::WriteOnly ) )
 				throw NifSkopeError( "Could not open output file" );
 			matFile.write( data );
 		}

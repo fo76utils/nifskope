@@ -1306,9 +1306,9 @@ void exportGltf( const NifModel * nif, const Scene * scene, [[maybe_unused]] con
 	QString	filename = getGltfFolder( nif );
 	if ( auto w = qobject_cast< const NifSkope * >( nif->getWindow() ); w ) {
 		if ( auto nifPath = w->getCurrentFile(); !nifPath.isEmpty() ) {
-			if ( nifPath.endsWith( QLatin1StringView(".nif"), Qt::CaseInsensitive )
-				|| nifPath.endsWith( QLatin1StringView(".bto"), Qt::CaseInsensitive )
-				|| nifPath.endsWith( QLatin1StringView(".btr"), Qt::CaseInsensitive ) ) {
+			if ( nifPath.endsWith( QLatin1String(".nif"), Qt::CaseInsensitive )
+				|| nifPath.endsWith( QLatin1String(".bto"), Qt::CaseInsensitive )
+				|| nifPath.endsWith( QLatin1String(".btr"), Qt::CaseInsensitive ) ) {
 				nifPath.chop( 4 );
 			}
 #ifdef Q_OS_WIN32
@@ -1319,7 +1319,7 @@ void exportGltf( const NifModel * nif, const Scene * scene, [[maybe_unused]] con
 				if ( !filename.isEmpty() && !filename.endsWith( QChar('/') ) )
 					filename.append( QChar('/') );
 				filename.append( nifPath );
-				filename.append( QLatin1StringView(".gltf") );
+				filename.append( QLatin1String(".gltf") );
 			}
 		}
 	}

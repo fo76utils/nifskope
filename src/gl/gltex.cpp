@@ -215,7 +215,7 @@ QString TexCache::stripPath( const QString & filepath, const QString & nifFolder
 	QStringList folders = settings.value( "Settings/Resources/Folders", QStringList() ).toStringList();
 
 	for ( QString base : folders ) {
-		if ( base.startsWith( QLatin1StringView("./") ) || base.startsWith( QLatin1StringView(".\\") ) ) {
+		if ( base.startsWith( QLatin1String("./") ) || base.startsWith( QLatin1String(".\\") ) ) {
 			base = nifFolder + QChar('/') + base;
 		}
 
@@ -557,7 +557,7 @@ bool TexCache::Tex::saveAsFile( TexCache & t, const QModelIndex & index, QString
 	i->mipmaps = t.texLoad( index, i->format, target, i->width, i->height, id );
 	mipmaps = std::uint16_t( i->mipmaps );
 
-	if ( savepath.toLower().endsWith( QLatin1StringView(".tga") ) ) {
+	if ( savepath.toLower().endsWith( QLatin1String(".tga") ) ) {
 		return TexCache::texSaveTGA( index, savepath, i->width, i->height );
 	}
 

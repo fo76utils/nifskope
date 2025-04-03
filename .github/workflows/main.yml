@@ -1,11 +1,11 @@
-name: Build NifSkope
+name: Build NifSkope (Qt 5)
 
 on:
   workflow_dispatch:
   pull_request:
   push:
     branches:
-      - develop
+      - qt5
     tags-ignore:
       - 'v2*'
 
@@ -27,12 +27,12 @@ jobs:
         msystem: UCRT64
         update: true
         cache: true
-        install: 'base-devel mingw-w64-ucrt-x86_64-gcc msys/p7zip mingw-w64-ucrt-x86_64-qt6-base mingw-w64-ucrt-x86_64-qt6-imageformats mingw-w64-ucrt-x86_64-qt6-tools'
+        install: 'base-devel mingw-w64-ucrt-x86_64-gcc msys/p7zip mingw-w64-ucrt-x86_64-qt5-base mingw-w64-ucrt-x86_64-qt5-imageformats mingw-w64-ucrt-x86_64-qt5-tools'
 
     - name: 'Build with qmake'
       shell: msys2 {0}
       run: |
-        qmake6 noavx2=1 NifSkope.pro
+        qmake noavx2=1 NifSkope.pro
         make -j 8
         mv -f release/NifSkope.exe release/NifSkope_noavx2.exe
 
@@ -58,11 +58,11 @@ jobs:
     - name: 'Install required packages'
       run: |
         sudo apt-get update
-        sudo apt-get -y install libsdl2-dev qt6-base-dev qt6-base-private-dev qt6-base-dev-tools qmake6 qt6-image-formats-plugins 7zip
+        sudo apt-get -y install libsdl2-dev qtbase5-dev qt5-qmake qt5-image-formats-plugins 7zip
 
     - name: 'Build with qmake'
       run: |
-        qmake6 noavx2=1 NifSkope.pro
+        qmake noavx2=1 NifSkope.pro
         make -j 8
         mv -f release/NifSkope release/NifSkope_noavx2
 
@@ -87,14 +87,14 @@ jobs:
     - name: 'Install required packages'
       uses: jurplel/install-qt-action@v4
       with:
-        version: '6.8.3'
+        version: '5.15.16'
 
     - name: 'Install clang'
       run: brew install llvm
 
     - name: 'Build with qmake'
       run: |
-        qmake6 QMAKE_APPLE_DEVICE_ARCHS="x86_64" noavx2=1 NifSkope.pro
+        qmake QMAKE_APPLE_DEVICE_ARCHS="x86_64" noavx2=1 NifSkope.pro
         make -j 8
 
     - name: 'Create DMG image'
@@ -126,12 +126,12 @@ jobs:
         msystem: CLANG64
         update: true
         cache: true
-        install: 'base-devel mingw-w64-clang-x86_64-gcc msys/p7zip mingw-w64-clang-x86_64-qt6-base mingw-w64-clang-x86_64-qt6-imageformats mingw-w64-clang-x86_64-qt6-tools'
+        install: 'base-devel mingw-w64-clang-x86_64-gcc msys/p7zip mingw-w64-clang-x86_64-qt5-base mingw-w64-clang-x86_64-qt5-imageformats mingw-w64-clang-x86_64-qt5-tools'
 
     - name: 'Build with qmake'
       shell: msys2 {0}
       run: |
-        qmake6 NifSkope.pro
+        qmake NifSkope.pro
         make -j 8
 
     - name: 'Upload Artifacts'

@@ -1245,8 +1245,8 @@ GLuint TexCache::texLoad( const NifModel * nif, const QString & filepath,
 	if ( data.isEmpty() )
 		return 0;
 
-	if ( filepath.endsWith( QLatin1StringView(".dds"), Qt::CaseInsensitive )
-		|| ( filepath.endsWith( QLatin1StringView(".hdr"), Qt::CaseInsensitive )
+	if ( filepath.endsWith( QLatin1String(".dds"), Qt::CaseInsensitive )
+		|| ( filepath.endsWith( QLatin1String(".hdr"), Qt::CaseInsensitive )
 			&& nif && nif->getBSVersion() >= 151 ) ) {
 		bool	isCubeMap = false;
 		if ( data.size() >= 148 ) {
@@ -1270,12 +1270,12 @@ GLuint TexCache::texLoad( const NifModel * nif, const QString & filepath,
 		if ( !f.open( QIODevice::ReadWrite ) )
 			throw QString( "could not open buffer" );
 
-		if ( filepath.endsWith( QLatin1StringView(".tga"), Qt::CaseInsensitive ) )
+		if ( filepath.endsWith( QLatin1String(".tga"), Qt::CaseInsensitive ) )
 			mipmaps = texLoadTGA( f, format, target, width, height, id );
-		else if ( filepath.endsWith( QLatin1StringView(".bmp"), Qt::CaseInsensitive ) )
+		else if ( filepath.endsWith( QLatin1String(".bmp"), Qt::CaseInsensitive ) )
 			mipmaps = texLoadBMP( f, format, target, width, height, id );
-		else if ( filepath.endsWith( QLatin1StringView(".nif"), Qt::CaseInsensitive )
-					|| filepath.endsWith( QLatin1StringView(".texcache"), Qt::CaseInsensitive ) )
+		else if ( filepath.endsWith( QLatin1String(".nif"), Qt::CaseInsensitive )
+					|| filepath.endsWith( QLatin1String(".texcache"), Qt::CaseInsensitive ) )
 			mipmaps = texLoadNIF( f, format, target, width, height, id );
 
 		f.close();
@@ -1337,13 +1337,13 @@ GLuint TexCache::texLoad( const NifModel * nif, const QString & filepath,
 
 bool TexCache::texIsSupported( const QString & filepath )
 {
-	return ( filepath.endsWith( QLatin1StringView(".dds"), Qt::CaseInsensitive )
+	return ( filepath.endsWith( QLatin1String(".dds"), Qt::CaseInsensitive )
 					|| ( filepath.startsWith( QChar('#') ) && ( filepath.length() == 9 || filepath.length() == 10 ) )
-					|| filepath.endsWith( QLatin1StringView(".tga"), Qt::CaseInsensitive )
-					|| filepath.endsWith( QLatin1StringView(".bmp"), Qt::CaseInsensitive )
-					|| filepath.endsWith( QLatin1StringView(".nif"), Qt::CaseInsensitive )
-					|| filepath.endsWith( QLatin1StringView(".texcache"), Qt::CaseInsensitive )
-					|| filepath.endsWith( QLatin1StringView(".hdr"), Qt::CaseInsensitive )
+					|| filepath.endsWith( QLatin1String(".tga"), Qt::CaseInsensitive )
+					|| filepath.endsWith( QLatin1String(".bmp"), Qt::CaseInsensitive )
+					|| filepath.endsWith( QLatin1String(".nif"), Qt::CaseInsensitive )
+					|| filepath.endsWith( QLatin1String(".texcache"), Qt::CaseInsensitive )
+					|| filepath.endsWith( QLatin1String(".hdr"), Qt::CaseInsensitive )
 	);
 }
 

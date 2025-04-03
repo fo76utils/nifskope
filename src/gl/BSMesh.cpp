@@ -30,7 +30,7 @@ void BSMesh::transformShapes()
 
 void BSMesh::drawShapes( NodeList * secondPass )
 {
-	if ( isHidden() || ( !scene->hasOption(Scene::ShowMarkers) && name.contains(QLatin1StringView("EditorMarker")) ) )
+	if ( isHidden() || ( !scene->hasOption(Scene::ShowMarkers) && name.contains(QLatin1String("EditorMarker")) ) )
 		return;
 
 	// Draw translucent meshes in second pass

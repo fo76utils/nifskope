@@ -191,7 +191,7 @@ public:
 		};
 
 		if ( x == tagToken )
-			tags.insert( list.value( QLatin1StringView("name") ).toString(), tagTokenTag );
+			tags.insert( list.value( QLatin1String("name") ).toString(), tagTokenTag );
 
 		if ( x == tagNone ) {
 			x = tags.value( tagid );
@@ -215,7 +215,7 @@ public:
 			case tagCompound:
 			case tagBlock:
 				{
-					QString name = list.value( QLatin1StringView("name") ).toString();
+					QString name = list.value( QLatin1String("name") ).toString();
 
 					if ( NifValue::type( name ) != NifValue::tNone ) {
 						// Internal Type
@@ -225,7 +225,7 @@ public:
 						QString id = name;
 
 						if ( x == tagCompound && NifValue::isValid( NifValue::type( id ) ) )
-							err( tr( "struct %1 is already registered as internal type" ).arg( list.value( QLatin1StringView("name") ) ) );
+							err( tr( "struct %1 is already registered as internal type" ).arg( list.value( QLatin1String("name") ) ) );
 
 						if ( id.isEmpty() )
 							err( tr( "struct and niblocks must have a name" ) );
@@ -237,11 +237,11 @@ public:
 							blk = NifBlockPtr( new NifBlock );
 
 						blk->id = id;
-						if ( auto v = list.value( QLatin1StringView("abstract") ); true )
-							blk->abstract = ( v == QLatin1StringView("1") || v == QLatin1StringView("true") );
+						if ( auto v = list.value( QLatin1String("abstract") ); true )
+							blk->abstract = ( v == QLatin1String("1") || v == QLatin1String("true") );
 
 						if ( x == tagBlock ) {
-							blk->ancestor = list.value( QLatin1StringView("inherit") ).toString();
+							blk->ancestor = list.value( QLatin1String("inherit") ).toString();
 
 							if ( !blk->ancestor.isEmpty() ) {
 								if ( !NifModel::blocks.contains( blk->ancestor ) )
@@ -249,7 +249,7 @@ public:
 							}
 						}
 
-						QString externalCond = list.value( QLatin1StringView("externalcond") ).toString();
+						QString externalCond = list.value( QLatin1String("externalcond") ).toString();
 						if ( externalCond == "1" || blk->id.startsWith( "BSVertexData" ) ) {
 							NifModel::fixedCompounds.insert( blk->id, blk );
 						}
@@ -258,7 +258,7 @@ public:
 				break;
 			case tagBasic:
 				{
-					QString name = list.value( QLatin1StringView("name") ).toString();
+					QString name = list.value( QLatin1String("name") ).toString();
 
 					if ( NifValue::type( name ) == NifValue::tNone )
 						err( tr( "basic definition %1 must have an internal NifSkope type" ).arg( name ) );
@@ -270,9 +270,9 @@ public:
 			case tagEnum:
 			case tagBitFlag:
 				{
-					typId  = list.value( QLatin1StringView("name") ).toString();
+					typId  = list.value( QLatin1String("name") ).toString();
 					typTxt = QString();
-					QString storage = list.value( QLatin1StringView("storage") ).toString();
+					QString storage = list.value( QLatin1String("storage") ).toString();
 
 					if ( typId.isEmpty() || storage.isEmpty() )
 						err( tr( "enum definition must have a name and a known storage type" ) );
@@ -286,9 +286,9 @@ public:
 				break;
 			case tagBitfield:
 				{
-					typId = list.value( QLatin1StringView("name") ).toString();
+					typId = list.value( QLatin1String("name") ).toString();
 					typTxt = QString();
-					QString storage = list.value( QLatin1StringView("storage") ).toString();
+					QString storage = list.value( QLatin1String("storage") ).toString();
 
 					if ( typId.isEmpty() || storage.isEmpty() )
 						err( tr( "bitfield definition must have a name and a known storage type" ) );
@@ -299,9 +299,9 @@ public:
 				break;
 			case tagVersion:
 				{
-					int v = NifModel::version2number( list.value( QLatin1StringView("num") ).toString().trimmed() );
+					int v = NifModel::version2number( list.value( QLatin1String("num") ).toString().trimmed() );
 
-					if ( v != 0 && !list.value( QLatin1StringView("num") ).isEmpty() )
+					if ( v != 0 && !list.value( QLatin1String("num") ).isEmpty() )
 						NifModel::supportedVersions.append( v );
 					else
 						err( tr( "invalid version tag" ) );
@@ -309,7 +309,7 @@ public:
 				break;
 			case tagToken:
 				{
-					attrlist = list.value( QLatin1StringView("attrs") ).toString();
+					attrlist = list.value( QLatin1String("attrs") ).toString();
 				}
 				break;
 			case tagModule:
@@ -335,23 +335,23 @@ public:
 			switch ( x ) {
 			case tagAdd:
 				{
-					QString type = list.value( QLatin1StringView("type") ).toString();
-					QString tmpl = list.value( QLatin1StringView("template") ).toString();
+					QString type = list.value( QLatin1String("type") ).toString();
+					QString tmpl = list.value( QLatin1String("template") ).toString();
 					QString arg  = get( "arg" );
 					QString arr1 = get( "length" );
 					QString arr2 = get( "width" );
 					QString cond = get( "cond" );
-					QString ver1 = list.value( QLatin1StringView("since") ).toString();
-					QString ver2 = list.value( QLatin1StringView("until") ).toString();
-					QString abs = list.value( QLatin1StringView("abstract") ).toString();
-					QString bin = list.value( QLatin1StringView("binary") ).toString();
+					QString ver1 = list.value( QLatin1String("since") ).toString();
+					QString ver2 = list.value( QLatin1String("until") ).toString();
+					QString abs = list.value( QLatin1String("abstract") ).toString();
+					QString bin = list.value( QLatin1String("binary") ).toString();
 					QString vercond = get( "vercond" );
 					QString defval = get( "default" );
 
 					bool hasTypeCondition = false;
 
-					QString onlyT = list.value( QLatin1StringView("onlyT") ).toString();
-					QString excludeT = list.value( QLatin1StringView("excludeT") ).toString();
+					QString onlyT = list.value( QLatin1String("onlyT") ).toString();
+					QString excludeT = list.value( QLatin1String("excludeT") ).toString();
 					if ( !onlyT.isEmpty() || !excludeT.isEmpty() ) {
 						Q_ASSERT( cond.isEmpty() );
 						Q_ASSERT( onlyT.isEmpty() != excludeT.isEmpty() );
@@ -405,7 +405,7 @@ public:
 
 					// now allocate
 					data = NifData(
-						list.value( QLatin1StringView("name") ).toString(),
+						list.value( QLatin1String("name") ).toString(),
 						type,
 						tmpl,
 						NifValue( NifValue::type( type ) ),
@@ -475,9 +475,9 @@ public:
 
 			switch ( x ) {
 			case tagOption:
-				optId  = list.value( QLatin1StringView("name") ).toString();
-				optVal = list.value( QLatin1StringView("value") ).toString();
-				optBit = list.value( QLatin1StringView("bit") ).toString();
+				optId  = list.value( QLatin1String("name") ).toString();
+				optVal = list.value( QLatin1String("value") ).toString();
+				optBit = list.value( QLatin1String("bit") ).toString();
 				if ( !optBit.isEmpty() )
 					optVal = optBit;
 
@@ -512,8 +512,8 @@ public:
 			switch ( x ) {
 			case tagTokenTag:
 				{
-					auto tok = list.value( QLatin1StringView("token") ).toString();
-					auto str = list.value( QLatin1StringView("string") ).toString();
+					auto tok = list.value( QLatin1String("token") ).toString();
+					auto str = list.value( QLatin1String("string") ).toString();
 					for ( const auto & attr : attrlist.split( " " ) ) {
 						if ( !tokens.contains(attr) )
 							tokens[attr] = {};

@@ -122,7 +122,7 @@ public:
 								if ( !nif->blockInherits( i, "BSShaderProperty" ) )
 									break;
 								const QString &	t = i->strType();
-								if ( !( t == "BSLayeredMaterial" || t.startsWith( QLatin1StringView( "BSMaterialData" ) ) ) )
+								if ( !( t == "BSLayeredMaterial" || t.startsWith( QLatin1String( "BSMaterialData" ) ) ) )
 									continue;
 								if ( !item->hasName( "Is Modified" ) || !nif->get<bool>( item ) ) {
 									if ( !nif->get<bool>( i, "Is Modified" ) ) {
@@ -253,7 +253,7 @@ public:
 
 			if ( !w && ValueEdit::canEdit( nv.type() ) )
 				w = new ValueEdit( parent );
-		} else if ( v.typeId() == QMetaType::QString ) {
+		} else if ( v.type() == QVariant::String ) {
 			QLineEdit * le = new QLineEdit( parent );
 			le->setFrame( false );
 			w = le;

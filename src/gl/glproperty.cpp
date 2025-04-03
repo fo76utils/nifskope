@@ -78,7 +78,7 @@ Property * Property::create( Scene * scene, const NifModel * nif, const QModelIn
 		while ( i2 > i0 ) {
 			size_t	i1 = ( i0 + i2 ) >> 1;
 			const auto &	p = niPropertyBlockNames[i1];
-			int	d = blockName.compare( QLatin1StringView( p.first.data(), qsizetype( p.first.length() ) ) );
+			int	d = blockName.compare( QLatin1String( p.first.data(), qsizetype( p.first.length() ) ) );
 			if ( !d ) {
 				i = p.second;
 				break;
@@ -964,7 +964,7 @@ void BSShaderLightingProperty::setMaterial( const NifModel * nif, const QModelIn
 	}
 	bool	isAbstract = false;
 	Material *	newMaterial = nullptr;
-	if ( name.endsWith( QLatin1StringView( !isEffect ? ".bgsm" : ".bgem" ), Qt::CaseInsensitive ) ) {
+	if ( name.endsWith( QLatin1String( !isEffect ? ".bgsm" : ".bgem" ), Qt::CaseInsensitive ) ) {
 		if ( bsVersion >= 130 && !nameChanged ) {
 			const NifItem *	i = nif->getItem( index, "Material" );
 			isAbstract = ( i && nif->get<bool>( i, "Is Modified" ) );

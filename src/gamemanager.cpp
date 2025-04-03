@@ -793,7 +793,7 @@ QStringList GameManager::find_paths( const GameMode game, const QString & dataPa
 				}
 			} catch ( std::exception & ) {
 			}
-			dataPaths.remove( i, 1 );
+			dataPaths.removeAt( i );
 		}
 	}
 	return dataPaths;
@@ -817,7 +817,7 @@ void GameManager::remove_invalid_paths( QStringList & dataPaths, const GameMode 
 				continue;
 			}
 		}
-		dataPaths.remove( i, 1 );
+		dataPaths.removeAt( i );
 	}
 
 	if ( !( game >= OTHER && game < NUM_GAMES ) )
@@ -833,7 +833,7 @@ void GameManager::remove_invalid_paths( QStringList & dataPaths, const GameMode 
 			}
 		} catch ( std::exception & ) {
 		}
-		dataPaths.remove( i, 1 );
+		dataPaths.removeAt( i );
 	}
 }
 

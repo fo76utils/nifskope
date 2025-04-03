@@ -980,8 +980,8 @@ void NifSkope::openArchive( const QString & archive )
 			auto text = ui->bsaFilter->text();
 
 			bsaProxyModel->setFilterRegularExpression(
-				QRegularExpression::fromWildcard(
-					text, Qt::CaseInsensitive, QRegularExpression::UnanchoredWildcardConversion ) );
+				QRegularExpression( QRegularExpression::wildcardToRegularExpression( text ).chopped( 2 ).mid( 2 ),
+									QRegularExpression::CaseInsensitiveOption ) );
 			bsaView->expandAll();
 
 			if ( text.isEmpty() ) {
@@ -1436,7 +1436,7 @@ void NifSkope::migrateSettings() const
 		QStringList keys = settings.allKeys();
 
 		for ( const auto& key : keys ) {
-			if ( settings.value( key ).typeId() == QMetaType::QByteArray ) {
+			if ( settings.value( key ).type() == QVariant::ByteArray ) {
 				qDebug() << "Removing Qt version-specific settings" << key
 					<< "while migrating settings from previous version";
 				settings.remove( key );
@@ -1487,7 +1487,7 @@ bool NifSkope::batchProcessFiles(
 			tmpNif->setBatchProcessingMode( true );
 			{
 				QFile	f( fileName );
-				if ( !f.open( QIODeviceBase::ReadOnly ) )
+				if ( !f.open( QIODevice::ReadOnly ) )
 					throw NifSkopeError( "error opening file" );
 				std::string	tmp( fileName.toStdString() );
 				tmpNif->load( f, tmp.c_str() );
@@ -1508,7 +1508,7 @@ bool NifSkope::batchProcessFiles(
 
 			if ( saveFlag ) {
 				QFile	f( fileName );
-				if ( !f.open( QIODeviceBase::WriteOnly ) )
+				if ( !f.open( QIODevice::WriteOnly ) )
 					throw NifSkopeError( "error opening file" );
 				tmpNif->save( f );
 			}

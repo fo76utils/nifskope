@@ -57,7 +57,7 @@ public:
 			if ( item->parent() && item->parent()->hasName( "Textures" ) )
 				break;
 			if ( item->hasName( "Path" ) || item->hasName( "Mesh Path" ) || item->hasName( "File Name" )
-				|| item->name().contains( QLatin1StringView( "Texture" ) ) ) {
+				|| item->name().contains( QLatin1String( "Texture" ) ) ) {
 				break;
 			}
 			return false;
@@ -94,7 +94,7 @@ std::string spResourceFileExtract::getNifItemFilePath( NifModel * nif, const Nif
 		}
 	} else if ( ( item->parent()
 					&& ( item->parent()->hasName( "Textures" ) || item->parent()->hasName( "NiSourceTexture" ) ) )
-				|| item->name().contains( QLatin1StringView( "Texture" ) )
+				|| item->name().contains( QLatin1String( "Texture" ) )
 				|| ( bsVersion >= 170 && item->hasName( "Path" ) ) ) {
 		archiveFolder = "textures/";
 		extension = ".dds";
@@ -680,7 +680,7 @@ public:
 														prvPath, QString( "Starfield mesh (*.mesh)" ) );
 		if ( fileName.isEmpty() )
 			return index;
-		if ( !fileName.endsWith( QLatin1StringView( ".mesh" ), Qt::CaseInsensitive ) )
+		if ( !fileName.endsWith( QLatin1String( ".mesh" ), Qt::CaseInsensitive ) )
 			fileName.append( ".mesh" );
 		if ( fileName != prvPath ) {
 			QSettings	settings;

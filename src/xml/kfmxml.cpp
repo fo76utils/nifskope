@@ -105,9 +105,9 @@ public:
 
 			switch ( x ) {
 			case 1:
-				v = KfmModel::version2number( list.value( QLatin1StringView("num") ).toString().trimmed() );
+				v = KfmModel::version2number( list.value( QLatin1String("num") ).toString().trimmed() );
 
-				if ( v != 0 && !list.value( QLatin1StringView("num") ).isEmpty() )
+				if ( v != 0 && !list.value( QLatin1String("num") ).isEmpty() )
 					KfmModel::supportedVersions.append( v );
 				else
 					err( tr( "invalid version string" ) );
@@ -115,13 +115,13 @@ public:
 				break;
 			case 2:
 
-				if ( x == 2 && NifValue::isValid( NifValue::type( list.value( QLatin1StringView("name") ).toString() ) ) )
-					err( tr( "compound %1 is already registered as internal type" ).arg( list.value( QLatin1StringView("name") ) ) );
+				if ( x == 2 && NifValue::isValid( NifValue::type( list.value( QLatin1String("name") ).toString() ) ) )
+					err( tr( "compound %1 is already registered as internal type" ).arg( list.value( QLatin1String("name") ) ) );
 
 				if ( !blk )
 					blk = NifBlockPtr( new NifBlock );
 
-				blk->id = list.value( QLatin1StringView("name") ).toString();
+				blk->id = list.value( QLatin1String("name") ).toString();
 				break;
 			}
 
@@ -132,21 +132,21 @@ public:
 		case 2:
 
 			if ( x == 3 ) {
-				QString type = list.value( QLatin1StringView("type") ).toString();
-				QString tmpl = list.value( QLatin1StringView("template") ).toString();
-				QString arr1 = list.value( QLatin1StringView("arr1") ).toString();
-				QString arr2 = list.value( QLatin1StringView("arr2") ).toString();
-				QString cond = list.value( QLatin1StringView("cond") ).toString();
-				QString ver1 = list.value( QLatin1StringView("ver1") ).toString();
-				QString ver2 = list.value( QLatin1StringView("ver2") ).toString();
-				QString abs = list.value( QLatin1StringView("abstract") ).toString();
+				QString type = list.value( QLatin1String("type") ).toString();
+				QString tmpl = list.value( QLatin1String("template") ).toString();
+				QString arr1 = list.value( QLatin1String("arr1") ).toString();
+				QString arr2 = list.value( QLatin1String("arr2") ).toString();
+				QString cond = list.value( QLatin1String("cond") ).toString();
+				QString ver1 = list.value( QLatin1String("ver1") ).toString();
+				QString ver2 = list.value( QLatin1String("ver2") ).toString();
+				QString abs = list.value( QLatin1String("abstract") ).toString();
 
 				NifData data(
-				    list.value( QLatin1StringView("name") ).toString(),
+				    list.value( QLatin1String("name") ).toString(),
 					type,
 					tmpl,
 				    NifValue( NifValue::type( type ) ),
-				    list.value( QLatin1StringView("arg") ).toString(),
+				    list.value( QLatin1String("arg") ).toString(),
 					arr1,
 					arr2,
 					cond,

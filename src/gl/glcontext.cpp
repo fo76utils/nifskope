@@ -40,7 +40,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <chrono>
 #include <QDir>
 #include <QOpenGLContext>
-#include <QOpenGLVersionFunctionsFactory>
 
 
 static const QString white = "#FFFFFFFF";
@@ -152,7 +151,7 @@ QModelIndex NifSkopeOpenGLContext::ConditionSingle::getIndex( const NifModel * n
 {
 	QString childid;
 
-	if ( blkid.startsWith( QLatin1StringView("HEADER/") ) ) {
+	if ( blkid.startsWith( QLatin1String("HEADER/") ) ) {
 		auto blk = blkid.remove( "HEADER/" );
 		if ( blk.contains("/") ) {
 			auto blks = blk.split( "/" );
@@ -266,7 +265,7 @@ void NifSkopeOpenGLContext::Shader::printCompileError( const QString & err )
 {
 	status = false;
 	QString	tmp( QString::fromUtf8( name.data(), qsizetype( name.length() ) ) );
-	tmp.append( QLatin1StringView( ":\r\n\r\n" ) );
+	tmp.append( QLatin1String( ":\r\n\r\n" ) );
 	tmp.append( err );
 	Message::append( QObject::tr( "There were errors during shader compilation" ), tmp );
 }
@@ -341,7 +340,7 @@ bool NifSkopeOpenGLContext::Shader::load( const QString & filepath )
 		QByteArray	data = loadShaderFile( filepath );
 
 		if ( name.ends_with( "frag" ) ) {
-			if ( qsizetype n = data.indexOf( QLatin1StringView("NUM_TEXTURE_UNITS") ); n >= 0 )
+			if ( qsizetype n = data.indexOf( "NUM_TEXTURE_UNITS" ); n >= 0 )
 				data.replace( n, 17, QByteArray::number( TexCache::num_texture_units - 2 ) );
 		}
 
@@ -779,7 +778,7 @@ bool NifSkopeOpenGLContext::Program::uniSampler( BSShaderLightingProperty * bspr
 
 
 NifSkopeOpenGLContext::NifSkopeOpenGLContext( QOpenGLContext * context )
-	:	fn( QOpenGLVersionFunctionsFactory::get< NifSkopeOpenGLContext::GLFunctions >( context ) ), cx( context )
+	:	fn( context->versionFunctions< NifSkopeOpenGLContext::GLFunctions >() ), cx( context )
 {
 	vertexAttrib1f = reinterpret_cast< void (*)( unsigned int, float ) >( cx->getProcAddress( "glVertexAttrib1f" ) );
 	vertexAttrib2fv =
@@ -938,7 +937,7 @@ void NifSkopeOpenGLContext::updateShaders()
 	QStringList	entryList = dir.entryList();
 	for ( int i = 0; i < 2; i++ ) {
 		for ( const QString & name : entryList ) {
-			bool	isProgram = name.endsWith( QLatin1StringView( ".prog" ), Qt::CaseInsensitive );
+			bool	isProgram = name.endsWith( QLatin1String( ".prog" ), Qt::CaseInsensitive );
 			if ( isProgram != bool( i ) )
 				continue;
 			Shader *	shader = createShader( name );

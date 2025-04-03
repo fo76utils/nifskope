@@ -731,9 +731,9 @@ bool NifOStream::write( const NifValue & val )
 			while ( len > 0 && string.at( len - 1 ) == '\0' )
 				len--;
 			if ( len >= string.size() )
-				string.resize( len + 1, '\0' );
+				string.append( '\0' );
 			else
-				string[len] = '\0';
+				string.data()[len] = '\0';
 			len++;
 
 			unsigned char tmp = (unsigned char) len;

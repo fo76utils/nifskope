@@ -4,7 +4,7 @@
 #include <QFile>
 #include <QList>
 #include <QMultiMap>
-#include <QMultiMapIterator>
+#include <QMapIterator>
 #include <QString>
 
 // Chunk Type definitions
@@ -492,7 +492,7 @@ private:
 			f->seek( q + k.l );
 		}
 
-		QMultiMapIterator<ChunkType, Chunk *> tempIter( temp );
+		QMapIterator<ChunkType, Chunk *> tempIter( temp );
 
 		while ( tempIter.hasNext() ) {
 			tempIter.next();
