@@ -2023,27 +2023,29 @@ void GLView::mouseReleaseEvent( QMouseEvent * event )
 
 		} else {
 			// Color Picker / Eyedrop tool
-			QOpenGLFramebufferObjectFormat fboFmt;
-			fboFmt.setTextureTarget( GL_TEXTURE_2D );
-			fboFmt.setInternalTextureFormat( GL_SRGB8 );
-			fboFmt.setMipmap( false );
-			fboFmt.setAttachment( QOpenGLFramebufferObject::Attachment::Depth );
+			auto	prvContext = pushGLContext();
+			{
+				QOpenGLFramebufferObjectFormat fboFmt;
+				fboFmt.setTextureTarget( GL_TEXTURE_2D );
+				fboFmt.setInternalTextureFormat( GL_SRGB8 );
+				fboFmt.setMipmap( false );
+				fboFmt.setAttachment( QOpenGLFramebufferObject::Attachment::Depth );
 
-			QOpenGLFramebufferObject fbo( pixelWidth, pixelHeight, fboFmt );
-			fbo.bind();
+				QOpenGLFramebufferObject fbo( pixelWidth, pixelHeight, fboFmt );
+				fbo.bind();
 
-			paintGL();
+				paintGL();
 
-			fbo.release();
+				fbo.release();
 
-			QImage * img = new QImage( fbo.toImage() );
+				QImage img( fbo.toImage() );
 
-			QColor what = QColor( img->pixel( ( event->localPos() * devicePixelRatioF() ).toPoint() ) );
+				QColor what = QColor( img.pixel( ( event->localPos() * devicePixelRatioF() ).toPoint() ) );
 
-			glClearColor( what.redF(), what.greenF(), what.blueF(), what.alphaF() );
-			// qDebug() << what;
-
-			delete img;
+				glClearColor( what.redF(), what.greenF(), what.blueF(), what.alphaF() );
+				// qDebug() << what;
+			}
+			popGLContext( prvContext );
 		}
 
 		update();
