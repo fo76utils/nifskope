@@ -134,7 +134,7 @@ defineReplace(QtHex) {
 
 # Format string for Qt DLL
 
-DLLSTRING = $$quote(Qt6%1)
+DLLSTRING = $$quote(Qt5%1)
 CONFIG(debug, debug|release) {
 	DLLEXT = $$quote(d.dll)
 } else {
