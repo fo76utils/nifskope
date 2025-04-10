@@ -1410,27 +1410,65 @@ void Scene::drawNiTSS( const NifModel * nif, const QModelIndex & iShape, bool so
 {
 	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 	glDisable( GL_CULL_FACE );
+	glEnable( GL_PRIMITIVE_RESTART );
+	renderer->fn->glPrimitiveRestartIndex( 0xFFFF );
 
 	QModelIndex iStrips = nif->getIndex( iShape, "Strips Data" );
 	for ( int r = 0; r < nif->rowCount( iStrips ); r++ ) {
 		QModelIndex iStripData = nif->getBlockIndex( nif->getLink( nif->getIndex( iStrips, r ) ), "NiTriStripsData" );
 		if ( !iStripData.isValid() )
 			continue;
+		QModelIndex iPoints = nif->getIndex( iStripData, "Points" );
+		int numStrips;
+		if ( !iPoints.isValid() || ( numStrips = nif->rowCount( iPoints ) ) < 1 )
+			continue;
 
 		QVector<Vector3> verts = nif->getArray<Vector3>( iStripData, "Vertices" );
+		qsizetype numVerts = std::min< qsizetype >( verts.size(), 65535 );
+		if ( numVerts < 1 )
+			continue;
 
-		QModelIndex iPoints = nif->getIndex( iStripData, "Points" );
-		for ( int r = 0; r < nif->rowCount( iPoints ); r++ ) {	// draw the strips like they appear in the tescs
+		qsizetype numPoints = 0;
+		for ( int s = 0; s < numStrips; s++ ) {
+			if ( QModelIndex i = nif->getIndex( iPoints, s ); i.isValid() )
+				numPoints += qsizetype( nif->rowCount( i ) ) + 1;
+		}
+		if ( numPoints < 2 )
+			continue;
+		numPoints--;
+
+		QVector<quint16> points( numPoints );
+		quint16 * p = points.data();
+		qsizetype k = 0;
+		for ( int s = 0; s < numStrips; s++ ) {
+			// draw the strips like they appear in the tescs
 			// (use the unstich strips spell to avoid the spider web effect)
-			QVector<quint16> strip = nif->getArray<quint16>( nif->getIndex( iPoints, r ) );
-			// TODO: check for invalid indices
-			if ( verts.size() >= 2 && strip.size() >= 3 ) {
-				drawTriangles( verts.constData(), size_t( verts.size() ), nullptr, solid,
-								GL_TRIANGLE_STRIP, size_t( strip.size() ), GL_UNSIGNED_SHORT, strip.constData() );
+			QModelIndex iStrip = nif->getIndex( iPoints, s );
+			const NifItem * i;
+			int stripLen;
+			if ( !iStrip.isValid() || ( i = nif->getItem( iStrip ) ) == nullptr
+				|| ( stripLen = nif->rowCount( iStrip ) ) < 1 ) {
+				continue;
 			}
+			if ( k > 0 ) {
+				p[k] = 0xFFFF;
+				k++;
+			}
+			for ( int j = 0; j < stripLen && k < numPoints; j++, k++ ) {
+				quint16 v = nif->get<quint16>( i, j );
+				if ( qsizetype( v ) >= numVerts )
+					v = 0;
+				p[k] = v;
+			}
+		}
+
+		if ( k > 0 ) {
+			drawTriangles( verts.constData(), size_t( numVerts ), nullptr, solid,
+							GL_TRIANGLE_STRIP, size_t( k ), GL_UNSIGNED_SHORT, p );
 		}
 	}
 
+	glDisable( GL_PRIMITIVE_RESTART );
 	glEnable( GL_CULL_FACE );
 }
 
