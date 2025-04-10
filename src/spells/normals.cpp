@@ -97,7 +97,7 @@ public:
 			}
 		};
 
-		if ( nif->getBSVersion() < 100 ) {
+		if ( !nif->blockInherits( iData, "BSTriShape" ) ) {
 			QVector<Vector3> verts = nif->getArray<Vector3>( iData, "Vertices" );
 			QVector<Triangle> triangles;
 			QModelIndex iPoints = nif->getIndex( iData, "Points" );
@@ -486,8 +486,9 @@ void spSmoothNormals::smoothNormals( NifModel * nif, const QModelIndex & index, 
 	QVector<Vector3> norms;
 
 	int numVerts = 0;
+	bool isBSTriShape = nif->blockInherits( iData, "BSTriShape" );
 
-	if ( nif->getBSVersion() < 100 ) {
+	if ( !isBSTriShape ) {
 		verts = nif->getArray<Vector3>( iData, "Vertices" );
 		norms = nif->getArray<Vector3>( iData, "Normals" );
 	} else {
@@ -532,7 +533,7 @@ void spSmoothNormals::smoothNormals( NifModel * nif, const QModelIndex & index, 
 							&( norms[0][0] ), &( verts.constFirst()[0] ), size_t( numVerts ), maxa, maxd );
 	snorms.removeLast();
 
-	if ( nif->getBSVersion() < 100 ) {
+	if ( !isBSTriShape ) {
 		nif->setArray<Vector3>( iData, "Normals", snorms );
 	} else {
 		// Pause updates between model/view
