@@ -470,7 +470,7 @@ public:
 				}
 
 				for ( const Vector3& v : vrts ) {
-					vertices += v / 7;
+					vertices += v * 0.0142875f;
 				}
 				triangles += tris;
 				normals += nrms;
@@ -484,15 +484,17 @@ public:
 
 		QPersistentModelIndex iPackedShape = nif->insertNiBlock( "bhkPackedNiTriStripsShape", nif->getBlockNumber( iShape ) );
 
-		nif->set<int>( iPackedShape, "Num Sub Shapes", 1 );
-		QModelIndex iSubShapes = nif->getIndex( iPackedShape, "Sub Shapes" );
-		nif->updateArraySize( iSubShapes );
-		nif->set<int>( nif->getIndex( iSubShapes, 0 ), "Layer", 1 );
-		nif->set<int>( nif->getIndex( iSubShapes, 0 ), "Num Vertices", vertices.count() );
-		nif->set<int>( nif->getIndex( iSubShapes, 0 ), "Material", nif->get<int>( iShape, "Material" ) );
-		nif->setArray<float>( iPackedShape, "Unknown Floats", { 0.0f, 0.0f, 0.1f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.1f } );
-		nif->set<float>( iPackedShape, "Scale", 1.0f );
-		nif->setArray<float>( iPackedShape, "Unknown Floats 2", { 1.0f, 1.0f, 1.0f } );
+		if ( nif->getVersionNumber() <= 0x14000005 ) {	// until 20.0.0.5
+			nif->set<int>( iPackedShape, "Num Sub Shapes", 1 );
+			QModelIndex iSubShapes = nif->getIndex( iPackedShape, "Sub Shapes" );
+			nif->updateArraySize( iSubShapes );
+			QModelIndex iSubShape = nif->getIndex( iSubShapes, 0 );
+			nif->set<int>( nif->getIndex( iSubShape, "Havok Filter" ), "Layer", 1 );
+			nif->set<int>( iSubShape, "Num Vertices", vertices.count() );
+			nif->set<int>( iSubShape, "Material", nif->get<int>( iShape, "Material" ) );
+		}
+		nif->set<Vector4>( iPackedShape, "Scale", FloatVector4( 1.0f ) );
+		nif->set<Vector4>( iPackedShape, "Scale Copy", FloatVector4( 1.0f ) );
 
 		QModelIndex iPackedData = nif->insertNiBlock( "hkPackedNiTriStripsData", nif->getBlockNumber( iPackedShape ) );
 		nif->setLink( iPackedShape, "Data", nif->getBlockNumber( iPackedData ) );
@@ -503,7 +505,8 @@ public:
 
 		for ( int t = 0; t < triangles.size(); t++ ) {
 			nif->set<Triangle>( nif->getIndex( iTriangles, t ), "Triangle", triangles[ t ] );
-			nif->set<Vector3>( nif->getIndex( iTriangles, t ), "Normal", normals.value( t ) );
+			if ( nif->getVersionNumber() <= 0x14000005 )
+				nif->set<Vector3>( nif->getIndex( iTriangles, t ), "Normal", normals.value( t ) );
 		}
 
 		nif->set<int>( iPackedData, "Num Vertices", vertices.count() );
