@@ -469,8 +469,9 @@ public:
 					tri[2] += vertices.count();
 				}
 
+				float scale = ( nif->getBSVersion() < 47 ? 0.142875f : 0.0142875f );
 				for ( const Vector3& v : vrts ) {
-					vertices += v * 0.0142875f;
+					vertices += v * scale;
 				}
 				triangles += tris;
 				normals += nrms;
