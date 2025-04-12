@@ -972,8 +972,10 @@ void importObjMain( NifModel * nif, const QModelIndex & index, bool collision )
 				if ( newiMaterial ) // don't affect a property  that is already there - that name is generated above on export and it has nothign to do with the stored name
 					nif->set<QString>( iMaterial, "Name", it.key() );
 
-				nif->set<Color3>( iMaterial, "Ambient Color", mtl.Ka );
-				nif->set<Color3>( iMaterial, "Diffuse Color", mtl.Kd );
+				if ( nif->getBSVersion() < 26 ) {
+					nif->set<Color3>( iMaterial, "Ambient Color", mtl.Ka );
+					nif->set<Color3>( iMaterial, "Diffuse Color", mtl.Kd );
+				}
 				nif->set<Color3>( iMaterial, "Specular Color", mtl.Ks );
 
 				if ( newiMaterial ) // don't affect a property  that is already there
