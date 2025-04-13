@@ -1,5 +1,16 @@
  == CHANGELOG ==
 
+* Tangent space spells now automatically add tangents to BSTriShape if missing.
+* "Color/Set All" has been implemented for BSTriShape and BSGeometry.
+* Various fixes to the texture preview feature.
+* Fixed parsing warnings on casting tangent space spells on NiFloatData.
+* Fixed BSValueNode blocks being incorrectly deleted by the Remove Bogus Nodes optimization spell.
+* Fixed issues with "Havok/Pack Strips" on newer NIF versions, including warnings and incorrect scale.
+* Fixed Face Normals and Smooth Normals on NiTriStripsData in Skyrim Special Edition and newer.
+* Significantly improved the performance of rendering bhkNiTriStripsShape with a large number of strips per shape.
+* Fixed parsing warnings on OBJ import to Fallout 3/New Vegas models.
+* Fixed the OpenGL context not being correctly set by the color picker tool.
+
 #### NifSkope-2.0.dev11-20250331
 
 * New spell for simplifying BSTriShape meshes, using [meshoptimizer](https://github.com/zeux/meshoptimizer#simplification). It is recommended to remove duplicate vertices first before simplification. Casting the spell without a selection simplifies the whole model (experimental), and there is also a batch spell that processes each shape separately with the last used settings.
