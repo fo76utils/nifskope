@@ -1716,7 +1716,7 @@ void GLView::saveImage()
 
 void GLView::contextMenuEvent( QContextMenuEvent * e )
 {
-	if ( ( pressPos - lastPos ).manhattanLength() <= 10 ) {
+	if ( e->reason() == QContextMenuEvent::Keyboard || ( pressPos - lastPos ).manhattanLength() <= 10 ) {
 		mouseButtonState = 0;
 		contextMenuShiftModifier = bool( e->modifiers() & Qt::ShiftModifier );
 		emit graphicsView->customContextMenuRequested( e->pos() );
