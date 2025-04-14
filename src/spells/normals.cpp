@@ -97,7 +97,7 @@ public:
 			}
 		};
 
-		if ( !nif->blockInherits( iData, "BSTriShape" ) ) {
+		if ( !nif->blockInherits( index, "BSTriShape" ) ) {
 			QVector<Vector3> verts = nif->getArray<Vector3>( iData, "Vertices" );
 			QVector<Triangle> triangles;
 			QModelIndex iPoints = nif->getIndex( iData, "Points" );
@@ -486,7 +486,7 @@ void spSmoothNormals::smoothNormals( NifModel * nif, const QModelIndex & index, 
 	QVector<Vector3> norms;
 
 	int numVerts = 0;
-	bool isBSTriShape = nif->blockInherits( iData, "BSTriShape" );
+	bool isBSTriShape = nif->blockInherits( index, "BSTriShape" );
 
 	if ( !isBSTriShape ) {
 		verts = nif->getArray<Vector3>( iData, "Vertices" );
