@@ -1,5 +1,7 @@
  == CHANGELOG ==
 
+#### NifSkope-2.0.dev11-20250414
+
 * Tangent space spells now automatically add tangents to BSTriShape if missing.
 * "Color/Set All" has been implemented for BSTriShape and BSGeometry.
 * Various fixes to the texture preview feature.
