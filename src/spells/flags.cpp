@@ -1120,17 +1120,33 @@ public:
 			if ( dynamic )
 				desc.MakeDynamic();
 
+			QModelIndex iBlock = nif->getBlockIndex( index );
+
 			if ( nif->set<BSVertexDesc>( index, desc ) ) {
-				auto iDataSize = nif->getIndex( index.parent(), "Data Size" );
-				auto numVerts = nif->get<uint>( index.parent(), "Num Vertices" );
-				auto numTris = nif->get<uint>( index.parent(), "Num Triangles" );
+				auto iDataSize = nif->getIndex( iBlock, "Data Size" );
+				auto numVerts = nif->get<uint>( iBlock, "Num Vertices" );
+				auto numTris = nif->get<uint>( iBlock, "Num Triangles" );
 
 				if ( iDataSize.isValid() )
 					nif->set<uint>( iDataSize, desc.GetVertexSize() * numVerts + 6 * numTris );
 
-				nif->updateArraySize( index.parent(), "Vertex Data" );
+				if ( auto iData = nif->getIndex( iBlock, "Vertex Data" ); iData.isValid() )
+					nif->updateArraySize( iData );
 			}
 
+			if ( ( desc & VertexFlags::VF_SKINNED ) && nif->getBSVersion() == 100 ) {
+				// Skinned SSE
+				auto skinID = nif->getLink( nif->getIndex( iBlock, "Skin" ) );
+				auto partID = nif->getLink( nif->getBlockIndex( skinID, "NiSkinInstance" ), "Skin Partition" );
+				if ( auto iPartBlock = nif->getBlockIndex( partID, "NiSkinPartition" ); iPartBlock.isValid() ) {
+					nif->set<BSVertexDesc>( iPartBlock, "Vertex Desc", desc );
+					quint32 numVerts = 0;
+					if ( auto iData = nif->getIndex( iPartBlock, "Vertex Data" ); iData.isValid() )
+						numVerts = quint32( nif->rowCount( iData ) );
+					nif->set<quint32>( iPartBlock, "Vertex Size", quint32( desc.GetVertexSize() ) );
+					nif->set<quint32>( iPartBlock, "Data Size", quint32( desc.GetVertexSize() ) * numVerts );
+				}
+			}
 		}
 
 		return index;

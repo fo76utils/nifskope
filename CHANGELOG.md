@@ -3,6 +3,7 @@
 * Tangent space spells now automatically add tangents to BSTriShape if missing.
 * "Color/Set All" has been implemented for BSTriShape and BSGeometry.
 * Various fixes to the texture preview feature.
+* Editing the vertex flags on a Skyrim SE BSTriShape with skinning updates the skin partition (fix to issue https://github.com/niftools/nifskope/issues/235).
 * Fixed parsing warnings on casting tangent space spells on NiFloatData.
 * Fixed BSValueNode blocks being incorrectly deleted by the Remove Bogus Nodes optimization spell.
 * Fixed issues with "Havok/Pack Strips" on newer NIF versions, including warnings and incorrect scale.
