@@ -1061,6 +1061,30 @@ public:
 		nif->removeNiBlock( nif->getBlockNumber( index ) );
 		return QModelIndex();
 	}
+
+	bool supportsMultiSelect() const override final { return true; }
+
+	bool isApplicableMulti( const NifModel * nif, const QModelIndexList & indices ) const override final
+	{
+		if ( indices.isEmpty() )
+			return false;
+		return std::all_of( indices.begin(), indices.end(),
+			[this, nif](const QModelIndex& idx) { return isApplicable( nif, idx ); } );
+	}
+
+	QModelIndex castMulti( NifModel * nif, const QModelIndexList & indices ) override final
+	{
+		// Sort by block number descending to avoid index invalidation
+		auto sorted = indices;
+		std::sort( sorted.begin(), sorted.end(), [nif](const QModelIndex& a, const QModelIndex& b) {
+			return nif->getBlockNumber( a ) > nif->getBlockNumber( b );
+		} );
+
+		for ( const auto& index : sorted )
+			nif->removeNiBlock( nif->getBlockNumber( index ) );
+
+		return QModelIndex();
+	}
 };
 
 REGISTER_SPELL( spRemoveBlock )
@@ -1100,6 +1124,49 @@ public:
 		}
 
 		return index;
+	}
+
+	bool supportsMultiSelect() const override final { return true; }
+
+	bool isApplicableMulti( const NifModel * nif, const QModelIndexList & indices ) const override final
+	{
+		if ( indices.isEmpty() )
+			return false;
+		return std::all_of( indices.begin(), indices.end(),
+			[this, nif](const QModelIndex& idx) { return isApplicable( nif, idx ); } );
+	}
+
+	QModelIndex castMulti( NifModel * nif, const QModelIndexList & indices ) override final
+	{
+		// For multiple blocks, copy all to a single clipboard entry
+		// Store as a list of blocks with their types
+		QByteArray data;
+		QBuffer buffer( &data );
+		if ( !buffer.open( QIODevice::WriteOnly ) )
+			return {};
+
+		QDataStream ds( &buffer );
+
+		// Store count of blocks
+		ds << (quint32)indices.count();
+
+		for ( const auto& index : indices ) {
+			auto bType = nif->createRTTIName( index );
+
+			if ( nif->checkVersion( 0x14010001, 0 ) )
+				ds << serializeStrings( nif, index, bType );
+
+			nif->saveIndex( buffer, index );
+		}
+
+		if ( !indices.isEmpty() ) {
+			auto bType = nif->createRTTIName( indices.first() );
+			QMimeData * mime = new QMimeData;
+			mime->setData( QString( "nifskope/blocks˂%1˂%2" ).arg( nif->getVersion(), bType ), data );
+			QApplication::clipboard()->setMimeData( mime );
+		}
+
+		return indices.isEmpty() ? QModelIndex() : indices.last();
 	}
 };
 
@@ -1674,6 +1741,31 @@ public:
 			doNode( nif, nif->getBlockIndex( l, "NiNode" ), iParent, tp );
 		}
 	}
+
+	bool supportsMultiSelect() const override final { return true; }
+
+	bool isApplicableMulti( const NifModel * nif, const QModelIndexList & indices ) const override final
+	{
+		if ( indices.isEmpty() )
+			return false;
+		return std::all_of( indices.begin(), indices.end(),
+			[this, nif](const QModelIndex& idx) { return isApplicable( nif, idx ); } );
+	}
+
+	QModelIndex castMulti( NifModel * nif, const QModelIndexList & indices ) override final
+	{
+		QModelIndex lastIndex;
+
+		for ( const auto& iNode : indices ) {
+			QModelIndex iParent = nif->getBlockIndex( nif->getParent( nif->getBlockNumber( iNode ) ), "NiNode" );
+			if ( isApplicable( nif, iNode ) ) {
+				doNode( nif, iNode, iParent, Transform() );
+				lastIndex = iNode;
+			}
+		}
+
+		return lastIndex;
+	}
 };
 
 REGISTER_SPELL( spFlattenBranch )
@@ -1697,6 +1789,37 @@ public:
 		nif->moveNiBlock( ix, ix - 1 );
 		return nif->getBlockIndex( ix - 1 );
 	}
+
+	bool supportsMultiSelect() const override final { return true; }
+
+	bool isApplicableMulti( const NifModel * nif, const QModelIndexList & indices ) const override final
+	{
+		if ( indices.isEmpty() )
+			return false;
+		// Can only move up if topmost block number > 0
+		return std::all_of( indices.begin(), indices.end(),
+			[this, nif](const QModelIndex& idx) { return isApplicable( nif, idx ); } );
+	}
+
+	QModelIndex castMulti( NifModel * nif, const QModelIndexList & indices ) override final
+	{
+		// Sort by block number ascending (move topmost first)
+		auto sorted = indices;
+		std::sort( sorted.begin(), sorted.end(), [nif](const QModelIndex& a, const QModelIndex& b) {
+			return nif->getBlockNumber( a ) < nif->getBlockNumber( b );
+		} );
+
+		QModelIndex lastIndex;
+		for ( const auto& index : sorted ) {
+			int ix = nif->getBlockNumber( index );
+			if ( isApplicable( nif, index ) ) {
+				nif->moveNiBlock( ix, ix - 1 );
+				lastIndex = nif->getBlockIndex( ix - 1 );
+			}
+		}
+
+		return lastIndex;
+	}
 };
 
 REGISTER_SPELL( spMoveBlockUp )
@@ -1719,6 +1842,37 @@ public:
 		int ix = nif->getBlockNumber( iBlock );
 		nif->moveNiBlock( ix, ix + 1 );
 		return nif->getBlockIndex( ix + 1 );
+	}
+
+	bool supportsMultiSelect() const override final { return true; }
+
+	bool isApplicableMulti( const NifModel * nif, const QModelIndexList & indices ) const override final
+	{
+		if ( indices.isEmpty() )
+			return false;
+		// Can only move down if bottommost block number < count - 1
+		return std::all_of( indices.begin(), indices.end(),
+			[this, nif](const QModelIndex& idx) { return isApplicable( nif, idx ); } );
+	}
+
+	QModelIndex castMulti( NifModel * nif, const QModelIndexList & indices ) override final
+	{
+		// Sort by block number descending (move bottommost first)
+		auto sorted = indices;
+		std::sort( sorted.begin(), sorted.end(), [nif](const QModelIndex& a, const QModelIndex& b) {
+			return nif->getBlockNumber( a ) > nif->getBlockNumber( b );
+		} );
+
+		QModelIndex lastIndex;
+		for ( const auto& index : sorted ) {
+			int ix = nif->getBlockNumber( index );
+			if ( isApplicable( nif, index ) ) {
+				nif->moveNiBlock( ix, ix + 1 );
+				lastIndex = nif->getBlockIndex( ix + 1 );
+			}
+		}
+
+		return lastIndex;
 	}
 };
 
@@ -1943,6 +2097,145 @@ public:
 
 		return index;
 	}
+
+	bool supportsMultiSelect() const override final { return true; }
+
+	bool isApplicableMulti( const NifModel * nif, const QModelIndexList & indices ) const override final
+	{
+		if ( indices.isEmpty() )
+			return false;
+		return std::all_of( indices.begin(), indices.end(),
+			[this, nif](const QModelIndex& idx) { return isApplicable( nif, idx ); } );
+	}
+
+	QModelIndex castMulti( NifModel * nif, const QModelIndexList & indices ) override final
+	{
+		// For multi-select, show menu once and apply conversion to all blocks
+		QStringList ids = nif->allNiBlocks();
+		ids.sort();
+
+		// Collect all unique block types
+		QStringList types;
+		for ( const auto& idx : indices ) {
+			QString btype = nif->itemName( idx );
+			if ( !types.contains( btype ) )
+				types.append( btype );
+		}
+
+		// Build menu of valid conversion targets (types that all blocks can convert to)
+		QMap<QString, QMenu *> map;
+		for ( const QString& id : ids ) {
+			bool canConvertAll = true;
+
+			for ( const QString& btype : types ) {
+				// Check if this block type can convert to target type
+				if ( id == btype || ( !nif->inherits( btype, id ) && !nif->inherits( id, btype ) ) ) {
+					canConvertAll = false;
+					break;
+				}
+			}
+
+			if ( !canConvertAll )
+				continue;
+
+			QString x( "Other" );
+			if ( id.startsWith( "Ni" ) )
+				x = QString( "Ni&" ) + id.mid( 2, 1 ) + "...";
+			if ( id.startsWith( "bhk" ) || id.startsWith( "hk" ) )
+				x = "Havok";
+			if ( id.startsWith( "BS" ) || id == "AvoidNode" || id == "RootCollisionNode" )
+				x = "Bethesda";
+			if ( id.startsWith( "Fx" ) )
+				x = "Firaxis";
+
+			if ( !map.contains( x ) )
+				map[ x ] = new QMenu( x );
+
+			map[ x ]->addAction( id );
+		}
+
+		QString newType;
+		{
+			QMenu menu;
+			for ( QMenu * m : map ) {
+				menu.addMenu( m );
+			}
+
+			if ( QAction * act = menu.exec( QCursor::pos() ); act )
+				newType = act->text();
+		}
+
+		if ( newType.isEmpty() )
+			return indices.isEmpty() ? QModelIndex() : indices.first();
+
+		// Apply conversion to all blocks (validate each conversion is valid)
+		QModelIndex lastIndex;
+		for ( const auto& index : indices ) {
+			QString btype = nif->itemName( index );
+
+			// Validate this specific block can convert to newType
+			if ( btype == newType || ( !nif->inherits( btype, newType ) && !nif->inherits( newType, btype ) ) )
+				continue;  // Skip invalid conversion
+
+			QVector<Vector4> dynamicVertexData;
+			if ( btype == "BSDynamicTriShape" ) {
+				if ( auto i = nif->getIndex( index, "Vertices" ); i.isValid() )
+					dynamicVertexData = nif->getArray<Vector4>( i );
+			}
+
+			nif->convertNiBlock( newType, index );
+
+			if ( !dynamicVertexData.isEmpty() ) {
+				auto vertexDesc = nif->get<BSVertexDesc>( index, "Vertex Desc" );
+				vertexDesc.SetFlag( VF_VERTEX );
+				vertexDesc.RemoveFlag( VF_FULLPREC );
+				if ( auto i = nif->getItem( index ); i )
+					i->invalidateCondition();
+				nif->set<BSVertexDesc>( index, "Vertex Desc", vertexDesc );
+			}
+
+			if ( btype == "BSTriShape" || newType == "BSTriShape" )
+				spRemoveWasteVertices::updateBSTriShape( nif, index );
+
+			if ( !dynamicVertexData.isEmpty() ) {
+				if ( auto iVertexData = nif->getIndex( index, "Vertex Data" ); iVertexData.isValid() ) {
+					int n = nif->rowCount( iVertexData );
+					for ( int i = 0; i < n; i++ ) {
+						if ( auto iVertex = nif->getIndex( iVertexData, i ); iVertex.isValid() ) {
+							if ( i < dynamicVertexData.size() ) {
+								Vector4 v = dynamicVertexData.at( i );
+								if ( auto j = nif->getItem( iVertex, "Vertex" ); j ) {
+									if ( j->hasValueType( NifValue::tHalfVector3 ) )
+										nif->set<HalfVector3>( j, HalfVector3( Vector3( v ) ) );
+									else
+										nif->set<Vector3>( j, Vector3( v ) );
+								}
+								if ( auto j = nif->getItem( iVertex, "Bitangent X" ); j )
+									nif->set<float>( j, v[3] );
+								else if ( auto j = nif->getItem( iVertex, "Unused W" ); j )
+									nif->set<float>( j, v[3] );
+							}
+						}
+					}
+				}
+			}
+
+			if ( newType == "BSDismemberSkinInstance" ) {
+				if ( auto iSkinPart = nif->getBlockIndex( nif->getLink( index, "Skin Partition" ) ); iSkinPart.isValid() ) {
+					if ( auto iNumParts = nif->getIndex( iSkinPart, "Num Partitions" ); iNumParts.isValid() ) {
+						quint32 numParts = nif->get<quint32>( iNumParts );
+						nif->set<quint32>( index, "Num Partitions", numParts );
+						if ( auto iPartitions = nif->getIndex( index, "Partitions" ); iPartitions.isValid() )
+							nif->updateArraySize( iPartitions );
+					}
+				}
+			}
+
+			lastIndex = index;
+		}
+
+		return lastIndex;
+	}
 };
 
 REGISTER_SPELL( spConvertBlock )
@@ -1978,6 +2271,37 @@ public:
 		}
 
 		return QModelIndex();
+	}
+
+	bool supportsMultiSelect() const override final { return true; }
+
+	bool isApplicableMulti( const NifModel * nif, const QModelIndexList & indices ) const override final
+	{
+		if ( indices.isEmpty() )
+			return false;
+		return std::all_of( indices.begin(), indices.end(),
+			[this, nif](const QModelIndex& idx) { return isApplicable( nif, idx ); } );
+	}
+
+	QModelIndex castMulti( NifModel * nif, const QModelIndexList & indices ) override final
+	{
+		QModelIndex lastBlock;
+
+		for ( const auto& index : indices ) {
+			QByteArray data;
+			QBuffer buffer( &data );
+
+			if ( buffer.open( QIODevice::WriteOnly ) && nif->saveIndex( buffer, index ) ) {
+				if ( buffer.open( QIODevice::ReadOnly ) ) {
+					QModelIndex block = nif->insertNiBlock( nif->itemName( index ), nif->getBlockCount() );
+					nif->loadIndex( buffer, block );
+					blockLink( nif, nif->getBlockIndex( nif->getParent( nif->getBlockNumber( index ) ) ), block );
+					lastBlock = block;
+				}
+			}
+		}
+
+		return lastBlock;
 	}
 };
 
