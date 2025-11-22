@@ -46,6 +46,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QPersistentModelIndex>
 #include <QString>
 
+#include <algorithm>
 #include <memory>
 
 
@@ -99,6 +100,27 @@ public:
 			cast( nif, index );
 	}
 
+	//! Determine if spell can be cast on multiple indices
+	virtual bool isApplicableMulti( const NifModel * nif, const QModelIndexList & indices ) const
+	{
+		if ( indices.isEmpty() )
+			return false;
+		return std::all_of( indices.begin(), indices.end(),
+			[this, nif](const QModelIndex& idx) { return isApplicable( nif, idx ); } );
+	}
+
+	//! Cast spell on multiple indices (default: apply to each sequentially)
+	virtual QModelIndex castMulti( NifModel * nif, const QModelIndexList & indices )
+	{
+		QModelIndex last = indices.first();
+		for ( const auto& idx : indices )
+			last = cast( nif, idx );
+		return last;
+	}
+
+	//! Flag if spell supports batch multi-selection operations
+	virtual bool supportsMultiSelect() const { return false; }
+
 	//! i18n wrapper for various strings
 	/*!
 	 * Note that we don't use QObject::tr() because that doesn't provide
@@ -120,6 +142,8 @@ class SpellBook final : public QMenu
 public:
 	//! Constructor
 	SpellBook( NifModel * nif, const QModelIndex & index = QModelIndex(), QObject * receiver = 0, const char * member = 0 );
+	//! Constructor for multiple indices
+	SpellBook( NifModel * nif, const QModelIndexList & indices, QObject * receiver = 0, const char * member = 0 );
 	//! Destructor
 	~SpellBook();
 
@@ -152,7 +176,11 @@ public slots:
 
 	void sltIndex( const QModelIndex & index );
 
+	void sltIndices( const QModelIndexList & indices );
+
 	void cast( NifModel * nif, const QModelIndex & index, SpellPtr spell );
+
+	void cast( NifModel * nif, const QModelIndexList & indices, SpellPtr spell );
 
 	void checkActions();
 
@@ -165,6 +193,7 @@ protected slots:
 protected:
 	NifModel * Nif;
 	QPersistentModelIndex Index;
+	QModelIndexList Indices;
 	QMap<QAction *, SpellPtr> Map;
 
 	void newSpellRegistered( SpellPtr spell );

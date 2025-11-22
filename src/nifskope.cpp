@@ -813,6 +813,60 @@ QModelIndex NifSkope::currentNifIndex() const
 	return index;
 }
 
+QModelIndexList NifSkope::selectedNifIndices() const
+{
+	QModelIndexList indices;
+	if ( dList->isVisible() && list && list->selectionModel() ) {
+		if ( list->model() == proxy ) {
+			for ( const auto& idx : list->selectionModel()->selectedRows() )
+				indices.append( proxy->mapTo( idx ) );
+		} else if ( list->model() == nif ) {
+			indices = list->selectionModel()->selectedRows();
+		}
+	} else if ( dTree->isVisible() && tree && tree->selectionModel() ) {
+		if ( tree->model() == proxy ) {
+			for ( const auto& idx : tree->selectionModel()->selectedRows() )
+				indices.append( proxy->mapTo( idx ) );
+		} else if ( tree->model() == nif ) {
+			indices = tree->selectionModel()->selectedRows();
+		}
+	}
+	return indices;
+}
+
+void NifSkope::selectIndices( const QModelIndexList & indices )
+{
+	QModelIndexList prevIndices = selectedNifIndices();
+
+	// Update selection in active view
+	if ( dList->isVisible() && list && list->selectionModel() ) {
+		list->selectionModel()->clearSelection();
+		for ( const auto& idx : indices ) {
+			QModelIndex mapIdx = idx;
+			if ( list->model() == proxy )
+				mapIdx = proxy->mapFrom( idx );
+			list->selectionModel()->select( mapIdx, QItemSelectionModel::Select | QItemSelectionModel::Rows );
+		}
+		if ( !indices.isEmpty() )
+			list->selectionModel()->setCurrentIndex( indices.first(), QItemSelectionModel::NoUpdate );
+	} else if ( dTree->isVisible() && tree && tree->selectionModel() ) {
+		tree->selectionModel()->clearSelection();
+		for ( const auto& idx : indices ) {
+			QModelIndex mapIdx = idx;
+			if ( tree->model() == proxy )
+				mapIdx = proxy->mapFrom( idx );
+			tree->selectionModel()->select( mapIdx, QItemSelectionModel::Select | QItemSelectionModel::Rows );
+		}
+		if ( !indices.isEmpty() )
+			tree->selectionModel()->setCurrentIndex( indices.first(), QItemSelectionModel::NoUpdate );
+	}
+
+	// Push undo command if selection changed
+	if ( prevIndices != indices ) {
+		indexStack->push( new SelectIndicesCommand( this, indices, prevIndices ) );
+	}
+}
+
 QByteArray fileChecksum( const QString &fileName, QCryptographicHash::Algorithm hashAlgorithm )
 {
 	QFile f( fileName );

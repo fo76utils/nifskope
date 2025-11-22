@@ -313,6 +313,12 @@ private:
 	//! Currently selected NiBlock index in the list or tree view
 	QModelIndex currentNifIndex() const;
 
+	//! Get all selected NiBlock indices in the list or tree view
+	QModelIndexList selectedNifIndices() const;
+
+	//! Select multiple blocks and track in undo stack
+	void selectIndices( const QModelIndexList & indices );
+
 	//! Disconnect and reconnect the models to the views
 	void swapModels();
 

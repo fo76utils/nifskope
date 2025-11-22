@@ -1603,6 +1603,30 @@ QModelIndex spRemoveBranch::cast( NifModel * nif, const QModelIndex & index )
 	return QModelIndex();
 }
 
+bool spRemoveBranch::isApplicableMulti( const NifModel * nif, const QModelIndexList & indices ) const
+{
+	if ( indices.isEmpty() )
+		return false;
+	return std::all_of( indices.begin(), indices.end(),
+		[this, nif](const QModelIndex& idx) { return isApplicable( nif, idx ); } );
+}
+
+QModelIndex spRemoveBranch::castMulti( NifModel * nif, const QModelIndexList & indices )
+{
+	// Sort by block number descending (remove deepest blocks first to avoid invalidation)
+	auto sorted = indices;
+	std::sort( sorted.begin(), sorted.end(), [nif](const QModelIndex& a, const QModelIndex& b) {
+		return nif->getBlockNumber( a ) > nif->getBlockNumber( b );
+	} );
+
+	for ( const auto& index : sorted ) {
+		QPersistentModelIndex iBlock = index;
+		removeChildren( nif, iBlock );
+		nif->removeNiBlock( nif->getBlockNumber( iBlock ) );
+	}
+	return QModelIndex();
+}
+
 REGISTER_SPELL( spRemoveBranch )
 
 //! Convert descendents to siblings?

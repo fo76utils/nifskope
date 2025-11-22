@@ -73,6 +73,10 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final;
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final;
+
+	bool supportsMultiSelect() const override final { return true; }
+	bool isApplicableMulti( const NifModel * nif, const QModelIndexList & indices ) const override final;
+	QModelIndex castMulti( NifModel * nif, const QModelIndexList & indices ) override final;
 };
 
 

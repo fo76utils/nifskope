@@ -38,10 +38,11 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QVariant>
 
 
-//! @file undocommands.h ChangeValueCommand, ToggleCheckBoxListCommand
+//! @file undocommands.h ChangeValueCommand, ToggleCheckBoxListCommand, SelectIndicesCommand
 
 class NifModel;
 class NifValue;
+class NifSkope;
 
 class ChangeValueCommand : public QUndoCommand
 {
@@ -98,6 +99,19 @@ private:
 	NifModel * nif;
 	uint newSize, oldSize;
 	QPersistentModelIndex idx;
+};
+
+
+//! Manages selection of multiple block indices in undo/redo stack
+class SelectIndicesCommand : public QUndoCommand
+{
+public:
+	SelectIndicesCommand( NifSkope * wnd, const QModelIndexList & cur, const QModelIndexList & prev );
+	void redo() override;
+	void undo() override;
+private:
+	QModelIndexList curIndices, prevIndices;
+	NifSkope * nifskope;
 };
 
 #endif // UNDOCOMMANDS_H

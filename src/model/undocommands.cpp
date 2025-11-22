@@ -34,11 +34,12 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "data/nifvalue.h"
 #include "model/nifmodel.h"
+#include "nifskope.h"
 
 #include <QCoreApplication>
 
 
-//! @file undocommands.cpp ChangeValueCommand, ToggleCheckBoxListCommand
+//! @file undocommands.cpp ChangeValueCommand, ToggleCheckBoxListCommand, SelectIndicesCommand
 
 size_t ChangeValueCommand::lastID = 0;
 
@@ -207,4 +208,26 @@ void ArrayUpdateCommand::undo()
 		// TODO: Actually attempt to set the array size back
 		nif->updateArraySize( idx );
 	}
+}
+
+
+/*
+ *  SelectIndicesCommand
+ */
+
+SelectIndicesCommand::SelectIndicesCommand( NifSkope * wnd, const QModelIndexList & cur,
+	const QModelIndexList & prev )
+	: nifskope( wnd ), curIndices( cur ), prevIndices( prev )
+{
+	setText( QCoreApplication::translate( "SelectIndicesCommand", "Select %1 blocks" ).arg( cur.count() ) );
+}
+
+void SelectIndicesCommand::redo()
+{
+	nifskope->selectIndices( curIndices );
+}
+
+void SelectIndicesCommand::undo()
+{
+	nifskope->selectIndices( prevIndices );
 }

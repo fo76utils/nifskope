@@ -1356,13 +1356,16 @@ bool NifSkope::eventFilter( QObject * o, QEvent * e )
 void NifSkope::contextMenu( const QPoint & pos )
 {
 	QModelIndex idx;
+	QModelIndexList indices;
 	QPoint p = pos;
 
 	if ( sender() == tree ) {
 		idx = tree->indexAt( pos );
+		indices = selectedNifIndices();
 		p = tree->mapToGlobal( pos );
 	} else if ( sender() == list ) {
 		idx = list->indexAt( pos );
+		indices = selectedNifIndices();
 		p = list->mapToGlobal( pos );
 	} else if ( sender() == header ) {
 		idx = header->indexAt( pos );
@@ -1378,10 +1381,16 @@ void NifSkope::contextMenu( const QPoint & pos )
 		idx = qobject_cast<const NifProxyModel *>(idx.model())->mapTo( idx );
 	}
 
-	SpellBook contextBook( nif, idx, this, SLOT( select( const QModelIndex & ) ) );
-
-	if ( !idx.isValid() || nif->flags( idx ) & (Qt::ItemIsEnabled | Qt::ItemIsSelectable) )
-		contextBook.exec( p );
+	// Use multi-selection if available, otherwise fall back to single index
+	if ( !indices.isEmpty() ) {
+		SpellBook contextBook( nif, indices, this, SLOT( select( const QModelIndex & ) ) );
+		if ( !idx.isValid() || nif->flags( idx ) & (Qt::ItemIsEnabled | Qt::ItemIsSelectable) )
+			contextBook.exec( p );
+	} else {
+		SpellBook contextBook( nif, idx, this, SLOT( select( const QModelIndex & ) ) );
+		if ( !idx.isValid() || nif->flags( idx ) & (Qt::ItemIsEnabled | Qt::ItemIsSelectable) )
+			contextBook.exec( p );
+	}
 }
 
 void NifSkope::overrideViewFont()

@@ -102,6 +102,30 @@ SpellBook::SpellBook( NifModel * nif, const QModelIndex & index, QObject * recei
 		connect( this, SIGNAL( sigIndex( const QModelIndex & ) ), receiver, member );
 }
 
+SpellBook::SpellBook( NifModel * nif, const QModelIndexList & indices, QObject * receiver, const char * member ) : QMenu(), Nif( 0 ), Indices( indices )
+{
+	setTitle( "Spells" );
+
+	// register this book in the library
+	books().append( this );
+
+	// attach this book to the specified nif
+	sltNif( nif );
+
+	// fill in the known spells
+	for ( SpellPtr spell : spells() ) {
+		newSpellRegistered( spell );
+	}
+
+	// set the current indices
+	sltIndices( indices );
+
+	connect( this, &SpellBook::triggered, this, &SpellBook::sltSpellTriggered );
+
+	if ( receiver && member )
+		connect( this, SIGNAL( sigIndex( const QModelIndex & ) ), receiver, member );
+}
+
 SpellBook::~SpellBook()
 {
 	books().removeAll( this );
@@ -154,10 +178,70 @@ void SpellBook::cast( NifModel * nif, const QModelIndex & index, SpellPtr spell 
 	}
 }
 
+void SpellBook::cast( NifModel * nif, const QModelIndexList & indices, SpellPtr spell )
+{
+	QSettings cfg;
+
+	bool suppressConfirm = cfg.value( "Settings/Suppress Undoable Confirmation", false ).toBool();
+	bool accepted = false;
+
+	QDialogButtonBox::StandardButton response = QDialogButtonBox::Yes;
+
+	// Cast non-modifying spells
+	if ( spell && spell->isApplicableMulti( nif, indices ) && spell->constant() ) {
+		auto idx = spell->castMulti( nif, indices );
+		emit sigIndex( idx );
+		return;
+	}
+
+	if ( !suppressConfirm && spell->page() != "Array" ) {
+		QString msg = indices.count() > 1 ?
+			QString( "Apply to %1 blocks? This action cannot currently be undone." ).arg( indices.count() ) :
+			"This action cannot currently be undone. Do you want to continue?";
+		response = CheckableMessageBox::question( this, "Confirmation", msg, "Do not ask me again", &accepted );
+
+		if ( accepted )
+			cfg.setValue( "Settings/Suppress Undoable Confirmation", true );
+	}
+
+	if ( (response == QDialogButtonBox::Yes) && spell && spell->isApplicableMulti( nif, indices ) ) {
+		bool noSignals = spell->batch();
+		if ( noSignals )
+			nif->setState( BaseModel::Processing );
+
+		QModelIndex idx;
+		if ( spell->supportsMultiSelect() ) {
+			idx = spell->castMulti( nif, indices );
+		} else {
+			for ( const auto& index : indices )
+				idx = spell->cast( nif, index );
+		}
+
+		if ( noSignals )
+			nif->resetState();
+
+		// Refresh the header
+		nif->invalidateHeaderConditions();
+		nif->updateHeader();
+
+		if ( nif->getProcessingResult() ) {
+			QModelIndex i = idx;
+			if ( !i.isValid() )
+				i = nif->getRootIndex();
+			emit nif->dataChanged( i, i );
+		}
+
+		emit sigIndex( idx );
+	}
+}
+
 void SpellBook::sltSpellTriggered( QAction * action )
 {
 	SpellPtr spell = Map.value( action );
-	cast( Nif, Index, spell );
+	if ( !Indices.isEmpty() )
+		cast( Nif, Indices, spell );
+	else
+		cast( Nif, Index, spell );
 }
 
 void SpellBook::sltNif( NifModel * nif )
@@ -179,6 +263,16 @@ void SpellBook::sltIndex( const QModelIndex & index )
 	else
 		Index = QModelIndex();
 
+	checkActions();
+}
+
+void SpellBook::sltIndices( const QModelIndexList & indices )
+{
+	Indices.clear();
+	for ( const auto& idx : indices ) {
+		if ( idx.model() == Nif )
+			Indices.append( idx );
+	}
 	checkActions();
 }
 
