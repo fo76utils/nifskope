@@ -1847,6 +1847,174 @@ public:
 	static bool processAllItems( NifModel * nif );
 };
 
+class spMeshFileExport
+{
+public:
+	static bool processAllItems( NifModel * nif );
+	static bool processAllItems( NifModel * nif, const QString & outputDirectory );
+};
+
+class spRemoveUnusedStrings
+{
+public:
+	static QModelIndex cast_Static( NifModel * nif, const QModelIndex & index );
+};
+
+class spRemoveAllDuplicateVertices
+{
+public:
+	static QModelIndex cast_Static( NifModel * nif, const QModelIndex & index );
+};
+
+class spRemoveAllWasteVertices
+{
+public:
+	static QModelIndex cast_Static( NifModel * nif, const QModelIndex & index );
+};
+
+class spSimplifySFMesh
+{
+public:
+	static QModelIndex cast_Static( NifModel * nif, const QModelIndex & index );
+};
+
+class spOptimizeAllIndices
+{
+public:
+	static QModelIndex cast_Static( NifModel * nif, const QModelIndex & index );
+};
+
+class spAddAllTangentSpaces
+{
+public:
+	static QModelIndex cast_Static( NifModel * nif, const QModelIndex & index );
+};
+
+class spUpdateAllBounds
+{
+public:
+	static QModelIndex cast_Static( NifModel * nif, const QModelIndex & index );
+};
+
+class spCombiProps
+{
+public:
+	static QModelIndex cast_Static( NifModel * nif, const QModelIndex & index );
+};
+
+class spRemoveBogusNodes
+{
+public:
+	static QModelIndex cast_Static( NifModel * nif, const QModelIndex & index );
+};
+
+class spSanitizeBlockOrder
+{
+public:
+	static QModelIndex cast_Static( NifModel * nif, const QModelIndex & index );
+};
+
+bool NifModel::convertToInternalGeometry()
+{
+	if ( getBSVersion() < 170 )
+		return false;
+	return spMeshFileImport::processAllItems( this );
+}
+
+bool NifModel::convertToExternalGeometry()
+{
+	if ( getBSVersion() < 170 )
+		return false;
+	return spMeshFileExport::processAllItems( this );
+}
+
+bool NifModel::convertToExternalGeometry( const QString & outputDirectory )
+{
+	if ( getBSVersion() < 170 )
+		return false;
+	return spMeshFileExport::processAllItems( this, outputDirectory );
+}
+
+bool NifModel::removeUnusedStrings()
+{
+	const QModelIndex headerIdx = getHeaderIndex();
+	const quint32 oldNumStrings = get<quint32>( headerIdx, "Num Strings" );
+	// Call the spell's static accessor with an invalid index (required for full-model operation)
+	spRemoveUnusedStrings::cast_Static( this, QModelIndex() );
+	const quint32 newNumStrings = get<quint32>( headerIdx, "Num Strings" );
+	return ( newNumStrings != oldNumStrings );
+}
+
+bool NifModel::removeDuplicateVertices()
+{
+	// Delegates to the batch spell which iterates all geometry block types (BSTriShape, BSGeometry, etc.)
+	spRemoveAllDuplicateVertices::cast_Static( this, QModelIndex() );
+	return true;
+}
+
+bool NifModel::removeUnusedVertices()
+{
+	// Delegates to the batch spell which iterates all geometry block types (BSTriShape, BSGeometry, etc.)
+	spRemoveAllWasteVertices::cast_Static( this, QModelIndex() );
+	return true;
+}
+
+bool NifModel::generateMeshLODs()
+{
+	// Delegates to the Starfield mesh simplifier spell which processes all applicable BSGeometry blocks.
+	spSimplifySFMesh::cast_Static( this, QModelIndex() );
+	return true;
+}
+
+bool NifModel::optimizeIndices()
+{
+	// Delegates to the batch spell which iterates all geometry block types (BSTriShape, BSGeometry, etc.)
+	spOptimizeAllIndices::cast_Static( this, QModelIndex() );
+	return true;
+}
+
+bool NifModel::addTangentSpacesAndUpdate()
+{
+	// Delegates to the existing batch spell used by the GUI "Add Tangent Spaces and Update" operation.
+	spAddAllTangentSpaces::cast_Static( this, QModelIndex() );
+	return true;
+}
+
+bool NifModel::updateBounds()
+{
+	// Delegates to the existing batch spell used by the GUI "Update Bounds" operation.
+	spUpdateAllBounds::cast_Static( this, QModelIndex() );
+	return true;
+}
+
+bool NifModel::combineProperties()
+{
+	// Delegates to the existing spell used by the GUI "Combine Properties" operation.
+	spCombiProps::cast_Static( this, QModelIndex() );
+	return true;
+}
+
+bool NifModel::removeBogusNodes()
+{
+	// Delegates to the existing spell used by the GUI "Remove Bogus Nodes" operation.
+	spRemoveBogusNodes::cast_Static( this, QModelIndex() );
+	return true;
+}
+
+bool NifModel::reorderBlocks()
+{
+	// Delegates to the existing spell used by the GUI "Reorder Blocks" operation.
+	spSanitizeBlockOrder::cast_Static( this, QModelIndex() );
+	return true;
+}
+
+bool NifModel::sanitizeBeforeSave()
+{
+	// Delegates to the existing sanitize pipeline used by the GUI "Sanitize before Save" operation.
+	SpellBook::sanitize( this );
+	return true;
+}
+
 bool NifModel::checkInternalGeometry( const QModelIndex & blockIndex )
 {
 	if ( !blockIndex.isValid() ) {
@@ -1862,6 +2030,10 @@ bool NifModel::checkInternalGeometry( const QModelIndex & blockIndex )
 		return true;
 	if ( get<quint32>( blockIndex, "Flags" ) & 0x0200 )
 		return true;
+	// In batch/headless mode interactive dialogs are unavailable, so report
+	// the block as non-convertible instead of prompting.
+	if ( getBatchProcessingMode() )
+		return false;
 	if ( QMessageBox::question( parentWindow, tr( "NifSkope warning" ),
 								tr( "This operation can only be performed on internal geometry. Convert meshes?" ) )
 		!= QMessageBox::Yes ) {

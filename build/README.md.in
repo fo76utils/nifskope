@@ -37,6 +37,44 @@ Running NifSkope under Wayland on Linux may require setting the QT\_QPA\_PLATFOR
 
 The resource manager in this version of NifSkope is optimized for PCs with solid-state drives. While hard disk drives generally also work, if the number of loose resources is large, load times can be significantly shorter on an SSD when the data is not cached yet by the operating system.
 
+#### Command-line (headless) usage
+
+NifSkope can be run without a GUI by passing the **-no-gui** flag. In this mode the application performs batch operations and exits, without opening any window.
+
+    NifSkope -no-gui --ConvertToInternalGeometry <path>
+    NifSkope -no-gui --ConvertToExternalGeometry <path>
+    NifSkope -no-gui --ConvertToExternalGeometry <path> -o <folder>
+    NifSkope -no-gui --RemoveUnusedStrings <path>
+    NifSkope -no-gui --RemoveDuplicateVertices <path>
+    NifSkope -no-gui --RemoveUnusedVertices <path>
+    NifSkope -no-gui --GenerateMeshLODs <path>
+    NifSkope -no-gui --OptimizeIndices <path>
+    NifSkope -no-gui --AddTangentSpacesAndUpdate <path>
+    NifSkope -no-gui --UpdateBounds <path>
+    NifSkope -no-gui --CombineProperties <path>
+    NifSkope -no-gui --RemoveBogusNodes <path>
+    NifSkope -no-gui --ReorderBlocks <path>
+    NifSkope -no-gui --SanitizeBeforeSave <path>
+
+Running with **-no-gui** and no further option prints a usage summary and exits with a non-zero code.
+
+| Option | Argument | Description |
+|--------|----------|-------------|
+| `--ConvertToInternalGeometry` | `<path>` | Convert all external `.mesh` geometry in Starfield NIF file(s) to internal geometry. `<path>` may be a single `.nif` file or a folder; folders are searched recursively. Files are overwritten in-place. Non-Starfield files (BSVersion < 170) and files that already use internal geometry are skipped without modification. |
+| `--ConvertToExternalGeometry` | `<path>` | Convert internal geometry in Starfield NIF file(s) to external `.mesh` files. `<path>` may be a single `.nif` file or a folder; folders are searched recursively. Files are overwritten in-place. Non-Starfield files (BSVersion < 170) and files that already use external geometry are skipped without modification. Uses `-o` output folder when provided; otherwise falls back to the saved output directory from GUI `Convert to External Geometry` and reports an error if neither is available. |
+| `-o`, `--OutputFolder` | `<folder>` | Optional output folder used by `--ConvertToExternalGeometry` for writing exported `.mesh` files. |
+| `--RemoveUnusedStrings` | `<path>` | Remove any unreferenced strings from the NIF header. `<path>` may be a single `.nif` file or a folder; folders are searched recursively. Files are overwritten in-place. |
+| `--RemoveDuplicateVertices` | `<path>` | Remove duplicate vertices from all geometry blocks (BSTriShape, BSGeometry, NiTriShape, etc.). `<path>` may be a single `.nif` file or a folder; folders are searched recursively. Files are overwritten in-place. **Warning:** for Starfield NIFs this operation may break any associated morph files; no morph file check is performed. |
+| `--RemoveUnusedVertices` | `<path>` | Remove unused vertices from all geometry blocks (BSTriShape, BSGeometry, NiTriShape, etc.). `<path>` may be a single `.nif` file or a folder; folders are searched recursively. Files are overwritten in-place. **Warning:** for Starfield NIFs this operation may break any associated morph files; no morph file check is performed. |
+| `--GenerateMeshLODs` | `<path>` | Generate Starfield mesh LODs for internal BSGeometry blocks. `<path>` may be a single `.nif` file or a folder; folders are searched recursively. Files are overwritten in-place. Non-Starfield files (BSVersion < 170) are skipped without modification. |
+| `--OptimizeIndices` | `<path>` | Optimize triangle index ordering for vertex cache efficiency across all geometry blocks (BSTriShape, BSGeometry, NiTriShape, etc.). `<path>` may be a single `.nif` file or a folder; folders are searched recursively. Files are overwritten in-place. |
+| `--AddTangentSpacesAndUpdate` | `<path>` | Add missing tangent space arrays and update tangent/bitangent data where applicable. `<path>` may be a single `.nif` file or a folder; folders are searched recursively. Files are overwritten in-place. |
+| `--UpdateBounds` | `<path>` | Update bounding spheres/boxes for contained geometry where applicable. `<path>` may be a single `.nif` file or a folder; folders are searched recursively. Files are overwritten in-place. |
+| `--CombineProperties` | `<path>` | Combine duplicate shader properties (NiProperty, NiSourceTexture, BSShaderTextureSet) into a single shared block. `<path>` may be a single `.nif` file or a folder; folders are searched recursively. Files are overwritten in-place. |
+| `--RemoveBogusNodes` | `<path>` | Remove useless or incorrect block types for the target NIF version where applicable. `<path>` may be a single `.nif` file or a folder; folders are searched recursively. Files are overwritten in-place. |
+| `--ReorderBlocks` | `<path>` | Reorder blocks so the game can properly load them. `<path>` may be a single `.nif` file or a folder; folders are searched recursively. Files are overwritten in-place. |
+| `--SanitizeBeforeSave` | `<path>` | Fix minor errors (for example duplicate block names) before save. `<path>` may be a single `.nif` file or a folder; folders are searched recursively. Files are overwritten in-place. |
+
 #### Building from source code (Qt 6)
 
 Compiling NifSkope requires Qt 6.4 or newer, or Qt 5.15. On Windows, [MSYS2](https://www.msys2.org/) can be used for building. After running the MSYS2 installer, use the following commands in the MSYS2-UCRT64 shell to install required packages:
