@@ -73,7 +73,7 @@
          <bool>true</bool>
         </property>
         <property name="toolButtonStyle">
-         <enum>Qt::ToolButtonTextBesideIcon</enum>
+         <enum>Qt::ToolButtonStyle::ToolButtonTextBesideIcon</enum>
         </property>
        </widget>
       </item>
@@ -105,49 +105,49 @@
       <item row="0" column="1">
        <widget class="QSlider" name="sldDirectional">
         <property name="orientation">
-         <enum>Qt::Horizontal</enum>
+         <enum>Qt::Orientation::Horizontal</enum>
         </property>
        </widget>
       </item>
       <item row="1" column="1">
        <widget class="QSlider" name="sldLightColor">
         <property name="orientation">
-         <enum>Qt::Horizontal</enum>
+         <enum>Qt::Orientation::Horizontal</enum>
         </property>
        </widget>
       </item>
       <item row="2" column="1">
        <widget class="QSlider" name="sldAmbient">
         <property name="orientation">
-         <enum>Qt::Horizontal</enum>
+         <enum>Qt::Orientation::Horizontal</enum>
         </property>
        </widget>
       </item>
       <item row="3" column="1">
        <widget class="QSlider" name="sldEnvMapRotation">
         <property name="orientation">
-         <enum>Qt::Horizontal</enum>
+         <enum>Qt::Orientation::Horizontal</enum>
         </property>
        </widget>
       </item>
       <item row="4" column="1">
        <widget class="QSlider" name="sldGlowScale">
         <property name="orientation">
-         <enum>Qt::Horizontal</enum>
+         <enum>Qt::Orientation::Horizontal</enum>
         </property>
        </widget>
       </item>
       <item row="5" column="1">
        <widget class="QSlider" name="sldLightScale">
         <property name="orientation">
-         <enum>Qt::Horizontal</enum>
+         <enum>Qt::Orientation::Horizontal</enum>
         </property>
        </widget>
       </item>
       <item row="6" column="1">
        <widget class="QSlider" name="sldToneMapping">
         <property name="orientation">
-         <enum>Qt::Horizontal</enum>
+         <enum>Qt::Orientation::Horizontal</enum>
         </property>
        </widget>
       </item>
@@ -158,6 +158,9 @@
           <width>24</width>
           <height>24</height>
          </size>
+        </property>
+        <property name="toolTip">
+         <string>Directional</string>
         </property>
         <property name="text">
          <string/>
@@ -185,6 +188,9 @@
           <height>24</height>
          </size>
         </property>
+        <property name="toolTip">
+         <string>Hue</string>
+        </property>
         <property name="text">
          <string/>
         </property>
@@ -210,6 +216,9 @@
           <width>24</width>
           <height>24</height>
          </size>
+        </property>
+        <property name="toolTip">
+         <string>Ambient</string>
         </property>
         <property name="text">
          <string/>
@@ -237,6 +246,9 @@
           <height>24</height>
          </size>
         </property>
+        <property name="toolTip">
+         <string>EnvMap Rotation</string>
+        </property>
         <property name="text">
          <string/>
         </property>
@@ -262,6 +274,9 @@
           <width>24</width>
           <height>24</height>
          </size>
+        </property>
+        <property name="toolTip">
+         <string>Glow Scale</string>
         </property>
         <property name="text">
          <string/>
@@ -289,6 +304,9 @@
           <height>24</height>
          </size>
         </property>
+        <property name="toolTip">
+         <string>Light Scale</string>
+        </property>
         <property name="text">
          <string/>
         </property>
@@ -314,6 +332,9 @@
           <width>24</width>
           <height>24</height>
          </size>
+        </property>
+        <property name="toolTip">
+         <string>Gamma</string>
         </property>
         <property name="text">
          <string/>
@@ -456,6 +477,9 @@
       </item>
       <item row="1" column="3">
        <widget class="QPushButton" name="btnLoadCubeMap">
+        <property name="toolTip">
+         <string>Load Cubemap</string>
+        </property>
         <property name="text">
          <string/>
         </property>
