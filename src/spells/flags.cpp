@@ -53,12 +53,8 @@ public:
 		if ( nif->isNiBlock( index ) )
 			return nif->getIndex( index, "Flags" );
 
-		if ( nif->blockInherits( index, "bhkRigidBody" ) ) {
-			QModelIndex iFlags = nif->getIndex( nif->getBlockIndex( index ), "Col Filter" );
-			iFlags = iFlags.sibling( iFlags.row(), NifModel::ValueCol );
-
-			if ( index == iFlags )
-				return iFlags;
+        if ( nif->itemName( index ) == "Flags" && nif->itemName( index.parent() ) == "Rigid Body Info" ) {
+            return index;
 		} else if ( nif->blockInherits( index, "BSXFlags" ) ) {
 			QModelIndex iFlags = nif->getIndex( nif->getBlockIndex( index ), "Integer Data" );
 			iFlags = iFlags.sibling( iFlags.row(), NifModel::ValueCol );
@@ -90,7 +86,7 @@ public:
 				return Controller;
 			} else if ( name == "NiNode" && nif->getVersionNumber() != 0x14020007 ) {
 				return Node;
-			} else if ( name == "bhkRigidBody" || name == "bhkRigidBodyT" ) {
+            } else if ( name == "bhkRigidBody" || name == "bhkRigidBodyT" || name == "Rigid Body Info") {
 				return RigidBody;
 			} else if ( (name == "NiTriShape" || name == "NiTriStrips") && nif->getVersionNumber() != 0x14020007 ) {
 				return Shape;
@@ -373,7 +369,11 @@ public:
 			flags = ( flags & 0xdf ) | ( chkScaled->isChecked() ? 0x20 : 0 );
 			flags = ( flags & 0xe0 ) | ( chkLinked->isChecked() ? spnPartNo->value() : 0 );
 			nif->set<int>( index, flags );
-			nif->set<int>( index.parent(), "Col Filter Copy", flags );
+            if ( nif->itemName( index.parent() ) == "Rigid Body Info" ) {
+                nif->set<int>( nif->getBlockIndex( index ) , "Flags", flags );
+            } else {
+                nif->set<int>( nif->getIndex( nif->getBlockIndex( index ), "Rigid Body Info" ) , "Flags", flags );
+            }
 		}
 	}
 
