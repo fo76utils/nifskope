@@ -767,7 +767,8 @@ bool Renderer::setupProgramCE1( const NifModel * nif, Program * prog, Shape * me
 
 		// Environment Mapping
 
-		bool	hasCubeMap = ( scene->hasOption(Scene::DoCubeMapping) && scene->hasOption(Scene::DoLighting) && (lsp->hasEnvironmentMap || nifVersion >= 151) );
+		bool	hasCubeMap = ( scene->hasOption(Scene::DoCubeMapping) && scene->hasOption(Scene::DoLighting) &&
+                           (lsp->hasEnvironmentMap || lsp->hasMultiLayerParallax || nifVersion >= 151) );
 		prog->uni1i( "hasEnvMask", lsp->useEnvironmentMask );
 		float refl = ( nifVersion < 151 ? lsp->environmentReflection : 1.0f );
 		prog->uni1f( "envReflection", refl );
