@@ -255,6 +255,12 @@ public:
 		QCheckBox * chkSort = dlgCheck( vbox, Spell::tr( "No Sorter" ) );
 		chkSort->setChecked( ( flags & 0x2000 ) != 0 );
 
+        QCheckBox * chkCloneUnique = dlgCheck( vbox, Spell::tr( "Clone Unique" ) );
+        chkCloneUnique->setChecked( ( flags & 0x4000 ) != 0 );
+
+        QCheckBox * chkEditorControlled = dlgCheck( vbox, Spell::tr( "Editor Controlled" ) );
+        chkEditorControlled->setChecked( ( flags & 0x8000 ) != 0 );
+
 		dlgButtons( &dlg, vbox );
 
 		if ( dlg.exec() == QDialog::Accepted ) {
@@ -277,6 +283,8 @@ public:
 			nif->set<int>( nif->getBlockIndex( index ), "Threshold", spnTest->value() );
 
 			flags = ( flags & 0xdfff ) | ( chkSort->isChecked() ? 0x2000 : 0 );
+            flags = ( flags & 0xbfff ) | ( chkCloneUnique->isChecked() ? 0x4000 : 0 );
+            flags = ( flags & 0x7fff ) | ( chkEditorControlled->isChecked() ? 0x8000 : 0 );
 
 			nif->set<int>( index, flags );
 		}
@@ -338,11 +346,27 @@ public:
 		QComboBox * cmbLoop = dlgCombo( vbox, Spell::tr( "Loop Mode" ), loopModes );
 		cmbLoop->setCurrentIndex( flags >> 1 & 3 );
 
+        QCheckBox * chkPlayBackwards = dlgCheck( vbox, Spell::tr( "Play Backwards" ) );
+        chkPlayBackwards->setChecked( flags & 0x10 );
+
+        QCheckBox * chkManagerControlled = dlgCheck( vbox, Spell::tr( "Manager Controlled" ) );
+        chkManagerControlled->setChecked( flags & 0x20 );
+
+        QCheckBox * chkComputeScaledTime = dlgCheck( vbox, Spell::tr( "Compute Scaled Time" ) );
+        chkComputeScaledTime->setChecked( flags & 0x40 );
+
+        QCheckBox * chkForcedUpdate = dlgCheck( vbox, Spell::tr( "Forced Update" ) );
+        chkForcedUpdate->setChecked( flags & 0x80 );
+
 		dlgButtons( &dlg, vbox );
 
 		if ( dlg.exec() == QDialog::Accepted ) {
 			flags = ( flags & 0xfff7 ) | ( chkActive->isChecked() ? 8 : 0 );
 			flags = ( flags & 0xfff9 ) | ( cmbLoop->currentIndex() << 1 );
+            flags = ( flags & 0xef ) | ( chkPlayBackwards->isChecked() ? 0x10 : 0 );
+            flags = ( flags & 0xdf ) | ( chkManagerControlled->isChecked() ? 0x20 : 0 );
+            flags = ( flags & 0xbf ) | ( chkComputeScaledTime->isChecked() ? 0x40 : 0 );
+            flags = ( flags & 0x7f ) | ( chkForcedUpdate->isChecked() ? 0x80 : 0 );
 			nif->set<int>( index, flags );
 		}
 	}
