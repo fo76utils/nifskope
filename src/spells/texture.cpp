@@ -161,7 +161,12 @@ QModelIndex getUV( const NifModel * nif, const QModelIndex & index )
 
 static bool texturePathFilterFunc( [[maybe_unused]] void *p, const std::string_view & s )
 {
-	return ( s.starts_with( "textures/" ) && s.ends_with( ".dds" ) );
+    return ( s.starts_with( "textures/" ) && s.ends_with( ".dds" ));
+}
+
+static bool texturePathFilterFuncAlt( [[maybe_unused]] void *p, const std::string_view & s )
+{
+    return ( s.starts_with( "textures/" ) && (s.ends_with( ".dds" ) || s.ends_with( ".tga" ) || s.ends_with( ".png" ) || s.ends_with( ".bmp" )) );
 }
 
 //! Selects a texture filename
@@ -255,7 +260,11 @@ public:
 		}
 
 		std::set< std::string_view >	texturePaths;
-		nif->listResourceFiles( texturePaths, &texturePathFilterFunc );
+        if ( !settings.value( "Settings/Resources/Alternate Extensions" ).toBool() ) {
+            nif->listResourceFiles( texturePaths, &texturePathFilterFunc );
+        } else {
+            nif->listResourceFiles( texturePaths, &texturePathFilterFuncAlt );
+        }
 		std::string	prvPath( file.toStdString() );
 		FileBrowserWidget	fileBrowser( 640, 600, "Choose Texture", texturePaths, prvPath,
 											&( nif->getGameResources() ) );
