@@ -170,7 +170,7 @@ static int generateMipMaps( int m )
 			src += yo;
 		}
 
-		glTexImage2D( GL_TEXTURE_2D, m++, 4, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.data() );
+		glTexImage2D( GL_TEXTURE_2D, m++, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.data() );
 	}
 
 	return m;
@@ -324,7 +324,7 @@ static int texLoadRaw( QIODevice & f, int width, int height, int num_mipmaps, in
 
 		convertToRGBA( data1, w, h, bytespp, mask, flipV, flipH, data2 );
 
-		glTexImage2D( GL_TEXTURE_2D, m++, 4, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data2 );
+		glTexImage2D( GL_TEXTURE_2D, m++, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data2 );
 
 		if ( w == 1 && h == 1 )
 			break;
@@ -388,7 +388,7 @@ static int texLoadPal( QIODevice & f, int width, int height, int num_mipmaps, in
 			}
 		}
 
-		glTexImage2D( GL_TEXTURE_2D, m++, 4, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixl );
+		glTexImage2D( GL_TEXTURE_2D, m++, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixl );
 
 		if ( w == 1 && h == 1 )
 			break;
@@ -525,7 +525,7 @@ static GLuint texLoadTGA(
 		if ( depth == 32 ) {
 			texformat.imageEncoding |= TexCache::TexFmt::TEXFMT_RGBA8;
 
-			if ( hdr[2] == TGA_GREY_RLE )
+			if ( hdr[2] == TGA_COLOR_RLE )
 				texformat.imageEncoding |= TexCache::TexFmt::TEXFMT_RLE;
 
 			return texLoadRaw( f, width, height, 1, 32, 4, TGA_RGBA_MASK, flipV, flipH, hdr[2] == TGA_COLOR_RLE );
