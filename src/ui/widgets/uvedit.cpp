@@ -1695,15 +1695,14 @@ void ScalingDialog::setUniform( bool status )
 	}
 }
 
-// 1 unit corresponds to 2 grid squares
 float ScalingDialog::getXMove()
 {
-	return spinXMove->value() / 2.0;
+	return spinXMove->value();
 }
 
 float ScalingDialog::getYMove()
 {
-	return spinYMove->value() / 2.0;
+	return spinYMove->value();
 }
 
 //! A class to perform rotation of UV coordinates
