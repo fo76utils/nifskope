@@ -408,6 +408,9 @@ REGISTER_SPELL( spExtractAllMaterials )
 class spMeshFileExport final : public Spell
 {
 public:
+	static constexpr const char * kMissingOutputDirectoryError =
+		"missing output directory for external mesh export; use -o <folder> (CLI) or set it in GUI via Convert to External Geometry first";
+
 	QString name() const override final { return Spell::tr( "Convert to External Geometry" ); }
 	QString page() const override final { return Spell::tr( "Mesh" ); }
 
@@ -423,8 +426,26 @@ public:
 
 	static void saveMeshData( QByteArray & meshBuf, NifModel * nif, const NifItem * meshDataItem );
 	static bool processItem( NifModel * nif, NifItem * item, const std::string & outputDirectory, const QString & meshDir );
+	static bool processAllItems( NifModel * nif );
+	static bool processAllItems( NifModel * nif, const QString & outputDirectory );
+	static bool processAllItems( NifModel * nif, const std::string & outputDirectory, const QString & meshDir );
+	static QString getNormalizedMeshDir();
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final;
 };
+
+QString spMeshFileExport::getNormalizedMeshDir()
+{
+	QSettings	settings;
+	QString	meshDir = settings.value( "Settings/Importex/Mesh Export Dir", QString() ).toString().trimmed().toLower();
+	meshDir.replace( QChar('/'), QChar('\\') );
+	while ( meshDir.endsWith( QChar('\\') ) )
+		meshDir.chop( 1 );
+	while ( meshDir.startsWith( QChar('\\') ) )
+		meshDir.remove( 0, 1 );
+	if ( !meshDir.isEmpty() )
+		meshDir.append( QChar('\\') );
+	return meshDir;
+}
 
 void spMeshFileExport::saveMeshData( QByteArray & meshBuf, NifModel * nif, const NifItem * meshDataItem )
 {
@@ -496,6 +517,64 @@ bool spMeshFileExport::processItem(
 	return haveMeshes;
 }
 
+bool spMeshFileExport::processAllItems( NifModel * nif, const std::string & outputDirectory, const QString & meshDir )
+{
+	bool r = false;
+	for ( int b = 0; b < nif->getBlockCount(); b++ )
+		r = r | processItem( nif, nif->getBlockItem( qint32(b) ), outputDirectory, meshDir );
+	return r;
+}
+
+bool spMeshFileExport::processAllItems( NifModel * nif )
+{
+	if ( !( nif && nif->getBSVersion() >= 170 ) )
+		return false;
+
+	std::string	outputDirectory( spResourceFileExtract::getOutputDirectory( nif ) );
+	if ( outputDirectory.empty() ) {
+		if ( nif->getBatchProcessingMode() ) {
+			throw NifSkopeError( kMissingOutputDirectoryError );
+		}
+		return false;
+	}
+
+	QString	meshDir = getNormalizedMeshDir();
+
+	bool meshesConverted = processAllItems( nif, outputDirectory, meshDir );
+	if ( meshesConverted && !nif->getBatchProcessingMode() )
+		Game::GameManager::close_resources();
+	return meshesConverted;
+}
+
+bool spMeshFileExport::processAllItems( NifModel * nif, const QString & outputDirectory )
+{
+	if ( !( nif && nif->getBSVersion() >= 170 ) )
+		return false;
+
+	QString outputDir = QDir::fromNativeSeparators( outputDirectory ).trimmed();
+	while ( outputDir.endsWith( QChar('/') ) )
+		outputDir.chop( 1 );
+	if ( outputDir.isEmpty() ) {
+		if ( nif->getBatchProcessingMode() )
+			throw NifSkopeError( kMissingOutputDirectoryError );
+		return false;
+	}
+
+	std::string outputDirectoryStd( outputDir.toLocal8Bit().constData() );
+	if ( !outputDirectoryStd.empty() ) {
+		char c = outputDirectoryStd.back();
+		if ( c != '/' && c != '\\' )
+			outputDirectoryStd += '/';
+	}
+
+	QString	meshDir = getNormalizedMeshDir();
+
+	bool meshesConverted = processAllItems( nif, outputDirectoryStd, meshDir );
+	if ( meshesConverted && !nif->getBatchProcessingMode() )
+		Game::GameManager::close_resources();
+	return meshesConverted;
+}
+
 QModelIndex spMeshFileExport::cast( NifModel * nif, const QModelIndex & index )
 {
 	if ( !( nif && nif->getBSVersion() >= 170 ) )
@@ -505,29 +584,17 @@ QModelIndex spMeshFileExport::cast( NifModel * nif, const QModelIndex & index )
 	if ( item && !( item->hasName( "BSGeometry" ) && (nif->get<quint32>(item, "Flags") & 0x0200) != 0 ) )
 		return index;
 
-	std::string	outputDirectory( spResourceFileExtract::getOutputDirectory( nif ) );
-	if ( outputDirectory.empty() )
-		return index;
-
-	QString	meshDir;
-	{
-		QSettings	settings;
-		meshDir = settings.value( "Settings/Importex/Mesh Export Dir", QString() ).toString().trimmed().toLower();
-	}
-	meshDir.replace( QChar('/'), QChar('\\') );
-	while ( meshDir.endsWith( QChar('\\') ) )
-		meshDir.chop( 1 );
-	while ( meshDir.startsWith( QChar('\\') ) )
-		meshDir.remove( 0, 1 );
-	if ( !meshDir.isEmpty() )
-		meshDir.append( QChar('\\') );
-
 	bool	meshesConverted = false;
 	if ( item ) {
+		std::string	outputDirectory( spResourceFileExtract::getOutputDirectory( nif ) );
+		if ( outputDirectory.empty() )
+			return index;
+
+		QString	meshDir = getNormalizedMeshDir();
+
 		meshesConverted = processItem( nif, item, outputDirectory, meshDir );
 	} else {
-		for ( int b = 0; b < nif->getBlockCount(); b++ )
-			meshesConverted |= processItem( nif, nif->getBlockItem( qint32(b) ), outputDirectory, meshDir );
+		meshesConverted = processAllItems( nif );
 	}
 	if ( meshesConverted && !nif->getBatchProcessingMode() )
 		Game::GameManager::close_resources();
