@@ -37,6 +37,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QSpinBox>  // Inherited
 
 #include <QColor>
+#include <QVector>
 #include <QRegularExpression>
 #include <QSlider>
 
@@ -45,6 +46,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class Color3;
 class Color4;
+class Vector3;
 
 //! A color selection widget using the HSV model
 class ColorWheel final : public QWidget
@@ -55,6 +57,7 @@ public:
 	static QColor choose( const QColor & color, bool alpha = true, QWidget * parent = nullptr );
 	static Color3 choose( const Color3 & color, QWidget * parent = nullptr );
 	static Color4 choose( const Color4 & color, QWidget * parent = nullptr );
+	static Color3 choose( const Vector3 & color, QWidget * parent = nullptr );
 
 	ColorWheel( QWidget * parent = nullptr );
 	ColorWheel( const QColor & c, QWidget * parent = nullptr );

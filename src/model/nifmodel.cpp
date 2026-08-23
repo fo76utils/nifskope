@@ -1567,8 +1567,28 @@ QVariant NifModel::data( const QModelIndex & index, int role ) const
 
 				if ( t[0] >= nvc || t[1] >= nvc || t[2] >= nvc )
 					return QColor::fromRgb( 240, 210, 210 );
-			} else if ( column == ValueCol && item->isColor() ) {
-				return item->getColorValue();
+			} else if ( column == ValueCol ) {
+				if ( item->isColor() ) {
+					return item->getColorValue();
+				} else if ( item->isVector3() ) {
+					QModelIndex parent = this->getBlockIndex( this->getParent( this->getBlockIndex( index ) ) );
+					QModelIndex grandparent = this->getBlockIndex( this->getParent( parent ) );
+					if ( this->isNiBlock( grandparent , "BSLightingShaderPropertyColorController" ) ) {
+						return item->getColorValue();
+					} else if ( this->isNiBlock( grandparent , "NiControllerSequence" ) ) {
+						QModelIndex iCtrlBlcks = this->getIndex( grandparent, "Controlled Blocks");
+						for ( int r = 0; r < this->rowCount( iCtrlBlcks ); r++ ) {
+							QModelIndex iCB = this->getIndex( iCtrlBlcks, r );
+							QModelIndex iInterp = this->getBlockIndex( this->getLink( iCB, "Interpolator" ), "NiInterpolator" );
+							if ( parent == iInterp ) {
+								QModelIndex iController = this->getBlockIndex( this->getLink( iCB, "Controller" ), "NiTimeController" );
+								if ( this->isNiBlock( iController, "BSEffectShaderPropertyColorController") ) {
+									return item->getColorValue();
+								}
+							}
+						}
+					}
+				}
 			}
 		}
 		return QVariant();

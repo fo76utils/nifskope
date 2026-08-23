@@ -1056,6 +1056,7 @@ QColor NifValue::toColor( const BaseModel * model, const NifItem * item ) const
 {
 	switch ( type() ) {
 	case tColor3:
+	case tVector3:
 		return Color3( val.f32v4[0], val.f32v4[1], val.f32v4[2] ).toQColor();
 	case tColor4:
 	case tByteColor4:
