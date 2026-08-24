@@ -32,6 +32,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "nifitem.h"
 #include "model/basemodel.h"
+#include "model/nifmodel.h"
 
 #include <new>
 
@@ -55,6 +56,31 @@ bool NifItem::isDescendantOf( const NifItem * testAncestor ) const
 		} while ( ancestor );
 	}
 
+	return false;
+}
+
+bool NifItem::isVector3Color() const
+{
+	if ( this->isVector3() && this->hasName( "Value" ) ) {
+		NifModel * nif = qobject_cast<NifModel *>( this->parentModel );
+		QModelIndex parent = nif->getBlockIndex( nif->getParent( nif->getBlockIndex( this ) ) );
+		QModelIndex grandparent = nif->getBlockIndex( nif->getParent( parent ) );
+		if ( nif->isNiBlock( grandparent , "BSLightingShaderPropertyColorController" ) ) {
+			return true;
+		} else if ( nif->isNiBlock( grandparent , "NiControllerSequence" ) ) {
+			QModelIndex iCtrlBlcks = nif->getIndex( grandparent, "Controlled Blocks");
+			for ( int r = 0; r < nif->rowCount( iCtrlBlcks ); r++ ) {
+				QModelIndex iCB = nif->getIndex( iCtrlBlcks, r );
+				QModelIndex iInterp = nif->getBlockIndex( nif->getLink( iCB, "Interpolator" ), "NiInterpolator" );
+				if ( parent == iInterp ) {
+					QModelIndex iController = nif->getBlockIndex( nif->getLink( iCB, "Controller" ), "NiTimeController" );
+					if ( nif->isNiBlock( iController, "BSEffectShaderPropertyColorController") ) {
+						return true;
+					}
+				}
+			}
+		}
+	}
 	return false;
 }
 

@@ -374,12 +374,12 @@ Color4 ColorWheel::choose( const Color4 & c, QWidget * parent )
 	return Color4( choose( c.toQColor(), true, parent ) );
 }
 
-Color3 ColorWheel::choose( const Vector3 & v, QWidget * parent )
+Vector3 ColorWheel::choose( const Vector3 & v, QWidget * parent )
 {
 	if ( v.data()[0] > 1.0 || v.data()[1] > 1.0 || v.data()[2] > 1.0 )
-		return Color3( v );
+		return Vector3( v );
 	
-	return Color3( choose( Color3( v ).toQColor(), false, parent ) );
+	return Vector3( Color3( choose( Color3( v ).toQColor(), false, parent ) ).toVector3() );
 }
 
 void ColorWheel::chooseHex()

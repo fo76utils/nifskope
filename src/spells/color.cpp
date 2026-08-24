@@ -21,27 +21,9 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
-		if ( nif->getValue( index ).isColor() )
+		if ( nif->getBlockItem( index ) )
+		if ( nif->getValue( index ).isColor() || ( nif->getItem( index ) && nif->getItem( index )->isVector3Color() ) )
 			return true;
-		else if ( nif->getValue( index ).isVector3() ) {
-			QModelIndex parent = nif->getBlockIndex( nif->getParent( nif->getBlockIndex( index ) ) );
-			QModelIndex grandparent = nif->getBlockIndex( nif->getParent( parent ) );
-			if ( nif->isNiBlock( grandparent , "BSLightingShaderPropertyColorController" ) )
-				return true;
-			else if ( nif->isNiBlock( grandparent , "NiControllerSequence" ) ) {
-				QModelIndex iCtrlBlcks = nif->getIndex( grandparent, "Controlled Blocks");
-				for ( int r = 0; r < nif->rowCount( iCtrlBlcks ); r++ ) {
-					QModelIndex iCB = nif->getIndex( iCtrlBlcks, r );
-					QModelIndex iInterp = nif->getBlockIndex( nif->getLink( iCB, "Interpolator" ), "NiInterpolator" );
-					if ( parent == iInterp ) {
-						QModelIndex iController = nif->getBlockIndex( nif->getLink( iCB, "Controller" ), "NiTimeController" );
-						if ( nif->isNiBlock( iController, "BSEffectShaderPropertyColorController") ) {
-							return true;
-						}
-					}
-				}
-			}
-		}
 		return false;
 	}
 
@@ -58,6 +40,9 @@ public:
 		} else if ( typ == NifValue::tByteColor4BGRA ) {
 			auto col = ColorWheel::choose( nif->get<ByteColor4BGRA>( index ) );
 			nif->set<ByteColor4BGRA>( index, *static_cast<ByteColor4BGRA *>(&col) );
+		} else if ( typ == NifValue::tVector3 ) {
+			auto col = ColorWheel::choose( nif->get<Vector3>( index ) );
+			nif->set<Vector3>( index, *static_cast<Vector3 *>(&col) );
 		}
 
 		return index;
