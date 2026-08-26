@@ -65,7 +65,8 @@ bool NifItem::isVector3Color() const
 		NifModel * nif = qobject_cast<NifModel *>( this->parentModel );
 		QModelIndex parent = nif->getBlockIndex( nif->getParent( nif->getBlockIndex( this ) ) );
 		QModelIndex grandparent = nif->getBlockIndex( nif->getParent( parent ) );
-		if ( nif->isNiBlock( grandparent , "BSLightingShaderPropertyColorController" ) ) {
+		if ( nif->isNiBlock( grandparent , "BSLightingShaderPropertyColorController" ) ||
+			 nif->isNiBlock( grandparent , "BSEffectShaderPropertyColorController" ) ) {
 			return true;
 		} else if ( nif->isNiBlock( grandparent , "NiControllerSequence" ) ) {
 			QModelIndex iCtrlBlcks = nif->getIndex( grandparent, "Controlled Blocks");
@@ -74,7 +75,8 @@ bool NifItem::isVector3Color() const
 				QModelIndex iInterp = nif->getBlockIndex( nif->getLink( iCB, "Interpolator" ), "NiInterpolator" );
 				if ( parent == iInterp ) {
 					QModelIndex iController = nif->getBlockIndex( nif->getLink( iCB, "Controller" ), "NiTimeController" );
-					if ( nif->isNiBlock( iController, "BSEffectShaderPropertyColorController") ) {
+					if ( nif->isNiBlock( iController, "BSLightingShaderPropertyColorController") ||
+						 nif->isNiBlock( iController, "BSEffectShaderPropertyColorController")) {
 						return true;
 					}
 				}

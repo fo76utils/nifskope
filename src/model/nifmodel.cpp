@@ -1572,6 +1572,21 @@ QVariant NifModel::data( const QModelIndex & index, int role ) const
 			}
 		}
 		return QVariant();
+	case Qt::ForegroundRole:
+		{
+			if ( column == ValueCol ) {
+				if ( item->isColor() || item->isVector3Color() )
+				{
+					QColor color = item->getColorValue();
+					// this seems better than value or lightness
+					if ( ( color.red() + color.green() + color.blue() ) / 3 > 127 )
+						return QColor( Qt::black );
+					else
+						return QColor( Qt::white );
+				}
+			}
+		}
+		return QVariant();
 	case Qt::UserRole:
 		{
 			if ( column == ValueCol ) {
