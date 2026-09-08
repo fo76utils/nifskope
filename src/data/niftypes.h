@@ -1435,8 +1435,14 @@ public:
 		rgb[1] = c.greenF();
 		rgb[2] = c.blueF();
 	}
+	
+	//! Convert to Vector3
+	Vector3 toVector3() const
+	{
+		return Vector3( clamp01( rgb[0] ), clamp01( rgb[1] ), clamp01( rgb[2] ) );
+	}
 
-	//! Set from vector
+	//! Set from Vector3
 	void fromVector3( const Vector3 & v )
 	{
 		rgb[0] = v[0];

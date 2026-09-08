@@ -672,17 +672,19 @@ public:
 	inline bool isQuat() const { return itemData.isQuat(); }
 	//! Check if the type of the item's value is a string type.
 	inline bool isString() const { return itemData.isString(); }
-	//! Check if the type of the item's value is a Vector 2.
+	//! Check if the type of the item's value is a Vector2.
 	inline bool isVector2() const { return itemData.isVector2(); }
 	//! Check if the type of the item's value is a HalfVector2.
 	inline bool isHalfVector2() const { return itemData.isHalfVector2(); }
-	//! Check if the type of the item's value is a Vector 3.
+	//! Check if the type of the item's value is a Vector3.
 	inline bool isVector3() const { return itemData.isVector3(); }
+	//! Check if the type of the item's value is a Vector3 used as a color.
+	bool isVector3Color() const;
 	//! Check if the type of the item's value is a Half Vector3.
 	inline bool isHalfVector3() const { return itemData.isHalfVector3(); }
 	//! Check if the type of the item's value is a Byte Vector3.
 	inline bool isByteVector3() const { return itemData.isByteVector3(); }
-	//! Check if the type of the item's value is a Vector 4.
+	//! Check if the type of the item's value is a Vector4.
 	inline bool isVector4() const { return itemData.isVector4(); }
 	//! Check if the type of the item's value is a triangle type.
 	inline bool isTriangle() const { return itemData.isTriangle(); }
