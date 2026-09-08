@@ -21,8 +21,8 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
-		if ( nif->getBlockItem( index ) )
-		if ( nif->getValue( index ).isColor() || ( nif->getItem( index ) && nif->getItem( index )->isVector3Color() ) )
+		if ( nif->getBlockItem( index ) &&
+			( nif->getValue( index ).isColor() || ( nif->getItem( index ) && nif->getItem( index )->isVector3Color() ) ) )
 			return true;
 		return false;
 	}
