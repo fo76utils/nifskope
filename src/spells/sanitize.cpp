@@ -483,8 +483,12 @@ private:
 			// Empty camera names are intentional in Starfield. Never generate names for them,
 			// including when this spell is invoked manually or the config cannot be loaded.
 			if ( AutoSanitizePolicy::protectsCamera( nif, iBlock )
-				|| (policy && policy->excludes( AutoSanitizePolicy::FixNames, nif, iBlock )) )
+				|| (policy && policy->excludes( AutoSanitizePolicy::FixNames, nif, iBlock )) ) {
+				if ( nif->blockInherits( iBlock, "NiAVObject" )
+					&& nif->get<int>( iBlock, "Name" ) < numStrings )
+					shapeNames << nif->get<QString>( iBlock, "Name" );
 				continue;
+			}
 			if ( !(nif->blockInherits( iBlock, "NiObjectNET" ) || nif->blockInherits( iBlock, "NiExtraData" )) )
 				continue;
 

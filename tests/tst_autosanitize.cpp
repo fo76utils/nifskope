@@ -135,9 +135,13 @@ private slots:
 			auto node = nif.insertNiBlock( "NiNode" );
 			QVERIFY( nif.assignString( node, "Name", QStringLiteral("Duplicate") ) );
 		}
+		auto protectedNameCollision = nif.insertNiBlock( "NiNode" );
+		QVERIFY( nif.assignString( protectedNameCollision, "Name", name ) );
 		QVERIFY( nif.sanitizeBeforeSave() );
 		for ( int i = 0; i < 2; i++ )
 			QCOMPARE( nif.get<int>( nif.getBlockIndex( i ), "Name" ), originalIndex );
+		if ( !name.isEmpty() )
+			QVERIFY( nif.get<QString>( protectedNameCollision ) != name );
 		QVERIFY( nif.get<QString>( nif.getBlockIndex( 2 ), "Name" ) != nif.get<QString>( nif.getBlockIndex( 3 ), "Name" ) );
 		auto names = spell( "Fix Invalid Block Names" );
 		QVERIFY( names );
