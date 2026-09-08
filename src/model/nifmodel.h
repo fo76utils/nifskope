@@ -265,8 +265,8 @@ public:
 	//! Move a block in the list
 	void moveNiBlock( int src, int dst );
 
-	//! Returns a list with all known NiXXX ids (<niobject abstract="0">)
-	static QStringList allNiBlocks();
+	//! Returns known block ids, optionally including abstract base types.
+	static QStringList allNiBlocks( bool includeAbstract = false );
 	//! Reorders the blocks according to a list of new block numbers
 	void reorderBlocks( const QVector<qint32> & order );
 	//! Moves all niblocks from this nif to another nif, returns a map which maps old block numbers to new block numbers
@@ -887,11 +887,11 @@ inline NifItem * NifModel::getFooterItem()
 	return const_cast<NifItem *>( const_cast<const NifModel *>(this)->getFooterItem() );
 }
 
-inline QStringList NifModel::allNiBlocks()
+inline QStringList NifModel::allNiBlocks( bool includeAbstract )
 {
 	QStringList lst;
 	for ( NifBlockPtr blk : blocks ) {
-		if ( !blk->abstract )
+		if ( includeAbstract || !blk->abstract )
 			lst.append( blk->id );
 	}
 	return lst;

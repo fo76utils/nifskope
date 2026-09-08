@@ -2,6 +2,7 @@
 #include "ui_settingsdialog.h"
 
 #include "ui/settingspane.h"
+#include "ui/settingssanitize.h"
 
 #include <QDebug>
 #include <QListWidget>
@@ -28,6 +29,8 @@ SettingsDialog::SettingsDialog( QWidget * parent ) :
 	content->addWidget( new SettingsGeneral( this ) );
 	content->addWidget( new SettingsRender( this ) );
 	content->addWidget( new SettingsResources( this ) );
+	sanitizePane = new SettingsSanitize( this );
+	content->addWidget( sanitizePane );
 
 	categories->setCurrentRow( 0 );
 
@@ -72,20 +75,24 @@ void SettingsDialog::registerPage( QWidget * parent, const QString & text )
 		p->categories->addItem( text );
 }
 
-void SettingsDialog::apply()
+bool SettingsDialog::apply()
 {
+	// A configuration write failure must leave Save/Apply available and the dialog open.
+	if ( !sanitizePane->saveChanges() )
+		return false;
 	emit saveSettings();
 	emit update3D();
 
 	btnSave->setEnabled( false );
 	btnApply->setEnabled( false );
 	btnCancel->setText( tr("Close") );
+	return true;
 }
 
 void SettingsDialog::save()
 {
-	apply();
-	close();
+	if ( apply() )
+		close();
 }
 
 void SettingsDialog::cancel()
@@ -102,7 +109,9 @@ void SettingsDialog::cancel()
 void SettingsDialog::restoreDefaults()
 {
 	auto tmpDlg = std::unique_ptr<SettingsDialog>( new SettingsDialog );
-	tmpDlg->save();
+	tmpDlg->sanitizePane->setDefault();
+	if ( !tmpDlg->apply() )
+		return;
 
 	loadSettings();
 }

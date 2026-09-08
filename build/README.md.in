@@ -75,6 +75,12 @@ Running with **-no-gui** and no further option prints a usage summary and exits 
 | `--ReorderBlocks` | `<path>` | Reorder blocks so the game can properly load them. `<path>` may be a single `.nif` file or a folder; folders are searched recursively. Files are overwritten in-place. |
 | `--SanitizeBeforeSave` | `<path>` | Fix minor errors (for example duplicate block names) before save. `<path>` may be a single `.nif` file or a folder; folders are searched recursively. Files are overwritten in-place. |
 
+#### Auto-sanitize exclusions
+
+Use **Settings > Auto-Sanitize** to exclude block types from individual automatic
+operations. Starfield camera names have built-in protection. See the
+[configuration and editor guide](AUTOSANITIZE.md) for details.
+
 #### Building from source code (Qt 6)
 
 Compiling NifSkope requires Qt 6.4 or newer, or Qt 5.15. On Windows, [MSYS2](https://www.msys2.org/) can be used for building. After running the MSYS2 installer, use the following commands in the MSYS2-UCRT64 shell to install required packages:
@@ -136,4 +142,3 @@ Refer to these other documents in your installation folder or at the links provi
 ## [CONTRIBUTORS](https://github.com/fo76utils/nifskope/blob/develop/CONTRIBUTORS.md)
 
 ## [LICENSE](https://github.com/fo76utils/nifskope/blob/develop/LICENSE.md)
-
