@@ -156,6 +156,8 @@ include(NifSkope_targets.pri)
 INCLUDEPATH += src lib
 
 HEADERS += \
+	src/autosanitize.h \
+	src/ui/settingssanitize.h \
 	src/data/nifitem.h \
 	src/data/niftypes.h \
 	src/data/nifvalue.h \
@@ -238,6 +240,8 @@ HEADERS += \
 	lib/xxhash.h
 
 SOURCES += \
+	src/autosanitize.cpp \
+	src/ui/settingssanitize.cpp \
 	src/data/nifitem.cpp \
 	src/data/niftypes.cpp \
 	src/data/nifvalue.cpp \
@@ -503,6 +507,20 @@ macx {
 }
 
 
+# Build the focused regression suite against the same sources and dependencies.
+# Configure Qt Test before constructing the Windows runtime deployment commands.
+autosanitize_tests {
+	TEMPLATE = app
+	TARGET = tst_autosanitize
+	# The normal build uses relative library flags; tests also support a separate build directory.
+	INCLUDEPATH += $$PWD/lib/libfo76utils/src $$PWD/lib/qhull/src $$PWD/lib/gli/gli $$PWD/lib/gli/external
+	QT += testlib
+	CONFIG += console testcase
+	CONFIG -= app_bundle
+	DEFINES += NIFSKOPE_TESTS
+	SOURCES += tests/tst_autosanitize.cpp
+}
+
 # Pre/Post Link in build_pass only
 build_pass|!debug_and_release {
 
@@ -546,6 +564,7 @@ build_pass|!debug_and_release {
 	copyDirs( $$SHADERS, shaders )
 	#copyDirs( $$LANG, lang )
 	copyFiles( $$XML $$QSS res/qt.conf )
+	copyFiles( AUTOSANITIZE.md )
 
 	# Copy Readmes and rename to TXT
 	copyFiles( $$READMES,,,, md:txt )

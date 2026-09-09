@@ -31,6 +31,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***** END LICENCE BLOCK *****/
 
 #include "spellbook.h"
+#include "autosanitize.h"
 
 #include "ui/checkablemessagebox.h"
 
@@ -303,10 +304,14 @@ SpellPtr SpellBook::instant( const NifModel * nif, const QModelIndex & index )
 QModelIndex SpellBook::sanitize( NifModel * nif )
 {
 	QPersistentModelIndex ridx;
+	AutoSanitizePolicy policy;
+	policy.load( AutoSanitizePolicy::configPath() );
+	for ( const QString & diagnostic : policy.diagnostics )
+		qCWarning( nsSpell ) << diagnostic;
 
 	for ( SpellPtr spell : sanitizers() ) {
 		if ( spell->isApplicable( nif, QModelIndex() ) ) {
-			QModelIndex idx = spell->cast( nif, QModelIndex() );
+			QModelIndex idx = spell->castSanitize( nif, policy );
 
 			if ( idx.isValid() && !ridx.isValid() )
 				ridx = idx;

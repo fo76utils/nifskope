@@ -151,6 +151,7 @@ defineReplace(QtBins) {
 	list =
 
 	for(m, modules) {
+		equals(m, testlib):m = Test
 		list += $$sprintf($$[QT_INSTALL_BINS]/$${DLLSTRING}, $$m)$${DLLEXT}
 	}
 
