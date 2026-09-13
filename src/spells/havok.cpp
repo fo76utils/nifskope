@@ -23,8 +23,6 @@
 #include <QSettings>
 #include <QSpinBox>
 
-#include <algorithm> // std::sort
-
 // Brief description is deliberately not autolinked to class Spell
 /*! \file havok.cpp
  * \brief Havok spells
@@ -92,7 +90,63 @@ public:
 	static QComboBox * addComboBox( QBoxLayout * parent, const QString & l, int v, const QStringList & itemList );
 	static bool settingsDialog( CoACD & coacd, float & precision, float & radius, float & simplifyMaxError,
 								bool & replaceShape, bool & enableCoACD );
-
+	
+	// sort and remove duplicates from a QVector of Vector4
+	QVector<Vector4> SortUnique( QVector<Vector4> input )
+	{
+		QMap<uint, Vector4> hashmap;
+		QMap<Vector4, bool> vectormap;
+		QVector<Vector4> result;
+		for ( Vector4 v : input )
+		{
+			hashmap.insert( qHash( v ), v );
+		}
+		for ( auto i = hashmap.constBegin(); i != hashmap.constEnd(); i++ )
+			vectormap.insert( i.value(), false );
+		for ( auto i = vectormap.constBegin(); i != vectormap.constEnd(); i++ )
+			result.append( i.key() );
+		return result;
+	}
+	
+	// sort and remove duplicates from a QVector of Vector4 in place
+	void SortUniqueInPlace( QVector<Vector4> & vector )
+	{
+		QMap<uint, Vector4> hashmap;
+		QMap<Vector4, bool> vectormap;
+		for ( Vector4 v : vector )
+		{
+			hashmap.insert( qHash( v ), v );
+		}
+		for ( auto i = hashmap.constBegin(); i != hashmap.constEnd(); i++ )
+			vectormap.insert( i.value(), false );
+		vector.clear();
+		for ( auto i = vectormap.constBegin(); i != vectormap.constEnd(); i++ )
+			vector.append( i.key() );
+	}
+	
+	// find the mean of a QVector of Vector4
+	Vector4 mean( QVector<Vector4> vector )
+	{
+		int len = vector.size();
+		float xsum = 0, ysum = 0, zsum = 0, wsum = 0;
+		
+		for ( int i = 0; i < len; i++ )
+		{
+			xsum += vector[i][0];
+			ysum += vector[i][1];
+			zsum += vector[i][2];
+			wsum += vector[i][3];
+		}
+		
+		float x = 0, y = 0, z = 0, w = 0;
+		x = xsum / len;
+		y = ysum / len;
+		z = zsum / len;
+		w = wsum / len;
+		
+		return Vector4(x,y,z,w);
+	}
+	
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
 	{
 		QModelIndex	iBlock = nif->getBlockIndex( index );
@@ -175,34 +229,254 @@ public:
 				nif->set<Matrix4>( iCVS, "Transform", Transform( Vector3( boundsCenter ), 1.0f ).toMatrix4() );
 
 			} else {									// CoACD disabled or approximation mode = convex hull
-				/* those will be filled with the CVS data */
-				QVector<Vector4> convex_verts, convex_norms;
-
-				// to store results
+				// to store results of initial convex hull
 				QVector<Vector4> hullVerts, hullNorms;
+				
+				// for intermediate steps
+				QVector<QVector<Vector4>> hullTris;
+				QVector<Vector4> hullVertsShrunk, hullPlanes, hullPlanesShrunk;
+				
+				// to store final convex shape data
+				QVector<Vector4> convex_verts, convex_norms;
 
 				compute_convex_hull( m.verts, hullVerts, hullNorms, precision / getHavokScale( nif ) );
 
-				// sort and remove duplicate vertices
 				{
-					QMap<Vector4, bool>	sortedVerts;
-					for ( Vector4 vert : hullVerts )
-						sortedVerts.insert( vert, false );
-					for ( auto i = sortedVerts.constBegin(); i != sortedVerts.constEnd(); i++ )
-						convex_verts.append( i.key() );
+					QVector<Vector4> tri(3);
+					for ( int i = 0; i < hullVerts.size(); i += 3 )
+					{
+						tri[0] = hullVerts[i];
+						tri[1] = hullVerts[i + 1];
+						tri[2] = hullVerts[i + 2];
+						hullTris.append( tri );
+					}
 				}
-				if ( cvsVertCount = convex_verts.size(); cvsVertCount < 4 )
-					continue;
+				
+				SortUniqueInPlace( hullVerts );
+				int hullVertsInitialCount = hullVerts.size();
+				
+				Vector3 center = Vector3( mean( hullVerts ) );
 
-				// sort and remove duplicate normals
+#if 1
+				// hullNorms seem a bit off sometimes, so construct them ourselves
+				for ( int i = 0; i < hullTris.size(); i++ )
 				{
-					QMap<Vector4, bool>	sortedNorms;
-					for ( Vector4 norm : hullNorms )
-						sortedNorms.insert( norm, false );
-					for ( auto i = sortedNorms.constBegin(); i != sortedNorms.constEnd(); i++ )
-						convex_norms.append( i.key() );
+					Vector3 v01 = Vector3( hullTris[i][1] ) - Vector3( hullTris[i][0] );
+					Vector3 v12 = Vector3( hullTris[i][2] ) - Vector3( hullTris[i][1] );
+					Vector3 normal = Vector3::crossproduct( v01, v12 );
+					normal.normalize();
+					float d = Vector3::dotproduct( normal, Vector3( hullTris[i][0] ) );
+					
+					// check that the center is on the inside
+					float h = Vector3::dotproduct( normal, center ) - d;
+					if ( h > 0 )
+					{
+						normal = -normal;
+						d = -d;
+					}
+					
+					hullPlanes.append( Vector4( normal, d ) );
+				}
+#endif
+
+#if 0
+				for ( int i = 0; i < hullNorms.size(); i++ )
+				{
+					hullPlanes.append( Vector4( Vector3( hullNorms[i] ), -hullNorms[i][3] ) );
+				}
+#endif	
+		
+				if ( radius != 0 )
+				{
+					// shift planes toward center by distance radius
+					for ( int i = 0; i < hullTris.size(); i++ )
+					{
+						Vector3 normal = Vector3( hullPlanes[i] );
+						float d = hullPlanes[i][3];
+						float h = Vector3::dotproduct( normal, center ) - d;
+						int hsign;
+						if ( h < 0 )
+							hsign = -1;
+						else
+							hsign = 1;
+						
+						float d_act = abs( h );
+						float d_new;
+						// if the distance from center to plane is zero (or -zero !) don't change it.
+						// otherwise, check to make sure it isn't too close to center, and if it is,
+						// move it 99% of the way there instead
+						if ( d != 0 )
+						{
+							if ( d_act < radius )
+							{
+								d_new = d + 0.99 * d_act * hsign;
+							}
+							else
+							{
+								d_new = d + radius * hsign;
+							}
+							
+							hullPlanesShrunk.append( Vector4( normal, d_new ) );
+						}
+						else
+						{
+							hullPlanesShrunk.append( Vector4( normal, d ) );
+						}
+					}
+					// sort and remove duplicate normals
+					SortUniqueInPlace( hullPlanesShrunk );
+					
+					// calculate new points of intersection from the shrunk planes
+					for ( int i = 0; i < hullPlanesShrunk.size() - 2; i++ )
+					{
+						Vector4 plane1 = hullPlanesShrunk[i];
+						Vector3 normal1 = Vector3( plane1 );
+						float a1 = plane1[0];
+						float b1 = plane1[1];
+						float c1 = plane1[2];
+						float d1 = plane1[3];
+						
+						for ( int j = i + 1 ; j < hullPlanesShrunk.size() - 1; j++ )
+						{
+							Vector4 plane2 = hullPlanesShrunk[j];
+							Vector3 normal2 = Vector3( plane2 );
+							float a2 = plane2[0];
+							float b2 = plane2[1];
+							float c2 = plane2[2];
+							float d2 = plane2[3];
+							
+							// check for parallel planes
+							Vector3 D = Vector3::crossproduct( normal1, normal2 ); // cross product of two normals is a normal orthogonal to the two
+							float mag_D = Vector3::dotproduct( D, D ); // vector dot product of itself is its magnitude
+							// zero means the planes are parallel
+							// one means ???
+							// vector dot product of itself cannot be negative so don't bother to do abs()
+							if ( mag_D < 0.000001 )
+								continue;
+							
+							for ( int k = j + 1 ; k < hullPlanesShrunk.size(); k++ )
+							{
+								Vector4 plane3 = hullPlanesShrunk[k];
+								Vector3 normal3 = Vector3( plane3 );
+								float a3 = plane3[0];
+								float b3 = plane3[1];
+								float c3 = plane3[2];
+								float d3 = plane3[3];
+								
+								// check for parallel planes
+								Vector3 D1 = Vector3::crossproduct( normal1, normal3 );
+								Vector3 D2 = Vector3::crossproduct( normal2, normal3 );
+								float mag_D1 = Vector3::dotproduct( D1, D1 );
+								float mag_D2 = Vector3::dotproduct( D2, D2 );
+								if ( ( mag_D1 < 0.000001 ) || ( mag_D2 < 0.000001 ) )
+									continue;
+								
+								// divide by zero problems here
+								float z = ( (d3-d2*a3/a2) - (b3-b2*a3/a2)*(d1-d2*a1/a2)/(b1-b2*a1/a2) ) / ((c3-c2*a3/a2) - (b3-b2*a3/a2)*(c1-c2*a1/a2)/(b1-b2*a1/a2));
+								float y = ( (d3-d2*a3/a2) - (c3-c2*a3/a2)*z ) / (b3-b2*a3/a2);
+								float x = (d1-b1*y-c1*z) / a1;
+								Vector3 P = Vector3( x, y, z );
+								
+								// check if point is on the correct side of all other planes
+								QVector<Vector4> idx = hullPlanesShrunk;
+								idx.removeAt( k );
+								idx.removeAt( j );
+								idx.removeAt( i );
+								bool isValid = true;
+								for ( int m = 0; m < idx.size(); m++ )
+								{
+									Vector3 normal = Vector3( idx[m] );
+									float d = idx[m][3];
+									float h = Vector3::dotproduct( normal, P ) - d;
+									if ( h > 0 )
+									{
+										isValid = false;
+										break;
+									}
+								}
+								
+								if ( isValid )
+									hullVertsShrunk.append( Vector4( Vector3( P ), 0 ) );
+							}
+						}
+					}
+					
+					// sort and remove duplicate normals and vertices
+					SortUniqueInPlace( hullPlanesShrunk );
+					SortUniqueInPlace( hullVertsShrunk );
+					
+					// combine nearby vertices.
+					// find the distance between every vertex and every other vertex.
+						
+					// combine the two nearest until the total vertices remaining matches that
+					// of the original hull.
+						
+					// keep track of the number of times a vertex has been combined, so that a
+					// weighted average can be used if it is combed additional times.
+					
+					QVector<int> avg_weights( hullVertsShrunk.size() );
+					
+					while ( hullVertsShrunk.size() > hullVertsInitialCount )
+					{
+						// find the smallest distance between any two vertices by checking every
+						// pair. if the current checked pair is smallest found so far, record
+						// that distance and the indices of the two vertices.
+						int i_merge, j_merge;						
+						float d_merge = MAXFLOAT;
+						
+						for ( int i = 0; i < hullVertsShrunk.size() - 1; i++ )
+						{
+							Vector3 v1 = Vector3( hullVertsShrunk[i] );
+							for ( int j = i + 1; hullVertsShrunk.size(); j++ )
+							{
+								Vector3 v2 = Vector3( hullVertsShrunk[j] );
+								float d = Vector3::distance( v1, v2 );
+								if ( d < d_merge )
+								{
+									i_merge = i;
+									j_merge = j;
+									d_merge = d;
+								}
+							}
+						}
+						
+						// combine two vertices with the smallest distance apart
+						Vector3 v1 = Vector3( hullVertsShrunk[i_merge] );
+						int w1 = avg_weights[i_merge];
+						Vector3 v2 = Vector3( hullVertsShrunk[j_merge] );
+						int w2 = avg_weights[j_merge];
+						
+						// weighted average
+						Vector3 v_merge = ( v1 * w1 + v2 * w2 ) / ( w1 + w2 );
+						int w_merge = w1 + w2;
+						
+						// record the merged vertex by overwriting the first vertex
+						hullVertsShrunk[i_merge] = v_merge;
+						avg_weights[i_merge] = w_merge;
+						
+						// and erase the second vertex
+						hullVertsShrunk.removeAt( j_merge );
+						avg_weights.removeAt( j_merge );
+					}
+					
+					// sort and remove duplicate normals and vertices
+					convex_norms = SortUnique( hullPlanesShrunk );
+					convex_verts = SortUnique( hullVertsShrunk );
+				}
+				else
+				{
+					// sort and remove duplicate normals and vertices
+					convex_norms = SortUnique( hullPlanes );
+					convex_verts = SortUnique( hullVerts );
 				}
 				cvsNormCount = convex_norms.size();
+				if ( cvsVertCount = convex_verts.size(); cvsVertCount < 4 )
+					continue;
+				
+				for ( int i = 0; i < convex_norms.size(); i++ )
+				{
+					convex_norms[i][3] = convex_norms[i][3] * -1 - radius;
+				}
 
 				/* create the CVS block */
 				iCVS = nif->insertNiBlock( "bhkConvexVerticesShape" );
