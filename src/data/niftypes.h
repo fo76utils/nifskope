@@ -393,7 +393,13 @@ public:
 		}
 		return *this;
 	}
-
+	
+	//! Find the distance between two vectors
+	static float distance( const Vector3 & v1, const Vector3 & v2 )
+	{
+		return sqrt( pow( v1[0] - v2[0], 2) + pow( v1[1] - v2[1], 2 ) + pow( v1[2] - v2[2], 2) );
+	}
+	
 	//! Find the dot product of two vectors
 	static float dotproduct( const Vector3 & v1, const Vector3 & v2 )
 	{
@@ -790,7 +796,17 @@ protected:
 	friend QDataStream & operator>>( QDataStream & ds, Vector4 & v );
 };
 
-//! QDebug stream operator for Vector2
+//! qHash for Vector4
+inline uint qHash( const Vector4 & v, uint seed = 0 )
+{
+	uint h = qHash( int( std::trunc( v[0] * 1000000 ) ), seed );
+	h = qHash( int( std::trunc( v[1] * 1000000 ) ), h );
+	h = qHash( int( std::trunc( v[2] * 1000000 ) ), h );
+	h = qHash( int( std::trunc( v[3] * 1000000 ) ), h );
+	return h;
+}
+
+//! QDebug stream operator for Vector4
 inline QDebug & operator<<( QDebug dbg, const Vector4 & v )
 {
 	dbg.nospace() << v.toString();
