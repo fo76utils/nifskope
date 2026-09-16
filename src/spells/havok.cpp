@@ -243,7 +243,7 @@ public:
 
 				{
 					QVector<Vector4> tri(3);
-					for ( int i = 0; i < hullVerts.size(); i += 3 )
+					for ( int i = 0; i < hullVerts.size() - 1; i += 3 )
 					{
 						tri[0] = hullVerts[i];
 						tri[1] = hullVerts[i + 1];
@@ -257,7 +257,8 @@ public:
 				
 				Vector3 center = Vector3( mean( hullVerts ) );
 
-#if 1
+// this seems broken somehow
+#if 0
 				// hullNorms seem a bit off sometimes, so construct them ourselves
 				for ( int i = 0; i < hullTris.size(); i++ )
 				{
@@ -278,14 +279,11 @@ public:
 					hullPlanes.append( Vector4( normal, d ) );
 				}
 #endif
-
-#if 0
+				
+				// flip magnitude for calculations
 				for ( int i = 0; i < hullNorms.size(); i++ )
-				{
 					hullPlanes.append( Vector4( Vector3( hullNorms[i] ), -hullNorms[i][3] ) );
-				}
-#endif	
-		
+				
 				if ( radius != 0 )
 				{
 					// shift planes toward center by distance radius
@@ -308,20 +306,14 @@ public:
 						if ( d != 0 )
 						{
 							if ( d_act < radius )
-							{
 								d_new = d + 0.99 * d_act * hsign;
-							}
 							else
-							{
 								d_new = d + radius * hsign;
-							}
 							
 							hullPlanesShrunk.append( Vector4( normal, d_new ) );
 						}
 						else
-						{
 							hullPlanesShrunk.append( Vector4( normal, d ) );
-						}
 					}
 					// sort and remove duplicate normals
 					SortUniqueInPlace( hullPlanesShrunk );
@@ -329,52 +321,108 @@ public:
 					// calculate new points of intersection from the shrunk planes
 					for ( int i = 0; i < hullPlanesShrunk.size() - 2; i++ )
 					{
-						Vector4 plane1 = hullPlanesShrunk[i];
-						Vector3 normal1 = Vector3( plane1 );
-						float a1 = plane1[0];
-						float b1 = plane1[1];
-						float c1 = plane1[2];
-						float d1 = plane1[3];
+						Vector4 P1 = hullPlanesShrunk[i];
+						Vector3 N1 = Vector3( P1 );
 						
 						for ( int j = i + 1 ; j < hullPlanesShrunk.size() - 1; j++ )
 						{
-							Vector4 plane2 = hullPlanesShrunk[j];
-							Vector3 normal2 = Vector3( plane2 );
-							float a2 = plane2[0];
-							float b2 = plane2[1];
-							float c2 = plane2[2];
-							float d2 = plane2[3];
+							Vector4 P2 = hullPlanesShrunk[j];
+							Vector3 N2 = Vector3( P2 );
 							
 							// check for parallel planes
-							Vector3 D = Vector3::crossproduct( normal1, normal2 ); // cross product of two normals is a normal orthogonal to the two
+							Vector3 D = Vector3::crossproduct( N1, N2 ); // cross product of two normals is a normal orthogonal to the two
 							float mag_D = Vector3::dotproduct( D, D ); // vector dot product of itself is its magnitude
 							// zero means the planes are parallel
-							// one means ???
+							// one means the planes are perpendicular
 							// vector dot product of itself cannot be negative so don't bother to do abs()
 							if ( mag_D < 0.000001 )
 								continue;
 							
 							for ( int k = j + 1 ; k < hullPlanesShrunk.size(); k++ )
 							{
-								Vector4 plane3 = hullPlanesShrunk[k];
-								Vector3 normal3 = Vector3( plane3 );
-								float a3 = plane3[0];
-								float b3 = plane3[1];
-								float c3 = plane3[2];
-								float d3 = plane3[3];
+								Vector4 P3 = hullPlanesShrunk[k];
+								Vector3 N3 = Vector3( P3 );
 								
 								// check for parallel planes
-								Vector3 D1 = Vector3::crossproduct( normal1, normal3 );
-								Vector3 D2 = Vector3::crossproduct( normal2, normal3 );
+								Vector3 D1 = Vector3::crossproduct( N1, N3 );
+								Vector3 D2 = Vector3::crossproduct( N2, N3 );
 								float mag_D1 = Vector3::dotproduct( D1, D1 );
 								float mag_D2 = Vector3::dotproduct( D2, D2 );
 								if ( ( mag_D1 < 0.000001 ) || ( mag_D2 < 0.000001 ) )
 									continue;
 								
-								// divide by zero problems here
-								float z = ( (d3-d2*a3/a2) - (b3-b2*a3/a2)*(d1-d2*a1/a2)/(b1-b2*a1/a2) ) / ((c3-c2*a3/a2) - (b3-b2*a3/a2)*(c1-c2*a1/a2)/(b1-b2*a1/a2));
-								float y = ( (d3-d2*a3/a2) - (c3-c2*a3/a2)*z ) / (b3-b2*a3/a2);
-								float x = (d1-b1*y-c1*z) / a1;
+								// renumber so that 1st eq always has an A value,
+								// 2nd always has a B value, etc.
+								// P: unsorted planes
+								// Q: sorted planes
+								// R: temporary
+								
+								Vector4 Q1;
+								Vector4 Q2;
+								Vector4 Q3;
+								Vector4 R1;
+								Vector4 R2;
+								Vector4 R3;
+								
+								// require that the first plane have a nonzero x-direction
+								if ( abs( P1[0] ) > 0.000001 )
+								{
+									Q1 = P1;
+									R2 = P2;
+									R3 = P3;
+								}
+								else if ( abs( P2[0] ) > 0.000001 )
+								{
+									Q1 = P2;
+									R2 = P1;
+									R3 = P3;
+								}
+								else
+								{
+									Q1 = P3;
+									R2 = P1;
+									R3 = P2;
+								}
+								
+								// require that the second plane have a nonzero y-direction
+								if ( abs( R2[1] ) > 0.000001 )
+								{
+									Q2 = R2;
+									Q3 = R3;
+								}
+								else
+								{
+									Q2 = R3;
+									Q3 = R2;
+								}
+								
+								// unpack. need to do this after vectors were rearranged.
+								
+								float a1 = Q1[0];
+								float b1 = Q1[1];
+								float c1 = Q1[2];
+								float d1 = Q1[3];
+								float a2 = Q2[0];
+								float b2 = Q2[1];
+								float c2 = Q2[2];
+								float d2 = Q2[3];
+								float a3 = Q3[0];
+								float b3 = Q3[1];
+								float c3 = Q3[2];
+								float d3 = Q3[3];
+								
+								// check for linear independence == determinant of [Q1,Q2,Q3] != 0
+								float dtmnt = a1*(b2*c3 - c2*b3) + b1*(c2*a3 - a2*c3) + c1*(a2*b3 - b2*a3);
+								if ( abs( dtmnt ) < 0.000001 )
+								{
+									// not linearly independent -- planes will never intersect
+									// at a single point
+									continue;
+								}									
+								
+								float z = ( (a1*b2-a2*b1)*(a1*d3-a3*d1) - (a1*b3-a3*b1)*(a1*d2-a2*d1) ) / ( (a1*b2-a2*b1)*(a1*c3-a3*c1) - (a1*b3-a3*b1)*(a1*c2-a2*c1) );
+								float y = ( (a1*d2-a2*d1) - (a1*c2-a2*c1)*z ) / (a1*b2-a2*b1);
+								float x = ( d1 - b1*y - c1*z ) / a1;
 								Vector3 P = Vector3( x, y, z );
 								
 								// check if point is on the correct side of all other planes
@@ -388,7 +436,7 @@ public:
 									Vector3 normal = Vector3( idx[m] );
 									float d = idx[m][3];
 									float h = Vector3::dotproduct( normal, P ) - d;
-									if ( h > 0 )
+									if ( h > 0.000001 )
 									{
 										isValid = false;
 										break;
@@ -414,23 +462,27 @@ public:
 					// keep track of the number of times a vertex has been combined, so that a
 					// weighted average can be used if it is combed additional times.
 					
-					QVector<int> avg_weights( hullVertsShrunk.size() );
+					int N_verts_new = hullVertsShrunk.size();
+					QVector<int> avg_weights( N_verts_new, 1 );
 					
-					while ( hullVertsShrunk.size() > hullVertsInitialCount )
+					while ( N_verts_new > hullVertsInitialCount )
 					{
 						// find the smallest distance between any two vertices by checking every
 						// pair. if the current checked pair is smallest found so far, record
 						// that distance and the indices of the two vertices.
-						int i_merge, j_merge;						
-						float d_merge = MAXFLOAT;
+						int i_merge, j_merge;
+						// begin by setting an initial distance to check against
+						float d_merge = INFINITY;
 						
-						for ( int i = 0; i < hullVertsShrunk.size() - 1; i++ )
+						// loop through all pairs
+						for ( int i = 0; i < N_verts_new - 1; i++ )
 						{
-							Vector3 v1 = Vector3( hullVertsShrunk[i] );
-							for ( int j = i + 1; hullVertsShrunk.size(); j++ )
+							Vector3 v1 = Vector3( hullVertsShrunk[i] ); // first vertex
+							for ( int j = i + 1; j < N_verts_new; j++ )
 							{
-								Vector3 v2 = Vector3( hullVertsShrunk[j] );
-								float d = Vector3::distance( v1, v2 );
+								Vector3 v2 = Vector3( hullVertsShrunk[j] ); // second vertex
+								float d = Vector3::distance( v1, v2 ); // distance between the two
+								// if smaller than previously found smallest value, record
 								if ( d < d_merge )
 								{
 									i_merge = i;
@@ -457,6 +509,8 @@ public:
 						// and erase the second vertex
 						hullVertsShrunk.removeAt( j_merge );
 						avg_weights.removeAt( j_merge );
+						
+						N_verts_new--;
 					}
 					
 					// sort and remove duplicate normals and vertices
@@ -474,9 +528,7 @@ public:
 					continue;
 				
 				for ( int i = 0; i < convex_norms.size(); i++ )
-				{
 					convex_norms[i][3] = convex_norms[i][3] * -1 - radius;
-				}
 
 				/* create the CVS block */
 				iCVS = nif->insertNiBlock( "bhkConvexVerticesShape" );
@@ -519,6 +571,10 @@ public:
 
 			QPersistentModelIndex shapeLink = nif->getIndex( rigidBody, "Shape" );
 			QPersistentModelIndex shape = nif->getBlockIndex( nif->getLink( shapeLink ) );
+			NifValue material = nif->getValue( nif->getIndex( shape, "Material" ) );
+			
+			if ( material.isValid() )
+				nif->setItemValue( nif->getItem( iCVS, "Material"), material );
 
 			if ( replaceShape && shape.isValid() ) {
 				replaceShape = false;
