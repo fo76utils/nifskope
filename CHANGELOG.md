@@ -6,6 +6,7 @@
 * Changed the definition of BSGeometryDataFlags in nif.xml from a bit field to bit flags, to allow for displaying and editing the flags as a list of checkboxes.
 * New render setting for the quality of bounding spheres.
 * The resource manager ignores errors on opening folders.
+* Havok/Create Convex Shape spell now accounts for the radius when generating, so the combined shape + radius adds up to the visible mesh. If replacing an existing shape, it will also keep the material, if there is one.
 
 #### NifSkope-2.0.dev11-20251230
 
