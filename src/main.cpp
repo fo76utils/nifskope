@@ -84,6 +84,7 @@ QCoreApplication * createApplication( int &argc, char *argv[] )
  */
 
 //! The main program
+#ifndef NIFSKOPE_TESTS
 int main( int argc, char * argv[] )
 {
 	QScopedPointer<QCoreApplication> app( createApplication( argc, argv ) );
@@ -844,6 +845,7 @@ int main( int argc, char * argv[] )
 
 	return 0;
 }
+#endif
 
 
 

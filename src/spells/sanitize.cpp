@@ -1,4 +1,5 @@
 #include "spellbook.h"
+#include "autosanitize.h"
 #include "sanitize.h"
 #include "spells/misc.h"
 
@@ -52,8 +53,21 @@ public:
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & ) override
 	{
+		return sanitize( nif, nullptr );
+	}
+
+	QModelIndex castSanitize( NifModel * nif, const AutoSanitizePolicy & policy ) override
+	{
+		return sanitize( nif, &policy );
+	}
+
+private:
+	QModelIndex sanitize( NifModel * nif, const AutoSanitizePolicy * policy )
+	{
 		for ( int n = 0; n < nif->getBlockCount(); n++ ) {
 			QModelIndex iBlock = nif->getBlockIndex( n );
+			if ( policy && policy->excludes( AutoSanitizePolicy::ReorderLinks, nif, iBlock ) )
+				continue;
 
 			QModelIndex iNumChildren = nif->getIndex( iBlock, "Num Children" );
 			QModelIndex iChildren = nif->getIndex( iBlock, "Children" );
@@ -109,8 +123,21 @@ public:
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & ) override final
 	{
+		return sanitize( nif, nullptr );
+	}
+
+	QModelIndex castSanitize( NifModel * nif, const AutoSanitizePolicy & policy ) override final
+	{
+		return sanitize( nif, &policy );
+	}
+
+private:
+	QModelIndex sanitize( NifModel * nif, const AutoSanitizePolicy * policy )
+	{
 		for ( int n = 0; n < nif->getBlockCount(); n++ ) {
 			QModelIndex iBlock = nif->getBlockIndex( n );
+			if ( policy && policy->excludes( AutoSanitizePolicy::CollapseLinks, nif, iBlock ) )
+				continue;
 
 			spCollapseArray arrayCollapser;
 
@@ -161,8 +188,21 @@ public:
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & ) override final
 	{
+		return sanitize( nif, nullptr );
+	}
+
+	QModelIndex castSanitize( NifModel * nif, const AutoSanitizePolicy & policy ) override final
+	{
+		return sanitize( nif, &policy );
+	}
+
+private:
+	QModelIndex sanitize( NifModel * nif, const AutoSanitizePolicy * policy )
+	{
 		for ( int i = 0; i < nif->getBlockCount(); i++ ) {
 			QModelIndex iTexSrc = nif->getBlockIndex( i, "NiSourceTexture" );
+			if ( policy && policy->excludes( AutoSanitizePolicy::AdjustTextures, nif, iTexSrc ) )
+				continue;
 
 			if ( iTexSrc.isValid() ) {
 				QModelIndex iFileName = nif->getIndex( iTexSrc, "File Name" );
@@ -392,6 +432,17 @@ public:
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & ) override final
 	{
+		return sanitize( nif, nullptr );
+	}
+
+	QModelIndex castSanitize( NifModel * nif, const AutoSanitizePolicy & policy ) override final
+	{
+		return sanitize( nif, &policy );
+	}
+
+private:
+	QModelIndex sanitize( NifModel * nif, const AutoSanitizePolicy * policy )
+	{
 		QVector<QString> stringsToAdd;
 		QVector<QString> shapeNames;
 		QMap<QModelIndex, QString> modifiedBlocks;
@@ -429,6 +480,15 @@ public:
 
 		for ( int i = 0; i < nif->getBlockCount(); i++ ) {
 			QModelIndex iBlock = nif->getBlockIndex( i );
+			// Empty camera names are intentional in Starfield. Never generate names for them,
+			// including when this spell is invoked manually or the config cannot be loaded.
+			if ( AutoSanitizePolicy::protectsCamera( nif, iBlock )
+				|| (policy && policy->excludes( AutoSanitizePolicy::FixNames, nif, iBlock )) ) {
+				if ( nif->blockInherits( iBlock, "NiAVObject" )
+					&& nif->get<int>( iBlock, "Name" ) < numStrings )
+					shapeNames << nif->get<QString>( iBlock, "Name" );
+				continue;
+			}
 			if ( !(nif->blockInherits( iBlock, "NiObjectNET" ) || nif->blockInherits( iBlock, "NiExtraData" )) )
 				continue;
 

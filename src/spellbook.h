@@ -51,6 +51,8 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using QIconPtr = std::shared_ptr<QIcon>;
 
+class AutoSanitizePolicy;
+
 //! \file spellbook.h Spell, SpellBook and Librarian
 
 //! Register a Spell using a Librarian
@@ -91,6 +93,12 @@ public:
 
 	//! Cast (apply) the spell
 	virtual QModelIndex cast( NifModel * nif, const QModelIndex & index ) = 0;
+
+	//! Automatic invocation, with optional per-block exclusions in modifying spells.
+	virtual QModelIndex castSanitize( NifModel * nif, const AutoSanitizePolicy & )
+	{
+		return cast( nif, QModelIndex() );
+	}
 
 	//! Cast the spell if applicable
 	void castIfApplicable( NifModel * nif, const QModelIndex & index )

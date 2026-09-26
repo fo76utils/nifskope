@@ -1,4 +1,5 @@
 #include "spellbook.h"
+#include "autosanitize.h"
 
 
 // Brief description is deliberately not autolinked to class Spell
@@ -31,15 +32,27 @@ public:
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
 	{
+		return sanitize( nif, index, nullptr );
+	}
+
+	QModelIndex castSanitize( NifModel * nif, const AutoSanitizePolicy & policy ) override final
+	{
+		return sanitize( nif, QModelIndex(), &policy );
+	}
+
+private:
+	QModelIndex sanitize( NifModel * nif, const QModelIndex & index, const AutoSanitizePolicy * policy )
+	{
 		if ( index.isValid() && nif->getBlockIndex( index, "NiGeometryData" ).isValid() ) {
-			nif->set<int>( index, "Group ID", 0 );
+			if ( !policy || !policy->excludes( AutoSanitizePolicy::FixGeometryData, nif, index ) )
+				nif->set<int>( index, "Group ID", 0 );
 		} else {
 			// set all blocks
 			for ( int n = 0; n < nif->getBlockCount(); n++ ) {
 				QModelIndex iBlock = nif->getBlockIndex( n );
 
 				if ( nif->getBlockIndex( iBlock, "NiGeometryData" ).isValid() ) {
-					cast( nif, iBlock );
+					sanitize( nif, iBlock, policy );
 				}
 			}
 		}
@@ -49,4 +62,3 @@ public:
 };
 
 REGISTER_SPELL( spFO3FixShapeDataName )
-

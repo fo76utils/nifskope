@@ -14,6 +14,7 @@ class QListWidgetItem;
 class QPushButton;
 class QStackedWidget;
 class GLView;
+class SettingsSanitize;
 
 namespace Ui {
 class SettingsDialog;
@@ -38,7 +39,7 @@ public:
 
 public slots:
 	void save();
-	void apply();
+	bool apply();
 	void cancel();
 	void changePage( QListWidgetItem * current, QListWidgetItem * previous );
 	void restoreDefaults();
@@ -53,6 +54,7 @@ signals:
 
 private:
 	std::unique_ptr<Ui::SettingsDialog> ui;
+	SettingsSanitize * sanitizePane;
 
 	QPushButton * btnSave;
 	QPushButton * btnApply;

@@ -1,4 +1,5 @@
 # Generated
+.build-autosanitize/
 .moc/
 .obj/
 .qrc/
@@ -75,3 +76,6 @@ vc100.pdb
 
 # VSCode
 .vscode/
+
+# Locally supplied game assets used for regression testing (not redistributed)
+/tests/fixtures/fr017/*.nif
