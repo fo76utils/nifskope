@@ -21,7 +21,10 @@ public:
 
 	bool isApplicable( const NifModel * nif, const QModelIndex & index ) override final
 	{
-		return nif->getValue( index ).isColor();
+		if ( nif->getBlockItem( index ) &&
+			( nif->getValue( index ).isColor() || ( nif->getItem( index ) && nif->getItem( index )->isVector3Color() ) ) )
+			return true;
+		return false;
 	}
 
 	QModelIndex cast( NifModel * nif, const QModelIndex & index ) override final
@@ -37,8 +40,10 @@ public:
 		} else if ( typ == NifValue::tByteColor4BGRA ) {
 			auto col = ColorWheel::choose( nif->get<ByteColor4BGRA>( index ) );
 			nif->set<ByteColor4BGRA>( index, *static_cast<ByteColor4BGRA *>(&col) );
+		} else if ( typ == NifValue::tVector3 ) {
+			auto col = ColorWheel::choose( nif->get<Vector3>( index ) );
+			nif->set<Vector3>( index, *static_cast<Vector3 *>(&col) );
 		}
-
 
 		return index;
 	}

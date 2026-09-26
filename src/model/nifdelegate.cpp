@@ -47,6 +47,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QListView>
 #include <QMessageBox>
 
+const QString SPACE_QSTRING(" ");
 
 //! @file nifdelegate.cpp NifDelegate
 
@@ -196,14 +197,20 @@ public:
 
 		// Color the field background if the value type is a color
 		//	Otherwise normal behavior
-		QVariant color = index.data( Qt::BackgroundRole );
-		if ( color.canConvert<QColor>() )
-			painter->fillRect( option.rect, color.value<QColor>() );
+		QVariant bgcolor = index.data( Qt::BackgroundRole );
+		if ( bgcolor.canConvert<QColor>() )
+			painter->fillRect( option.rect, bgcolor.value<QColor>().rgb() );
 		else if ( option.state & QStyle::State_Selected )
 			painter->fillRect( option.rect, option.palette.brush( cg, QPalette::Highlight ) );
 
 		painter->save();
-		painter->setPen( opt.palette.color( cg, opt.state & QStyle::State_Selected ? QPalette::HighlightedText : QPalette::Text ) );
+		
+		QVariant fgcolor = index.data( Qt::ForegroundRole );
+		if ( fgcolor.canConvert<QColor>() )
+			painter->setPen( fgcolor.value<QColor>() );
+		else
+			painter->setPen( opt.palette.color( cg, opt.state & QStyle::State_Selected ? QPalette::HighlightedText : QPalette::Text ) );
+		
 		painter->setFont( opt.font );
 
 		if ( !icon.isNull() )
@@ -212,8 +219,8 @@ public:
 			painter->drawText( dRect, opt.decorationAlignment, deco );
 
 		if ( !text.isEmpty() ) {
-			drawDisplay( painter, opt, tRect, text );
-			drawFocus( painter, opt, tRect );
+			//drawDisplay( painter, opt, tRect, text );
+			painter->drawText( tRect, Qt::ElideRight | Qt::AlignVCenter, SPACE_QSTRING + text);
 		}
 
 		painter->restore();

@@ -1217,7 +1217,6 @@ void NifModel::insertType( NifItem * parent, const NifData & data, int at )
 	restoreState();
 }
 
-
 /*
  *  QAbstractModel interface
  */
@@ -1567,8 +1566,24 @@ QVariant NifModel::data( const QModelIndex & index, int role ) const
 
 				if ( t[0] >= nvc || t[1] >= nvc || t[2] >= nvc )
 					return QColor::fromRgb( 240, 210, 210 );
-			} else if ( column == ValueCol && item->isColor() ) {
-				return item->getColorValue();
+			} else if ( column == ValueCol ) {
+				if ( item->isColor() || item->isVector3Color() )
+					return item->getColorValue();
+			}
+		}
+		return QVariant();
+	case Qt::ForegroundRole:
+		{
+			if ( column == ValueCol ) {
+				if ( item->isColor() || item->isVector3Color() )
+				{
+					QColor color = item->getColorValue();
+					// this seems better than value or lightness
+					if ( ( color.red() + color.green() + color.blue() ) / 3 > 127 )
+						return QColor( Qt::black );
+					else
+						return QColor( Qt::white );
+				}
 			}
 		}
 		return QVariant();
