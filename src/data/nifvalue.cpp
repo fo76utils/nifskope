@@ -741,7 +741,20 @@ bool NifValue::setFromString( const QString & s, const BaseModel * model, const 
 	case tColor4:
 	case tByteColor4:
 	case tByteColor4BGRA:
-		val.f32v4 = FloatVector4( Color4( QColor(s) ) );
+		if ( s.startsWith( QChar('#') ) ) {
+			val.f32v4 = FloatVector4( Color4( QColor(s) ) );
+		} else {
+			if ( typ == tColor3 ) {
+				Vector3	tmp;
+				tmp.fromString( s );
+				val.f32v4 = FloatVector4( tmp ).blendValues( FloatVector4(1.0f), 0x08 );
+			} else {
+				Vector4	tmp;
+				tmp.fromString( s );
+				val.f32v4 = FloatVector4( tmp );
+			}
+			val.f32v4.shuffleValues( 0xC6 );	// R <-> B
+		}
 		ok = true;
 		break;
 	case tFileVersion:

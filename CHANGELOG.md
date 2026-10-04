@@ -7,6 +7,7 @@
 * New render setting for the quality of bounding spheres.
 * The resource manager ignores errors on opening folders.
 * Havok/Create Convex Shape spell now accounts for the radius when generating, so the combined shape + radius adds up to the visible mesh. If replacing an existing shape, it will also keep the material, if there is one.
+* Fixed parsing default values of color types in nif.xml.
 
 #### NifSkope-2.0.dev11-20251230
 
