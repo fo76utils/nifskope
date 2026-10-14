@@ -1908,6 +1908,7 @@
         <option value="18" name="LOD Landscape Noise" />
         <option value="19" name="Multitexture Landscape LOD Blend" />
         <option value="20" name="FO4 Dismemberment" />
+		<option value="21" name="PBR" />
     </enum>
 
     <enum name="BSShaderType155" storage="uint" prefix="ST155" versions="#F76#">
@@ -7117,6 +7118,45 @@
         <field name="Unknown 1" type="float" default="-1.0" vercond="#BS_GT_130#" />
         <field name="Unknown 2" type="float" default="-1.0" vercond="#BS_GTE_F76#" />
     </struct>
+	
+	<bitflags name="PBRFeatureFlags" storage="uint" versions="#SSE#">
+        <option bit="0" name="Subsurface" />
+        <option bit="1" name="Two Layer" />
+        <option bit="2" name="Colored Coat" />
+        <option bit="3" name="Interlayer Parallax" />
+        <option bit="4" name="Coat Normal" />
+        <option bit="5" name="Fuzz" />
+        <option bit="6" name="Hair Marschner" />
+        <option bit="7" name="Glint" />
+	</bitflags>
+	
+	<struct name="PBRCoat" module="BSMain" versions="#SSE#">
+		<field name="Color" type="Color3" default="#VEC3_ONE#" />
+		<field name="Strength" type="float" default="1.0" />
+		<field name="Roughness" type="float" default="1.0" />
+		<field name="Specular Level" type="float" default="0.04" />
+	</struct>
+	
+	<struct name="PBRGlint" module="BSMain" versions="#SSE#">
+		<field name="Screen Space Scale" type="float" default="1.5" />
+		<field name="Log Microfacet Density" type="float" default="40.0" />
+		<field name="Microfacet Roughness" type="float" default="0.015" />
+		<field name="Density Randomization" type="float" default="2.0" />
+	</struct>
+	
+	<struct name="PBRMaterialData" module="BSMain" versions="#SSE#">
+		<field name="Version" type="uint" default="1" />
+		<field name="Feature Flags" type="PBRFeatureFlags" />
+		<field name="Roughness Scale" type="float" default="1.0" />
+		<field name="Specular Level" type="float" default="0.04" />
+		<field name="Displacement Scale" type="float" default="1.0" />
+		<field name="Subsurface Color" type="Color3" default="#VEC3_ONE#" />
+		<field name="Subsurface Opacity" type="float" default="0.0" />
+		<field name="Coat" type="PBRCoat" />
+		<field name="Fuzz Color" type="Color3" default="#VEC3_ONE#" />
+		<field name="Fuzz Weight" type="float" default="0.0" />
+		<field name="Glint" type="PBRGlint" />
+	</struct>
 
     <struct name="BGSMWetnessParams" abstract="true" module="BSMain" versions="#FO4# #F76#">
         <field name="Spec Scale" type="float" default="-1.0" />
@@ -7783,12 +7823,12 @@
         <field name="Texture Clamp Mode" type="TexClampMode" default="WRAP_S_WRAP_T" vercond="#NI_BS_LTE_FO4#">How to handle texture borders.</field>
         <field name="Alpha" type="float" default="1.0" range="0.0:128.0" vercond="#NI_BS_LTE_FO4#">The material opacity (1=opaque). Greater than 1.0 is used to affect alpha falloff i.e. staying opaque longer based on vertex alpha and alpha mask.</field>
         <field name="Refraction Strength" type="float" range="#F0_1#" vercond="#NI_BS_LTE_FO4#">The amount of distortion. **Not based on physically accurate refractive index** (0=none)</field>
-        <field name="Glossiness" type="float" default="80.0" range="#F0_999#" vercond="#NI_BS_LT_FO4#">The material specular power, or glossiness.</field>
+        <field name="Glossiness" type="float" default="80.0" range="#F0_999#" vercond="#NI_BS_LT_FO4#" cond="Shader Type != 21">The material specular power, or glossiness.</field>
         <field name="Smoothness" type="float" default="1.0" range="#F0_1#" vercond="#BS_FO4_2#">The base roughness, multiplied by the smoothness map.</field>
-        <field name="Specular Color" type="Color3" default="#VEC3_ONE#" vercond="#NI_BS_LTE_FO4#">Adds a colored highlight.</field>
-        <field name="Specular Strength" type="float" default="1.0" range="#F0_10#" vercond="#NI_BS_LTE_FO4#">Brightness of specular highlight. (0=not visible)</field>
-        <field name="Lighting Effect 1" type="float" default="0.3" range="#F0_10#" vercond="#NI_BS_LT_FO4#">Controls strength for envmap/backlight/rim/softlight lighting effect?</field>
-        <field name="Lighting Effect 2" type="float" default="2.0" range="#F0_1000#" vercond="#NI_BS_LT_FO4#">Controls strength for envmap/backlight/rim/softlight lighting effect?</field>
+        <field name="Specular Color" type="Color3" default="#VEC3_ONE#" vercond="#NI_BS_LTE_FO4#" cond="Shader Type != 21">Adds a colored highlight.</field>
+        <field name="Specular Strength" type="float" default="1.0" range="#F0_10#" vercond="#NI_BS_LTE_FO4#" cond="Shader Type != 21">Brightness of specular highlight. (0=not visible)</field>
+        <field name="Lighting Effect 1" type="float" default="0.3" range="#F0_10#" vercond="#NI_BS_LT_FO4#" cond="Shader Type != 21">Controls strength for envmap/backlight/rim/softlight lighting effect?</field>
+        <field name="Lighting Effect 2" type="float" default="2.0" range="#F0_1000#" vercond="#NI_BS_LT_FO4#" cond="Shader Type != 21">Controls strength for envmap/backlight/rim/softlight lighting effect?</field>
         <field name="Subsurface Rolloff" type="float" default="0.0" range="#F0_10#" vercond="#BS_FO4_2#" />
         <field name="Rimlight Power" type="float" default="#FLT_MAX#" vercond="#BS_FO4_2#" />
         <field name="Backlight Power" type="float" range="#F0_1000#" vercond="#BS_FO4_2#" cond="(Rimlight Power #GTE# #FLT_MAX#) #AND# (Rimlight Power #LT# #FLT_INF#)" />
@@ -7811,6 +7851,7 @@
         <field name="Eye Cubemap Scale" type="float" default="1.3" range="#F0_10#" vercond="#NI_BS_LTE_FO4#" cond="Shader Type == 16">Eye cubemap scale</field>
         <field name="Left Eye Reflection Center" type="Vector3" vercond="#NI_BS_LTE_FO4#" cond="Shader Type == 16">Offset to set center for left eye cubemap</field>
         <field name="Right Eye Reflection Center" type="Vector3" vercond="#NI_BS_LTE_FO4#" cond="Shader Type == 16">Offset to set center for right eye cubemap</field>
+		<field name="PBR Material Data" type="PBRMaterialData" vercond="#BS_SSE#" cond="Shader Type == 21" />
     </niobject>
 
     <struct name="BSEffectShaderPropertyDataGTEFO76" module="BSMain" versions="#BS_GTE_F76#">
