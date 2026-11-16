@@ -1253,7 +1253,8 @@ GLuint TexCache::texLoad( const NifModel * nif, const QString & filepath,
 			if ( FileBuffer::readUInt32Fast( data.data() ) == 0x20534444 ) {	// "DDS "
 				if ( data.data()[113] & 0x02 ) {	// DDSCAPS2_CUBEMAP
 					isCubeMap = true;
-					if ( nif->getBSVersion() < 170 && FileBuffer::readUInt32Fast( data.data() + 84 ) == 0x30315844 && data.data()[128] == 0x57 )
+					quint32	bsVersion = ( nif ? nif->getBSVersion() : 0 );
+					if ( bsVersion >= 151 && bsVersion < 170 && FileBuffer::readUInt32Fast( data.data() + 84 ) == 0x30315844 && data.data()[128] == 0x57 )
 						data[128] = 0x5B;	// Fallout 76: DXGI_FORMAT_B8G8R8A8_UNORM -> DXGI_FORMAT_B8G8R8A8_UNORM_SRGB
 				}
 			} else if ( FileBuffer::readUInt64Fast( data.data() ) == 0x4E41494441523F23ULL ) {	// "#?RADIAN"
